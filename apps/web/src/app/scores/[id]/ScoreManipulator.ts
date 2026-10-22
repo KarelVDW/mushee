@@ -28,8 +28,9 @@ const MAX_RANGE = 100_000
  * live in dedicated methods rather than as actions, because they act on a position rather
  * than on the selected notes, and leave the selection as it is.
  *
- * Every mutation runs through {@link manipulate}, which registers it as one step with the
- * {@link ManipulationHistoryManager}; {@link undo}/{@link redo} travel that history by
+ * Every public mutator runs through {@link commit}, so each edit is tracked as one step with
+ * the {@link ManipulationHistoryManager}, autosaved, and announced; {@link undo}/{@link redo}
+ * travel that history by
  * swapping in a rebuilt Score (note identities change wholesale, so the selection is
  * re-resolved by position).
  */
@@ -196,9 +197,7 @@ export class ScoreManipulator {
         const score = this._score
         const selected = this._selectedNote
         if (!score || !selected) return
-        this.manipulate(() => this.execute(action, this._selectedNotes, selected, ...args))
-        this.save(score)
-        this.emit()
+        this.commit(() => this.execute(action, this._selectedNotes, selected, ...args))
     }
 
     /** Apply an action to `notes` (bulk) or to `active` alone, then re-anchor the selection on its results. */
@@ -232,15 +231,13 @@ export class ScoreManipulator {
             this.run(REMOVE_NOTE)
             return
         }
-        this.manipulate(() => {
+        this.commit(() => {
             const landingIndex = removable[0].index
             const kept = this._selectedNotes.filter((note) => !removable.includes(note.measure))
             score.removeMeasures(removable)
             if (kept.length > 0) this.execute(REMOVE_NOTE, kept, kept[kept.length - 1])
             else this.setSingle(score.measures[landingIndex]?.firstNote ?? score.lastMeasure?.lastNote ?? null)
         })
-        this.save(score)
-        this.emit()
     }
 
     /** The measures every note of which is selected, in score order (the selection is contiguous). */
@@ -248,6 +245,18 @@ export class ScoreManipulator {
         const selected = new Set(this._selectedNotes)
         const measures = [...new Set(this._selectedNotes.map((note) => note.measure))]
         return measures.filter((measure) => measure.notes.every((note) => selected.has(note)))
+    }
+
+    /**
+     * The one path every public mutator takes: run `mutate` as an undoable step, autosave the
+     * score, and notify subscribers — so no edit can be tracked without being saved or announced.
+     */
+    private commit(mutate: () => void): void {
+        const score = this._score
+        if (!score) return
+        this.manipulate(mutate)
+        this.save(score)
+        this.emit()
     }
 
     /** Run one mutation as an undoable step (no-ops — navigation actions — register nothing). */
@@ -300,7 +309,7 @@ export class ScoreManipulator {
         const score = this._score
         const selected = this._selectedNote
         if (!score || !selected || this._clipboard.length === 0) return
-        this.manipulate(() => {
+        this.commit(() => {
             const targets = this._selectedNotes.length > 0 ? this._selectedNotes : [selected]
             const pasted = score.replace(
                 targets,
@@ -310,8 +319,6 @@ export class ScoreManipulator {
             const last = pasted[pasted.length - 1]
             if (first && last) this.setRange(first, last)
         })
-        this.save(score)
-        this.emit()
     }
 
     // --- Structure (operate on the score as a whole, not the active note) ---
@@ -319,20 +326,17 @@ export class ScoreManipulator {
     addMeasure(): void {
         const score = this._score
         if (!score) return
-        this.manipulate(() => score.addMeasure().complete())
-        this.save(score)
+        this.commit(() => score.addMeasure().complete())
     }
 
     removeMeasure(): void {
         const score = this._score
         // A score always has at least one bar; the UI disables the control too, this keeps every path honest.
         if (!score || score.measures.length <= 1) return
-        this.manipulate(() => {
+        this.commit(() => {
             score.removeLastMeasure()
             this.setSingle(score.lastMeasure?.lastNote ?? null)
         })
-        this.save(score)
-        this.emit()
     }
 
     /** Set a tempo at an explicit position (the in-score tempo marking popover, or the dock at {@link activePosition}). */
@@ -340,8 +344,7 @@ export class ScoreManipulator {
         const score = this._score
         const measure = score?.measures[measureIndex]
         if (!score || !measure) return
-        this.manipulate(() => score.setTempo(measure.noteAtBeat(beatPosition), bpm))
-        this.save(score)
+        this.commit(() => score.setTempo(measure.noteAtBeat(beatPosition), bpm))
     }
 
     /**
@@ -352,8 +355,7 @@ export class ScoreManipulator {
         const score = this._score
         const measure = score?.measures[measureIndex]
         if (!score || !measure) return
-        this.manipulate(() => score.setClef(measure.noteAtBeat(beat), type))
-        this.save(score)
+        this.commit(() => score.setClef(measure.noteAtBeat(beat), type))
     }
 
     /**
@@ -364,8 +366,7 @@ export class ScoreManipulator {
         const score = this._score
         const measure = score?.measures[measureIndex]
         if (!score || !measure) return
-        this.manipulate(() => score.setKeySignature(measure.noteAtBeat(beat), fifths))
-        this.save(score)
+        this.commit(() => score.setKeySignature(measure.noteAtBeat(beat), fifths))
     }
 
     /** Change the time signature from a measure (the in-score glyph or dock popover). */
@@ -374,7 +375,7 @@ export class ScoreManipulator {
         const measure = score?.measures[measureIndex]
         if (!score || !measure) return
         const version = score.version
-        this.manipulate(() => {
+        this.commit(() => {
             score.setTimeSignature(measure, new TimeSignature(beatAmount, beatType))
             if (score.version === version) return // same meter — nothing changed
             // Rebarring may have replaced the selected note (split or merged across the new
@@ -383,9 +384,6 @@ export class ScoreManipulator {
             const survived = selected && score.measures.includes(selected.measure)
             this.setSingle(survived ? selected : (score.measures[Math.min(measureIndex, score.measures.length - 1)]?.firstNote ?? null))
         })
-        if (score.version === version) return
-        this.save(score)
-        this.emit()
     }
 
     /**
@@ -425,24 +423,18 @@ export class ScoreManipulator {
         const score = this._score
         if (!score) return
         const selectionScope = scope === 'selection' && this._selectedNotes.length > 0
-        this.manipulate(() => {
+        this.commit(() => {
             if (selectionScope) {
                 const result = score.transpose(interval, this._selectedNotes)
                 const first = result[0]
                 const last = result[result.length - 1]
                 if (first && last) this.setRange(first, last)
             } else {
-                const note = this._selectedNote
-                const measureIdx = note ? note.measure.index : null
-                const noteIdx = note ? note.measure.notes.indexOf(note) : null
+                const at = this.addressOf(this._selectedNote)
                 score.transpose(interval)
-                if (measureIdx !== null && noteIdx !== null && noteIdx >= 0) {
-                    this.setSingle(score.measures[measureIdx]?.notes[noteIdx] ?? null)
-                }
+                if (at) this.setSingle(this.noteAt(at))
             }
         })
-        this.save(score)
-        this.emit()
         this.onPitchHighlight?.(selectionScope ? [...this._selectedNotes] : 'all')
     }
 
@@ -453,17 +445,11 @@ export class ScoreManipulator {
     setInstrument(instrument: Instrument): void {
         const score = this._score
         if (!score) return
-        this.manipulate(() => {
-            const note = this._selectedNote
-            const measureIdx = note ? note.measure.index : null
-            const noteIdx = note ? note.measure.notes.indexOf(note) : null
+        this.commit(() => {
+            const at = this.addressOf(this._selectedNote)
             score.setInstrument(instrument)
-            if (measureIdx !== null && noteIdx !== null && noteIdx >= 0) {
-                this.setSingle(score.measures[measureIdx]?.notes[noteIdx] ?? null)
-            }
+            if (at) this.setSingle(this.noteAt(at))
         })
-        this.save(score)
-        this.emit()
     }
 
     // --- History (undo / redo) ---
