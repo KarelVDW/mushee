@@ -14,7 +14,7 @@ audience is still small and forgiving.
       neither flag below changes them.
 - [ ] `apps/web/src/app/privacy/page.tsx` — drop "beta notifications" from the
       Twilio SendGrid purposes (or keep it deliberately if `BETA_MODE` may
-      return). Also hard-coded.
+      return), and bump its own `LAST_UPDATED`. Also hard-coded.
 - [ ] **Signup CAPTCHA** — code shipped 2026-09-05 (Cloudflare Turnstile via
       better-auth's captcha plugin, signup endpoint only). Still to do: create
       the Turnstile widget in the Cloudflare dashboard (managed mode, domain
@@ -123,7 +123,8 @@ not on the beta flag:
       closed beta — … Paid plans arrive at launch." (the section subtitle)
       with tier-neutral text.
 - [ ] Gating: `canPurchase` hides Change plan and the pack top-up on `isBeta`;
-      gate on `billing.betaMode` alone so beta-tier users can actually buy.
+      drop that term (keep the `billingConfigured` and `betaMode` checks) so
+      beta-tier users can actually buy.
 
 Migrating them to free needs neither.
 

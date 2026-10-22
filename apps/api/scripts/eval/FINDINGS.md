@@ -2200,13 +2200,13 @@ struck/plucked instruments (`isStruckOrPluckedInstrument`: piano, guitar, bass�
 keep 0.5. Kill-switch `ONSET_POLICY=legacy`. Production path, paired over clips,
 95 % CI:
 
-| change                                                         | synthetic                                                 | real                                                              |
-| -------------------------------------------------------------- | --------------------------------------------------------- | ----------------------------------------------------------------- |
-| voice 0.5 → 0.35                                               | **+0.068** [+0.059, +0.077]_ (dev +0.063_, test +0.072\*) | singing **+0.009** [+0.007, +0.011]_ (dev +0.009_, test +0.009\*) |
-| voice 0.35 → 0.25                                              | +0.013\*                                                  | +0.001 (null; vocadito keeps sliding: 0.701 → 0.698 → 0.694)      |
-| sustained instruments 0.5 → 0.35                               | **+0.006** [+0.003, +0.009]\*                             | URMP +0.005 [−0.001, +0.012]                                      |
-| sustained instruments 0.5 → 0.35 ramped to 0.5 by reverberance | **+0.007** [+0.005, +0.009]\*                             | URMP +0.004 [−0.002, +0.011]                                      |
-| plucked/struck 0.5 → 0.35                                      | −0.006\*                                                  | GuitarSet −0.008\* → excluded from the policy                     |
+| change                                                         | synthetic                                                   | real                                                                |
+| -------------------------------------------------------------- | ----------------------------------------------------------- | ------------------------------------------------------------------- |
+| voice 0.5 → 0.35                                               | **+0.068** [+0.059, +0.077]\* (dev +0.063\*, test +0.072\*) | singing **+0.009** [+0.007, +0.011]\* (dev +0.009\*, test +0.009\*) |
+| voice 0.35 → 0.25                                              | +0.013\*                                                    | +0.001 (null; vocadito keeps sliding: 0.701 → 0.698 → 0.694)        |
+| sustained instruments 0.5 → 0.35                               | **+0.006** [+0.003, +0.009]\*                               | URMP +0.005 [−0.001, +0.012]                                        |
+| sustained instruments 0.5 → 0.35 ramped to 0.5 by reverberance | **+0.007** [+0.005, +0.009]\*                               | URMP +0.004 [−0.002, +0.011]                                        |
+| plucked/struck 0.5 → 0.35                                      | −0.006\*                                                    | GuitarSet −0.008\* → excluded from the policy                       |
 
 0.35 rather than 0.25 for voice: the synthetic voices sing vowels only, so they have
 no consonant re-onsets to lose — their extra gain at 0.25 is partly a property of the
@@ -2238,8 +2238,8 @@ flat, n.s.). On dry audio reverberance is ≈ 0, so the dry numbers are flat
 0.35's. The collapse pass is neutral or positive on every one of these clips.
 
 Voice is deliberately not ramped. Ramping it the same way costs synthetic voices
-**−0.052** [−0.063, −0.041]_ and real singing in the two rooms **−0.020**
-[−0.022, −0.018]_ (dev −0.023*, test −0.018*; vocadito +0.003, n.s.): a room
+**−0.052** [−0.063, −0.041]\* and real singing in the two rooms **−0.020**
+[−0.022, −0.018]\* (dev −0.023\*, test −0.018\*; vocadito +0.003, n.s.): a room
 deepens sung vibrato's modulation, so the voice needs the deep dip most where the
 room is worst. The same mechanism, opposite answers by material, which is what
 `OnsetDetector.minTroughSec`'s doc comment predicted from the July reverb sweep.
@@ -2261,8 +2261,8 @@ singing +0.05…+0.10\*, instruments +0.01…+0.02\* in every condition.
 Two onset-split fragments a few tens of ms apart can snap to the same grid slot:
 the deduced line then carries two notes at one instant — a chord in a single-voice
 staff. A final pass keeps one note per slot (same pitch → one note spanning both;
-different pitch → the longer). Synthetic voices **+0.012** [+0.010, +0.014]_, real
-singing **+0.0016** [+0.0010, +0.0023]_, never negative per dataset.
+different pitch → the longer). Synthetic voices **+0.012** [+0.010, +0.014]\*, real
+singing **+0.0016** [+0.0010, +0.0023]\*, never negative per dataset.
 Kill-switch `EXTRACTOR_COLLAPSE_COINCIDENT=0`.
 
 ### Two real notes on one slot (measured null, not shipped)

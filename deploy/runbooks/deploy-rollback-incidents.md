@@ -11,14 +11,16 @@ staging.solkey.io, `production` → solkey.io. `master` never deploys anywhere.
 1. Merge/push to `master` — CI (`ci.yml`) must be green (format check,
    whole-repo lint, type-check, the unit tests of every workspace incl. the
    notation model's 100%-coverage gate, build, mocked e2e).
-2. Promote to staging (when the change needs a staging pass): run Actions →
-   Deploy → Run workflow, environment `staging`, from `master`
-   (`gh workflow run deploy.yml --ref master -f environment=staging`). It
-   builds both images (api, crepe-inference) SHA-tagged, applies
-   `overlays/staging`, and waits for the rollouts. Push
-   `git push origin master:staging` only so Vercel builds the staging web.
-   Smoke-test on https://staging.solkey.io, then scale staging back to zero —
-   an idle staging copy bills 24/7 on Autopilot:
+2. Promote to staging: `git push origin master:staging`. Every release takes
+   this step, because step 3 promotes whatever `staging` points at; on its
+   own the push only makes Vercel build the staging web. When the change
+   needs a staging pass, also run Actions → Deploy → Run workflow,
+   environment `staging`, from the `staging` branch
+   (`gh workflow run deploy.yml --ref staging -f environment=staging`), so
+   the API you test is the commit you promote. It builds both images (api,
+   crepe-inference) SHA-tagged, applies `overlays/staging`, and waits for
+   the rollouts. Smoke-test on https://staging.solkey.io, then scale staging
+   back to zero — an idle staging copy bills 24/7 on Autopilot:
     ```sh
     kubectl scale deploy --all -n mushee-staging --replicas=0
     ```
