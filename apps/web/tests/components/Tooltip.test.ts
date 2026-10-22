@@ -45,6 +45,26 @@ describe('Tooltip', () => {
 
     const button = () => host.querySelector('button') as HTMLButtonElement
 
+    /** Keyboard focus: a Tab press (heard on the window), then focus landing on the control. */
+    const keyFocus = () =>
+        act(() => {
+            window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab' }))
+            button().focus()
+        })
+
+    /** Report `(pointer: coarse)` as matching — a phone. */
+    function coarsePointer() {
+        vi.spyOn(window, 'matchMedia').mockImplementation(
+            (query: string) =>
+                ({
+                    matches: query === '(pointer: coarse)',
+                    media: query,
+                    addEventListener: () => undefined,
+                    removeEventListener: () => undefined,
+                }) as unknown as MediaQueryList,
+        )
+    }
+
     function render(props: Partial<Parameters<typeof Tooltip>[0]> = {}, buttonProps: Record<string, unknown> = {}) {
         act(() => {
             root.render(
@@ -66,6 +86,8 @@ describe('Tooltip', () => {
             return selector === ':focus-visible' ? focusVisible : originalMatches.call(this, selector)
         })
         onClick = vi.fn()
+        // Every test starts from a pointer press: only a key press makes focus open a tooltip.
+        pointer(document.body, 'pointerdown')
         host = document.createElement('div')
         outside = document.createElement('div')
         document.body.append(host, outside)
@@ -107,7 +129,7 @@ describe('Tooltip', () => {
 
     it('opens at once on keyboard focus, closes on blur', () => {
         render()
-        act(() => button().focus())
+        keyFocus()
         expect(card()?.textContent).toBe('Quarter note — 1 beat · Q')
         act(() => button().blur())
         expect(card()).toBeNull()
@@ -116,7 +138,7 @@ describe('Tooltip', () => {
     it('stays shut for focus that is not :focus-visible, or handed back by a popover', () => {
         render()
         focusVisible = false
-        act(() => button().focus())
+        keyFocus()
         expect(card()).toBeNull()
         act(() => button().blur())
 
@@ -126,9 +148,39 @@ describe('Tooltip', () => {
         expect(card()).toBeNull()
     })
 
+    it('stays shut for focus the app moves after a tap, even when the browser calls it focus-visible', () => {
+        render()
+        // A phone after a recording: the user tapped Stop, the editor moves focus to the record button.
+        pointer(document.body, 'pointerdown', { pointerType: 'touch' })
+        act(() => button().focus())
+        expect(card()).toBeNull()
+        act(() => button().blur())
+        // Moved with focusWithoutTooltip, it stays shut even straight after a key press (Space stopped the recording).
+        act(() => {
+            document.body.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true }))
+            focusWithoutTooltip(button(), { preventScroll: true })
+        })
+        expect(document.activeElement).toBe(button())
+        expect(card()).toBeNull()
+    })
+
+    it('never names the key on a coarse pointer — not in the bubble, the card or the description', () => {
+        coarsePointer()
+        render()
+        const description = () => document.getElementById(button().getAttribute('aria-describedby') as string)
+        expect(description()?.textContent).toBe('1 beat')
+        // A phone with a keyboard attached still gets the name, without the key.
+        keyFocus()
+        expect(card()?.textContent).toBe('Quarter note — 1 beat')
+        act(() => button().blur())
+        // A shortcut-only tooltip (no hint) leaves no description at all.
+        render({ hint: undefined })
+        expect(button().hasAttribute('aria-describedby')).toBe(false)
+    })
+
     it('closes when the control is used from the keyboard, Enter or Space', () => {
         render()
-        act(() => button().focus())
+        keyFocus()
         expect(card()).not.toBeNull()
         // Enter on a focused button: keydown, then the click it activates (detail 0, no pointer).
         act(() => {
@@ -147,7 +199,7 @@ describe('Tooltip', () => {
         host.setAttribute('aria-modal', 'true')
         try {
             render()
-            act(() => button().focus())
+            keyFocus()
             const event = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })
             act(() => {
                 button().dispatchEvent(event)
@@ -165,7 +217,7 @@ describe('Tooltip', () => {
         const editorKeys: string[] = []
         host.addEventListener('keydown', (e) => editorKeys.push(e.key))
         render()
-        act(() => button().focus())
+        keyFocus()
         const event = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })
         act(() => {
             button().dispatchEvent(event)
@@ -203,7 +255,7 @@ describe('Tooltip', () => {
 
     it('a reason replaces name, hint and key, and is the description', () => {
         render({ label: 'Tie', reason: 'Tie needs the next note to be the same pitch.' })
-        act(() => button().focus())
+        keyFocus()
         expect(card()?.textContent).toBe('Tie needs the next note to be the same pitch.')
         const description = document.getElementById(button().getAttribute('aria-describedby') as string)
         expect(description?.textContent).toBe('Tie needs the next note to be the same pitch.')
@@ -260,7 +312,7 @@ describe('Tooltip', () => {
             pointer(button(), 'pointerover')
             advance(TOOLTIP_HOVER_DELAY_MS)
             expect(card()).toBeNull()
-            act(() => button().focus())
+            keyFocus()
             expect(card()).toBeNull()
             pointer(button(), 'pointerdown', { pointerType: 'touch' })
             advance(TOOLTIP_HOLD_DELAY_MS)

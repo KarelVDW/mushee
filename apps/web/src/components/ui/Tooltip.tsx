@@ -57,6 +57,40 @@ export function useKeyboardLayout(): ReadonlyMap<string, string> | null {
     return useSyncExternalStore(layout.subscribe, layout.getSnapshot, () => null)
 }
 
+const COARSE_POINTER = '(pointer: coarse)'
+
+function coarsePointerQuery(): MediaQueryList | null {
+    return typeof window !== 'undefined' && typeof window.matchMedia === 'function' ? window.matchMedia(COARSE_POINTER) : null
+}
+
+function subscribeCoarsePointer(listener: () => void): () => void {
+    const query = coarsePointerQuery()
+    query?.addEventListener('change', listener)
+    return () => query?.removeEventListener('change', listener)
+}
+
+/** A touch screen is the primary pointer, where key hints mean nothing. False on the server and through hydration. */
+function useIsCoarsePointer(): boolean {
+    return useSyncExternalStore(
+        subscribeCoarsePointer,
+        () => coarsePointerQuery()?.matches ?? false,
+        () => false,
+    )
+}
+
+/**
+ * Whether the user's last input was a key press — the only time focus landing on a control opens
+ * its tooltip. `:focus-visible` alone isn't enough: Chromium can report focus the app moved
+ * itself (the record button after a recording, on a phone) as focus-visible, and the user would
+ * see a key hint they never asked for. Heard in the capture phase on the window, so no handler
+ * that stops propagation can hide an input from it.
+ */
+let lastInputWasKey = false
+if (typeof window !== 'undefined') {
+    window.addEventListener('keydown', () => (lastInputWasKey = true), { capture: true, passive: true })
+    window.addEventListener('pointerdown', () => (lastInputWasKey = false), { capture: true, passive: true })
+}
+
 /**
  * The key a tooltip names: a live binding from the editor's Keybindings (so a rebound command
  * shows its new key), or display tokens the caller already resolved (e.g. through the browser's
@@ -71,7 +105,7 @@ interface TooltipProps {
     label?: string
     /** One plain line saying what the control does. */
     hint?: string
-    /** Its shortcut; shown only to fine pointers and keyboards, never in the touch bubble. */
+    /** Its shortcut; shown only where the primary pointer is fine, never on a touch screen. */
     shortcut?: TooltipShortcut
     /** Why the control can't be used right now. Replaces name, hint and key while set. */
     reason?: string
@@ -82,15 +116,16 @@ interface TooltipProps {
 }
 
 /**
- * Focus a control without opening its tooltip — for focus handed back by a closing popover,
- * menu or dialog, which the user didn't move there themselves.
+ * Focus a control without opening its tooltip — for focus the user didn't move there themselves:
+ * handed back by a closing popover, menu or dialog, or moved by the editor when a recording
+ * starts or ends.
  */
 let suppressFocusTooltip = false
-export function focusWithoutTooltip(el: HTMLElement | null | undefined): void {
+export function focusWithoutTooltip(el: HTMLElement | null | undefined, options?: FocusOptions): void {
     if (!el) return
     suppressFocusTooltip = true
     try {
-        el.focus()
+        el.focus(options)
     } finally {
         suppressFocusTooltip = false
     }
@@ -120,11 +155,12 @@ function isShortcutParts(shortcut: Shortcut | readonly string[]): shortcut is re
  * The visible name of an icon-only control: "Name — hint · key" (contract C2).
  *
  * - Fine pointers: opens after {@link TOOLTIP_HOVER_DELAY_MS} of mouse hover, or at once on
- *   keyboard focus (`:focus-visible` only — focus a popover or dialog hands back doesn't count,
- *   see {@link focusWithoutTooltip}). Closes on pointer-leave, blur, a press (mouse, Enter or
- *   Space), or Escape, which it consumes so the editor's own Escape binding doesn't also fire —
- *   except inside a modal dialog, where the same Escape closes the dialog as well.
- * - Coarse pointers: never on hover. Holding a finger on the control for
+ *   keyboard focus (`:focus-visible` straight after a key press — focus the app moves itself
+ *   doesn't count, see {@link focusWithoutTooltip}). Closes on pointer-leave, blur, a press
+ *   (mouse, Enter or Space), or Escape, which it consumes so the editor's own Escape binding
+ *   doesn't also fire — except inside a modal dialog, where the same Escape closes the dialog too.
+ * - Coarse pointers: never on hover, and never a key, in the bubble or the description (a phone
+ *   with a keyboard attached still gets the name). Holding a finger on the control for
  *   {@link TOOLTIP_HOLD_DELAY_MS} names it in a bubble above it, kept while held and for
  *   {@link TOOLTIP_HOLD_LINGER_MS} after release. Releasing on the control still acts; sliding
  *   off first cancels both.
@@ -149,7 +185,8 @@ export function Tooltip({ label, hint, shortcut, reason, side = 'top', children 
 
     const isApple = useIsApple()
     const layout = useKeyboardLayout()
-    const keys = reason ? null : shortcutText(shortcut, isApple, layout)
+    const coarse = useIsCoarsePointer()
+    const keys = reason || coarse ? null : shortcutText(shortcut, isApple, layout)
     const description = reason ?? ([hint, keys].filter(Boolean).join(', ') || null)
     const empty = !label && !hint && !keys && !reason
 
@@ -281,7 +318,7 @@ export function Tooltip({ label, hint, shortcut, reason, side = 'top', children 
         if (holdStart.current || openedBy === 'hold') e.preventDefault()
     }
     const onFocus = (e: ReactFocusEvent) => {
-        if (suppressFocusTooltip || !(e.target instanceof HTMLElement) || !matchesFocusVisible(e.target)) return
+        if (suppressFocusTooltip || !lastInputWasKey || !(e.target instanceof HTMLElement) || !matchesFocusVisible(e.target)) return
         clearTimers()
         open('focus')
     }

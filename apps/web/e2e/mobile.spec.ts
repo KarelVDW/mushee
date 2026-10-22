@@ -190,9 +190,9 @@ test('from onboarding, Start recording hands focus to the dock’s stop as the e
     await expect(start).toHaveCount(0)
     // Never dropped to <body>: the strip's stop takes it, and the editor's keys still reach the recording.
     await expect(page.getByRole('button', { name: 'Stop recording', exact: true })).toBeFocused()
-    // Focus moved during keyboard use shows the stop's tooltip, and its first Escape closes only
-    // that (the tooltip contract); the next one reaches the editor and stops the recording.
-    await page.keyboard.press('Escape')
+    // Focus the editor moved there opens no tooltip — a phone never gets a key hint popping up
+    // over the dock — so the first Escape already reaches the editor and stops the recording.
+    await expect(page.locator('body > .tooltip-enter')).toHaveCount(0)
     await page.keyboard.press('Escape')
     await expect(page.getByRole('group', { name: 'Recording status' })).toHaveCount(0)
 })
