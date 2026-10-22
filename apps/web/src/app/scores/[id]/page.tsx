@@ -7,16 +7,7 @@
  */
 
 import { type AttributeClickEvent, type ScoreHighlight, ScoreView, type SelectionMenuEvent } from '@mushee/notation/components'
-import {
-    type Accidental,
-    type ClefType,
-    type DurationType,
-    Instrument,
-    type Interval,
-    type Note,
-    type Pitch,
-    TimeSignature,
-} from '@mushee/notation/model'
+import { type Accidental, type ClefType, type DurationType, Instrument, type Note, type Pitch, TimeSignature } from '@mushee/notation/model'
 import { ScoreDeserializer } from '@mushee/notation/model/io/ScoreDeserializer'
 import { useParams, useRouter } from 'next/navigation'
 import { type ReactNode, useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react'
@@ -26,7 +17,6 @@ import { KeySignaturePopover } from '@/components/editor/KeySignaturePopover'
 import { SelectionPopover } from '@/components/editor/SelectionPopover'
 import { TempoPopover } from '@/components/editor/TempoPopover'
 import { TimeSignaturePopover } from '@/components/editor/TimeSignaturePopover'
-import { TransposePopover } from '@/components/editor/TransposePopover'
 import { ExportMenu } from '@/components/ExportMenu'
 import { ChipToggle, ErrorScreen, Icon, Wordmark } from '@/components/ui'
 import { ApiError, NetworkError } from '@/lib/api'
@@ -47,8 +37,10 @@ import {
     TOGGLE_TUPLET,
 } from './actions'
 import { ChangeInstrumentDialog } from './ChangeInstrumentDialog'
+import { HistoryTools } from './HistoryTools'
 import { KeyboardShortcutsDialog } from './KeyboardShortcutsDialog'
 import { COMPACT_POPOVER_SHEET, NoteToolDock } from './NoteToolDock'
+import { PitchTools } from './PitchTools'
 import { ConcurrentRecordingDialog, MicModeGuideDialog, RecordingLimitDialog } from './RecordingDialogs'
 import { RecordingsMenu } from './RecordingsMenu'
 import { type PitchScope, ScoreManipulator } from './ScoreManipulator'
@@ -76,7 +68,6 @@ export default function ScoreEditorPage() {
     const [instrumentDialogOpen, setInstrumentDialogOpen] = useState(false)
     const [shortcutsOpen, setShortcutsOpen] = useState(false)
     const [transposeOpen, setTransposeOpen] = useState(false)
-    const transposeAnchorRef = useRef<HTMLDivElement>(null)
     // Transient magenta emphasis on the canvas: a pulse over the open transpose popover's
     // target range, replaced by a fading flash the moment a pitch operation lands.
     const [pitchHighlight, setPitchHighlight] = useState<ScoreHighlight | null>(null)
@@ -172,17 +163,6 @@ export default function ScoreEditorPage() {
     )
     const handleAddMeasure = useCallback(() => manipulator.addMeasure(), [manipulator])
     const handleRemoveMeasure = useCallback(() => manipulator.removeMeasure(), [manipulator])
-    const handleUndo = useCallback(() => manipulator.undo(), [manipulator])
-    const handleRedo = useCallback(() => manipulator.redo(), [manipulator])
-    const handleMinimizeAccidentals = useCallback(() => manipulator.minimizeAccidentals(), [manipulator])
-    const handleTransposeApply = useCallback(
-        (interval: Interval, scope: PitchScope) => {
-            manipulator.transpose(interval, scope)
-            setTransposeOpen(false)
-        },
-        [manipulator],
-    )
-    const closeTranspose = useCallback(() => setTransposeOpen(false), [])
 
     // The open transpose popover aims a gentle pulse at its target range; closing clears it
     // — but never a flash that an Apply just set (the popover closes right after applying).
@@ -437,47 +417,17 @@ export default function ScoreEditorPage() {
                 </div>
                 {!isMobile && <TransportControls {...transport} />}
                 <div className="flex items-center gap-2 shrink-0 sm:flex-1 justify-end">
-                    {/* Undo/redo sit in the header, not the tool dock: the dock's tools edit the
-                        selection, while history travel is a document-level (meta) operation —
-                        like export, it belongs with the chrome. On phones the pair moves into
-                        the dock's tool strip instead (thumb reach, and there is no ⌘Z). */}
-                    {/* Pitch operations follow the same rule: minimize-accidentals and transpose act on
-                        the whole score by default (a multi-note selection narrows them), so they live
-                        with the document-level chrome. On phones they join the dock's settings well. */}
+                    {/* Pitch and history tools are document-level chrome (see PitchTools /
+                        HistoryTools); on phones they move into the dock instead. */}
                     {!isMobile && (
-                        <div role="group" aria-label="Pitch" className="flex items-center gap-1">
-                            <ChipToggle onClick={handleMinimizeAccidentals} disabled={!activeNote} ariaLabel="Minimize accidentals">
-                                <Icon name="natural" size={16} />
-                            </ChipToggle>
-                            <div ref={transposeAnchorRef} className="relative">
-                                <ChipToggle active={transposeOpen} onClick={() => setTransposeOpen((o) => !o)} ariaLabel="Transpose">
-                                    <Icon name="transpose" size={16} />
-                                </ChipToggle>
-                                {transposeOpen && (
-                                    <TransposePopover
-                                        score={score}
-                                        selectedNotes={manipulator.selectedNotes}
-                                        selectionNarrowsPitchOps={manipulator.selectionNarrowsPitchOps}
-                                        anchorRef={transposeAnchorRef}
-                                        className="right-0 top-[calc(100%+0.5rem)]"
-                                        onApply={handleTransposeApply}
-                                        onDismiss={closeTranspose}
-                                        onScopeChange={handleTransposeAim}
-                                    />
-                                )}
-                            </div>
-                        </div>
+                        <PitchTools
+                            manipulator={manipulator}
+                            transposeOpen={transposeOpen}
+                            onTransposeOpenChange={setTransposeOpen}
+                            onTransposeAim={handleTransposeAim}
+                        />
                     )}
-                    {!isMobile && (
-                        <div role="group" aria-label="History" className="flex items-center gap-1">
-                            <ChipToggle onClick={handleUndo} disabled={!manipulator.canUndo} ariaLabel="Undo">
-                                <Icon name="undo" size={16} />
-                            </ChipToggle>
-                            <ChipToggle onClick={handleRedo} disabled={!manipulator.canRedo} ariaLabel="Redo">
-                                <Icon name="redo" size={16} />
-                            </ChipToggle>
-                        </div>
-                    )}
+                    {!isMobile && <HistoryTools manipulator={manipulator} />}
                     {!isMobile && (
                         <ChipToggle active={shortcutsOpen} onClick={() => setShortcutsOpen(true)} ariaLabel="Keyboard shortcuts">
                             <Icon name="keyboard" size={16} />
@@ -585,24 +535,24 @@ export default function ScoreEditorPage() {
                     onTimeSet={handleTimeSet}
                     selectionDisabled={!activeNote}
                     compact={isMobile}
-                    pitch={
-                        isMobile
-                            ? {
-                                  onMinimize: handleMinimizeAccidentals,
-                                  score,
-                                  selectedNotes: manipulator.selectedNotes,
-                                  selectionNarrowsPitchOps: manipulator.selectionNarrowsPitchOps,
-                                  onTranspose: handleTransposeApply,
-                                  onTransposeAim: handleTransposeAim,
-                              }
-                            : undefined
+                    settingsExtras={
+                        isMobile ? (
+                            <>
+                                <PitchTools
+                                    manipulator={manipulator}
+                                    plain
+                                    compact
+                                    transposeOpen={transposeOpen}
+                                    onTransposeOpenChange={setTransposeOpen}
+                                    onTransposeAim={handleTransposeAim}
+                                />
+                                <ChipToggle plain active={metronome} onClick={toggleMetronome} ariaLabel="Metronome">
+                                    <Icon name="audio-lines" size={14} />
+                                </ChipToggle>
+                            </>
+                        ) : undefined
                     }
-                    metronome={isMobile ? { active: metronome, onToggle: toggleMetronome } : undefined}
-                    history={
-                        isMobile
-                            ? { canUndo: manipulator.canUndo, canRedo: manipulator.canRedo, onUndo: handleUndo, onRedo: handleRedo }
-                            : undefined
-                    }
+                    trailingGroup={isMobile ? <HistoryTools manipulator={manipulator} plain /> : undefined}
                     footer={
                         isMobile ? (
                             <MobileEditorActions

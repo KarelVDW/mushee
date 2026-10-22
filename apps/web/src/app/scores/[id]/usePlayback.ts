@@ -50,5 +50,14 @@ export function usePlayback({
     const handlePlayToggle = useCallback(() => toggle(activeNote), [toggle, activeNote])
     const toggleMetronome = useCallback(() => setMetronome((on) => !on), [])
 
-    return { transportRef, playbackCursorRef, playbackState, metronome, toggleMetronome, stopAll, handlePlayToggle, instrumentsReady: ready }
+    return {
+        transportRef,
+        playbackCursorRef,
+        playbackState,
+        metronome,
+        toggleMetronome,
+        stopAll,
+        handlePlayToggle,
+        instrumentsReady: ready,
+    }
 }

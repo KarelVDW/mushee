@@ -3,27 +3,14 @@
 import { BeatUnitIcon, ClefIcon, Glyph, KeySignatureIcon, TimeSignatureIcon } from '@mushee/notation/components'
 import { Bravura } from '@mushee/notation/engraving/Bravura'
 import { TUPLET_NUMBER_SCALE } from '@mushee/notation/engraving/constants'
-import {
-    type Accidental,
-    CLEF_DEFS,
-    type ClefType,
-    Duration,
-    type DurationType,
-    type Interval,
-    type Note,
-    type Score,
-    TimeSignature,
-} from '@mushee/notation/model'
+import { type Accidental, CLEF_DEFS, type ClefType, Duration, type DurationType, TimeSignature } from '@mushee/notation/model'
 import { type ReactNode, type RefObject, useMemo, useRef, useState } from 'react'
 
 import { ClefPopover } from '@/components/editor/ClefPopover'
 import { keySignatureLabel, KeySignaturePopover } from '@/components/editor/KeySignaturePopover'
 import { TempoPopover } from '@/components/editor/TempoPopover'
 import { TimeSignaturePopover } from '@/components/editor/TimeSignaturePopover'
-import { TransposePopover } from '@/components/editor/TransposePopover'
-import { ChipToggle, Icon, Segmented, ToolGroup } from '@/components/ui'
-
-import type { PitchScope } from './ScoreManipulator'
+import { ChipToggle, Segmented, ToolGroup } from '@/components/ui'
 
 const ACCIDENTALS: { label: string; value: Accidental | undefined }[] = [
     { label: '♮', value: undefined },
@@ -117,20 +104,10 @@ interface NoteToolDockProps {
     selectionDisabled: boolean
     /** Tighter group spacing so the tool rows fit a phone. */
     compact?: boolean
-    /** When set, the pitch actions (minimize accidentals / transpose) join the score-settings well (mobile: the header has no room for them). */
-    pitch?: {
-        onMinimize: () => void
-        score: Score
-        selectedNotes: Note[]
-        selectionNarrowsPitchOps: boolean
-        onTranspose: (interval: Interval, scope: PitchScope) => void
-        /** Forwarded to the popover's onScopeChange (the canvas pulse over its target). */
-        onTransposeAim?: (scope: PitchScope | null) => void
-    }
-    /** When set, a metronome toggle joins the tool strip (mobile: the action row has no room for it). */
-    metronome?: { active: boolean; onToggle: () => void }
-    /** When set, undo/redo join the tool strip (mobile: the header has no room for them and there is no ⌘Z). */
-    history?: { canUndo: boolean; canRedo: boolean; onUndo: () => void; onRedo: () => void }
+    /** Extra chips at the end of the score-settings well (mobile: the pitch tools and the metronome, which the header and action row have no room for). */
+    settingsExtras?: ReactNode
+    /** A tool group after the others (mobile: undo/redo — no header room and no ⌘Z). */
+    trailingGroup?: ReactNode
     /** Extra dock row rendered below the tools (the mobile action row). */
     footer?: ReactNode
 }
@@ -168,9 +145,8 @@ export function NoteToolDock({
     onTimeSet,
     selectionDisabled,
     compact = false,
-    pitch,
-    metronome,
-    history,
+    settingsExtras,
+    trailingGroup,
     footer,
 }: NoteToolDockProps) {
     // The tempo chip and popover write the tempo in the meter's felt beat (♩. = 60 in 6/8).
@@ -214,7 +190,12 @@ export function NoteToolDock({
                     options={ACCIDENTALS.map((a) => ({ value: a.value, label: a.label }))}
                 />
                 <ToolGroup ariaLabel="Score settings">
-                    <PopoverChip plain compact={compact} disabled={selectionDisabled} ariaLabel={`Clef: ${CLEF_DEFS[clef].label}`} chip={<ClefIcon type={clef} size={26} />}>
+                    <PopoverChip
+                        plain
+                        compact={compact}
+                        disabled={selectionDisabled}
+                        ariaLabel={`Clef: ${CLEF_DEFS[clef].label}`}
+                        chip={<ClefIcon type={clef} size={26} />}>
                         {({ anchorRef, className, close }) => (
                             <ClefPopover
                                 active={clef}
@@ -290,46 +271,9 @@ export function NoteToolDock({
                             />
                         )}
                     </PopoverChip>
-                    {pitch && (
-                        <>
-                            <ChipToggle plain onClick={pitch.onMinimize} disabled={selectionDisabled} ariaLabel="Minimize accidentals">
-                                <Icon name="natural" size={14} />
-                            </ChipToggle>
-                            <PopoverChip plain compact={compact} disabled={selectionDisabled} ariaLabel="Transpose" chip={<Icon name="transpose" size={14} />}>
-                                {({ anchorRef, className, close }) => (
-                                    <TransposePopover
-                                        score={pitch.score}
-                                        selectedNotes={pitch.selectedNotes}
-                                        selectionNarrowsPitchOps={pitch.selectionNarrowsPitchOps}
-                                        anchorRef={anchorRef}
-                                        className={className}
-                                        onApply={(interval, scope) => {
-                                            pitch.onTranspose(interval, scope)
-                                            close()
-                                        }}
-                                        onDismiss={close}
-                                        onScopeChange={pitch.onTransposeAim}
-                                    />
-                                )}
-                            </PopoverChip>
-                        </>
-                    )}
-                    {metronome && (
-                        <ChipToggle plain active={metronome.active} onClick={metronome.onToggle} ariaLabel="Metronome">
-                            <Icon name="audio-lines" size={14} />
-                        </ChipToggle>
-                    )}
+                    {settingsExtras}
                 </ToolGroup>
-                {history && (
-                    <ToolGroup ariaLabel="History">
-                        <ChipToggle plain onClick={history.onUndo} disabled={!history.canUndo} ariaLabel="Undo">
-                            <Icon name="undo" size={14} />
-                        </ChipToggle>
-                        <ChipToggle plain onClick={history.onRedo} disabled={!history.canRedo} ariaLabel="Redo">
-                            <Icon name="redo" size={14} />
-                        </ChipToggle>
-                    </ToolGroup>
-                )}
+                {trailingGroup}
             </div>
             {footer}
         </div>
