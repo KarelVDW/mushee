@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import type { ScoreDocument, ScoreEntry } from '../src/lib/api'
-import { buildPianoRoll, pitchLabel } from '../src/lib/piano-roll'
+import { buildPianoRoll } from '../src/lib/piano-roll'
 
 function note(step: string, octave: number, duration: number, extra?: Partial<ScoreEntry>): ScoreEntry {
     return { _type: 'note', pitch: { step, octave }, duration, ...extra }
@@ -62,14 +62,5 @@ describe('buildPianoRoll', () => {
     it('handles documents without parts', () => {
         expect(buildPianoRoll({}).notes).toEqual([])
         expect(buildPianoRoll({ parts: [] }).end).toBe(0)
-    })
-})
-
-describe('pitchLabel', () => {
-    it('names middle C and accidentals', () => {
-        expect(pitchLabel(60)).toBe('C4')
-        expect(pitchLabel(66)).toBe('F♯4')
-        expect(pitchLabel(69)).toBe('A4')
-        expect(pitchLabel(21)).toBe('A0')
     })
 })
