@@ -83,7 +83,7 @@ export class ManipulationHistoryManager {
     }
 
     /** Step back. Returns the state to adopt, or null when there is nothing to undo. */
-    undo(score: Score, selection: SelectionAddress | null, onChange?: () => void): RestoredState | null {
+    undo(score: Score, selection: SelectionAddress | null, onChange: () => void): RestoredState | null {
         this.recordStep(score, selection) // pending out-of-band changes become the step being undone
         const entry = this.undoStack.pop()
         if (!entry || this.currentJson === null) return null
@@ -92,7 +92,7 @@ export class ManipulationHistoryManager {
     }
 
     /** Reapply the last undone step. Returns the state to adopt, or null when there is none. */
-    redo(score: Score, selection: SelectionAddress | null, onChange?: () => void): RestoredState | null {
+    redo(score: Score, selection: SelectionAddress | null, onChange: () => void): RestoredState | null {
         this.recordStep(score, selection) // out-of-band changes wrote a new present — this voids the redo trail
         const entry = this.redoStack.pop()
         if (!entry || this.currentJson === null) return null
@@ -122,7 +122,7 @@ export class ManipulationHistoryManager {
     }
 
     /** Rebuild a snapshot into a live Score and make it the new boundary. */
-    private restore(entry: HistoryEntry, onChange?: () => void): RestoredState {
+    private restore(entry: HistoryEntry, onChange: () => void): RestoredState {
         const score = new ScoreDeserializer(JSON.parse(entry.json) as ScorePartwise).toScore(onChange)
         this.currentJson = entry.json
         this.currentVersion = score.version

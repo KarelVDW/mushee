@@ -310,7 +310,7 @@ export default function ScoreEditorPage() {
         waveformStore,
         recordingState,
         recordingHalt,
-        setRecordingHalt,
+        dismissRecordingHalt,
         handleRecordToggle,
         micModeGuideOpen,
         confirmMicModeGuide,
@@ -633,10 +633,10 @@ export default function ScoreEditorPage() {
                 <RecordingLimitDialog
                     info={recordingHalt.info}
                     onUpgrade={() => router.push('/settings')}
-                    onClose={() => setRecordingHalt(null)}
+                    onClose={dismissRecordingHalt}
                 />
             )}
-            {recordingHalt?.kind === 'concurrent' && <ConcurrentRecordingDialog onClose={() => setRecordingHalt(null)} />}
+            {recordingHalt?.kind === 'concurrent' && <ConcurrentRecordingDialog onClose={dismissRecordingHalt} />}
             {micModeGuideOpen && <MicModeGuideDialog onConfirm={confirmMicModeGuide} onClose={dismissMicModeGuide} />}
         </div>
     )

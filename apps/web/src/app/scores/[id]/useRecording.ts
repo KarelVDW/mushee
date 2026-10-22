@@ -17,7 +17,7 @@ import type { Transport } from '@/lib/Transport'
 import type { ScoreManipulator } from './ScoreManipulator'
 
 // Why the recording was cut short (or refused) — drives which dialog shows.
-export type RecordingHalt = { kind: 'limit'; info: RecordingLimitInfo } | { kind: 'concurrent' } | null
+type RecordingHalt = { kind: 'limit'; info: RecordingLimitInfo } | { kind: 'concurrent' }
 
 /** Pick the toast for a mic that couldn't be opened — shared by the real take
  *  and the Mic Mode guide's warm-up stream. */
@@ -60,7 +60,8 @@ export function useRecording({
     // the waveform layer inside the score SVG, never this page.
     const [waveformStore] = useState(() => new RecordingWaveformStore())
     const [recordingState, setRecordingState] = useState<RecordingState>('idle')
-    const [recordingHalt, setRecordingHalt] = useState<RecordingHalt>(null)
+    const [recordingHalt, setRecordingHalt] = useState<RecordingHalt | null>(null)
+    const dismissRecordingHalt = useCallback(() => setRecordingHalt(null), [])
     const [micModeGuideOpen, setMicModeGuideOpen] = useState(false)
     // The take started by confirming the guide skips the reminder toast — the
     // user just read the full walkthrough.
@@ -279,7 +280,7 @@ export function useRecording({
         waveformStore,
         recordingState,
         recordingHalt,
-        setRecordingHalt,
+        dismissRecordingHalt,
         handleRecordToggle,
         micModeGuideOpen,
         confirmMicModeGuide,

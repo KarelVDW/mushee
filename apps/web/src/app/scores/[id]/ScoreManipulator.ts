@@ -49,7 +49,7 @@ export class ScoreManipulator {
     private _version = 0
     private readonly listeners = new Set<() => void>()
     private save: (score: Score) => void = () => {}
-    readonly history = new ManipulationHistoryManager()
+    private readonly history = new ManipulationHistoryManager()
     /**
      * Set while a recording take is writing into the score (the page toggles it): history
      * travel would swap the Score instance out from under the transport's live refs, so
