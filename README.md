@@ -63,7 +63,7 @@ Prereqs: Node 22 + pnpm, Docker Desktop.
 
 ```sh
 pnpm install
-cp apps/api/.env.example apps/api/.env.development   # required: the api scripts load it with --env-file
+cp -n apps/api/.env.example apps/api/.env.development   # required: the api scripts load it with --env-file; -n keeps an existing one
 pnpm bootstrap    # start dev Postgres (:5632) + fresh schema + demo data
 pnpm dev          # web on :3200, admin on :3500, eval on :3600, api on :4200 (in-process inference)
 ```
