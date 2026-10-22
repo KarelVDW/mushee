@@ -1,4 +1,4 @@
-import { Pitch, type PitchStep } from '@mushee/notation/model/Pitch'
+import { Pitch, type PitchStep } from '@mushee/notation/model'
 
 import type { ScoreDocument, ScoreEntry } from './api'
 
@@ -95,10 +95,4 @@ function isTieStop(entry: ScoreEntry): boolean {
 /** Positions accumulate float error through triplet durations — compare loosely. */
 function nearlyEqual(a: number, b: number): boolean {
     return Math.abs(a - b) < 1e-6
-}
-
-/** "C4" style label for the pitch axis. */
-export function pitchLabel(midi: number): string {
-    const names = ['C', 'C♯', 'D', 'D♯', 'E', 'F', 'F♯', 'G', 'G♯', 'A', 'A♯', 'B']
-    return `${names[((midi % 12) + 12) % 12]}${Math.floor(midi / 12) - 1}`
 }

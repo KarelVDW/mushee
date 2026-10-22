@@ -10,8 +10,7 @@
  * corpus row in the DB fully reproduces its expected notes.
  */
 
-import { KeySignature } from '@mushee/notation/model/KeySignature'
-import { Pitch, type PitchStep } from '@mushee/notation/model/Pitch'
+import { KeySignature, Pitch, type PitchStep } from '@mushee/notation/model'
 
 import type { ClipMelody, MelodyEvent, MelodyPitch } from './melody'
 

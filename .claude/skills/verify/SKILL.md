@@ -12,8 +12,9 @@ pnpm bootstrap   # dev Postgres + fresh schema + demo data
 pnpm dev         # web :3200, api :4200 (background it; readiness: curl :3200 and :4200/plans)
 ```
 
-`pnpm bootstrap` needs `apps/api/.env.development` — copy it from
-`apps/api/.env.example` if `db:clean` fails with "not found". Postgres runs in
+`pnpm bootstrap` and `pnpm dev` need `apps/api/.env.development` (the api
+scripts load it with `--env-file`) — copy it from `apps/api/.env.example` first,
+as the root README's quickstart does. Postgres runs in
 Docker on :5632. Re-seed between destructive runs with `pnpm run db:seed`
 (idempotent) or `pnpm run db:reset` (full wipe).
 

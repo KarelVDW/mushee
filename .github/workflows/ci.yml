@@ -1,6 +1,6 @@
 # Gates every PR (and pushes to master) on the same checks that pass locally:
 # format check, whole-repo lint, type-check, the unit tests of every workspace
-# (api, admin, playback, notation incl. its 100% model coverage gate, web) and
+# (api, admin, playback, ui, notation incl. its 100% model coverage gate, web) and
 # the build. The API tests spawn real ffmpeg via ffmpeg-static — no system
 # packages needed.
 name: CI

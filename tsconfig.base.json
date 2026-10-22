@@ -3,7 +3,6 @@
     // runtime settings live in tsconfig.bundler.json (the browser-bundled
     // workspaces) and apps/api/tsconfig.json (Node, CommonJS).
     "compilerOptions": {
-        "target": "ES2022",
         "strict": true,
         "esModuleInterop": true,
         "allowSyntheticDefaultImports": true,

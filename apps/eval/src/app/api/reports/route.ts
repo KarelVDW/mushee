@@ -2,24 +2,14 @@ import { existsSync, readdirSync, readFileSync, statSync } from 'fs'
 import { NextResponse } from 'next/server'
 import { join } from 'path'
 
+import type { ReportListingDto } from '@/lib/api'
 import { REAL_ROOT, SYNTH_ROOT } from '@/server/paths'
 
 const ROOTS: Record<string, string> = { eval: SYNTH_ROOT, 'eval-real': REAL_ROOT }
 
-export interface ReportListing {
-    root: string
-    file: string
-    label: string
-    mode: string
-    provider: string
-    overallF1: number
-    scenarios: number
-    modifiedAt: string
-}
-
 /** Every report JSON the harness or this app has written, newest first. */
 export function GET() {
-    const listings: ReportListing[] = []
+    const listings: ReportListingDto[] = []
     for (const [root, dir] of Object.entries(ROOTS)) {
         if (!existsSync(dir)) continue
         for (const file of readdirSync(dir)) {

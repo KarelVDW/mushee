@@ -1,9 +1,10 @@
 'use client'
 
 import { NOTATION_INK } from '@mushee/notation/components'
+import { Pitch } from '@mushee/notation/model'
 
 import type { ScoreDocument } from '@/lib/api'
-import { buildPianoRoll, pitchLabel } from '@/lib/piano-roll'
+import { buildPianoRoll } from '@/lib/piano-roll'
 
 /**
  * Read-only piano-roll rendering of a score document. Honors the Sanctuary
@@ -67,7 +68,7 @@ export function ScorePreview({ document }: { document: ScoreDocument }) {
                             className="stroke-outline-variant/35"
                         />
                         <text x={2} y={y(midi) + ROW_HEIGHT / 2 - 3} fontSize={9} className="fill-on-surface-variant font-mono">
-                            {pitchLabel(midi)}
+                            {Pitch.fromMidi(midi).label}
                         </text>
                     </g>
                 ))}
@@ -92,7 +93,7 @@ export function ScorePreview({ document }: { document: ScoreDocument }) {
                         height={ROW_HEIGHT - 2}
                         rx={2}
                         fill={NOTATION_INK}>
-                        <title>{`${pitchLabel(note.midi)} · ${onset(note.start)} · ${trim(note.duration)} quarters`}</title>
+                        <title>{`${Pitch.fromMidi(note.midi).label} · ${onset(note.start)} · ${trim(note.duration)} quarters`}</title>
                     </rect>
                 ))}
             </svg>

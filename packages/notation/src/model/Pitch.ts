@@ -87,6 +87,15 @@ export class Pitch {
     }
 
     /**
+     * Plain-text name for axis labels and tooltips — "C4", "F♯4", "B♭3" — with the ♯/♭
+     * characters (one per semitone) rather than SMuFL glyphs, so any UI font can set it.
+     */
+    get label(): string {
+        const accidental = this.alter > 0 ? '♯'.repeat(this.alter) : '♭'.repeat(-this.alter)
+        return `${this.name}${accidental}${this.octave}`
+    }
+
+    /**
      * Whether `other` is the same written note: same letter, alteration and octave. Enharmonic
      * equivalents (C♯/D♭) sound alike but are spelled differently — compare `toMidi()` for sound.
      */
@@ -98,6 +107,22 @@ export class Pitch {
         // The fallback (and transposed's throw) stay although the type rules an unknown step
         // out: stored score JSON reaches Pitch without runtime validation.
         return (this.octave + 1) * 12 + (SEMITONES[this.name] ?? 0) + this.alter
+    }
+
+    /**
+     * The plain spelling of a MIDI pitch, for display where no key context exists: the natural
+     * where there is one, otherwise the sharp (61 → C♯4, never D♭4). {@link spellingsOf} lists
+     * every spelling when the context should choose.
+     */
+    static fromMidi(midi: number): Pitch {
+        const octave = Math.floor(midi / 12) - 1
+        const pitchClass = midi - (octave + 1) * 12
+        // The highest natural at or below the pitch class is the note itself or the one its sharp raises.
+        let name: PitchStep = 'C'
+        for (const candidate of INDEX_TO_NOTE) {
+            if (SEMITONES[candidate] <= pitchClass) name = candidate
+        }
+        return new Pitch({ name, alter: pitchClass - SEMITONES[name], octave })
     }
 
     static fromLine(line: number): Pitch {

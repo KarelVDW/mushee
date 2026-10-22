@@ -1,5 +1,6 @@
 'use client'
 
+import { Pitch } from '@mushee/notation/model'
 import { useMemo, useState } from 'react'
 
 import type { EstNoteDto } from '@/lib/api'
@@ -25,12 +26,6 @@ const ROW_HEIGHT = 14
 const LANE_HEIGHT = 5
 const AXIS_HEIGHT = 22
 const LABEL_WIDTH = 34
-
-const PITCH_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
-
-function pitchName(midi: number): string {
-    return `${PITCH_NAMES[midi % 12]}${Math.floor(midi / 12) - 1}`
-}
 
 /** Greedy one-to-one matching under the harness's onset window + exact pitch. */
 function matchNotes(expected: EstNoteDto[], derived: EstNoteDto[]): { expMatched: boolean[]; derMatched: boolean[] } {
@@ -142,7 +137,7 @@ export function NotesCompare({ expected, derived }: NotesCompareProps) {
                                     className="fill-(--color-on-surface-variant)"
                                     fontSize={9}
                                     fontFamily="var(--font-mono)">
-                                    {pitchName(midi)}
+                                    {Pitch.fromMidi(midi).label}
                                 </text>
                             </g>
                         )
@@ -182,7 +177,7 @@ export function NotesCompare({ expected, derived }: NotesCompareProps) {
                             transform: 'translate(-50%, -100%)',
                         }}>
                         <span className="font-mono text-[11px]">
-                            {hover.series === 'expected' ? 'expected' : 'pipeline'} · {pitchName(hover.note.midi)} ·{' '}
+                            {hover.series === 'expected' ? 'expected' : 'pipeline'} · {Pitch.fromMidi(hover.note.midi).label} ·{' '}
                             {hover.note.onsetSec.toFixed(2)}s +{hover.note.durSec.toFixed(2)}s · {hover.matched ? 'matched' : 'unmatched'}
                         </span>
                     </div>

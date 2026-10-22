@@ -254,6 +254,30 @@ describe('Pitch', () => {
         })
     })
 
+    describe('fromMidi (plain sharp spelling of a MIDI pitch)', () => {
+        it('spells naturals as naturals and the black keys as sharps', () => {
+            const names = Array.from({ length: 12 }, (_, i) => Pitch.fromMidi(60 + i).label)
+            expect(names).toEqual(['C4', 'C♯4', 'D4', 'D♯4', 'E4', 'F4', 'F♯4', 'G4', 'G♯4', 'A4', 'A♯4', 'B4'])
+        })
+
+        it('round-trips through toMidi across the range, below MIDI 0 included', () => {
+            for (const midi of [-13, -1, 0, 21, 59, 60, 61, 108, 127]) {
+                expect(Pitch.fromMidi(midi).toMidi()).toBe(midi)
+            }
+            expect(Pitch.fromMidi(21).label).toBe('A0')
+            expect(Pitch.fromMidi(-1).label).toBe('B-2')
+        })
+    })
+
+    describe('label (plain-text name)', () => {
+        it('writes one ♯ or ♭ character per semitone of alteration', () => {
+            expect(new Pitch({ name: 'C', octave: 4 }).label).toBe('C4')
+            expect(new Pitch({ name: 'B', alter: -1, octave: 3 }).label).toBe('B♭3')
+            expect(new Pitch({ name: 'F', alter: 2, octave: 5 }).label).toBe('F♯♯5')
+            expect(new Pitch({ name: 'E', alter: -2, octave: 2 }).label).toBe('E♭♭2')
+        })
+    })
+
     describe('spellingsOf (enharmonic candidates of a MIDI pitch)', () => {
         const spelledAs = (midi: number) => Pitch.spellingsOf(midi).map((p) => `${p.name}${p.accidental ?? ''}${p.octave}`)
 
