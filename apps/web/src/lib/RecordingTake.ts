@@ -20,10 +20,21 @@ export class RecordingTake {
     static startingAt(score: Score, note: Note | null): RecordingTake | null {
         if (note) return new RecordingTake(score, note.measure.index, note.clef)
         const last = score.lastMeasure
-        if (!last) return null
-        const index = score.measures.findLastIndex((measure) => RecordingTake.holdsPitchedNotes(measure)) + 1
+        const index = RecordingTake.startIndexFor(score, null)
+        if (!last || index === null) return null
         const clef = score.measures[index]?.clefAtOrBefore(0) ?? last.lastClef
         return new RecordingTake(score, index, clef)
+    }
+
+    /**
+     * Where {@link startingAt} would put the take's first bar (0-based) — cheap, so the Record
+     * button and the count-in can name the bar ("from bar 3") and always agree with the take.
+     * Null only for a score without a single bar.
+     */
+    static startIndexFor(score: Score, note: Note | null): number | null {
+        if (note) return note.measure.index
+        if (!score.lastMeasure) return null
+        return score.measures.findLastIndex((measure) => RecordingTake.holdsPitchedNotes(measure)) + 1
     }
 
     private static holdsPitchedNotes(measure: Measure): boolean {

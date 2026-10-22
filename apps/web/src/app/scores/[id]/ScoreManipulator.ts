@@ -115,6 +115,8 @@ export class ScoreManipulator {
     private clearedFromMeasure: number | null = null
     /** Whether the current selection was made quietly (see {@link select}). */
     private _quietSelection = false
+    /** Whether the current selection is the editor's own opening one (see {@link selectionIsInitial}). */
+    private _initialSelection = false
     /** Bumped by every committed edit that changed the score and every undo / redo (see {@link editCount}). */
     private _editCount = 0
 
@@ -287,12 +289,16 @@ export class ScoreManipulator {
         return this.sharedBySelection((note) => note.pitch?.accidental)
     }
 
-    /** Bind a freshly loaded score and its (debounced) autosave, selecting the first note. */
+    /**
+     * Bind a freshly loaded score and its (debounced) autosave, selecting the first note — the
+     * editor's opening selection, so the keys and the dock have somewhere to act (see
+     * {@link selectionIsInitial}).
+     */
     attach(score: Score, save: (score: Score) => void): void {
         this._score = score
         this.save = save
         this.history.reset(score)
-        this.setSingle(score.firstMeasure?.firstNote ?? null)
+        this.setInitial(score.firstMeasure?.firstNote ?? null)
         this.emit()
     }
 
@@ -302,13 +308,16 @@ export class ScoreManipulator {
      * Collapse the selection onto a single note (or clear it). The note becomes anchor + focus.
      * A `quiet` selection is one the editor made for the user rather than one they asked for —
      * the bar after a finished take — so it neither previews the note's pitch nor stops what is
-     * playing (see {@link selectionIsQuiet}).
+     * playing (see {@link selectionIsQuiet}). `initial` puts the editor's opening selection back
+     * as it was (a take that never got going), still not one the user made (see
+     * {@link selectionIsInitial}).
      */
-    select(note: Note | null, { quiet = false }: { quiet?: boolean } = {}): void {
+    select(note: Note | null, { quiet = false, initial = false }: { quiet?: boolean; initial?: boolean } = {}): void {
         // Clearing remembers where the selection was — a take clears it as it starts, and the
         // dock keeps showing that bar's settings (see settingsPosition).
         this.clearedFromMeasure = note ? null : (this.addressOf(this._selectedNote)?.measureIndex ?? this.clearedFromMeasure)
-        this.setSingle(note)
+        if (initial) this.setInitial(note)
+        else this.setSingle(note)
         this._quietSelection = quiet && note !== null
         this.emit()
         if (note && !quiet) this.speakSelection()
@@ -317,6 +326,26 @@ export class ScoreManipulator {
     /** Whether the current selection was made by a quiet {@link select}: no preview, no stopping playback. */
     get selectionIsQuiet(): boolean {
         return this._quietSelection
+    }
+
+    /**
+     * Whether the selection is still the one the editor opened the score with — the first note,
+     * selected on {@link attach} (or after a history step that carried no selection) — rather
+     * than one the user made. Record treats it as no selection (see {@link recordingStartNote}).
+     * The user's first select, move or edit clears it.
+     */
+    get selectionIsInitial(): boolean {
+        return this._initialSelection
+    }
+
+    /**
+     * The note Record starts a take at: the selected note's bar — but not the editor's own
+     * opening selection, which would put the take in front of the music already written. Null
+     * then, and with nothing selected: the take carries on after the last bar that holds notes
+     * (RecordingTake.startingAt). The Record button's label and the take both read it, so they agree.
+     */
+    get recordingStartNote(): Note | null {
+        return this._initialSelection ? null : this._selectedNote
     }
 
     /** Extend the selection so it spans from the current anchor to `focus` (drag / shift-click). */
@@ -355,13 +384,21 @@ export class ScoreManipulator {
 
     private setSingle(note: Note | null): void {
         this._quietSelection = false
+        this._initialSelection = false
         this._anchorNote = note
         this._selectedNote = note
         this._selectedNotes = note ? [note] : []
     }
 
+    /** {@link setSingle}, marked as the editor's opening selection (see {@link selectionIsInitial}). */
+    private setInitial(note: Note | null): void {
+        this.setSingle(note)
+        this._initialSelection = note !== null
+    }
+
     private setRange(anchor: Note, focus: Note): void {
         this._quietSelection = false
+        this._initialSelection = false
         this._anchorNote = anchor
         this._selectedNote = focus
         this._selectedNotes = this.notesBetween(anchor, focus)
@@ -501,6 +538,8 @@ export class ScoreManipulator {
         const score = this._score
         if (!score) return false
         const version = score.version
+        // An edit or a move is the user acting where the selection is: it is theirs from now on.
+        this._initialSelection = false
         this.manipulate(mutate)
         // Navigation runs through here too, but changes nothing: only a real change counts, and
         // only a real change is saved — so moving around never reads as "Saving…".
@@ -898,7 +937,7 @@ export class ScoreManipulator {
         const anchor = this.noteAt(restored.selection?.anchor)
         const focus = this.noteAt(restored.selection?.focus)
         if (anchor && focus) this.setRange(anchor, focus)
-        else this.setSingle(restored.score.firstMeasure?.firstNote ?? null)
+        else this.setInitial(restored.score.firstMeasure?.firstNote ?? null)
         this.save(restored.score)
         this.emit()
     }

@@ -126,6 +126,16 @@ describe('RecordingTake', () => {
         it('has nowhere to start in a score without bars', () => {
             expect(RecordingTake.startingAt(makeScore(0), null)).toBeNull()
         })
+
+        it('names where it would start without starting — what the Record button and the count-in say', () => {
+            const score = makeScore(4)
+            fill(score, 1, [pitched('C', 5, 'w')])
+            expect(RecordingTake.startIndexFor(score, null)).toBe(2)
+            expect(RecordingTake.startIndexFor(score, score.measures[3].firstNote)).toBe(3)
+            expect(RecordingTake.startIndexFor(makeScore(0), null)).toBeNull()
+            // Asking adds nothing.
+            expect(score.measures).toHaveLength(4)
+        })
     })
 
     describe('after the take', () => {

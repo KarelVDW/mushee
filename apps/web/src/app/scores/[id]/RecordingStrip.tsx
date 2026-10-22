@@ -63,7 +63,7 @@ function HintLine({ hint }: { hint: StripHint }) {
 /**
  * The one recording status surface (contract C10): for the length of a take it stands in for
  * the dock's tool wells — a white capsule well on the dock's chrome. The count-in reads 'Get
- * ready' over one dot per click (the engine's own clock fills them), then 'Recording' with a
+ * ready · from bar 3' over one dot per click (the engine's own clock fills them), then 'Recording' with a
  * slowly pulsing red dot and the elapsed time; one hint line says how to stop, how much of
  * today is left, or what the server's transcription is doing. Screen readers hear the state
  * changes once, through the editor's announcer (contract C11); the strip's own polite status
@@ -86,6 +86,11 @@ export function RecordingStrip({ status, touch }: { status: RecordingStatus; tou
             <div aria-hidden className="flex items-center gap-2.5">
                 {status.phase === 'recording' && <span className="recording-dot size-2 shrink-0 rounded-full bg-error" />}
                 <span className="font-label font-medium text-[15px] leading-none text-on-surface">{copy.label}</span>
+                {copy.startsFrom && (
+                    <span className="font-body font-normal text-[13px] leading-none text-on-surface-variant whitespace-nowrap">
+                        · {copy.startsFrom}
+                    </span>
+                )}
                 {status.phase === 'countoff' ? (
                     <CountoffDots countoff={status.countoff} />
                 ) : (

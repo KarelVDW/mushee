@@ -23,7 +23,7 @@ import { RecordingTake } from '@/lib/RecordingTake'
 import type { RecordingLimitInfo } from '@/lib/TranscriptionSocket'
 import type { Transport } from '@/lib/Transport'
 
-import { MicFailure, type RecordingStatus, TakeSummaryCopy } from './RecordingCopy'
+import { MicFailure, type RecordingStatus, RecordingStripCopy, TakeSummaryCopy } from './RecordingCopy'
 import type { ScoreManipulator } from './ScoreManipulator'
 
 /** Why the recording was cut short (or refused, or couldn't hear) — drives which dialog shows. */
@@ -196,10 +196,12 @@ export function useRecording({
 
         const cursorEl = playbackCursorRef.current
         if (!cursorEl) return
-        // With a note selected the take records into its bar; with nothing selected it
-        // carries on after the music (see RecordingTake.startingAt).
+        // With a note selected the take records into its bar; with nothing selected — or only the
+        // editor's opening selection, on a score just opened — it carries on after the music
+        // (see ScoreManipulator.recordingStartNote and RecordingTake.startingAt).
         const before = activeNote
-        const take = RecordingTake.startingAt(score, before)
+        const beforeWasInitial = manipulator.selectionIsInitial
+        const take = RecordingTake.startingAt(score, manipulator.recordingStartNote)
         if (!take) return
 
         // Stop any ongoing playback before beginning a recording session.
@@ -219,7 +221,9 @@ export function useRecording({
          */
         const abandon = () => {
             if (take.discardIfEmpty()) saveToApi({ score })
-            if (!transport.isRecording) manipulator.select(before?.isAttached ? before : null, { quiet: true })
+            if (!transport.isRecording) {
+                manipulator.select(before?.isAttached ? before : null, { quiet: true, initial: beforeWasInitial })
+            }
         }
         /** The bar after the take, quietly selected — Record, the dock and the phone's nudges work at once. */
         const carryOn = () => {
@@ -256,6 +260,7 @@ export function useRecording({
             health: 'ok',
             micModeReminder: reminder,
             secondsLeftAtStart: credits && credits.remainingSeconds !== null ? credits.remainingSeconds + credits.packSeconds : null,
+            startBar: take.startIndex + 1,
         })
 
         let mic: MediaTrackSettings | null
@@ -267,7 +272,7 @@ export function useRecording({
                 wsUrl: recordingSocketUrl(id),
                 onStateChange: (state) => {
                     setRecordingState(state)
-                    if (state === 'countoff') manipulator.announce('Count-in')
+                    if (state === 'countoff') manipulator.announce(RecordingStripCopy.countInAnnouncement(take.startIndex + 1))
                     if (state === 'idle') {
                         setStatus(null)
                         // The take ended: whatever bars are still waiting for their
@@ -413,6 +418,11 @@ export function useRecording({
     /** The Record button: stop a running take, or start one (at the selected note, or after the music). */
     const toggleRecording = useCallback(() => void handleRecordToggle(), [handleRecordToggle])
 
+    // Where pressing Record now would start, 1-based — named by the Record button's tooltip, from
+    // the same note the take reads (ScoreManipulator.recordingStartNote), so the two agree.
+    const startIndex = score ? RecordingTake.startIndexFor(score, manipulator.recordingStartNote) : null
+    const recordFromBar = startIndex === null ? null : startIndex + 1
+
     /** The blocked-mic dialog's "Try again": close it and press Record again. */
     const retryRecording = useCallback(() => {
         setRecordingHalt(null)
@@ -432,6 +442,7 @@ export function useRecording({
         recordingHalt,
         dismissRecordingHalt,
         toggleRecording,
+        recordFromBar,
         retryRecording,
         micModeGuideOpen,
         confirmMicModeGuide,

@@ -101,7 +101,7 @@ test('a take: the strip replaces the tools, Record becomes Stop, and the bar aft
 
     await stop.click()
     // The summary names the bar the take added and the next step, with a way to hear it and to take it back.
-    const summary = page.getByRole('status').filter({ hasText: /Added bars? 1(–2)?\. Click any note to fix it\./ })
+    const summary = page.getByRole('status').filter({ hasText: /Added bars? 2(–3)?\. Click any note to fix it\./ })
     await expect(summary).toBeVisible()
     await expect(summary.getByRole('button', { name: 'Hear it back' })).toBeVisible()
     await expect(summary.getByRole('button', { name: 'Undo this recording', exact: true })).toBeVisible()
@@ -111,7 +111,43 @@ test('a take: the strip replaces the tools, Record becomes Stop, and the bar aft
     await expect(page.locator(SELECTION_BANDS)).toHaveCount(1)
     await expect(page.getByRole('button', { name: 'Rest', exact: true })).toBeEnabled()
     // Screen readers hear it too, through the editor's live region.
-    await expect(page.locator('[aria-live="polite"]:not([role])')).toHaveText(/^Recording stopped\. Added bars? 1( to 2)?\./)
+    await expect(page.locator('[aria-live="polite"]:not([role])')).toHaveText(/^Recording stopped\. Added bars? 2( to 3)?\./)
+})
+
+test('Record on a score just opened carries on after the tune, and says where before it starts', async ({ page, browserName }) => {
+    test.skip(browserName === 'webkit', 'the synthetic microphone needs Chromium’s MediaRecorder')
+    await mockRecording(page)
+    // The editor selects the first note as the score opens; that is not the user picking bar 1,
+    // so the recording goes after the written bar — and the button says so.
+    await expect(page.locator(SELECTION_BANDS)).toHaveCount(1)
+    const record = page.getByRole('button', { name: 'Record', exact: true })
+    await record.hover()
+    await expect(page.getByText('Record a melody from bar 2')).toBeVisible()
+    await record.click()
+    const strip = page.getByRole('group', { name: 'Recording status' })
+    await expect(strip).toContainText('Get ready')
+    await expect(strip).toContainText('from bar 2')
+    const live = page.locator('[aria-live="polite"]:not([role])')
+    await expect(live).toHaveText('Get ready, from bar 2.')
+    await expect(strip).toContainText('Recording', { timeout: 6000 })
+    await page.getByRole('button', { name: 'Stop recording', exact: true }).click()
+    await expect(page.getByRole('status').filter({ hasText: /^Added bars? 2(–3)?\./ })).toBeVisible()
+
+    // The tune is where it was: walking back from the bar after the recording meets the
+    // recorded G in bar 2, then the tune's last note in bar 1.
+    await focusEditor(page)
+    await page.keyboard.press('ArrowLeft')
+    await expect(live).toHaveText(/^G, whole note\. Bar 2, beat 1\./)
+    await page.keyboard.press('ArrowLeft')
+    await expect(live).toHaveText('F, quarter note. Bar 1, beat 4.')
+})
+
+test('a note the user picks is where Record starts, and the button names its bar', async ({ page }) => {
+    await focusEditor(page)
+    await page.keyboard.press('ArrowRight')
+    const record = page.getByRole('button', { name: 'Record', exact: true })
+    await record.hover()
+    await expect(page.getByText('Record a melody from bar 1')).toBeVisible()
 })
 
 test('the summary’s Undo takes the whole recording back in one step', async ({ page, browserName }) => {
@@ -124,7 +160,7 @@ test('the summary’s Undo takes the whole recording back in one step', async ({
     await expect(page.getByRole('group', { name: 'Recording status' })).toContainText('Recording', { timeout: 6000 })
     await page.getByRole('button', { name: 'Stop recording', exact: true }).click()
 
-    const summary = page.getByRole('status').filter({ hasText: /Added bars? 1/ })
+    const summary = page.getByRole('status').filter({ hasText: /Added bars? 2/ })
     await expect(summary).toBeVisible()
     await expect(headerUndo).toBeEnabled()
     await summary.getByRole('button', { name: 'Undo this recording', exact: true }).click()

@@ -22,6 +22,8 @@ export interface RecordingStatus {
     micModeReminder: boolean
     /** Recording left today when the take started, packs included; null on an uncapped plan. */
     secondsLeftAtStart: number | null
+    /** The bar the take's first note lands in, 1-based (as the user counts them). */
+    startBar: number
 }
 
 /** The strip's one hint line: what it says, and how it is drawn. */
@@ -57,8 +59,22 @@ export class RecordingStripCopy {
     }
 
     /**
+     * Where the recording goes, beside 'Get ready' through the count-in ('from bar 3') — the
+     * selection highlight may sit elsewhere (a score just opened has its first note selected),
+     * so the strip says it. Null once recording.
+     */
+    get startsFrom(): string | null {
+        return this.status.phase === 'countoff' ? `from bar ${this.status.startBar}` : null
+    }
+
+    /** What the editor's announcer says as the count-in starts — the strip's own words, with where it records. */
+    static countInAnnouncement(startBar: number): string {
+        return `Get ready, from bar ${startBar}.`
+    }
+
+    /**
      * The strip's live-region text: the transcription warning or recovery while one is up, else
-     * nothing. The state words ('Count-in', 'Recording') reach screen readers through the
+     * nothing. The state words ('Get ready', 'Recording') reach screen readers through the
      * editor's announcer (contract C11) alone, so no state is ever spoken twice.
      */
     get news(): string | null {

@@ -29,6 +29,11 @@ export interface TransportControlsProps {
      * take always stays stoppable.
      */
     recordDisabled?: boolean
+    /**
+     * The bar (1-based) a take started now would record into — the selected one, or the bar
+     * after the music — named in Record's tooltip ('Record a melody from bar 3').
+     */
+    recordFromBar?: number | null
     metronome: boolean
     onMetronomeToggle: () => void
     /** Thumb-sized buttons with the record button as the biggest of the set (the mobile dock). */
@@ -50,10 +55,12 @@ export function RecordButton({
     recordingState,
     onRecordToggle,
     recordDisabled = false,
+    recordFromBar = null,
     large = false,
     shortcuts,
-}: Pick<TransportControlsProps, 'recordingState' | 'onRecordToggle' | 'recordDisabled' | 'large' | 'shortcuts'>) {
+}: Pick<TransportControlsProps, 'recordingState' | 'onRecordToggle' | 'recordDisabled' | 'recordFromBar' | 'large' | 'shortcuts'>) {
     const live = recordingState !== 'idle'
+    const idleTooltip = recordFromBar === null ? 'Record a melody' : `Record a melody from bar ${recordFromBar}`
     return (
         <span data-record-button className="contents">
             <TransportBtn
@@ -62,7 +69,7 @@ export function RecordButton({
                 active={live}
                 onClick={onRecordToggle}
                 ariaLabel={live ? 'Stop recording' : 'Record'}
-                tooltip={live ? 'Stop recording' : 'Record a melody'}
+                tooltip={live ? 'Stop recording' : idleTooltip}
                 shortcut={live ? shortcuts?.playPause : shortcuts?.record}
                 tooltipSide={large ? 'top' : 'bottom'}
                 disabled={!live && recordDisabled}
@@ -78,6 +85,7 @@ export function TransportControls({
     recordingState,
     onRecordToggle,
     recordDisabled = false,
+    recordFromBar = null,
     metronome,
     onMetronomeToggle,
     large = false,
@@ -126,6 +134,7 @@ export function TransportControls({
                 recordingState={recordingState}
                 onRecordToggle={onRecordToggle}
                 recordDisabled={recordDisabled}
+                recordFromBar={recordFromBar}
                 large={large}
                 shortcuts={shortcuts}
             />

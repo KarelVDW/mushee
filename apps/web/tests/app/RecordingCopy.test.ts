@@ -10,6 +10,7 @@ const status = (over: Partial<RecordingStatus> = {}): RecordingStatus => ({
     health: 'ok',
     micModeReminder: false,
     secondsLeftAtStart: null,
+    startBar: 1,
     ...over,
 })
 
@@ -17,11 +18,18 @@ describe('RecordingStripCopy', () => {
     it('reads "Get ready" through the count-in and "Recording" after, leaving the state words out of its live region', () => {
         const countoff = new RecordingStripCopy(status({ phase: 'countoff', captureStartedAt: null }), 0, false)
         expect(countoff.label).toBe('Get ready')
-        // The editor's announcer says 'Count-in' and 'Recording': the strip's region stays quiet, so neither is heard twice.
+        // The editor's announcer says 'Get ready' and 'Recording': the strip's region stays quiet, so neither is heard twice.
         expect(countoff.news).toBeNull()
         const live = new RecordingStripCopy(status(), 7, false)
         expect(live.label).toBe('Recording')
         expect(live.news).toBeNull()
+    })
+
+    it('says where the recording goes through the count-in, in the strip and to a screen reader alike', () => {
+        const countoff = new RecordingStripCopy(status({ phase: 'countoff', captureStartedAt: null, startBar: 3 }), 0, true)
+        expect(countoff.startsFrom).toBe('from bar 3')
+        expect(new RecordingStripCopy(status({ startBar: 3 }), 2, true).startsFrom).toBeNull()
+        expect(RecordingStripCopy.countInAnnouncement(3)).toBe('Get ready, from bar 3.')
     })
 
     it('says how to stop while recording — by tap on a phone, by Space or the stop square elsewhere', () => {
