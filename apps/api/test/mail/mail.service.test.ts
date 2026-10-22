@@ -128,6 +128,16 @@ describe('MailService announcements', () => {
         expect(html).toContain('/settings')
     })
 
+    it('previews {{name}} in subject and body as the sample recipient, never as the SendGrid token', () => {
+        const preview = MailService.previewAnnouncement('Hi {{name}}', 'Dear {{ name }},\n\nSee you, {{name}}.')
+        expect(preview.subject).toBe('Hi Ada')
+        expect(preview.text).toContain('Dear Ada,\n\nSee you, Ada.')
+        expect(preview.html).toContain('<p>Dear Ada,</p>')
+        expect(preview.html).toContain('<p>See you, Ada.</p>')
+        for (const part of Object.values(preview)) expect(part).not.toContain('-firstName-')
+        expect(MailService.previewAnnouncement('Hi {{name}}', 'B', 'Grace').subject).toBe('Hi Grace')
+    })
+
     it('flattens markup in the subject, where HTML cannot go', () => {
         const rendered = MailService.renderAnnouncement('Beta ends on **1 October** — see [pricing](https://solkey.io/pricing)', 'Body')
         expect(rendered.subject).toBe('Beta ends on 1 October — see pricing (https://solkey.io/pricing)')
