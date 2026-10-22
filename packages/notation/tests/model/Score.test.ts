@@ -10,7 +10,7 @@ import { Pitch } from '@mushee/notation/model/Pitch'
 import { Score } from '@mushee/notation/model/Score'
 import { TimeSignature } from '@mushee/notation/model/TimeSignature'
 import type { DurationType } from '@mushee/notation/model/types'
-import { fill, makeScore, p, pitched, q } from '@mushee/notation/testing'
+import { clefAt, fill, keyAt, makeScore, p, pitched, q } from '@mushee/notation/testing'
 import { describe, expect, it } from 'vitest'
 
 /** A C4 written under a 3:2 ratio. */
@@ -201,9 +201,7 @@ describe('Score', () => {
 
         it('inherits clef, key (incl. mode) and time signature from the previous measure', () => {
             const score = new Score()
-            const a = score.addMeasure()
-            a.complete()
-            a.setTimeSignature(new TimeSignature(3, 4))
+            const a = score.appendMeasure(new Measure(score, 'treble', new TimeSignature(3, 4))).complete()
             score.setClef(a.firstNote, 'bass')
             score.setKeySignature(a.firstNote, 3, 'minor')
             const b = score.addMeasure()
@@ -1042,10 +1040,10 @@ describe('Score', () => {
             const m = score.firstMeasure
             if (!m) throw new Error('expected firstMeasure')
             score.setClef(m.noteAtBeat(2), 'bass')
-            expect(m.clefAtBeat(2)?.type).toBe('bass')
+            expect(clefAt(m, 2)?.type).toBe('bass')
             // Active clef before beat 2 is the treble leading clef — setting beat 2 to treble drops it.
             score.setClef(m.noteAtBeat(2), 'treble')
-            expect(m.clefAtBeat(2)).toBeUndefined()
+            expect(clefAt(m, 2)).toBeUndefined()
         })
 
         it('stops drawing a mid-measure clef that became a no-op after the leading clef changed', () => {
@@ -1209,7 +1207,7 @@ describe('Score', () => {
                 if (!m) throw new Error('expected firstMeasure')
                 score.setKeySignature(m.firstNote, 1) // leading G major
                 score.setKeySignature(m.noteAtBeat(2), 0) // mid-measure back to C
-                const midKey = m.keyAtBeat(2)
+                const midKey = keyAt(m, 2)
                 if (!midKey) throw new Error('expected mid-measure key')
                 expect(KeySignatureLayout.drawnAccidentalsFor(midKey).map((a) => a.glyphName)).toEqual(['accidentalNatural'])
             })

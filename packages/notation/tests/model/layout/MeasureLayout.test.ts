@@ -7,7 +7,7 @@ import { type MeasureFlags, MeasureMetrics } from '@mushee/notation/model/layout
 import { Measure } from '@mushee/notation/model/Measure'
 import { Score } from '@mushee/notation/model/Score'
 import { TimeSignature } from '@mushee/notation/model/TimeSignature'
-import { makeScore, pitched, rest, triplet } from '@mushee/notation/testing'
+import { clefAt, keyAt, makeScore, pitched, rest, triplet } from '@mushee/notation/testing'
 import { describe, expect, it } from 'vitest'
 
 /** A registered measure inside a fresh score (no notes unless added). */
@@ -210,7 +210,7 @@ describe('MeasureLayout', () => {
             const { m } = registeredMeasure()
             m.addNotes([pitched('C', 4, 'h'), pitched('E', 4, 'h')])
             m.setKeySignature(2, 2)
-            const midKey = m.keyAtBeat(2)
+            const midKey = keyAt(m, 2)
             if (!midKey) throw new Error('expected a mid-measure key signature')
             const layout = m.layout
             expect(layout.getXForElement(midKey)).toBeGreaterThan(layout.getXForElement(m.notes[0]))
@@ -221,7 +221,7 @@ describe('MeasureLayout', () => {
             const { m } = registeredMeasure()
             m.addNotes([pitched('C', 4, 'q'), pitched('D', 4, 'q'), pitched('E', 4, 'q'), pitched('F', 4, 'q')])
             m.setClef(2, 'bass')
-            const midClef = m.clefAtBeat(2)
+            const midClef = clefAt(m, 2)
             if (!midClef) throw new Error('expected a mid-measure clef')
             const layout = m.layout
             expect(layout.getXForElement(midClef)).toBeGreaterThan(layout.getXForElement(m.notes[0]))
@@ -233,8 +233,8 @@ describe('MeasureLayout', () => {
             m.addNotes([pitched('C', 4, 'h'), pitched('E', 4, 'h')])
             m.setClef(2, 'bass')
             m.setKeySignature(2, 2)
-            const midClef = m.clefAtBeat(2)
-            const midKey = m.keyAtBeat(2)
+            const midClef = clefAt(m, 2)
+            const midKey = keyAt(m, 2)
             if (!midClef || !midKey) throw new Error('expected mid-measure clef and key')
             const layout = m.layout
             expect(layout.getXForElement(midClef)).toBeLessThan(layout.getXForElement(midKey))
@@ -246,8 +246,8 @@ describe('MeasureLayout', () => {
             m.addNotes([pitched('C', 4, 'q'), pitched('D', 4, 'q'), pitched('E', 4, 'q'), pitched('F', 4, 'q')])
             m.setClef(1, 'bass')
             m.setKeySignature(2, 2)
-            const midClef = m.clefAtBeat(1)
-            const midKey = m.keyAtBeat(2)
+            const midClef = clefAt(m, 1)
+            const midKey = keyAt(m, 2)
             if (!midClef || !midKey) throw new Error('expected mid-measure clef and key')
             expect(m.layout.getXForElement(midClef)).toBeLessThan(m.layout.getXForElement(midKey))
         })
@@ -255,7 +255,7 @@ describe('MeasureLayout', () => {
         it('a mid-measure clef in an empty measure joins the leading run', () => {
             const { m } = registeredMeasure()
             m.setClef(2, 'bass')
-            const midClef = m.clefAtBeat(2)
+            const midClef = clefAt(m, 2)
             if (!midClef) throw new Error('expected a mid-measure clef')
             // Leading run: leading clef, time signature, then the homeless mid clef.
             expect(m.layout.getXForElement(midClef)).toBe(m.clef.layout.width.total + m.timeSignature.layout.width.total)
@@ -265,7 +265,7 @@ describe('MeasureLayout', () => {
             const { m } = registeredMeasure()
             m.addNotes([pitched('C', 4, 'h'), pitched('E', 4, 'h')])
             m.setClef(3, 'bass')
-            const midClef = m.clefAtBeat(3)
+            const midClef = clefAt(m, 3)
             if (!midClef) throw new Error('expected a mid-measure clef')
             expect(m.layout.getXForElement(midClef)).toBeGreaterThan(m.layout.getXForElement(m.notes[1]))
         })
@@ -278,8 +278,8 @@ describe('MeasureLayout', () => {
             score.setKeySignature(m.firstNote, 2)
             m.setClef(2, 'bass')
             m.setKeySignature(3, 1)
-            const midClef = m.clefAtBeat(2)
-            const midKey = m.keyAtBeat(3)
+            const midClef = clefAt(m, 2)
+            const midKey = keyAt(m, 3)
             if (!midClef || !midKey) throw new Error('expected mid-measure clef and key')
             const layout = m.layout
             expect(layout.attributes.map((a) => a.element)).toEqual([m.clef, m.keySignature, m.timeSignature, midClef, midKey])
@@ -313,7 +313,7 @@ describe('MeasureLayout', () => {
             m.addNotes([pitched('C', 4, 'h'), pitched('E', 4, 'h')])
             score.setKeySignature(m.firstNote, 1)
             m.setKeySignature(2, 3)
-            const midKey = m.keyAtBeat(2)
+            const midKey = keyAt(m, 2)
             if (!midKey) throw new Error('expected a mid-measure key')
             expect(m.layout.keyLayoutFor(m.keySignature).accidentals).toHaveLength(1)
             expect(m.layout.keyLayoutFor(midKey).accidentals).toHaveLength(3)

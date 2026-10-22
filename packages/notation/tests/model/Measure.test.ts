@@ -4,7 +4,7 @@ import { Note } from '@mushee/notation/model/Note'
 import { Score } from '@mushee/notation/model/Score'
 import { TimeSignature } from '@mushee/notation/model/TimeSignature'
 import type { ClefType } from '@mushee/notation/model/types'
-import { makeScore, pitched, rest } from '@mushee/notation/testing'
+import { clefAt, keyAt, makeScore, pitched, rest } from '@mushee/notation/testing'
 import { describe, expect, it } from 'vitest'
 
 describe('Measure', () => {
@@ -125,7 +125,7 @@ describe('Measure', () => {
         })
     })
 
-    describe('addNotes / removeNotes / replaceNotes', () => {
+    describe('addNotes / replaceNotes', () => {
         it('addNotes appends and assigns measure', () => {
             const score = new Score()
             const m = new Measure(score, 'treble', new TimeSignature(4, 4))
@@ -143,16 +143,6 @@ describe('Measure', () => {
             m.addNotes([a])
             m.addNotes([b], 'start')
             expect(m.notes[0]).toBe(b)
-        })
-
-        it('removeNotes detaches measure from removed notes', () => {
-            const score = new Score()
-            const m = new Measure(score, 'treble', new TimeSignature(4, 4))
-            const n = rest('q')
-            m.addNotes([n])
-            m.removeNotes([n])
-            expect(m.notes).not.toContain(n)
-            expect(() => n.measure).toThrow()
         })
 
         it('replaceNotes throws when targets are not in this measure', () => {
@@ -330,7 +320,7 @@ describe('Measure', () => {
             const m = new Measure(score, 'treble', new TimeSignature(4, 4))
             m.addClef(2, 'bass')
             expect(m.clefs).toHaveLength(2)
-            expect(m.clefAtBeat(2)?.type).toBe('bass')
+            expect(clefAt(m, 2)?.type).toBe('bass')
         })
 
         it('setClef(0) replaces the leading clef and marks it explicit', () => {
@@ -346,7 +336,7 @@ describe('Measure', () => {
             const score = new Score()
             const m = new Measure(score, 'treble', new TimeSignature(4, 4))
             m.setClef(2, 'treble') // same as the leading treble → redundant, not stored
-            expect(m.clefAtBeat(2)).toBeUndefined()
+            expect(clefAt(m, 2)).toBeUndefined()
             expect(m.midMeasureClefs).toHaveLength(0)
         })
 
@@ -370,13 +360,16 @@ describe('Measure', () => {
             expect(m.clefAtOrBefore(3).type).toBe('bass')
         })
 
-        it('clefBefore ignores a clef exactly at the beat', () => {
+        it('setClef judges redundancy by the clef in effect before the beat, ignoring one exactly at it', () => {
             const score = new Score()
             const m = new Measure(score, 'treble', new TimeSignature(4, 4))
             m.addClef(2, 'bass')
-            expect(m.clefBefore(2).type).toBe('treble')
-            expect(m.clefBefore(3).type).toBe('bass')
-            expect(m.clefBefore(0).type).toBe('treble') // nothing strictly before beat 0 → leading clef
+            m.setClef(2, 'bass') // the bass at beat 2 itself doesn't count: treble is in effect before it
+            expect(clefAt(m, 2)?.type).toBe('bass')
+            m.setClef(3, 'bass') // bass is already in effect before beat 3 → redundant, not stored
+            expect(clefAt(m, 3)).toBeUndefined()
+            m.setClef(2, 'treble') // replaces the bass; treble is in effect before beat 2 → dropped
+            expect(clefAt(m, 2)).toBeUndefined()
         })
 
         it('lastClef is the highest-beat clef (carried into the next measure)', () => {
@@ -392,7 +385,7 @@ describe('Measure', () => {
             const m = score.firstMeasure
             if (!m) throw new Error('expected firstMeasure')
             m.setClef(2, 'bass')
-            const midClef = m.clefAtBeat(2)
+            const midClef = clefAt(m, 2)
             if (!midClef) throw new Error('expected mid-measure clef')
             expect(() => m.layout.getXForElement(midClef)).not.toThrow()
             expect(m.layout.getXForElement(midClef)).toBeGreaterThan(m.layout.getXForElement(m.clef))
@@ -428,7 +421,7 @@ describe('Measure', () => {
             const score = new Score()
             const m = new Measure(score, 'treble', new TimeSignature(4, 4))
             m.addKeySignature(2, -3)
-            expect(m.keyAtBeat(2)?.fifths).toBe(-3)
+            expect(keyAt(m, 2)?.fifths).toBe(-3)
         })
 
         it('setKeySignature(0) replaces the leading key and marks it explicit', () => {
@@ -444,7 +437,7 @@ describe('Measure', () => {
             const score = new Score()
             const m = new Measure(score, 'treble', new TimeSignature(4, 4), { keyFifths: 1 }) // leading G major
             m.setKeySignature(2, 1) // same as the carried-in G major → redundant, not stored at beat 2
-            expect(m.keyAtBeat(2)).toBeUndefined()
+            expect(keyAt(m, 2)).toBeUndefined()
             expect(m.midMeasureKeySignatures).toHaveLength(0)
         })
 
@@ -508,7 +501,7 @@ describe('Measure', () => {
             const m = score.firstMeasure
             if (!m) throw new Error('expected firstMeasure')
             m.setKeySignature(2, 3)
-            const midKey = m.keyAtBeat(2)
+            const midKey = keyAt(m, 2)
             if (!midKey) throw new Error('expected mid-measure key')
             expect(() => m.layout.getXForElement(midKey)).not.toThrow()
         })
@@ -531,7 +524,7 @@ describe('Measure', () => {
             m.transposeKeySignatures(2, 1) // up a major 2nd: +2 fifths
             expect(m.keySignature.fifths).toBe(2)
             expect(m.keySignature.mode).toBe('major') // mode survives the rewrite
-            expect(m.keyAtBeat(2)?.fifths).toBe(3)
+            expect(keyAt(m, 2)?.fifths).toBe(3)
         })
     })
 
@@ -660,18 +653,6 @@ describe('Measure', () => {
             score.toggleTuplet(placed)
             expect(m.tuplets[0]).toBe(m.tuplets[0])
             expect(m.tuplets).toBe(m.tuplets) // derived per version, not rebuilt per read
-        })
-    })
-
-    describe('setTimeSignature', () => {
-        it('replaces the time signature value', () => {
-            const score = new Score()
-            const m = new Measure(score, 'treble', new TimeSignature(4, 4))
-            expect(m.maxBeats).toBe(4)
-            const threeFour = new TimeSignature(3, 4)
-            m.setTimeSignature(threeFour)
-            expect(m.timeSignature).toBe(threeFour)
-            expect(m.maxBeats).toBe(3)
         })
     })
 

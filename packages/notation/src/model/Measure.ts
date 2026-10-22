@@ -31,7 +31,7 @@ export class Measure {
     private readonly _clefs: LeadingTrack<Clef>
     private readonly _keys: LeadingTrack<KeySignature>
     private _tempos: Tempo[] = []
-    private _timeSignature: TimeSignature
+    private readonly _timeSignature: TimeSignature
     private _endBarline?: BarlineType
 
     private readonly _tempoList = new BeatPositionedList<Tempo>(() => this._tempos)
@@ -143,13 +143,6 @@ export class Measure {
         return this._tupletData.value.tupletByNote.get(note)
     }
 
-    removeNotes(notes: Note[]) {
-        this._notes = difference(this._notes, notes)
-        notes.forEach((n) => n.setMeasure(undefined))
-        this.touch()
-        return this
-    }
-
     addNotes(notes: Note[], position: 'start' | 'end' = 'end') {
         this._notes = position === 'end' ? [...this._notes, ...notes] : [...notes, ...this._notes]
         notes.forEach((n) => n.setMeasure(this))
@@ -224,10 +217,6 @@ export class Measure {
         return leading
     }
 
-    clefAtBeat(beatPosition: number): Clef | undefined {
-        return this._clefs.list.at(beatPosition)
-    }
-
     /** The clef in effect at `beatPosition` within this measure — the latest at or before it. */
     clefAtOrBefore(beatPosition: number): Clef {
         /* v8 ignore next -- defensive: the beat-0 clef is always present, so a beat in the measure always finds one */
@@ -241,7 +230,8 @@ export class Measure {
     }
 
     /** The clef in effect just before `beatPosition` (ignoring any clef exactly at it). */
-    clefBefore(beatPosition: number): Clef {
+    private clefBefore(beatPosition: number): Clef {
+        /* v8 ignore next -- defensive: setClef only asks for a beat after 0, where the beat-0 clef is always found */
         return this._clefs.list.before(beatPosition) ?? this.clef
     }
 
@@ -293,10 +283,6 @@ export class Measure {
         /* v8 ignore next -- defensive: the beat-0 key is created with the measure and only ever replaced, never removed */
         if (!leading) throw new Error('Measure has no leading key signature')
         return leading
-    }
-
-    keyAtBeat(beatPosition: number): KeySignature | undefined {
-        return this._keys.list.at(beatPosition)
     }
 
     /** The key signature in effect at `beatPosition` within this measure — the latest at or before it. */
@@ -379,11 +365,6 @@ export class Measure {
 
     get timeSignature() {
         return this._timeSignature
-    }
-
-    setTimeSignature(timeSignature: TimeSignature) {
-        this._timeSignature = timeSignature
-        this.touch()
     }
 
     get endBarline() {

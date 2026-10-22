@@ -6,7 +6,7 @@ import { Measure } from '@mushee/notation/model/Measure'
 import { Score } from '@mushee/notation/model/Score'
 import { TimeSignature } from '@mushee/notation/model/TimeSignature'
 import type { ClefType } from '@mushee/notation/model/types'
-import { key, makeScore } from '@mushee/notation/testing'
+import { key, keyAt, makeScore } from '@mushee/notation/testing'
 import { describe, expect, it } from 'vitest'
 
 const bar = (clef: ClefType, fifths: number) => new Measure(new Score(), clef, new TimeSignature(4, 4), { keyFifths: fifths })
@@ -106,7 +106,7 @@ describe('KeySignatureLayout', () => {
             const m = score.measures[0]
             score.setKeySignature(m.firstNote, 2) // leading D major (F♯, C♯)
             score.setKeySignature(m.noteAtBeat(2), 0) // mid-measure C major
-            const midKey = m.keyAtBeat(2)
+            const midKey = keyAt(m, 2)
             if (!midKey) throw new Error('expected mid-measure key')
             expect(glyphsAndNames(KeySignatureLayout.drawnAccidentalsFor(midKey))).toEqual([
                 ['accidentalNatural', 'F'],

@@ -105,7 +105,7 @@ describe('MidiExporter', () => {
     it('re-emits the time signature when only the beat type changes', () => {
         const score = makeScore(2)
         // 4/4 -> 4/8: same beat amount (4), different beat type — exercises the second clause of the change test.
-        score.measures[1].setTimeSignature(new TimeSignature(4, 8))
+        score.setTimeSignature(score.measures[1], new TimeSignature(4, 8))
         const bytes = new MidiExporter(score).toBytes()
 
         expect(indexOf(bytes, [0xff, 0x58, 0x04, 4, 2, 24, 8])).toBeGreaterThan(-1) // 4/4 (log2(4)=2)

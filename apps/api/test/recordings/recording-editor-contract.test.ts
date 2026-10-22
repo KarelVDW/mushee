@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { BEAT_EPSILON } from '../../../../packages/notation/src/model/Duration'
 import { DURATION_TYPE, type MxmlMeasure as EditorMxmlMeasure } from '../../../../packages/notation/src/model/io/MusicXml'
 import { ScoreDeserializer } from '../../../../packages/notation/src/model/io/ScoreDeserializer'
+import { Measure } from '../../../../packages/notation/src/model/Measure'
 import { Score } from '../../../../packages/notation/src/model/Score'
 import { TimeSignature } from '../../../../packages/notation/src/model/TimeSignature'
 import { DurationSpeller } from '../../../../packages/notation/src/model/util/DurationSpeller'
@@ -107,11 +108,7 @@ describe('MxmlBuilder output loads into the editor model', () => {
         // 2. Streamed into a live editor score, the way useRecording applies score-updates.
         const live = new Score()
         const timeSignature = new TimeSignature(beats, beatType)
-        for (let i = 0; i < measureCount; i++) {
-            const measure = live.addMeasure()
-            measure.setTimeSignature(timeSignature)
-            measure.complete()
-        }
+        for (let i = 0; i < measureCount; i++) live.appendMeasure(new Measure(live, 'treble', timeSignature)).complete()
         for (const [index, mxml] of measures.entries()) {
             const target = live.measures[index]
             const streamed = ScoreDeserializer.mxmlMeasureToNotes(mxml)

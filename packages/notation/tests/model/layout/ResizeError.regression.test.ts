@@ -130,7 +130,7 @@ describe('ResizeError regressions', () => {
             for (let i = 0; i < 16; i++) dense.push(sixteenthSharp())
             m.addNotes(dense)
             expect(() => layOut(score)).not.toThrow()
-            m.removeNotes(dense)
+            m.replaceNotes(dense, [])
             expect(() => layOut(score)).not.toThrow()
         })
 

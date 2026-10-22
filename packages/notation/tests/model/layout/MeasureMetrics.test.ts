@@ -54,10 +54,15 @@ describe('MeasureMetrics', () => {
             const score = makeScore(2)
             const [m0, m1] = score.measures
             expect(new MeasureMetrics(m1, m0).baseFlags).toEqual(NONE)
-            score.setClef(m1.firstNote, 'bass')
-            score.setKeySignature(m1.firstNote, 2)
-            m1.setTimeSignature(new TimeSignature(3, 4))
-            expect(new MeasureMetrics(m1, m0).baseFlags).toEqual({ showsClef: true, showsKeySignature: true, showsTimeSignature: true })
+            score.setTimeSignature(m1, new TimeSignature(3, 4))
+            const changed = score.measures[1] // the rebar replaces m1
+            score.setClef(changed.firstNote, 'bass')
+            score.setKeySignature(changed.firstNote, 2)
+            expect(new MeasureMetrics(changed, m0).baseFlags).toEqual({
+                showsClef: true,
+                showsKeySignature: true,
+                showsTimeSignature: true,
+            })
         })
     })
 
