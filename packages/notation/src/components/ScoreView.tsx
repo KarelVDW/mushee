@@ -35,14 +35,13 @@ const REFLOW_BREAKPOINT = 768
 /** Floor for the reflowed layout width — keeps a crowded measure legible on the narrowest phones. */
 const MIN_LAYOUT_WIDTH = 340
 
-interface ScoreProps {
+interface ScoreViewProps {
     score: ScoreModel
     /**
      * Pass `score.layout.id`. The score mutates in place, so its identity never changes;
      * this prop is what makes the memo re-render when the score's layout snapshot moves.
      */
     layoutId: string
-    height?: number
     /** The active note: the moving end of the selection, see ScoreManipulator._selectedNote. */
     selectedNote?: Note | null
     /** Every selected note (a run when the user drags/shift-selects); drives the highlight. */
@@ -88,7 +87,7 @@ export interface SelectionMenuEvent {
  */
 export type AttributeClickEvent = AttributeClick & { measureIndex: number; x: number; y: number }
 
-export const Score = memo(function Score({
+export const ScoreView = memo(function ScoreView({
     score,
     selectedNote,
     selectedNotes,
@@ -103,7 +102,7 @@ export const Score = memo(function Score({
     onRemoveMeasure,
     canRemoveMeasure = true,
     onAttributeClick,
-}: ScoreProps) {
+}: ScoreViewProps) {
     const containerRef = useRef<HTMLDivElement>(null)
     const svgRef = useRef<SVGSVGElement>(null)
     const [containerWidth, setContainerWidth] = useState(0)

@@ -6,7 +6,7 @@
  * components/ holds what two or more routes use (ExportMenu also serves the share page).
  */
 
-import { type AttributeClickEvent, Score as ScoreView, type ScoreHighlight, type SelectionMenuEvent } from '@mushee/notation/components'
+import { type AttributeClickEvent, type ScoreHighlight, ScoreView, type SelectionMenuEvent } from '@mushee/notation/components'
 import {
     type Accidental,
     type ClefType,

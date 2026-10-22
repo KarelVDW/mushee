@@ -1,6 +1,6 @@
 'use client'
 
-import { Score as NotationScore } from '@mushee/notation/components'
+import { ScoreView as NotationScoreView } from '@mushee/notation/components'
 import type { Score } from '@mushee/notation/model'
 import { Component, type ReactNode } from 'react'
 
@@ -14,7 +14,7 @@ export function ScoreView({ score }: { score: Score }) {
         <RenderBoundary
             fallback={<p className="font-body text-[13px] text-on-surface-variant m-0">The notation renderer failed on this score.</p>}>
             <div className="bg-white rounded-md p-4 overflow-x-auto">
-                <NotationScore score={score} layoutId={score.layout.id} />
+                <NotationScoreView score={score} layoutId={score.layout.id} />
             </div>
         </RenderBoundary>
     )

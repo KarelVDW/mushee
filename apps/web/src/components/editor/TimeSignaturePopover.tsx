@@ -1,7 +1,8 @@
 'use client'
 
-import { Glyph, Staff } from '@mushee/notation/components'
+import { Glyph } from '@mushee/notation/components'
 import { TimeSignature } from '@mushee/notation/model'
+import { Staff } from '@mushee/notation/model/layout/Staff'
 import { useMemo } from 'react'
 
 import { Popover, PopoverOption } from '@/components/ui'

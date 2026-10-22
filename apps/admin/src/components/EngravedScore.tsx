@@ -1,6 +1,6 @@
 'use client'
 
-import { Score as ScoreView } from '@mushee/notation/components'
+import { ScoreView } from '@mushee/notation/components'
 import type { ScorePartwise } from '@mushee/notation/model/io/MusicXml'
 import { ScoreDeserializer } from '@mushee/notation/model/io/ScoreDeserializer'
 import { Component, type ReactNode, useMemo } from 'react'
