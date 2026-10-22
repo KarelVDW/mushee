@@ -3,6 +3,7 @@
 import { Instrument } from '@mushee/notation/model'
 import { type KeyboardEvent, type ReactNode, type Ref, useEffect, useEffectEvent, useId, useRef, useState } from 'react'
 
+import { MicFailure } from '@/app/scores/[id]/RecordingCopy'
 import { InstrumentChordHint, PopularInstrumentTiles } from '@/app/scores/InstrumentPicker'
 import { PlanPicker } from '@/components/PlanPicker'
 import { Chip, Eyebrow, Icon, ModalTitle, PrimaryButton, SubHeadline, TertiaryButton, TextField } from '@/components/ui'
@@ -335,6 +336,10 @@ export function MicStep({
         onAdvance()
     }
 
+    // Where this browser keeps the microphone permission, in one line; null where there is no
+    // reliable path to name. It only shows once blocked, so the server render (no navigator) matches.
+    const permissionStep = typeof navigator === 'undefined' ? null : MicFailure.permissionStep(navigator.userAgent)
+
     return (
         <StepShell
             titleRef={titleRef}
@@ -365,7 +370,7 @@ export function MicStep({
                                 ? 'One iPhone setting first. Your iPhone tunes its mic for phone calls, which hides whistling and instruments. Switch it once and it stays that way.'
                                 : "You're ready to record. Tap Continue.")}
                         {micState === 'denied' &&
-                            'No problem — the editor works without a mic, and recording will ask again when you need it. To enable it now, update site permissions in your browser and try again, or just Continue.'}
+                            'No problem — the editor works without a mic, and recording will ask again when you need it.'}
                         {micState === 'requesting' && 'Your browser will ask you to confirm in a moment.'}
                         {micState === 'idle' && 'When you tap Allow, your browser will ask for permission.'}
                     </span>
@@ -400,19 +405,39 @@ export function MicStep({
 
             {micState !== 'granted' && (
                 <div className="flex flex-col gap-3">
-                    <div className="flex gap-x-5 gap-y-2 items-center flex-wrap">
-                        <PrimaryButton
-                            onClick={() => void requestMic()}
-                            disabled={micState === 'requesting'}
-                            icon={micState === 'denied' ? 'refresh-cw' : 'mic'}>
-                            {micState === 'denied' ? 'Try again' : micState === 'requesting' ? 'Asking…' : 'Allow microphone'}
-                        </PrimaryButton>
-                        {/* Skipping the mic skips only the mic; the footer's Continue takes over once the browser has answered. */}
-                        {micState !== 'denied' && <TertiaryButton onClick={onAdvance}>Not now</TertiaryButton>}
-                    </div>
-                    <span className="font-body font-normal text-[12px] leading-[1.4] text-on-surface-variant">
-                        You can change this any time in your browser&apos;s site settings.
-                    </span>
+                    {micState === 'denied' ? (
+                        // Blocked: the footer's Continue is the one next step. Browsers remember a block,
+                        // so Try again stays quiet, after the line saying where this browser keeps it.
+                        <>
+                            {permissionStep && (
+                                <p className="m-0 font-body font-normal text-[13px] leading-normal text-on-surface">
+                                    To allow it now: {permissionStep} Then Try again.
+                                </p>
+                            )}
+                            <div>
+                                <TertiaryButton onClick={() => void requestMic()}>
+                                    <span className="inline-flex items-center gap-1.5">
+                                        <Icon name="refresh-cw" size={13} />
+                                        Try again
+                                    </span>
+                                </TertiaryButton>
+                            </div>
+                        </>
+                    ) : (
+                        <div className="flex gap-x-5 gap-y-2 items-center flex-wrap">
+                            <PrimaryButton onClick={() => void requestMic()} disabled={micState === 'requesting'} icon="mic">
+                                {micState === 'requesting' ? 'Asking…' : 'Allow microphone'}
+                            </PrimaryButton>
+                            {/* Skipping the mic skips only the mic; the footer's Continue takes over once the browser has answered. */}
+                            <TertiaryButton onClick={onAdvance}>Not now</TertiaryButton>
+                        </div>
+                    )}
+                    {/* Said once: where this browser keeps the setting (above, when blocked), else this. */}
+                    {!(micState === 'denied' && permissionStep) && (
+                        <span className="font-body font-normal text-[12px] leading-[1.4] text-on-surface-variant">
+                            You can change this any time in your browser&apos;s site settings.
+                        </span>
+                    )}
                 </div>
             )}
         </StepShell>

@@ -386,6 +386,48 @@ describe('MicStep', () => {
         expect(window.localStorage.getItem('solkey:mic-mode-guide')).not.toBeNull()
     })
 
+    it('keeps a blocked mic quiet: Try again recedes, and the one fix this browser needs is said once', async () => {
+        vi.stubGlobal('navigator', {
+            ...navigator,
+            userAgent:
+                'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36',
+        })
+        openMic.mockRejectedValue(new DOMException('Permission denied', 'NotAllowedError'))
+        const host = renderMic()
+        click(buttonNamed(host, 'Allow microphone'))
+        await settle()
+
+        expect(host.textContent).toContain('Microphone blocked.')
+        expect(host.textContent).toContain('No problem — the editor works without a mic, and recording will ask again when you need it.')
+        expect(host.textContent).toContain(
+            'To allow it now: Click the icon left of the web address, then set Microphone to Allow. Then Try again.',
+        )
+        expect(host.textContent).not.toContain('site settings')
+        expect(host.textContent).not.toContain('or just Continue')
+        // A text button, not a second capsule beside the footer's Continue.
+        const retry = buttons(host).find((b) => b.textContent === 'Try again')
+        expect(retry?.className).toContain('bg-transparent')
+        expect(buttonNamed(host, 'Not now')).toBeUndefined()
+
+        openMic.mockResolvedValue(stream().stream)
+        click(retry)
+        await settle()
+        expect(openMic).toHaveBeenCalledTimes(2)
+        expect(host.textContent).toContain('Microphone connected.')
+    })
+
+    it('falls back to the general site-settings line where no browser path can be named', async () => {
+        vi.stubGlobal('navigator', { ...navigator, userAgent: 'Mozilla/5.0 (X11; Linux x86_64; rv:140.0) Gecko/20100101 Firefox/140.0' })
+        openMic.mockRejectedValue(new DOMException('Permission denied', 'NotAllowedError'))
+        const host = renderMic()
+        click(buttonNamed(host, 'Allow microphone'))
+        await settle()
+
+        expect(host.textContent).toContain('Microphone blocked.')
+        expect(host.textContent).not.toContain('To allow it now')
+        expect(host.textContent).toContain("You can change this any time in your browser's site settings.")
+    })
+
     it("lets go of the iPhone's open mic when the step closes another way", async () => {
         vi.stubGlobal('navigator', { ...navigator, userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)' })
         const { stop, stream: granted } = stream()

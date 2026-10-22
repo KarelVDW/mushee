@@ -630,7 +630,7 @@ function Onboarding({ onComplete, onSkip }) {
                                 <span style={{ font: '400 13px/1.5 var(--font-body)', color: 'var(--color-on-surface-variant)' }}>
                                     {data.micState === 'granted' && "You're ready to record. Tap Continue."}
                                     {data.micState === 'denied' &&
-                                        'No problem — the editor works without a mic, and recording will ask again when you need it. To enable it now, update site permissions in your browser and try again, or just Continue.'}
+                                        'No problem — the editor works without a mic, and recording will ask again when you need it.'}
                                     {data.micState === 'requesting' && 'Your browser will ask you to confirm in a moment.'}
                                     {data.micState === 'idle' && 'When you tap Allow, your browser will ask for permission.'}
                                 </span>
@@ -638,17 +638,11 @@ function Onboarding({ onComplete, onSkip }) {
                         </div>
 
                         <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
-                            {data.micState !== 'granted' && (
-                                <PrimaryButton
-                                    emphasis="pop"
-                                    onClick={requestMic}
-                                    disabled={data.micState === 'requesting'}
-                                    icon={data.micState === 'denied' ? 'refresh-cw' : 'mic'}>
-                                    {data.micState === 'denied'
-                                        ? 'Try again'
-                                        : data.micState === 'requesting'
-                                          ? 'Asking…'
-                                          : 'Allow microphone'}
+                            {/* Blocked: the footer's Continue leads; Try again is a quiet text button (browsers remember a block). */}
+                            {data.micState === 'denied' && <TertiaryButton onClick={requestMic}>Try again</TertiaryButton>}
+                            {(data.micState === 'idle' || data.micState === 'requesting') && (
+                                <PrimaryButton emphasis="pop" onClick={requestMic} disabled={data.micState === 'requesting'} icon="mic">
+                                    {data.micState === 'requesting' ? 'Asking…' : 'Allow microphone'}
                                 </PrimaryButton>
                             )}
                             <span style={{ font: '400 12px/1.4 var(--font-body)', color: 'var(--color-on-surface-variant)' }}>

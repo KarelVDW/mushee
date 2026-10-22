@@ -388,6 +388,28 @@ test.describe('onboarding', () => {
         expect(await page.evaluate(() => window.localStorage.getItem('solkey:mic-mode-guide'))).not.toBeNull()
     })
 
+    test('a blocked mic leaves one next step: Continue, with Try again a quiet text button', async ({ page }) => {
+        await page.addInitScript(() => {
+            Object.defineProperty(MediaDevices.prototype, 'getUserMedia', {
+                configurable: true,
+                value: () => Promise.reject(new DOMException('Permission denied', 'NotAllowedError')),
+            })
+        })
+        await page.goto('/onboarding')
+        await page.getByRole('button', { name: 'Continue' }).click()
+        await page.getByRole('button', { name: 'Allow microphone' }).click()
+
+        await expect(page.getByText('Microphone blocked.')).toBeVisible()
+        await expect(
+            page.getByText('No problem — the editor works without a mic, and recording will ask again when you need it.'),
+        ).toBeVisible()
+        await expect(page.getByText(/^To allow it now: .+ Then Try again\.$/)).toBeVisible()
+        await expect(page.getByText("You can change this any time in your browser's site settings.")).toHaveCount(0)
+        await expect(page.getByRole('button', { name: 'Try again' })).toBeVisible()
+        await page.getByRole('button', { name: 'Continue' }).click()
+        await expect(page.getByRole('heading', { name: 'A bit about you.' })).toBeFocused()
+    })
+
     test('verify: the code submits itself on the sixth digit, and a wrong one is said in plain words', async ({ page }) => {
         let verified = false
         let attempts = 0
