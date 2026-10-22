@@ -1,20 +1,32 @@
 'use client'
 
-import { useRouter } from 'next/navigation'
-import { type FormEvent, useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { Suspense, useState } from 'react'
 
 import { Turnstile, TURNSTILE_SITE_KEY } from '@/components/Turnstile'
-import { AuthCard, AuthShell } from '@/components/ui'
+import { AuthCard, type AuthCredentials, AuthShell } from '@/components/ui'
 import { track } from '@/lib/analytics'
 import { emailOtp, signUp } from '@/lib/auth-client'
 import { nextPathFrom, withNext } from '@/lib/nextPath'
 import { BETA_MODE, requestedPlanFrom, withPlan } from '@/lib/plans'
 
 export default function SignupPage() {
+    // useSearchParams needs a Suspense boundary on this prerendered page. The fallback is
+    // the same form without ?next=, so the prerendered HTML still shows the card.
+    return (
+        <Suspense fallback={<SignupForm />}>
+            <SignupWithNext />
+        </Suspense>
+    )
+}
+
+function SignupWithNext() {
+    const params = useSearchParams()
+    return <SignupForm next={nextPathFrom(`?${params.toString()}`)} />
+}
+
+function SignupForm({ next }: { next?: string }) {
     const router = useRouter()
-    const [name, setName] = useState('')
-    const [email, setEmail] = useState('')
-    const [password, setPassword] = useState('')
     const [error, setError] = useState<string | null>(null)
     const [loading, setLoading] = useState(false)
     // Signup CAPTCHA (when a site key is configured): the token is single-use, so a
@@ -22,8 +34,7 @@ export default function SignupPage() {
     const [captchaToken, setCaptchaToken] = useState<string | null>(null)
     const [captchaAttempt, setCaptchaAttempt] = useState(0)
 
-    function handleSubmit(e: FormEvent) {
-        e.preventDefault()
+    function handleSubmit({ name, email, password }: AuthCredentials) {
         setError(null)
         setLoading(true)
 
@@ -69,18 +80,13 @@ export default function SignupPage() {
                         </>
                     ) : undefined
                 }
-                name={name}
-                email={email}
-                password={password}
                 error={error}
                 loading={loading}
                 submitDisabled={!!TURNSTILE_SITE_KEY && !captchaToken}
                 beforeSubmit={
                     TURNSTILE_SITE_KEY && <Turnstile key={captchaAttempt} siteKey={TURNSTILE_SITE_KEY} onToken={setCaptchaToken} />
                 }
-                onNameChange={setName}
-                onEmailChange={setEmail}
-                onPasswordChange={setPassword}
+                next={next}
                 onSubmit={handleSubmit}
             />
         </AuthShell>

@@ -1,4 +1,4 @@
-export { AuthCard, AuthShell } from './AuthCard'
+export { AuthCard, type AuthCredentials, AuthFrame, AuthShell } from './AuthCard'
 export { Badge } from './Badge'
 export { Avatar, Eyebrow, ModalTitle, PageTitle, SubHeadline, Wordmark } from './Brand'
 export { CloseButton, IconButton, PrimaryButton, SecondaryButton, TertiaryButton } from './Buttons'
