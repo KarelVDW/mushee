@@ -252,11 +252,17 @@ export function useRecording({
                 manipulator.select(before?.isAttached ? before : null, { quiet: true, initial: beforeWasInitial })
             }
         }
-        /** The bar after the take, quietly selected — Record, the dock and the phone's nudges work at once. */
+        /**
+         * The bar after the take, quietly selected — Record, the dock and the phone's nudges work
+         * at once — once the bars recorded after the last note are gone (RecordingTake.dropTrailingRests).
+         * A note picked while the take drained stays picked, unless it was in one of those bars.
+         */
         const carryOn = () => {
+            take.dropTrailingRests()
             const next = take.noteAfter()
             saveToApi({ score })
-            if (next && !manipulator.selectedNote) manipulator.select(next, { quiet: true })
+            const picked = manipulator.selectedNote
+            if (next && (!picked || !score.measures.includes(picked.measure))) manipulator.select(next, { quiet: true })
         }
         /** Once nothing more can reach the score: what follows this take. */
         const finish = () => {

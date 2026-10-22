@@ -176,6 +176,41 @@ describe('RecordingTake', () => {
             expect(score.measures).toHaveLength(3)
         })
 
+        it('drops the bars recorded after its last note, and carries on right after the music', () => {
+            const score = makeScore(2)
+            const displaced = score.measures[1]
+            const take = new RecordingTake(score, 1, clef('treble'))
+            take.begin()
+            take.appendMeasure()
+            take.appendMeasure()
+            take.applyUpdate({ 0: transcribed([pitched('C', 5, 'w')]), 1: transcribed([rest('w')]) })
+            expect(take.dropTrailingRests()).toBe(true)
+            expect(take.measures).toEqual([score.measures[1]])
+            expect(score.measures).toHaveLength(3)
+            expect(take.noteAfter()).toBe(displaced.firstNote)
+            // Nothing trailing any more, and a take that heard nothing keeps its bars.
+            expect(take.dropTrailingRests()).toBe(false)
+            const silent = new RecordingTake(makeScore(1), 0, clef('treble'))
+            silent.begin()
+            silent.appendMeasure()
+            expect(silent.dropTrailingRests()).toBe(false)
+            expect(silent.measures).toHaveLength(2)
+        })
+
+        it('at the end of the score, keeps one empty bar after the last note to carry on from', () => {
+            const score = makeScore(1)
+            fill(score, 0, [pitched('C', 5, 'w')])
+            const take = RecordingTake.startingAt(score, null)
+            take?.begin()
+            take?.appendMeasure()
+            take?.applyUpdate({ 0: transcribed([pitched('D', 5, 'w')]) })
+            take?.dropTrailingRests()
+            const after = take?.noteAfter()
+            expect(score.measures).toHaveLength(3)
+            expect(after).toBe(score.measures[2].firstNote)
+            expect(after?.isRest).toBe(true)
+        })
+
         it('takes an empty take back out, tempo marking and all', () => {
             const score = makeScore(2)
             score.setTempo(score.measures[1].firstNote, 132)

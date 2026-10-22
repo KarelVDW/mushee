@@ -148,7 +148,7 @@ test('a take folds the dock into the recording strip beside record-as-stop; toas
         page.getByRole('group', { name: 'Note navigation and transport' }).getByRole('button', { name: 'Record', exact: true }),
     ).toBeFocused()
 
-    const summary = page.getByRole('status').filter({ hasText: /Added bars? 2(–3)?\. Tap any note to fix it\./ })
+    const summary = page.getByRole('status').filter({ hasText: /Added bar 2\. Tap any note to fix it\./ })
     await expect(summary).toBeVisible()
     // The dock is back, with a note selected so the nudges and Record work at once.
     const tools = page.getByRole('group', { name: 'Note tools' })

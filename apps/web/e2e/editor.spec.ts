@@ -146,7 +146,8 @@ test('a take: the strip replaces the tools, Record becomes Stop, and the bar aft
 
     await stop.click()
     // The summary names the bar the take added and the next step, with a way to hear it and to take it back.
-    const summary = page.getByRole('status').filter({ hasText: /Added bars? 2(–3)?\. Click any note to fix it\./ })
+    // Only the bar with notes counts: what was recorded after the last note is dropped.
+    const summary = page.getByRole('status').filter({ hasText: /Added bar 2\. Click any note to fix it\./ })
     await expect(summary).toBeVisible()
     await expect(summary.getByRole('button', { name: 'Hear it back' })).toBeVisible()
     await expect(summary.getByRole('button', { name: 'Undo this recording', exact: true })).toBeVisible()
@@ -156,7 +157,7 @@ test('a take: the strip replaces the tools, Record becomes Stop, and the bar aft
     await expect(page.locator(SELECTION_BANDS)).toHaveCount(1)
     await expect(page.getByRole('button', { name: 'Rest', exact: true })).toBeEnabled()
     // Screen readers hear it too, through the editor's live region.
-    await expect(page.locator('[aria-live="polite"]:not([role])')).toHaveText(/^Recording stopped\. Added bars? 2( to 3)?\./)
+    await expect(page.locator('[aria-live="polite"]:not([role])')).toHaveText(/^Recording stopped\. Added bar 2\./)
     await expect(transpose).not.toHaveAttribute('aria-disabled')
     await expect(instrument).not.toHaveAttribute('aria-disabled')
 })
@@ -177,8 +178,12 @@ test('Record on a score just opened carries on after the tune, and says where be
     const live = page.locator('[aria-live="polite"]:not([role])')
     await expect(live).toHaveText('Get ready, from bar 2.')
     await expect(strip).toContainText('Recording', { timeout: 6000 })
+    // Past the end of the take's first bar (one 4/4 bar at 120 bpm is 2 s), so the take runs
+    // into a second bar — one that only the mock's silence fills.
+    await expect(strip).toContainText('0:03', { timeout: 8000 })
     await page.getByRole('button', { name: 'Stop recording', exact: true }).click()
-    await expect(page.getByRole('status').filter({ hasText: /^Added bars? 2(–3)?\./ })).toBeVisible()
+    // The bar recorded after the last note is dropped: only bar 2 counts.
+    await expect(page.getByRole('status').filter({ hasText: /^Added bar 2\./ })).toBeVisible()
 
     // The tune is where it was: walking back from the bar after the recording meets the
     // recorded G in bar 2, then the tune's last note in bar 1.
@@ -207,7 +212,7 @@ test('the summary’s Undo takes the whole recording back in one step', async ({
     await expect(page.getByRole('group', { name: 'Recording status' })).toContainText('Recording', { timeout: 6000 })
     await page.getByRole('button', { name: 'Stop recording', exact: true }).click()
 
-    const summary = page.getByRole('status').filter({ hasText: /Added bars? 2/ })
+    const summary = page.getByRole('status').filter({ hasText: /Added bar 2\./ })
     await expect(summary).toBeVisible()
     await expect(headerUndo).toBeEnabled()
     await summary.getByRole('button', { name: 'Undo this recording', exact: true }).click()
@@ -777,7 +782,7 @@ test.describe('an empty score', () => {
         await expect(heading).toHaveCount(0)
         await expect(strip).toContainText('Recording', { timeout: 6000 })
         await page.getByRole('button', { name: 'Stop recording', exact: true }).click()
-        await expect(page.getByRole('status').filter({ hasText: /Added bars? 1/ })).toBeVisible()
+        await expect(page.getByRole('status').filter({ hasText: /Added bar 1\./ })).toBeVisible()
         await expect(heading).toHaveCount(0)
     })
 

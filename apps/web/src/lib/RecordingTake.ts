@@ -92,6 +92,24 @@ export class RecordingTake {
     }
 
     /**
+     * Take out the take's trailing bars that hold no pitched note — the second or two between the
+     * last note and the stop — so the summary counts only bars with notes in them and the next
+     * take carries on right after the music, not after a gap to delete by hand. A take that heard
+     * nothing keeps its bars (its summary offers the Undo). Like the rest of the take this is a
+     * direct write, so the take stays one undoable step. Returns whether anything was removed.
+     */
+    dropTrailingRests(): boolean {
+        const measures = this.measures
+        const lastPitched = measures.findLastIndex((measure) => RecordingTake.holdsPitchedNotes(measure))
+        const trailing = lastPitched < 0 ? [] : measures.slice(lastPitched + 1)
+        if (trailing.length === 0) return false
+        this.score.removeMeasures(trailing)
+        this.added = this.added.filter((measure) => !trailing.includes(measure))
+        this.nextMeasureIndex = measures[lastPitched].index + 1
+        return true
+    }
+
+    /**
      * The first note of the bar right after the take — where pressing Record again carries on,
      * since a take inserts before the bar it starts in. A take that started from a selection
      * displaced that bar, so it is always there; a take that ran off the end of the score gets
