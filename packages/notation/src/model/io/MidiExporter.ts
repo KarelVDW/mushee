@@ -66,10 +66,7 @@ export class MidiExporter {
         for (const measure of this.score.measures) {
             const measureStart = position
             const timeSignature = measure.timeSignature
-            if (
-                previousTimeSignature?.beatAmount !== timeSignature.beatAmount ||
-                previousTimeSignature?.beatType !== timeSignature.beatType
-            ) {
+            if (!previousTimeSignature?.equals(timeSignature)) {
                 events.push({ tick: MidiExporter.toTicks(measureStart), order: 0, data: MidiExporter.timeSignatureMeta(timeSignature) })
                 previousTimeSignature = timeSignature
             }

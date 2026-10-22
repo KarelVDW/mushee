@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest'
 import { Rng } from '../../support/scoreGenerator'
 
 /**
- * The speller (imports, recording gaps) must write exactly the span it is given:
+ * The speller (MusicXML and MIDI import) must write exactly the span it is given:
  * for any meter and any sixteenth-grid start and length inside the bar, the
  * written values sum to the span, never exceed it, and stay few — a span is at
  * most one value per metrical boundary it crosses plus a handful of grid pieces.

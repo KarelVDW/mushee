@@ -27,6 +27,30 @@ describe('Instrument', () => {
         expect(Instrument.byGmProgram(999)).toBe(Instrument.Piano)
     })
 
+    it('byGmProgram resolves a program only one instrument carries to that instrument', () => {
+        expect(Instrument.byGmProgram(56)).toBe(Instrument.Trumpet)
+        expect(Instrument.byGmProgram(115)).toBe(Instrument.Woodblock)
+    })
+
+    it('byGmProgram pins the default for every program several instruments share', () => {
+        const defaults = new Map([
+            [40, Instrument.Violin],
+            [42, Instrument.Cello],
+            [58, Instrument.Tuba],
+            [60, Instrument.HornInC],
+            [70, Instrument.Bassoon],
+            [71, Instrument.Clarinet],
+            [73, Instrument.Flute],
+            [74, Instrument.Recorder],
+        ])
+        // A new instrument on an already-used program must get a deliberate default here too.
+        const counts = new Map<number, number>()
+        for (const i of [...Instrument.selectable(), Instrument.Woodblock]) counts.set(i.gmProgram, (counts.get(i.gmProgram) ?? 0) + 1)
+        const shared = [...counts].filter(([, n]) => n > 1).map(([program]) => program)
+        expect(shared.sort((a, b) => a - b)).toEqual([...defaults.keys()])
+        for (const [program, instrument] of defaults) expect(Instrument.byGmProgram(program)).toBe(instrument)
+    })
+
     it('byId resolves a registered instrument and returns undefined for an unknown id', () => {
         expect(Instrument.byId('trumpet')).toBe(Instrument.Trumpet)
         expect(Instrument.byId('not-an-instrument')).toBeUndefined()

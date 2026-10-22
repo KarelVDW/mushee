@@ -56,9 +56,13 @@ export class Instrument {
         return Instrument._byId.get(id)
     }
 
-    /** Resolve by GM program number (1-indexed in MusicXML, 0-indexed here). Returns Piano if unknown. */
+    /**
+     * Resolve by GM program number (1-indexed in MusicXML, 0-indexed here). A program several
+     * instruments share resolves to its entry in `_gmDefault`, never to whichever is declared
+     * first; a program one instrument carries resolves to it; an unknown program to Piano.
+     */
     static byGmProgram(program: number): Instrument {
-        return Instrument._all.find((i) => i.gmProgram === program) ?? Instrument.Piano
+        return Instrument._gmDefault.get(program) ?? Instrument._all.find((i) => i.gmProgram === program) ?? Instrument.Piano
     }
 
     /** Resolve by display name, case-insensitive; undefined when no instrument carries that name. */
@@ -154,4 +158,22 @@ export class Instrument {
 
     /** Used by the metronome click. Not a score-selectable instrument. */
     static readonly Woodblock = new Instrument('woodblock', 'Woodblock', 'Percussion', 115, 'woodblock')
+
+    /**
+     * The instrument each shared GM program imports as (MIDI files, MusicXML parts with a foreign
+     * name): the plainly named one, so a GM flute is a Flute rather than a Dizi Flute. 60 and 71
+     * keep the concert-pitch Horn in C and the B♭ Clarinet they always resolved to — choosing
+     * between concert-pitch and transposing instruments there is a product decision. Declared
+     * after the instruments so the static initialisers have run.
+     */
+    private static readonly _gmDefault: ReadonlyMap<number, Instrument> = new Map([
+        [40, Instrument.Violin],
+        [42, Instrument.Cello],
+        [58, Instrument.Tuba],
+        [60, Instrument.HornInC],
+        [70, Instrument.Bassoon],
+        [71, Instrument.Clarinet],
+        [73, Instrument.Flute],
+        [74, Instrument.Recorder],
+    ])
 }

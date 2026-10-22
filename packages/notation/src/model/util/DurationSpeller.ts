@@ -26,6 +26,10 @@ const WRITTEN_VALUES: readonly WrittenValue[] = Duration.WRITABLE.map((duration)
  *
  * Works on the sixteenth grid: anything finer is rounded away, so a span shorter
  * than a sixteenth spells as nothing.
+ *
+ * The recording pipeline spells with its own port (apps/api MxmlBuilder.spellSpan,
+ * 12 divisions per quarter, no alignment check in the no-boundary fallback) until
+ * the API can consume this package.
  */
 export class DurationSpeller {
     constructor(readonly timeSignature: TimeSignature) {}
