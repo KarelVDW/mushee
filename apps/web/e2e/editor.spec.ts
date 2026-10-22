@@ -93,8 +93,11 @@ test('a take: the strip replaces the tools, Record becomes Stop, and the bar aft
     await expect(page.getByRole('group', { name: 'Note tools' })).toHaveCount(0)
     const stop = page.getByRole('button', { name: 'Stop recording', exact: true })
     await expect(stop).toBeVisible()
+    // One stop while recording: the playback Stop square stays out of the way, as on phones.
+    await expect(page.getByRole('button', { name: 'Stop', exact: true })).toBeHidden()
     await expect(strip).toContainText('Recording', { timeout: 6000 })
     await expect(strip).toContainText('Press Space or')
+    await expect(page.getByRole('button', { name: 'Stop', exact: true })).toBeHidden()
 
     await stop.click()
     // The summary names the bar the take added and the next step, with a way to hear it and to take it back.

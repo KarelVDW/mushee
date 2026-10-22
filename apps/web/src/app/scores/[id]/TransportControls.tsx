@@ -86,9 +86,11 @@ export function TransportControls({
 }: TransportControlsProps) {
     const isRecording = recordingState !== 'idle'
     const isPlaying = playbackState === 'playing'
-    // Stop keeps its slot (the centred transport never shifts) but only shows while something
-    // plays or records — at rest there is nothing to stop.
-    const canStop = playbackState !== 'stopped' || isRecording
+    // Stop keeps its slot (the centred transport never shifts) but only shows while playback
+    // runs or is paused — at rest there is nothing to stop, and during a recording the record
+    // button is the stop (with Space and Escape): a second stop square beside it would leave a
+    // newcomer guessing which one ends the recording.
+    const canStop = playbackState !== 'stopped'
     const side = large ? 'top' : 'bottom'
 
     return (
