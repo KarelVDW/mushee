@@ -511,9 +511,9 @@ describe('Measure', () => {
             const m = score.firstMeasure
             if (!m) throw new Error('expected firstMeasure')
             m.setKeySignature(0, 1) // G major: one sharp
-            const trebleY = m.keySignature.layout.accidentals[0].y
+            const trebleY = m.layout.keyLayoutFor(m.keySignature).accidentals[0].y
             m.setClef(0, 'bass')
-            const bassY = m.keySignature.layout.accidentals[0].y
+            const bassY = m.layout.keyLayoutFor(m.keySignature).accidentals[0].y
             expect(bassY).not.toBe(trebleY) // the F# sits on a different line under the bass clef
         })
 

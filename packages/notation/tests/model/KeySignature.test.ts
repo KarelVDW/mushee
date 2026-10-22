@@ -96,15 +96,15 @@ describe('KeySignature', () => {
         })
     })
 
-    describe('layout (delegates into the score layout)', () => {
+    describe("layout (built by its measure's layout)", () => {
         it('is stable without mutation and rebuilt after a relevant change', () => {
             const score = makeScore(1)
             const m = score.measures[0]
             score.setKeySignature(m.firstNote, 1)
-            const before = m.keySignature.layout
-            expect(m.keySignature.layout).toBe(before)
+            const before = m.layout.keyLayoutFor(m.keySignature)
+            expect(m.layout.keyLayoutFor(m.keySignature)).toBe(before)
             m.setClef(0, 'bass') // the key draws on different lines under a new clef
-            expect(m.keySignature.layout).not.toBe(before)
+            expect(m.layout.keyLayoutFor(m.keySignature)).not.toBe(before)
         })
     })
 

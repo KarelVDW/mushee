@@ -66,16 +66,16 @@ describe('KeySignatureLayout', () => {
         expect(layoutFor(m).accidentals).toHaveLength(0)
     })
 
-    it('is reachable through the keySignature.layout delegate for a drawn key in a score', () => {
+    it("is built by its measure's layout for a drawn key in a score", () => {
         const score = new Score()
         // Mark the key explicit so addMeasure's carry-forward doesn't demote it to the inherited C major.
         const measure = new Measure(score, 'treble', new TimeSignature(4, 4), { keyFifths: 2, leadingKeyExplicit: true })
         measure.complete()
         score.appendMeasure(measure)
-        const viaDelegate = measure.keySignature.layout
-        expect(viaDelegate.accidentals).toHaveLength(2)
+        const layout = measure.layout.keyLayoutFor(measure.keySignature)
+        expect(layout.accidentals).toHaveLength(2)
         // Same instance on repeated access within one layout snapshot.
-        expect(measure.keySignature.layout).toBe(viaDelegate)
+        expect(measure.layout.keyLayoutFor(measure.keySignature)).toBe(layout)
     })
 
     describe('drawnAccidentalsFor (context-aware)', () => {

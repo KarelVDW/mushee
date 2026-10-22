@@ -287,7 +287,7 @@ describe('MeasureLayout', () => {
             expect(layout.attributes[0].width).toBe(m.clef.layout.width.total)
             expect(layout.attributes[2].width).toBe(m.timeSignature.layout.width.total)
             expect(layout.attributes[3].width).toBe(midClef.layout.width.total)
-            expect(layout.attributes[1].width).toBe(m.keySignature.layout.width.total)
+            expect(layout.attributes[1].width).toBe(layout.keyLayoutFor(m.keySignature).width.total)
         })
 
         it('leaves out what the measure does not draw (a mid-row measure, a C-major key)', () => {
@@ -317,7 +317,7 @@ describe('MeasureLayout', () => {
             if (!midKey) throw new Error('expected a mid-measure key')
             expect(m.layout.keyLayoutFor(m.keySignature).accidentals).toHaveLength(1)
             expect(m.layout.keyLayoutFor(midKey).accidentals).toHaveLength(3)
-            expect(midKey.layout).toBe(m.layout.keyLayoutFor(midKey))
+            expect(m.layout.keyLayoutFor(midKey)).toBe(m.layout.keyLayoutFor(midKey)) // one layout per key per snapshot
         })
 
         it('keyLayoutFor throws for a key signature from another measure', () => {
@@ -331,7 +331,8 @@ describe('MeasureLayout', () => {
             m.addNotes([triplet(), triplet(), triplet()])
             const tuplet = m.tuplets[0]
             if (!tuplet) throw new Error('expected a tuplet')
-            expect(m.layout.tupletLayoutFor(tuplet)).toBe(tuplet.layout)
+            expect(m.layout.tupletLayoutFor(tuplet).x2).toBeGreaterThan(m.layout.tupletLayoutFor(tuplet).x1)
+            expect(m.layout.tupletLayoutFor(tuplet)).toBe(m.layout.tupletLayoutFor(tuplet))
 
             const { m: other } = registeredMeasure()
             other.addNotes([triplet(), triplet(), triplet()])

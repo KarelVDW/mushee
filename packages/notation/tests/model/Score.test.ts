@@ -1216,9 +1216,10 @@ describe('Score', () => {
                 const score = makeScore(2)
                 score.setKeySignature(score.measures[0].firstNote, 1) // G major
                 score.setKeySignature(score.measures[1].firstNote, 0) // C major cancels F♯
-                expect(score.measures[1].keySignature.layout.accidentals).toHaveLength(1) // 1 natural
+                const second = score.measures[1]
+                expect(second.layout.keyLayoutFor(second.keySignature).accidentals).toHaveLength(1) // 1 natural
                 score.setKeySignature(score.measures[0].firstNote, 2) // earlier key → D major (F♯, C♯)
-                expect(score.measures[1].keySignature.layout.accidentals).toHaveLength(2) // now cancels both
+                expect(second.layout.keyLayoutFor(second.keySignature).accidentals).toHaveLength(2) // now cancels both
             })
         })
     })

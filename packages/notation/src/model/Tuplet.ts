@@ -1,4 +1,3 @@
-import type { TupletLayout } from './layout/TupletLayout'
 import type { Measure } from './Measure'
 import type { Note } from './Note'
 
@@ -6,18 +5,14 @@ import type { Note } from './Note'
  * A group of notes written under one tuplet ratio. Derived per measure version
  * by TupletFinder — instances are stable for as long as the measure's content
  * doesn't change. Semantic (editing operations clip and collapse groups); its
- * geometry is context-dependent and lives in the layout layer.
+ * geometry is context-dependent and lives in the layout layer
+ * (`MeasureLayout.tupletLayoutFor`).
  */
 export class Tuplet {
     constructor(
         readonly measure: Measure,
         readonly notes: Note[],
     ) {}
-
-    /** Delegates into the current ScoreLayout — context-dependent, never cached here. */
-    get layout(): TupletLayout {
-        return this.measure.layout.tupletLayoutFor(this)
-    }
 
     get firstNote() {
         return this.notes[0]

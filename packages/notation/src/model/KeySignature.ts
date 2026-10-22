@@ -1,5 +1,4 @@
 import type { GlyphName } from '../engraving/Bravura'
-import type { KeySignatureLayout } from './layout/KeySignatureLayout'
 import type { Measure } from './Measure'
 import { Pitch, type PitchStep } from './Pitch'
 
@@ -42,7 +41,8 @@ export interface KeyAccidental {
  * {@link sameKeyAs}: C major and A minor share fifths 0 yet are different keys to propagation,
  * redundancy checks and serialization. Only `fifths` (positive = sharps, negative = flats)
  * shapes accidentals and rendering. Its drawn form (cancellation naturals) depends on the
- * *preceding* key, so its layout is context-dependent and lives in the layout layer (delegated below).
+ * *preceding* key, so its layout is context-dependent and lives in the layout layer
+ * (`MeasureLayout.keyLayoutFor`).
  */
 export class KeySignature {
     readonly id = crypto.randomUUID()
@@ -53,11 +53,6 @@ export class KeySignature {
         readonly fifths: number,
         readonly mode?: string,
     ) {}
-
-    /** Delegates into the current ScoreLayout — context-dependent, never cached here. */
-    get layout(): KeySignatureLayout {
-        return this.measure.layout.keyLayoutFor(this)
-    }
 
     /** Whether this is the key (fifths, mode) — a key's identity, mode included. */
     sameKeyAs(fifths: number, mode?: string): boolean {

@@ -1,5 +1,4 @@
 import type { Duration } from './Duration'
-import type { TempoLayout } from './layout/TempoLayout'
 import type { Measure } from './Measure'
 
 /**
@@ -7,7 +6,8 @@ import type { Measure } from './Measure'
  * (the unit playback, MIDI and the transcription grid run on); the marking is
  * *written* in the measure's felt beat — `♩ = 90` in 4/4, `♩. = 60` in 6/8,
  * `𝅗𝅥 = 45` in 2/2 — see `pulse`/`pulseBpm`. Immutable after construction; its
- * layout (the marking's x at its beat) comes from the measure's layout.
+ * layout (the marking's x at its beat) comes from the measure's layout
+ * (`MeasureLayout.tempoLayoutFor`).
  */
 export class Tempo {
     readonly id = crypto.randomUUID()
@@ -26,9 +26,5 @@ export class Tempo {
     /** `bpm` counted in the written beat, rounded to a whole number for display (60 for 90 quarter-bpm in 6/8). */
     get pulseBpm(): number {
         return Math.round(this.measure.timeSignature.pulseBpmOf(this.bpm))
-    }
-
-    get layout(): TempoLayout {
-        return this.measure.layout.tempoLayoutFor(this)
     }
 }

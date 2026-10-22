@@ -94,10 +94,11 @@ not a guarantee: a single measure denser than the packing budget widens the effe
 so the score shrinks on screen). Layout must always resolve — it never throws on any
 model + width combination.
 
-The `layout` getters on `Measure`, `Note`, `KeySignature`, `Tuplet` and `Tempo` are conveniences
-that delegate into the current `ScoreLayout` (a tempo marking's layout is built by its
-measure's layout, which places it at its beat); they own no cache of their own. A note outside
-the score has no layout — the editor's ghost note is drawn from `NoteLayout.preview(note, clef)`.
+The `layout` getters on `Measure` and `Note` are conveniences that delegate into the current
+`ScoreLayout`; they own no cache of their own. A key signature, tuplet or tempo marking is laid
+out by its measure's layout (`keyLayoutFor`, `tupletLayoutFor`, `tempoLayoutFor` — the
+renderer reads those), so they carry no getter. A note outside the score has no layout — the
+editor's ghost note is drawn from `NoteLayout.preview(note, clef)`.
 Only `Clef` and `TimeSignature` layouts are context-free — they depend only on the clef type and
 the digits — so they are shared: `ClefLayout.of(type)` keeps one per clef type, and a
 `TimeSignature` caches its own forever, per tier 1 semantics. Widths are ink, so each layout

@@ -22,19 +22,18 @@ describe('Tempo', () => {
         expect(new Tempo(m, 0, 120).id).not.toBe(new Tempo(m, 0, 120).id)
     })
 
-    it("layout comes from its measure's layout: the marking's x at its beat, rebuilt when the measure changes", () => {
+    it("is laid out by its measure's layout: the marking's x at its beat, rebuilt when the measure changes", () => {
         const score = makeScore(1)
         const m = score.measures[0]
         m.setTempo(2, 120)
         const t = m.tempoAtBeat(2) as Tempo
-        expect(t.layout).toBe(m.layout.tempoLayoutFor(t))
-        expect(t.layout).toBe(t.layout)
-        expect(t.layout.x).toBe(m.layout.getXForBeat(2))
-        expect(t.layout.y).toBe(TEMPO_MARKING_Y)
-        const before = t.layout
+        const before = m.layout.tempoLayoutFor(t)
+        expect(m.layout.tempoLayoutFor(t)).toBe(before)
+        expect(before.x).toBe(m.layout.getXForBeat(2))
+        expect(before.y).toBe(TEMPO_MARKING_Y)
         m.setTempo(0, 90) // any change to the measure rebuilds its layout
         expect(m.tempos).toContain(t)
-        expect(t.layout).not.toBe(before)
+        expect(m.layout.tempoLayoutFor(t)).not.toBe(before)
     })
 
     it('a measure layout refuses a tempo that is not its own', () => {
