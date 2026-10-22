@@ -4,7 +4,7 @@ import { Glyph } from '@mushee/notation/components'
 import { Instrument, Score } from '@mushee/notation/model'
 import { ScoreSerializer } from '@mushee/notation/model/io/ScoreSerializer'
 import { useRouter } from 'next/navigation'
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import {
     Alert,
@@ -64,6 +64,15 @@ export default function ScoresPage() {
     const createMutation = useCreateScore()
     const deleteMutation = useDeleteScore()
     const duplicateMutation = useDuplicateScore()
+
+    // "New score" on other pages lands here as /scores?new=1. The flag is read from
+    // window.location in a mount effect, not useSearchParams, so the page needs no
+    // Suspense boundary; dropping it right away keeps a reload from reopening the dialog.
+    useEffect(() => {
+        if (!new URLSearchParams(window.location.search).has('new')) return
+        setCreateDialogOpen(true)
+        router.replace('/scores')
+    }, [router])
 
     function handleCreate(title: string, instrument: Instrument) {
         createFromScore(title, Score.blank(instrument))
