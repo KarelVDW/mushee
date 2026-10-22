@@ -561,13 +561,15 @@ test('renaming: Enter hands the keys back to the score, Escape puts the old titl
     await title.fill('Morning song')
     await expect(page).toHaveTitle('Morning song — Solkey')
     await page.keyboard.press('Enter')
-    await expect(page.locator('div[tabindex="0"]').first()).toBeFocused()
+    // The keys go back to the named canvas itself, so a screen reader hears the score and its how-to.
+    const canvas = page.getByRole('application', { name: 'Morning song — score' })
+    await expect(canvas).toBeFocused()
 
     await title.click()
     await title.fill('Not this')
     await page.keyboard.press('Escape')
     await expect(title).toHaveValue('Morning song')
-    await expect(page.locator('div[tabindex="0"]').first()).toBeFocused()
+    await expect(canvas).toBeFocused()
 
     await title.fill('')
     await expect(page).toHaveTitle('Untitled score — Solkey')
@@ -682,5 +684,22 @@ test.describe('an empty score', () => {
     test('from onboarding, focus starts on Start recording', async ({ page }) => {
         await page.goto(`/scores/${MOCK_SCORE_ID}?first=1`)
         await expect(page.getByRole('button', { name: 'Start recording' })).toBeFocused()
+    })
+
+    test('Start recording from the keyboard hands the keys to the canvas, so Escape stops the recording', async ({ page, browserName }) => {
+        test.skip(browserName === 'webkit', 'the synthetic microphone needs Chromium’s MediaRecorder')
+        await mockRecording(page)
+        await page.goto(`/scores/${MOCK_SCORE_ID}?first=1`)
+        const start = page.getByRole('button', { name: 'Start recording' })
+        await expect(start).toBeFocused()
+        await page.keyboard.press('Enter')
+        const strip = page.getByRole('group', { name: 'Recording status' })
+        await expect(strip).toBeVisible()
+        await expect(start).toHaveCount(0)
+        // Never dropped to <body> as the empty state goes: the canvas holds the keys.
+        await expect(page.getByRole('application', { name: `${MOCK_TITLE} — score` })).toBeFocused()
+        await page.keyboard.press('Escape')
+        await expect(strip).toHaveCount(0)
+        await expect(page.getByRole('button', { name: 'Record', exact: true })).toBeVisible()
     })
 })

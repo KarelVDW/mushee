@@ -14,7 +14,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { useCallback, useEffect, useId, useRef, useState, useSyncExternalStore } from 'react'
 
 import { SelectionPopover } from '@/components/editor/SelectionPopover'
-import { ErrorScreen, focusWithoutTooltip, PopoverSheetHost, showToast, TertiaryButton } from '@/components/ui'
+import { ErrorScreen, PopoverSheetHost, showToast, TertiaryButton } from '@/components/ui'
 import { ApiError, NetworkError } from '@/lib/api'
 import { withPlan } from '@/lib/plans'
 import { useScoreDocument } from '@/lib/queries'
@@ -63,7 +63,15 @@ export default function ScoreEditorPage() {
     const activeNote = manipulator.selectedNote
 
     const [title, setTitle] = useState('')
+    // The page holds the editor's keydown listener (keys bubble up to it from anywhere in the
+    // editor); the canvas — the named 'score editor' application around the score — is where
+    // focus goes, so a screen reader landing back on the editor hears the score's name and how
+    // its keys work, and enters the application instead of browsing past it.
     const containerRef = useRef<HTMLDivElement>(null)
+    const canvasRef = useRef<HTMLDivElement>(null)
+    // Without scrolling: the canvas can be taller than the viewport, and handing the keys back
+    // must never move the score away from where the user had it.
+    const focusCanvas = useCallback(() => canvasRef.current?.focus({ preventScroll: true }), [])
     const scoreAreaRef = useRef<HTMLDivElement>(null)
     const [instrumentDialogOpen, setInstrumentDialogOpen] = useState(false)
     const [shortcutsOpen, setShortcutsOpen] = useState(false)
@@ -179,8 +187,8 @@ export default function ScoreEditorPage() {
         setSelectionMenu(null)
         if (!returnFocusFromMenu.current) return
         returnFocusFromMenu.current = false
-        containerRef.current?.focus()
-    }, [])
+        focusCanvas()
+    }, [focusCanvas])
     const handleSelectionMenu = useCallback((_event: SelectionMenuEvent) => openSelectionMenu('pointer'), [openSelectionMenu])
     useEffect(() => {
         manipulator.onSelectionMenuRequest = () => openSelectionMenu('keyboard')
@@ -258,26 +266,31 @@ export default function ScoreEditorPage() {
 
     // Big edits offer an Undo in a toast (the manipulator says which and what to call it). Its
     // Undo takes back exactly that step, and the toast goes as soon as any other step commits —
-    // so it can never undo the wrong thing.
+    // so it can never undo the wrong thing — or the editor closes: the app-wide Toaster outlives
+    // the page, and an Undo pressed from the library would edit (and autosave) a score no longer
+    // on screen.
     useEffect(() => {
-        let unwatch: (() => void) | null = null
+        let live: { toast: number; unwatch: () => void } | null = null
+        const retire = () => {
+            if (!live) return
+            live.unwatch()
+            dismissToast(live.toast)
+            live = null
+        }
         manipulator.onUndoOffer = (offer) => {
-            unwatch?.()
+            retire()
             const toast = showToast(offer.message, 'info', {
                 duration: UNDO_TOAST_MS,
                 action: { label: 'Undo', ariaLabel: offer.undoLabel, onClick: () => manipulator.undoStep(offer.step) },
             })
-            const unsubscribe = manipulator.subscribe(() => {
-                if (manipulator.editCount === offer.step) return
-                dismissToast(toast)
-                unsubscribe()
-                unwatch = null
+            const unwatch = manipulator.subscribe(() => {
+                if (manipulator.editCount !== offer.step) retire()
             })
-            unwatch = unsubscribe
+            live = { toast, unwatch }
         }
         return () => {
             manipulator.onUndoOffer = undefined
-            unwatch?.()
+            retire()
         }
     }, [manipulator])
 
@@ -374,17 +387,17 @@ export default function ScoreEditorPage() {
 
     // Route keyboard input through the manipulator. Re-runs once the editor chrome (and so the
     // container) mounts — which happens only after the score AND its instruments load, hence
-    // both deps — attaching the listener and focusing for capture. Suspended while a dialog is
-    // up so its keystrokes can't edit the score; when the dialog closes, re-attaching also puts
-    // focus back on the editor.
+    // both deps — attaching the listener and focusing the canvas for capture. Suspended while a
+    // dialog is up so its keystrokes can't edit the score; when the dialog closes, re-attaching
+    // also puts focus back on the canvas.
     const dialogOpen = instrumentDialogOpen || shortcutsOpen || recordingHalt !== null || micModeGuideOpen
     useEffect(() => {
         const el = containerRef.current
         if (!el || dialogOpen) return
         el.addEventListener('keydown', manipulator.handleKeyDown)
-        el.focus()
+        focusCanvas()
         return () => el.removeEventListener('keydown', manipulator.handleKeyDown)
-    }, [manipulator, score, dialogOpen, instrumentsReady])
+    }, [manipulator, score, dialogOpen, instrumentsReady, focusCanvas])
 
     // Straight from onboarding (?first=1), focus starts on the empty score's Start recording —
     // once, after the effect above has focused the editor (the keys stay on the editor, which
@@ -405,10 +418,10 @@ export default function ScoreEditorPage() {
     // Record with the strip's record-as-stop), and the take's end swaps them back. Focus on a
     // control that went (or just turned disabled, like Play mid-take) would drop to <body>, out
     // of reach of the editor's keys — so the record button in the dock takes it (phones), or else
-    // the editor itself, where Space and Escape still stop the take. Only focus the swap lost (or
-    // that sits on the editor itself) moves; an open dialog keeps its own. Declared after the
-    // listener effect above, which focuses the editor when the Mic Mode guide closes on the take
-    // it starts.
+    // the canvas, where Space and Escape still stop the take. Only focus the swap lost (or that
+    // sits on the canvas or the editor itself) moves; an open dialog keeps its own. Declared after
+    // the listener effect above, which focuses the canvas when the Mic Mode guide closes on the
+    // take it starts.
     const dockRef = useRef<HTMLDivElement>(null)
     const stripUp = recordingStatus !== null
     const stripWasUp = useRef(stripUp)
@@ -418,13 +431,17 @@ export default function ScoreEditorPage() {
         const editor = containerRef.current
         const focused = document.activeElement
         const lost =
-            !focused || focused === document.body || focused === editor || (focused instanceof HTMLButtonElement && focused.disabled)
+            !focused ||
+            focused === document.body ||
+            focused === editor ||
+            focused === canvasRef.current ||
+            (focused instanceof HTMLButtonElement && focused.disabled)
         if (dialogOpen || !editor || !lost) return
         const recordButton = dockRef.current?.querySelector<HTMLElement>(RECORD_BUTTON_SELECTOR)
         // Without scrolling: the phone dock's rows are still animating to their new height inside a clipped frame.
         if (recordButton) recordButton.focus({ preventScroll: true })
-        else focusWithoutTooltip(editor)
-    }, [stripUp, dialogOpen])
+        else focusCanvas()
+    }, [stripUp, dialogOpen, focusCanvas])
 
     // Phone sheets live between the header and the dock (Popover's sheet frame reads
     // --app-header-h / --dock-h): measured, and re-measured whenever either bar changes size.
@@ -502,12 +519,18 @@ export default function ScoreEditorPage() {
     return (
         <div
             ref={containerRef}
-            tabIndex={0}
+            // Focusable but never a Tab stop: a click on bare chrome (the header's or the dock's
+            // background) lands here instead of on <body>, keeping the keys in the editor — and
+            // is handed straight on to the canvas, the editor's one named focus target.
+            tabIndex={-1}
             className="relative flex flex-col h-dvh bg-surface text-on-surface outline-none"
-            // A context menu aimed at the editor itself came from the keyboard (Shift+F10, the
-            // Menu key — the focused element is the target): ours, not the browser's.
+            onFocus={(e) => {
+                if (e.target === e.currentTarget) focusCanvas()
+            }}
+            // A context menu aimed at the canvas (or the editor itself) came from the keyboard
+            // (Shift+F10, the Menu key — the focused element is the target): ours, not the browser's.
             onContextMenu={(e) => {
-                if (e.target !== e.currentTarget) return
+                if (e.target !== e.currentTarget && e.target !== canvasRef.current) return
                 e.preventDefault()
                 manipulator.requestSelectionMenu()
             }}>
@@ -521,7 +544,7 @@ export default function ScoreEditorPage() {
                         setTitle(v)
                         saveToApi({ title: v })
                     }}
-                    onTitleDone={() => focusWithoutTooltip(containerRef.current)}
+                    onTitleDone={focusCanvas}
                     onChangeInstrument={() => setInstrumentDialogOpen(true)}
                     autosave={autosave}
                     compact={isMobile}
@@ -543,33 +566,41 @@ export default function ScoreEditorPage() {
                         {/* The click events carry coordinates relative to the ScoreView's own
                         container, so the popovers anchor inside this exact wrapper. */}
                         <div className="relative">
-                            <ScoreView
-                                score={score}
-                                layoutId={score.layout.id}
-                                // View-only while a take runs: a stray tap can't select a note (which
-                                // would end the take) or open a popover; scrolling stays native.
-                                interactive={!taking}
-                                selectedNote={activeNote}
-                                selectedNotes={manipulator.selectedNotes}
-                                highlight={pitchHighlight}
-                                playbackCursorRef={playbackCursorRef}
-                                waveformStore={waveformStore}
-                                onSelectionStart={handleSelectionStart}
-                                onSelectionExtend={handleSelectionExtend}
-                                onSelectionMenu={handleSelectionMenu}
-                                onNoteChange={handleNoteChange}
-                                onMeasureButtonsLayout={setMeasureButtonsRect}
-                                onAttributeClick={setAttributePopover}
-                                onAttributeHover={setAttributeHover}
-                                // The canvas, named for a screen reader: the score's title, how the keys
-                                // work, and — while it is empty — what to do first.
+                            {/* The canvas, named for a screen reader: the score's title, how the keys
+                            work, and — while it is empty — what to do first. It wraps the score
+                            alone: the bar buttons and the empty state after it stay plain page
+                            content, reachable in browse mode. The keys bubble on to the page's
+                            listener; the selection and the input cursor show where they go. */}
+                            <div
+                                ref={canvasRef}
+                                tabIndex={0}
                                 role="application"
                                 aria-roledescription="score editor"
                                 aria-label={title.trim() ? `${title.trim()} — score` : UNTITLED_SCORE}
                                 aria-describedby={
                                     [emptyScore && emptyStateId, !isMobile && keyboardHelpId].filter(Boolean).join(' ') || undefined
                                 }
-                            />
+                                className="outline-none">
+                                <ScoreView
+                                    score={score}
+                                    layoutId={score.layout.id}
+                                    // View-only while a take runs: a stray tap can't select a note (which
+                                    // would end the take) or open a popover; scrolling stays native.
+                                    interactive={!taking}
+                                    selectedNote={activeNote}
+                                    selectedNotes={manipulator.selectedNotes}
+                                    highlight={pitchHighlight}
+                                    playbackCursorRef={playbackCursorRef}
+                                    waveformStore={waveformStore}
+                                    onSelectionStart={handleSelectionStart}
+                                    onSelectionExtend={handleSelectionExtend}
+                                    onSelectionMenu={handleSelectionMenu}
+                                    onNoteChange={handleNoteChange}
+                                    onMeasureButtonsLayout={setMeasureButtonsRect}
+                                    onAttributeClick={setAttributePopover}
+                                    onAttributeHover={setAttributeHover}
+                                />
+                            </div>
                             {/* Chrome after the score's <svg> in DOM order — the exports and the selection
                                 bar take the canvas's first svg — and none of it ever exported. */}
                             {measureButtonsRect && !taking && (
@@ -583,7 +614,12 @@ export default function ScoreEditorPage() {
                             <EditorEmptyState
                                 show={emptyScore}
                                 touch={isMobile}
-                                onStartRecording={toggleRecording}
+                                // The button goes (inert, then unmounted) the moment the recording starts:
+                                // the keys move to the canvas first, so Space and Escape can still stop it.
+                                onStartRecording={() => {
+                                    focusCanvas()
+                                    toggleRecording()
+                                }}
                                 descriptionId={emptyStateId}
                                 startRef={startRecordingRef}
                             />

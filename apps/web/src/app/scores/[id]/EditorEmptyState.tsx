@@ -65,8 +65,11 @@ export function EditorEmptyState({ show, touch, onStartRecording, descriptionId,
             data-export-exclude
             inert={leaving}
             className={[
-                'mx-auto mb-6 max-w-[30rem] flex flex-col items-center gap-3 text-center',
-                touch ? 'mt-6' : 'mt-14',
+                'mx-auto mb-6 max-w-120 flex flex-col items-center gap-3 text-center',
+                // 56px below the score's last row on desktop. The bar buttons' row (MeasureControls:
+                // 12px + a 32px row, 40px on touch) sits in between, so this margin is what is left.
+                // Phones keep 24px clear of those 40px buttons — the row alone already takes 52px.
+                touch ? 'mt-6' : 'mt-3 pointer-coarse:mt-1',
                 'transition-[opacity,transform] duration-200 ease-solkey motion-reduce:transition-none',
                 leaving ? 'opacity-0 translate-y-2' : 'opacity-100 translate-y-0',
             ].join(' ')}>

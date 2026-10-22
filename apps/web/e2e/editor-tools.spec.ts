@@ -413,7 +413,7 @@ test('shortcuts dialog: a binding can be removed and defaults restored', async (
     await expect(restToggle).toHaveAttribute('aria-pressed', 'true')
 })
 
-test('Add bar and Remove last bar are named buttons under the final barline', async ({ page }) => {
+test('Add bar and Remove last bar are named buttons under the final barline', async ({ page, browserName }) => {
     const svg = page.locator('.max-w-240 svg').first()
     await expect(svg).toBeVisible()
     // Real buttons now, outside the score's svg: nothing of them is drawn into it.
@@ -444,8 +444,13 @@ test('Add bar and Remove last bar are named buttons under the final barline', as
     }).toPass({ timeout: 5000 })
     await expect(page.getByRole('status').filter({ hasText: /^Removed bar/ })).toHaveCount(0)
 
-    // Tab reaches them, and the second-to-last bar goes too; the score's only bar never does.
-    await remove.focus()
+    // Tab reaches them — straight after the canvas, in reading order — and the second-to-last
+    // bar goes too; the score's only bar never does. (Safari's Tab skips buttons unless asked.)
+    const tab = browserName === 'webkit' ? 'Alt+Tab' : 'Tab'
+    await focusEditor(page)
+    await page.keyboard.press(tab)
+    await expect(add).toBeFocused()
+    await page.keyboard.press(tab)
     await expect(remove).toBeFocused()
     await page.keyboard.press('Enter')
     await expect(remove).toBeDisabled()

@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
+
 import type { Locator, Page } from '@playwright/test'
 
 import { denyMicrophone, expect, MOCK_SCORE_ID, MOCK_SHARE_TOKEN, MOCK_TITLE, SELECTION_BANDS, test, waitForAutosave } from './fixtures'
@@ -155,6 +158,43 @@ test('a take folds the dock into the recording strip beside record-as-stop; toas
         const dock = await page.getByRole('group', { name: 'Note navigation and transport' }).boundingBox()
         expect((toast?.y ?? Infinity) + (toast?.height ?? 0)).toBeLessThanOrEqual(dock?.y ?? 0)
     }).toPass({ timeout: 5000 })
+})
+
+test('from onboarding, Start recording hands focus to the dock’s stop as the empty score goes', async ({ page }) => {
+    // The fixture as rests only: a score without a single pitched note, so the empty state shows.
+    const stored = JSON.parse(readFileSync(resolve(process.cwd(), 'e2e/fixtures/score.partwise.json'), 'utf8')) as {
+        parts: { measures: { entries: Record<string, unknown>[] }[] }[]
+    }
+    for (const measure of stored.parts[0].measures) {
+        measure.entries = measure.entries.map((entry) => {
+            if (entry._type !== 'note' || !entry.pitch) return entry
+            const { pitch: _pitch, ...rest } = entry
+            return { ...rest, rest: {} }
+        })
+    }
+    await page.route(/\/scores\/[^/]+\/load$/, (route) =>
+        route.fulfill({
+            json: stored,
+            headers: {
+                'access-control-allow-origin': route.request().headers()['origin'] ?? '*',
+                'access-control-allow-credentials': 'true',
+            },
+        }),
+    )
+    await mockRecording(page)
+    await page.goto(`/scores/${MOCK_SCORE_ID}?first=1`)
+    const start = page.getByRole('button', { name: 'Start recording' })
+    await expect(start).toBeFocused()
+    await page.keyboard.press('Enter')
+    await expect(page.getByRole('group', { name: 'Recording status' })).toBeVisible()
+    await expect(start).toHaveCount(0)
+    // Never dropped to <body>: the strip's stop takes it, and the editor's keys still reach the recording.
+    await expect(page.getByRole('button', { name: 'Stop recording', exact: true })).toBeFocused()
+    // Focus moved during keyboard use shows the stop's tooltip, and its first Escape closes only
+    // that (the tooltip contract); the next one reaches the editor and stops the recording.
+    await page.keyboard.press('Escape')
+    await page.keyboard.press('Escape')
+    await expect(page.getByRole('group', { name: 'Recording status' })).toHaveCount(0)
 })
 
 /** Open the phone dock's More sheet: everything beyond Undo and the note lengths lives there. */
