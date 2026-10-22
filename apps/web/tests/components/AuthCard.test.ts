@@ -65,6 +65,16 @@ describe('AuthCard', () => {
         expect(field(signin, 'Password').placeholder).toBe('')
     })
 
+    it('never lets a pre-hydration submit put credentials in the URL', () => {
+        // The form's fields are named for autofill; a native GET submit (before React hydrates)
+        // would serialise them into the query string — history and server logs included.
+        for (const mode of ['signin', 'signup'] as const) {
+            const host = render({ mode })
+            expect(host.querySelector('form')?.getAttribute('method')).toBe('post')
+            unmount?.()
+        }
+    })
+
     it('states the signup password rule up front, and what signing up costs', () => {
         const host = render({ mode: 'signup' })
         expect(description(host, field(host, 'Password'))).toBe('At least 8 characters.')

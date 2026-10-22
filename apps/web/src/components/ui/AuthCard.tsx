@@ -188,7 +188,9 @@ export function AuthCard({ mode, notice, loading, submitDisabled, beforeSubmit, 
                 )}
             </div>
 
-            <form onSubmit={submit} className="flex flex-col gap-5 flex-1">
+            {/* method="post": a submit that lands before hydration falls back to a native submit,
+                and a GET would put the email and password in the URL (history, server logs). */}
+            <form method="post" onSubmit={submit} className="flex flex-col gap-5 flex-1">
                 <div className="flex flex-col gap-4.5 flex-1 justify-center">
                     {isSignup && (
                         <TextField

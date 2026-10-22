@@ -42,7 +42,8 @@ function LoginForm() {
                 <p className="font-body text-[14px] leading-normal text-on-surface-variant m-0 mb-7">
                     Enter the console secret to continue.
                 </p>
-                <form onSubmit={(e) => void submit(e)} className="flex flex-col gap-5">
+                {/* method="post" so a pre-hydration native submit never puts the secret in the URL. */}
+                <form method="post" onSubmit={(e) => void submit(e)} className="flex flex-col gap-5">
                     <TextField
                         label="Console secret"
                         type="password"

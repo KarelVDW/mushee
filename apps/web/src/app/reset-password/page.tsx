@@ -147,6 +147,7 @@ function PasswordResetPageInner() {
                 <div className="flex-1 flex flex-col gap-6">
                     {stage === 'request' && (
                         <form
+                            method="post"
                             onSubmit={(e) => {
                                 void handleRequest(e)
                             }}
@@ -234,6 +235,7 @@ function PasswordResetPageInner() {
 
                     {stage === 'set-new' && (
                         <form
+                            method="post"
                             onSubmit={(e) => {
                                 void handleSetNew(e)
                             }}
