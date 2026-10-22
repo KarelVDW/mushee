@@ -93,10 +93,10 @@ test('tabs: arrow keys move between tabs', async ({ page }) => {
 test('recordings tab: lists every recording with its score and deletes one', async ({ page, apiMock }) => {
     await page.getByRole('tab', { name: 'Recordings' }).click()
     await expect(page).toHaveURL(/\/settings\?tab=recordings$/)
-    const rows = page.getByRole('list', { name: 'Takes' }).getByRole('listitem')
+    const rows = page.getByRole('list', { name: 'Recordings' }).getByRole('listitem')
     await expect(rows).toHaveCount(4)
     await expect(rows.first()).toContainText(MOCK_TITLE)
-    await rows.first().getByRole('button', { name: 'Delete take' }).click()
+    await rows.first().getByRole('button', { name: 'Delete recording' }).click()
     await rows.first().getByRole('button', { name: 'Delete', exact: true }).click()
     await expect(rows).toHaveCount(3)
     expect(apiMock.recordingDeletes).toEqual(['take-2'])
@@ -104,7 +104,7 @@ test('recordings tab: lists every recording with its score and deletes one', asy
 
 test('recordings tab: links each score, labels orphans "Deleted score", and disables play without audio', async ({ page }) => {
     await page.goto('/settings?tab=recordings')
-    const rows = page.getByRole('list', { name: 'Takes' }).getByRole('listitem')
+    const rows = page.getByRole('list', { name: 'Recordings' }).getByRole('listitem')
     await expect(rows).toHaveCount(4)
 
     // Recordings on a live score link to it; the orphan's score is gone, so its name is plain text.
@@ -115,15 +115,15 @@ test('recordings tab: links each score, labels orphans "Deleted score", and disa
     await expect(orphan).toHaveCount(1)
     await expect(orphan).not.toContainText(MOCK_TITLE)
     await expect(orphan.getByRole('link')).toHaveCount(0)
-    await expect(orphan.getByRole('button', { name: 'Play take' })).toBeEnabled()
+    await expect(orphan.getByRole('button', { name: 'Play recording' })).toBeEnabled()
 
     // The audio-less recording (7 s) cannot be played; the others can.
     const silent = rows.filter({ hasText: '0:07' })
     await expect(silent).toHaveCount(1)
-    const silentPlay = silent.getByRole('button', { name: 'Play take' })
+    const silentPlay = silent.getByRole('button', { name: 'Play recording' })
     await expect(silentPlay).toBeDisabled()
-    await expect(silentPlay).toHaveAttribute('title', 'No audio was kept for this take')
-    await expect(rows.getByRole('button', { name: 'Play take', disabled: false })).toHaveCount(3)
+    await expect(silentPlay).toHaveAttribute('title', 'No audio was kept for this recording')
+    await expect(rows.getByRole('button', { name: 'Play recording', disabled: false })).toHaveCount(3)
 })
 
 test('account tab: "Download my data" produces a zip archive of the account', async ({ page }) => {

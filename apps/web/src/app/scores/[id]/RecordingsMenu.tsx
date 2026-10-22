@@ -44,7 +44,7 @@ function RecordingsPanel({ scoreId }: { scoreId: string }) {
                     Nothing recorded yet. Each time you record, the audio is kept here so you can listen back.
                 </p>
             )}
-            {recordings.data && recordings.data.length > 0 && <TakesList takes={recordings.data} numbered noun="recording" />}
+            {recordings.data && recordings.data.length > 0 && <TakesList takes={recordings.data} numbered />}
             <p className="m-0 font-body font-normal text-[11px] leading-normal text-on-surface-variant">
                 Only you can hear these. Deleting this score deletes them too.
             </p>
