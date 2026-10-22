@@ -23,7 +23,15 @@ interface NewScoreDialogProps {
  * The form every new score goes through: a title and a lead instrument. Mount it
  * only while it is open, so each opening starts from the initial values.
  */
-export function NewScoreDialog({ title: heading, subtitle, initialTitle = '', initialInstrument, notice, onCancel, onCreate }: NewScoreDialogProps) {
+export function NewScoreDialog({
+    title: heading,
+    subtitle,
+    initialTitle = '',
+    initialInstrument,
+    notice,
+    onCancel,
+    onCreate,
+}: NewScoreDialogProps) {
     const [title, setTitle] = useState(initialTitle)
     const [instrument, setInstrument] = useState<Instrument>(initialInstrument)
     const titleInputRef = useRef<HTMLInputElement>(null)
