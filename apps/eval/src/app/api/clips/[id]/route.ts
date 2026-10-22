@@ -13,7 +13,7 @@ export async function GET(_request: Request, { params }: Params) {
         latestTranscription(id),
         listClips(clip.corpusId),
     ])
-    // Prev/next hand the clip page and the recording flow their navigation.
+    // Prev/next and position hand the clip page its navigation (the record flow derives its own from the corpus clip list).
     const index = siblings.findIndex((c) => c.id === id)
     return NextResponse.json({
         clip,
