@@ -109,6 +109,12 @@ interface PopoverProps {
     variant?: 'anchored' | 'sheet'
     /** Anchored only: keep the panel this many px inside the viewport's left and right edges. */
     viewportGutter?: number
+    /**
+     * The panel's closing row (Transpose's "More options" + Apply). A sheet pins it under its
+     * scrolling body, so the commit button stays in view however long the body grows; an
+     * anchored popover renders it last, inline.
+     */
+    footer?: ReactNode
     children: ReactNode
 }
 
@@ -130,6 +136,7 @@ export function Popover({
     manageFocus = false,
     variant = 'anchored',
     viewportGutter,
+    footer,
     children,
 }: PopoverProps) {
     const popRef = useRef<HTMLDivElement>(null)
@@ -221,6 +228,7 @@ export function Popover({
                     </Tooltip>
                 </div>
                 <SheetBody className={className}>{children}</SheetBody>
+                {footer && <div className="shrink-0 px-4 pt-2 pb-4">{footer}</div>}
             </div>
         )
         if (!sheetTarget) return null
@@ -246,6 +254,7 @@ export function Popover({
             )}
             {hint && <PopoverHint>{hint}</PopoverHint>}
             {children}
+            {footer}
         </div>
     )
 }
@@ -256,10 +265,14 @@ function PopoverHint({ children }: { children: ReactNode }) {
 
 /**
  * A sheet's scrolling body. Where its content is clipped — below, or above once scrolled — a
- * 16px fade over the edge line says there is more that way.
+ * 16px fade over the edge line says there is more that way. It re-measures whenever the body
+ * or its content changes size (Transpose's "More options" growing the content, a sheet frame
+ * shrinking), not only on scroll and window resize. The content keeps its natural height —
+ * the body scrolls instead of squeezing a child (the transpose preview) to fit.
  */
 function SheetBody({ className, children }: { className?: string; children: ReactNode }) {
     const ref = useRef<HTMLDivElement>(null)
+    const contentRef = useRef<HTMLDivElement>(null)
     const [clipped, setClipped] = useState(false)
     const [scrolled, setScrolled] = useState(false)
     const measure = useCallback(() => {
@@ -271,16 +284,19 @@ function SheetBody({ className, children }: { className?: string; children: Reac
     useLayoutEffect(() => {
         measure()
         window.addEventListener('resize', measure)
-        return () => window.removeEventListener('resize', measure)
+        const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(measure)
+        for (const el of [ref.current, contentRef.current]) if (el) observer?.observe(el)
+        return () => {
+            window.removeEventListener('resize', measure)
+            observer?.disconnect()
+        }
     }, [measure])
     return (
         <div className="relative flex-1 min-h-0 flex flex-col">
-            <div
-                ref={ref}
-                data-popover-body=""
-                onScroll={measure}
-                className={`flex-1 min-h-0 overflow-y-auto overscroll-contain flex flex-col px-4 pb-4${className ? ` ${className}` : ''}`}>
-                {children}
+            <div ref={ref} data-popover-body="" onScroll={measure} className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
+                <div ref={contentRef} className={`flex flex-col px-4 pb-4${className ? ` ${className}` : ''}`}>
+                    {children}
+                </div>
             </div>
             {scrolled && (
                 <div

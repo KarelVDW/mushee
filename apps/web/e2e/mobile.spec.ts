@@ -278,6 +278,23 @@ test('pitch actions live in the More sheet and the transpose sheet swaps in with
     await expect(page.getByRole('dialog')).toHaveCount(0)
 })
 
+test('transpose’s More options keeps Apply pinned in view, the interval row whole, and fades the clipped body', async ({ page }) => {
+    await page.setViewportSize({ width: 360, height: 740 })
+    const sheet = await openMore(page)
+    await sheet.getByRole('button', { name: 'Transpose' }).tap()
+    const transpose = page.getByRole('dialog', { name: 'Transpose' })
+    await transpose.getByRole('button', { name: 'More options' }).tap()
+    const apply = transpose.getByRole('button', { name: 'Apply' })
+    await expect(apply).toBeInViewport({ ratio: 1 })
+    // The body grew past the sheet: it scrolls, and the fade says so.
+    await expect(transpose.locator('[data-sheet-fade="bottom"]')).toHaveCount(1)
+    // 1–8 on one row: no lone '8' wrapped under the rest.
+    const sizes = transpose.getByRole('group', { name: 'Interval size' }).getByRole('button')
+    await expect(sizes).toHaveCount(8)
+    const tops = new Set(await sizes.evaluateAll((els) => els.map((el) => Math.round(el.getBoundingClientRect().top))))
+    expect(tops.size).toBe(1)
+})
+
 test('the More sheet toggles note tools and the metronome', async ({ page }) => {
     const sheet = await openMore(page)
     const rest = sheet.getByRole('button', { name: 'Rest', exact: true })
