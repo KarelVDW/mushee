@@ -80,7 +80,7 @@ export function SharedScorePage({ token }: { token: string }) {
 
     return (
         <div className="bg-surface min-h-dvh flex flex-col">
-            <header className="sticky top-0 z-50 bg-surface-container-low/85 backdrop-blur-xl">
+            <header className="sticky top-0 z-(--z-sticky) bg-surface-container-low/85 backdrop-blur-xl">
                 <div className="max-w-320 mx-auto px-4 sm:px-8 py-3 sm:py-4 flex items-center gap-3 sm:gap-4">
                     <Link href="/" className="no-underline shrink-0" aria-label="Solkey home">
                         <Wordmark size={24} />

@@ -84,7 +84,7 @@ export function SelectionPopover({ x, y, canPaste, onCopy, onPaste, onDelete, on
             style={{ left: pos?.left ?? x, top: pos?.top ?? y, visibility: pos ? 'visible' : 'hidden' }}
             // Tonal gray, not the white glass panel: the bar floats over the pure-white
             // score canvas, and the surface shift is what separates it (no-line rule).
-            className="bg-surface-container-high/90 backdrop-blur-md editorial-shadow absolute z-50 flex items-center gap-0.5 rounded-full px-1.5 py-1">
+            className="bg-surface-container-high/90 backdrop-blur-md editorial-shadow absolute z-(--z-popover) flex items-center gap-0.5 rounded-full px-1.5 py-1">
             <SelectionAction label="Copy" onClick={onCopy} />
             {canPaste && <SelectionAction label="Paste" onClick={onPaste} />}
             <SelectionAction label="Delete" destructive onClick={onDelete} />
