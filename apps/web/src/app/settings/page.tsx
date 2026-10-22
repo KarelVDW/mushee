@@ -25,6 +25,7 @@ import { useSession } from '@/lib/auth-client'
 import { downloadBlob } from '@/lib/FileDownload'
 import { type PlanTier, requestedPlanFrom } from '@/lib/plans'
 import { useAllRecordings, useExportAccountData, useRefreshBillingState, useScores, useSignOut, useUpdateProfile } from '@/lib/queries'
+import { rovingIndexForKey } from '@/lib/useRadioGroup'
 
 import { BillingSection } from './BillingSection'
 import { ChangePasswordDialog } from './ChangePasswordDialog'
@@ -280,7 +281,7 @@ function RecordingsSection() {
                 <Alert onRetry={() => void takes.refetch()}>Couldn&apos;t load your recordings.</Alert>
             ) : takes.data.length === 0 ? (
                 <p className="font-body font-normal text-[13px] leading-normal text-on-surface-variant m-0">
-                    No recordings yet. Press record in any score and they&apos;ll show up here.
+                    No recordings yet — press record in any score and your recordings show up here.
                 </p>
             ) : (
                 <TakesList
@@ -303,28 +304,19 @@ const TABS: readonly { readonly id: SettingsTab; readonly label: string; readonl
 const tabId = (tab: SettingsTab) => `settings-tab-${tab}`
 const panelId = (tab: SettingsTab) => `settings-panel-${tab}`
 
-/** The tab an arrow, Home or End key moves to from `index` (wrapping), or null for any other key. */
-function tabIndexForKey(key: string, index: number): number | null {
-    const last = TABS.length - 1
-    if (key === 'ArrowDown' || key === 'ArrowRight') return index === last ? 0 : index + 1
-    if (key === 'ArrowUp' || key === 'ArrowLeft') return index === 0 ? last : index - 1
-    if (key === 'Home') return 0
-    if (key === 'End') return last
-    return null
-}
-
 /**
  * The settings tabs: a side rail on desktop, a row of labels on phones (no icons, so all four
  * fit at 360px). The current tab pairs its fill with a shape — a 4px cyan stripe on the rail,
  * the 3px cyan underline on the row — and is aria-selected. Arrow keys, Home and End move
  * between tabs (the ARIA tabs pattern, activating as they go); only the current tab is in
- * the Tab order.
+ * the Tab order. Only the current tab's panel is rendered, so only that tab names it in
+ * aria-controls — the others would point at an id that isn't in the page.
  */
 function SettingsTabs({ tab, onTab }: { tab: SettingsTab; onTab: (t: SettingsTab) => void }) {
     const refs = useRef<(HTMLButtonElement | null)[]>([])
 
     const onKeyDown = (e: KeyboardEvent<HTMLButtonElement>, index: number) => {
-        const target = tabIndexForKey(e.key, index)
+        const target = rovingIndexForKey(e, index, TABS.length)
         if (target === null) return
         e.preventDefault()
         onTab(TABS[target].id)
@@ -348,7 +340,7 @@ function SettingsTabs({ tab, onTab }: { tab: SettingsTab; onTab: (t: SettingsTab
                         role="tab"
                         id={tabId(id)}
                         aria-selected={active}
-                        aria-controls={panelId(id)}
+                        aria-controls={active ? panelId(id) : undefined}
                         tabIndex={active ? 0 : -1}
                         onClick={() => onTab(id)}
                         onKeyDown={(e) => onKeyDown(e, index)}

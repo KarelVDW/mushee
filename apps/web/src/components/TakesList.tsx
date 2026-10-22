@@ -81,7 +81,7 @@ interface TakesListProps {
 
 /**
  * Rows of takes with replay (useTakePlayer) and a two-step inline delete.
- * Shared by the editor's Takes panel and Settings → Your data.
+ * Shared by the editor's Takes panel and Settings → Recordings.
  */
 export function TakesList({ takes, scoreTitleFor, scroll = true }: TakesListProps) {
     const remove = useDeleteRecording()
@@ -123,23 +123,29 @@ export function TakesList({ takes, scoreTitleFor, scroll = true }: TakesListProp
                         <div className="flex flex-col gap-0.5 flex-1 min-w-0">
                             <span className="font-body font-medium text-[13px] leading-none text-on-surface truncate">
                                 {formatTakeDate(take.startedAt)}
+                            </span>
+                            {/* The score name rides the length line, outside any clipping box, so the
+                                link's focus ring shows whole; the name truncates inside the link. */}
+                            <span className="flex items-baseline min-w-0 leading-none text-on-surface-variant">
+                                <span className="font-mono font-normal text-[11px] shrink-0">{formatRecordingTime(take.seconds)}</span>
                                 {scoreTitle !== undefined && (
-                                    <span className="font-normal text-on-surface-variant">
-                                        {' · '}
+                                    <>
+                                        <span className="font-body text-[12px] whitespace-pre shrink-0"> · </span>
                                         {scoreTitle === null ? (
-                                            'Deleted score'
+                                            <span className="font-body text-[12px] truncate">Deleted score</span>
                                         ) : (
                                             <Link
                                                 href={`/scores/${take.scoreId}`}
-                                                className="text-primary underline-offset-2 hover:underline rounded-sm focus-ring">
-                                                {scoreTitle}
+                                                className={[
+                                                    'flex min-w-0 font-body text-[12px] text-primary underline-offset-2 hover:underline rounded-sm focus-ring',
+                                                    // A 40px hit area on touch without growing the row: the pseudo-element grows, the text doesn't.
+                                                    'relative pointer-coarse:after:absolute pointer-coarse:after:inset-x-0 pointer-coarse:after:-inset-y-3.5 pointer-coarse:after:content-[""]',
+                                                ].join(' ')}>
+                                                <span className="truncate">{scoreTitle}</span>
                                             </Link>
                                         )}
-                                    </span>
+                                    </>
                                 )}
-                            </span>
-                            <span className="font-mono font-normal text-[11px] leading-none text-on-surface-variant">
-                                {formatRecordingTime(take.seconds)}
                             </span>
                         </div>
                         {confirming === take.id ? (

@@ -162,6 +162,14 @@ describe('TakesList score names', () => {
         expect(container.querySelectorAll('li')[1]?.querySelector('a')).toBeNull()
     })
 
+    it('keeps the score link out of the truncating date line, so its focus ring is never clipped', () => {
+        act(() => root.render(createElement(TakesList, { takes: [take('a')], scoreTitleFor: () => 'Scale Study' })))
+        const link = container.querySelector('a')
+        // The link truncates its own name; no ancestor clips it (or its ring) with overflow.
+        expect(link?.parentElement?.closest('.truncate')).toBeNull()
+        expect(link?.querySelector('.truncate')?.textContent).toBe('Scale Study')
+    })
+
     it('shows no score name on a per-score list', () => {
         act(() => root.render(createElement(TakesList, { takes: [take('a')] })))
         expect(container.querySelector('a')).toBeNull()

@@ -84,4 +84,17 @@ describe('PacksDialog', () => {
         const buy = [...host.querySelectorAll('footer button')].at(-1)
         expect(buy?.textContent).toBe('Buy 15 min · $6')
     })
+
+    it('picks a pack with the arrow keys, the group one Tab stop on the chosen pack', () => {
+        const host = render(SKETCH)
+        const cards = () => [...host.querySelectorAll<HTMLButtonElement>('[role="radio"]')]
+        expect(cards().map((c) => c.tabIndex)).toEqual([0, -1, -1])
+        act(() => {
+            cards()[0]?.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }))
+        })
+        expect(cards().map((c) => c.getAttribute('aria-checked'))).toEqual(['false', 'true', 'false'])
+        expect(cards().map((c) => c.tabIndex)).toEqual([-1, 0, -1])
+        expect(document.activeElement).toBe(cards()[1])
+        expect([...host.querySelectorAll('footer button')].at(-1)?.textContent).toMatch(/^Buy \d+ min · /)
+    })
 })

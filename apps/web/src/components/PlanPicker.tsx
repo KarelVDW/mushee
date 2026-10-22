@@ -1,12 +1,13 @@
 'use client'
 
-import { type Ref, useRef, useState } from 'react'
+import { useState } from 'react'
 
 import { Badge, Eyebrow, Icon } from '@/components/ui'
 import type { BillingInterval } from '@/lib/api'
 import { type Currency, formatMoney } from '@/lib/currency'
 import { planFeatures, planPriceParts, type PlanTier } from '@/lib/plans'
 import { useDisplayCurrency } from '@/lib/useDisplayCurrency'
+import { type RadioProps, useRadioGroup } from '@/lib/useRadioGroup'
 
 interface PlanPickerProps {
     plans: PlanTier[]
@@ -92,23 +93,28 @@ function CompactPlanPicker({
     const professional = plans.filter((p) => p.professional)
     const [comparing, setComparing] = useState(false)
     const [showProfessional, setShowProfessional] = useState(() => professional.some((p) => p.id === selected))
-    const firstProfessionalRef = useRef<HTMLButtonElement>(null)
     const shown = showProfessional ? plans : consumer
+    const radios = useRadioGroup(
+        shown.map((p) => p.id),
+        selected,
+        onSelect,
+    )
 
     // The link goes away once used, so focus moves to the row it revealed rather than to <body>.
     const revealProfessional = () => {
         setShowProfessional(true)
-        requestAnimationFrame(() => firstProfessionalRef.current?.focus())
+        const firstProfessional = plans.findIndex((p) => p.professional)
+        requestAnimationFrame(() => radios.focus(firstProfessional))
     }
 
     return (
         <>
             <BillingToggle value={billing} onChange={onBillingChange} />
             <div role="radiogroup" aria-label="Plans" className="flex flex-col gap-2">
-                {shown.map((p) => (
+                {shown.map((p, index) => (
                     <PlanRow
                         key={p.id}
-                        ref={p.id === professional[0]?.id ? firstProfessionalRef : undefined}
+                        radio={radios.radioProps(index)}
                         plan={p}
                         billing={billing}
                         currency={currency}
@@ -154,7 +160,7 @@ function rowPrice(plan: PlanTier, billing: BillingInterval, currency: Currency):
 }
 
 function PlanRow({
-    ref,
+    radio,
     plan,
     billing,
     currency,
@@ -162,11 +168,11 @@ function PlanRow({
     current,
     expanded,
     onSelect,
-}: TierCardProps & { ref?: Ref<HTMLButtonElement>; expanded: boolean }) {
+}: TierCardProps & { radio: RadioProps; expanded: boolean }) {
     const price = rowPrice(plan, billing, currency)
     return (
         <button
-            ref={ref}
+            {...radio}
             type="button"
             role="radio"
             aria-checked={active}
@@ -210,22 +216,28 @@ function PlanRow({
     )
 }
 
+const BILLING_OPTIONS = [
+    ['monthly', 'Monthly'],
+    ['yearly', 'Yearly · save 17%'],
+] as const satisfies readonly (readonly [BillingInterval, string])[]
+
 function BillingToggle({ value, onChange }: { value: BillingInterval; onChange: (v: BillingInterval) => void }) {
+    const radios = useRadioGroup(
+        BILLING_OPTIONS.map(([k]) => k),
+        value,
+        onChange,
+    )
     return (
         <div
             role="radiogroup"
             aria-label="How often you pay"
             className="inline-flex p-0.75 rounded-full bg-surface-container-low self-start">
-            {(
-                [
-                    ['monthly', 'Monthly'],
-                    ['yearly', 'Yearly · save 17%'],
-                ] as const
-            ).map(([k, label]) => {
+            {BILLING_OPTIONS.map(([k, label], index) => {
                 const active = value === k
                 return (
                     <button
                         key={k}
+                        {...radios.radioProps(index)}
                         type="button"
                         role="radio"
                         aria-checked={active}

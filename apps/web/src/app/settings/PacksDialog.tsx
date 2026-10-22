@@ -10,6 +10,7 @@ import { CREDIT_PACKS, type CreditPack } from '@/lib/plans'
 import { usePlanCatalogue, useStartPackCheckout } from '@/lib/queries'
 import { formatAllowance } from '@/lib/recordingTime'
 import { useDisplayCurrency } from '@/lib/useDisplayCurrency'
+import { useRadioGroup } from '@/lib/useRadioGroup'
 
 type Phase = 'choose' | 'redirecting'
 
@@ -44,6 +45,11 @@ export function PacksDialog({ billing, onClose, onSeePlans }: PacksDialogProps) 
     const currency = useDisplayCurrency()
     const startCheckout = useStartPackCheckout()
     const songwriter = usePlanCatalogue().songwriter
+    const radios = useRadioGroup(
+        CREDIT_PACKS.map((p) => p.id),
+        selected,
+        setSelected,
+    )
 
     const pack = CREDIT_PACKS.find((p) => p.id === selected) ?? CREDIT_PACKS[0]
     const locked = phase !== 'choose'
@@ -86,11 +92,12 @@ export function PacksDialog({ billing, onClose, onSeePlans }: PacksDialogProps) 
                     )}
 
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3" role="radiogroup" aria-label="Minute pack">
-                        {CREDIT_PACKS.map((p) => {
+                        {CREDIT_PACKS.map((p, index) => {
                             const active = selected === p.id
                             return (
                                 <button
                                     key={p.id}
+                                    {...radios.radioProps(index)}
                                     type="button"
                                     role="radio"
                                     aria-checked={active}

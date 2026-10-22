@@ -85,7 +85,14 @@ export function ChangePasswordDialog({ onClose }: ChangePasswordDialogProps) {
             ) : (
                 <div className="flex flex-col gap-4 pb-4">
                     {/* One eye button (on New password) reveals all three fields. */}
-                    <PasswordField label="Current password" value={current} onChange={setCurrent} shown={showPw} autoFocus />
+                    <PasswordField
+                        label="Current password"
+                        value={current}
+                        onChange={setCurrent}
+                        autoComplete="current-password"
+                        shown={showPw}
+                        autoFocus
+                    />
                     <NewPasswordFields
                         value={next}
                         onChange={setNext}

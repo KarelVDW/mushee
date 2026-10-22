@@ -86,4 +86,51 @@ describe('PlanPicker compact', () => {
         act(() => rows(host)[2]?.click())
         expect(onSelect).toHaveBeenCalledWith('studio')
     })
+
+    it('is one Tab stop — the checked row, or the first while none is', () => {
+        const tabIndexes = (host: HTMLElement) => rows(host).map((r) => r.tabIndex)
+        expect(tabIndexes(renderCompact('pro'))).toEqual([-1, 0, -1])
+        unmount?.()
+        expect(tabIndexes(renderCompact(null))).toEqual([0, -1, -1])
+    })
+
+    it('moves to and checks the next or previous row on the arrow keys, wrapping', () => {
+        const onSelect = vi.fn()
+        const host = renderCompact('free', 'monthly', onSelect)
+        const arrow = (row: number, key: string) =>
+            act(() => {
+                rows(host)[row]?.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true }))
+            })
+        arrow(0, 'ArrowDown')
+        expect(onSelect).toHaveBeenLastCalledWith('pro')
+        expect(document.activeElement).toBe(rows(host)[1])
+        arrow(0, 'ArrowUp')
+        expect(onSelect).toHaveBeenLastCalledWith('studio')
+        expect(document.activeElement).toBe(rows(host)[2])
+    })
+})
+
+describe('PlanPicker billing toggle', () => {
+    it('is a radio group of its own with one Tab stop, flipped by the arrow keys', () => {
+        const onBillingChange = vi.fn()
+        const host = document.createElement('div')
+        document.body.appendChild(host)
+        const root = createRoot(host)
+        act(() =>
+            root.render(
+                createElement(PlanPicker, { plans: PLAN_TIERS, billing: 'monthly', onBillingChange, selected: 'free', onSelect: () => {} }),
+            ),
+        )
+        unmount = () => {
+            act(() => root.unmount())
+            host.remove()
+        }
+        const options = [...host.querySelectorAll<HTMLButtonElement>('[role="radiogroup"][aria-label="How often you pay"] [role="radio"]')]
+        expect(options.map((o) => o.tabIndex)).toEqual([0, -1])
+        act(() => {
+            options[0]?.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }))
+        })
+        expect(onBillingChange).toHaveBeenCalledWith('yearly')
+        expect(document.activeElement).toBe(options[1])
+    })
 })
