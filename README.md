@@ -266,6 +266,8 @@ are no longer gated.
 - `apps/admin/README.md` — admin console
 - `apps/eval/README.md` — corpus & benchmarking workbench
 - `apps/api/scripts/eval/README.md` — recording-pipeline eval harness and its findings log
-- `meta/` — developer/agent working notes: `master-todo.md` (beta roadmap) and
+- `meta/` — developer/agent working notes: `master-todo.md` (beta roadmap),
   `notes.md` (launch runbooks, architecture decisions, known quirks, and the
-  WebSocket-concurrency backlog)
+  WebSocket-concurrency backlog), `marketing/` (launch copy),
+  `overnight-2026-09-04.md` (overnight pass log) and `burst/` (executed burst
+  plan + notes, historical)

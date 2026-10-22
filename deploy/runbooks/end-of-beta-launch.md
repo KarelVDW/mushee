@@ -9,6 +9,12 @@ audience is still small and forgiving.
 
 - [ ] Lawyer has reviewed `/terms` + `/privacy` (master-todo item 1's open
       half; include the stored-recording-audio section).
+- [ ] `apps/web/src/app/terms/page.tsx` §3 "Beta access" — rewrite or remove
+      it, and bump `LAST_UPDATED`. Its beta sentences are hard-coded, so
+      neither flag below changes them.
+- [ ] `apps/web/src/app/privacy/page.tsx` — drop "beta notifications" from the
+      Twilio SendGrid purposes (or keep it deliberately if `BETA_MODE` may
+      return). Also hard-coded.
 - [ ] **Signup CAPTCHA** — code shipped 2026-09-05 (Cloudflare Turnstile via
       better-auth's captcha plugin, signup endpoint only). Still to do: create
       the Turnstile widget in the Cloudflare dashboard (managed mode, domain
@@ -98,14 +104,28 @@ its 503/hidden state without touching anything else.
 They're on tier `beta` (1800 credits = 30 min/day since the pricing relaunch
 migration, not sellable). Options:
 
-- **Grandfather them** (generous, zero effort): leave rows alone; the tier
+- **Grandfather them** (generous, little effort): leave rows alone; the tier
   stays functional, they keep 30 min/day forever — more than Songwriter's
-  20 min, so nobody on it ever has a reason to pay — can upgrade any time.
+  20 min, so nobody on it ever has a reason to pay — can upgrade any time,
+  once the settings page stops treating them as beta (below).
 - **Migrate to free** (Sketch: 180 credits = 3 min/day, 5 scores):
   `UPDATE user_subscriptions SET "tierId"='free' WHERE "tierId"='beta';`
 - Middle path: re-tune the beta tier itself (e.g. down to Songwriter's 1200)
   (`UPDATE subscription_tiers SET "dailyRecordingCredits"=… WHERE id='beta'`;
   live within 60 s, no deploy).
+
+Keeping anyone on the `beta` tier (grandfathering or the middle path) needs two
+web edits before the flip, because Settings → Plan & billing
+(`apps/web/src/app/settings/BillingSection.tsx`) keys on `tierId === 'beta'`,
+not on the beta flag:
+
+- [ ] Copy: replace "Free during the beta" (`priceLine`) and "Solkey is in
+      closed beta — … Paid plans arrive at launch." (the section subtitle)
+      with tier-neutral text.
+- [ ] Gating: `canPurchase` hides Change plan and the pack top-up on `isBeta`;
+      gate on `billing.betaMode` alone so beta-tier users can actually buy.
+
+Migrating them to free needs neither.
 
 Whatever you choose, email them about it before they notice — from the admin
 console's **Announcements** page (audience filter: plan `Beta`; send a test copy
@@ -137,7 +157,11 @@ the web client too, so the gate drops even before the web rebuild.
    rebuild).
 3. Smoke: new signup goes straight to onboarding (no waiting room), pricing
    buttons lead to Polar checkout, `/beta` for an approved user shows
-   "you're in", the admin console (admin.solkey.io) still signs in.
+   "you're in", the admin console (admin.solkey.io) still signs in. The same
+   web flag also flips three spots worth a look: onboarding's plan step shows
+   the plan picker (not `BetaPlanStep`), the recording-limit dialog offers the
+   one-time minute packs, and `view-source` of `/` lists the paid JSON-LD
+   offers instead of "Solkey Beta".
 4. Watch signups: `SELECT count(*), max("createdAt") FROM "user";` and the
    SendGrid activity feed (OTP volume = signup volume). This is where the
    missing CAPTCHA would show up first.
