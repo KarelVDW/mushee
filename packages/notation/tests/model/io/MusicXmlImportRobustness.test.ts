@@ -17,7 +17,11 @@ import { generateScore, Rng } from '../../support/scoreGenerator'
  * to begin with), so every survivor exercises real parsing paths.
  */
 
-const FRIENDLY_ERRORS = ['The file is not well-formed XML.', 'The file is not a MusicXML score.', 'The score has no measures.']
+const FRIENDLY_ERRORS = [
+    "This file looks damaged, so Solkey couldn't read it.",
+    'The file is not a MusicXML score.',
+    'This file has no music in it.',
+]
 
 const GARBAGE_TEXT = ['', '-1', '0', '999999', 'NaN', '1e308', 'abc', '7/8', ' 4 ', '∞', '-0.5', '3+2']
 

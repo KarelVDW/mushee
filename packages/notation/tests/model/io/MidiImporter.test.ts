@@ -117,14 +117,14 @@ describe('MidiImporter', () => {
             ])
             const { score, warnings } = load(bytes)
             expect(bars(score)).toEqual([['G4:q', 'D4:q', 'F4:q', 'r:q']])
-            expect(warnings).toEqual(['Overlapping notes were reduced to a single melody line (the top note).'])
+            expect(warnings).toEqual(['Solkey keeps one note at a time, so notes played together were reduced to the top one.'])
         })
 
         it('snaps timing to the sixteenth grid and never writes a note shorter than one', () => {
             const bytes = file([track(on(10, 60), off(Q - 5, 60), on(0, 62), off(1, 62), END)])
             const { score, warnings } = load(bytes)
             expect(bars(score)).toEqual([['C4:q', 'D4:16', 'r:16', 'r:8', 'r:h']])
-            expect(warnings).toEqual(['Note timing was snapped to a sixteenth-note grid.'])
+            expect(warnings).toEqual(['Note timing was tidied to the nearest sixteenth.'])
         })
 
         it('imports the busiest track, ignores percussion, and reports both', () => {
@@ -151,7 +151,7 @@ describe('MidiImporter', () => {
             expect(score.measures[0].tempoAtBeat(0)?.bpm).toBe(90)
             expect(warnings).toEqual([
                 'Only the busiest track (“Lead”) was imported; 1 other track with notes was left out.',
-                'Percussion (channel 10) was left out.',
+                'Drums were left out.',
             ])
         })
 
@@ -305,27 +305,25 @@ describe('MidiImporter', () => {
         it('rejects files that are not MIDI, use SMPTE timing, or hold no tracks or notes', () => {
             expect(() => load(new Uint8Array(str('RIFF')))).toThrow('not a MIDI file')
             expect(() => load(new Uint8Array([...str('MThx'), ...u32(6), 0, 1, 0, 1, 1, 0xe0]))).toThrow('not a MIDI file')
-            expect(() => load(file([melody([60])], { division: 0xe250 }))).toThrow('SMPTE')
-            expect(() => load(file([melody([60])], { division: 0 }))).toThrow('SMPTE')
-            expect(() => load(file([]))).toThrow('no tracks')
-            expect(() => load(file([chunk('XFIH', [])]))).toThrow('no tracks')
-            expect(() => load(file([track(trackName(0, 'Empty'), END)]))).toThrow('no notes')
+            expect(() => load(file([melody([60])], { division: 0xe250 }))).toThrow("timing format Solkey can't read")
+            expect(() => load(file([melody([60])], { division: 0 }))).toThrow("timing format Solkey can't read")
+            expect(() => load(file([]))).toThrow('has no music in it')
+            expect(() => load(file([chunk('XFIH', [])]))).toThrow('has no music in it')
+            expect(() => load(file([track(trackName(0, 'Empty'), END)]))).toThrow('has no music in it')
         })
 
         it('rejects truncated and corrupt files', () => {
             const good = file([melody([60])])
-            expect(() => load(good.subarray(0, good.length - 3))).toThrow('truncated or corrupt')
+            expect(() => load(good.subarray(0, good.length - 3))).toThrow('looks damaged')
             // A declared chunk length that runs past the end of the file — for a track, and for a chunk that is skipped.
-            expect(() => load(file([chunk('MTrk', [0, 0xff, 0x2f]).map((b, i) => (i === 7 ? 200 : b))]))).toThrow('truncated or corrupt')
-            expect(() => load(file([chunk('XFIH', [1, 2, 3]).map((b, i) => (i === 7 ? 200 : b)), melody([60])]))).toThrow(
-                'truncated or corrupt',
-            )
+            expect(() => load(file([chunk('MTrk', [0, 0xff, 0x2f]).map((b, i) => (i === 7 ? 200 : b))]))).toThrow('looks damaged')
+            expect(() => load(file([chunk('XFIH', [1, 2, 3]).map((b, i) => (i === 7 ? 200 : b)), melody([60])]))).toThrow('looks damaged')
             // A data byte before any status byte has been seen.
-            expect(() => load(file([track(event(0, 60, 80), END)]))).toThrow('truncated or corrupt')
+            expect(() => load(file([track(event(0, 60, 80), END)]))).toThrow('looks damaged')
             // A variable-length quantity that never terminates.
-            expect(() => load(file([track([0x80, 0x80, 0x80, 0x80, 0x80], END)]))).toThrow('truncated or corrupt')
+            expect(() => load(file([track([0x80, 0x80, 0x80, 0x80, 0x80], END)]))).toThrow('looks damaged')
             // A meta event whose declared length exceeds the file.
-            expect(() => load(file([track([0, 0xff, 0x03, 0x7f, 65])]))).toThrow('truncated or corrupt')
+            expect(() => load(file([track([0, 0xff, 0x03, 0x7f, 65])]))).toThrow('looks damaged')
         })
 
         it('refuses a file whose ticks would spin out more bars than a score may hold', () => {

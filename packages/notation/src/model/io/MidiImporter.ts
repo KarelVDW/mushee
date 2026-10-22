@@ -17,12 +17,12 @@ const DRUM_CHANNEL = 9
 /** Lowest MIDI note the model can write (octave 0); higher than 127 cannot occur. */
 const LOWEST_MIDI = 12
 
-const CORRUPT = 'The MIDI file is truncated or corrupt.'
+const CORRUPT = "This file looks damaged, so Solkey couldn't read it."
 const WARN_TRACKS = (name: string | undefined, others: number) =>
     `Only the busiest track${name ? ` (“${name}”)` : ''} was imported; ${others} other ${others === 1 ? 'track' : 'tracks'} with notes ${others === 1 ? 'was' : 'were'} left out.`
-const WARN_DRUMS = 'Percussion (channel 10) was left out.'
-const WARN_QUANTIZED = 'Note timing was snapped to a sixteenth-note grid.'
-const WARN_REDUCED = 'Overlapping notes were reduced to a single melody line (the top note).'
+const WARN_DRUMS = 'Drums were left out.'
+const WARN_QUANTIZED = 'Note timing was tidied to the nearest sixteenth.'
+const WARN_REDUCED = 'Solkey keeps one note at a time, so notes played together were reduced to the top one.'
 
 interface RawNote {
     onset: number // ticks
@@ -127,7 +127,7 @@ export class MidiImporter {
     toScore(): ImportedScore {
         const tracks = this.parse()
         const melodyTrack = tracks.reduce((best, track) => (track.notes.length > best.notes.length ? track : best))
-        if (!melodyTrack.notes.length) throw new Error('The MIDI file contains no notes.')
+        if (!melodyTrack.notes.length) throw new Error('This file has no music in it.')
         const otherTracks = tracks.filter((track) => track !== melodyTrack && track.notes.length > 0).length
         if (otherTracks) this.warn(WARN_TRACKS(melodyTrack.name, otherTracks))
         if (tracks.some((track) => track.drumNotes > 0)) this.warn(WARN_DRUMS)
@@ -159,7 +159,8 @@ export class MidiImporter {
         reader.u16() // format: 0 and 1 read the same way, and a format-2 file's patterns are just more tracks
         const trackCount = reader.u16()
         this.division = reader.u16()
-        if (this.division === 0 || this.division & 0x8000) throw new Error('MIDI files with SMPTE timing are not supported.')
+        if (this.division === 0 || this.division & 0x8000)
+            throw new Error("This MIDI file uses a timing format Solkey can't read. Export it again from your music app and try once more.")
         reader.seek(reader.position + Math.max(0, headerLength - 6))
 
         const tracks: TrackData[] = []
@@ -169,7 +170,7 @@ export class MidiImporter {
             if (id === 'MTrk') tracks.push(this.parseTrack(reader, end))
             reader.seek(end)
         }
-        if (!tracks.length) throw new Error('The MIDI file contains no tracks.')
+        if (!tracks.length) throw new Error('This file has no music in it.')
         return tracks
     }
 
@@ -315,7 +316,7 @@ export class MidiImporter {
             measureCount += Math.ceil((end - start) / capacity - BEAT_EPSILON)
             return { start, end, timeSignature }
         })
-        if (measureCount > MAX_MEASURES) throw new Error('The MIDI file is too long to import.')
+        if (measureCount > MAX_MEASURES) throw new Error('This MIDI file is too long to import.')
         return regions
     }
 

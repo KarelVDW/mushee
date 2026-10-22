@@ -56,7 +56,7 @@ describe('MusicXmlImporter', () => {
             const bar = score.measures[1]
             expect(bar.beats).toBeCloseTo(bar.maxBeats, 6)
             expect(measureNotes(score, 1)).toEqual(['r:q', 'r:q', 'r:q', 'C4:8(3:2)', 'D4:8(3:2)', 'r:8(3:2)'])
-            expect(warnings).toContain('Some bars did not add up (an incomplete tuplet, for instance) and were completed with rests.')
+            expect(warnings).toContain("Some bars didn't add up, so rests were added to fill them.")
         })
 
         it('pads what tuplet space can express and keeps the notes when a residue remains', () => {
@@ -87,7 +87,7 @@ describe('MusicXmlImporter', () => {
             expect(bar.maxBeats - bar.beats).toBeGreaterThan(0)
             expect(bar.maxBeats - bar.beats).toBeLessThan(1 / 6)
             expect(measureNotes(score, 1)).toEqual(['r:q', 'r:q', 'r:q', 'C4:8(3:2)', 'E4:16(5:4)', 'r:8(5:4)'])
-            expect(warnings).toContain('Some bars did not add up (an incomplete tuplet, for instance) and were completed with rests.')
+            expect(warnings).toContain("Some bars didn't add up, so rests were added to fill them.")
         })
 
         it('drops a note or forward whose duration is absurd instead of spelling it', () => {
@@ -96,7 +96,7 @@ describe('MusicXmlImporter', () => {
             )
             const { score, warnings } = load(huge)
             expect(measureNotes(score)).toEqual(['r:q', 'r:q', 'r:q', 'r:q'])
-            expect(warnings).toContain('Some notes could not be read and were left out.')
+            expect(warnings).toContain("Some notes couldn't be read and were left out.")
         })
     })
 
@@ -179,14 +179,14 @@ describe('MusicXmlImporter', () => {
             const xml = `<score-timewise><measure><part id="Q">${ATTRIBUTES}${note('E', 4, 'whole', 48)}</part></measure></score-timewise>`
             expect(measureNotes(load(xml).score)).toEqual(['E4:w'])
             expect(load('<score-timewise><measure/></score-timewise>').score.measures).toHaveLength(1)
-            expect(() => load('<score-timewise/>')).toThrow('no measures')
+            expect(() => load('<score-timewise/>')).toThrow('has no music in it')
         })
 
         it('rejects files that are not well-formed XML, not MusicXML, or have no measures', () => {
-            expect(() => load('<score-partwise><part></score-partwise>')).toThrow('not well-formed XML')
+            expect(() => load('<score-partwise><part></score-partwise>')).toThrow('looks damaged')
             expect(() => load('<svg xmlns="http://www.w3.org/2000/svg"/>')).toThrow('not a MusicXML score')
-            expect(() => load(doc(''))).toThrow('no measures')
-            expect(() => load(`<score-partwise>${PART_LIST}<part id="P9"><measure/></part></score-partwise>`)).toThrow('no measures')
+            expect(() => load(doc(''))).toThrow('has no music in it')
+            expect(() => load(`<score-partwise>${PART_LIST}<part id="P9"><measure/></part></score-partwise>`)).toThrow('has no music in it')
         })
     })
 
@@ -333,7 +333,7 @@ describe('MusicXmlImporter', () => {
             )
             const { score, warnings } = load(xml)
             expect(measureNotes(score)).toEqual(['G4:q', 'G5:q', 'B3:q', 'r:q'])
-            expect(warnings).toEqual(['Chords were reduced to their top note.'])
+            expect(warnings).toEqual(['Solkey keeps one note at a time, so chords were reduced to their top note.'])
             // A chord flag on the very first note has nothing to attach to and reads as a plain note.
             expect(measureNotes(load(doc(measure(note('D', 4, 'whole', 48, '<chord/>')))).score)).toEqual(['D4:w'])
         })
@@ -351,7 +351,7 @@ describe('MusicXmlImporter', () => {
             )
             const { score, warnings } = load(xml)
             expect(measureNotes(score)).toEqual(['C5:h', 'D5:h'])
-            expect(warnings).toEqual(['Only the first voice of the part was imported.'])
+            expect(warnings).toEqual(['Solkey keeps one melody, so only the first line of this part came in.'])
         })
 
         it('leaves out grace and cue notes', () => {
@@ -361,7 +361,7 @@ describe('MusicXmlImporter', () => {
                 ),
             )
             expect(measureNotes(load(xml).score)).toEqual(['C5:w'])
-            expect(load(xml).warnings).toEqual(['Grace and cue notes were left out.'])
+            expect(load(xml).warnings).toEqual(['Grace and cue notes (small extra notes) were left out.'])
             const cue = doc(
                 measure(
                     `<note><cue/><pitch><step>B</step><octave>4</octave></pitch><duration>12</duration><type>quarter</type></note>` +
@@ -383,7 +383,7 @@ describe('MusicXmlImporter', () => {
             )
             const { score, warnings } = load(xml)
             expect(measureNotes(score)).toEqual(['r:q', 'r:q', 'C#9:q', 'Dbb4:q'])
-            expect(warnings).toEqual(['Some notes could not be read and were left out.'])
+            expect(warnings).toEqual(["Some notes couldn't be read and were left out."])
         })
 
         it('turns <forward> into rests for the imported voice only', () => {
