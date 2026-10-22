@@ -1,8 +1,9 @@
 'use client'
 
+import { usePathname } from 'next/navigation'
 import { useEffect, useState } from 'react'
 
-import { CloseButton, Icon } from '@/components/ui'
+import { Icon } from '@/components/ui'
 
 const DISMISS_KEY = 'solkey:unsupported-browser-dismissed'
 
@@ -22,14 +23,19 @@ export function meetsBrowserFloor(): boolean {
 }
 
 /**
- * Warns users on browsers below the supported floor that pages may render
- * broken. Mounted app-wide in Providers; renders nothing on supported
- * browsers. Deliberately styled with pre-floor CSS only (solid fills, flex,
- * plain shadows) — this is the one component that must look right on the
+ * Advises users on browsers below the supported floor to update — advice, not an error:
+ * a neutral strip with a plain way forward (on iPhone and iPad, Safari updates with iOS).
+ * Mounted first in Providers, so on document-flow pages it sits in the flow above the nav
+ * and covers nothing; on the full-height editor and library (/scores…) it floats over the
+ * top instead, so their docked chrome isn't pushed off screen. Dismissible either way.
+ * Renders nothing on supported browsers. Deliberately styled with pre-floor CSS only (solid
+ * fills, flex, plain shadows) — this is the one component that must look right on the
  * browsers everything else is allowed to fail on.
  */
 export function BrowserSupportBanner() {
     const [visible, setVisible] = useState(false)
+    const pathname = usePathname()
+    const overlay = pathname?.startsWith('/scores') ?? false
 
     useEffect(() => {
         let dismissed = false
@@ -56,15 +62,25 @@ export function BrowserSupportBanner() {
         <div
             role="status"
             aria-label="Unsupported browser"
-            className="fixed top-5 left-5 right-5 z-(--z-banner) max-w-180 mx-auto bg-surface-container-lowest rounded-lg editorial-shadow px-5 py-3.5 flex items-center gap-4">
-            <span className="w-7 h-7 rounded-full shrink-0 inline-flex items-center justify-center bg-error-container text-on-error-container">
-                <Icon name="error" size={16} />
+            className={[
+                'bg-surface-container-high px-5 py-3 flex items-center gap-3',
+                overlay ? 'fixed top-5 left-5 right-5 z-(--z-banner) max-w-180 mx-auto rounded-lg editorial-shadow' : 'relative w-full',
+            ].join(' ')}>
+            <span className="shrink-0 inline-flex text-on-surface-variant">
+                <Icon name="alert-triangle" size={18} />
             </span>
             <p className="flex-1 font-body font-normal text-[14px] leading-normal text-on-surface m-0">
-                This browser is older than Solkey supports, so pages may not display correctly. For the full experience — including
-                recording — use a recent Chrome, Edge, Firefox, or Safari.
+                Your browser is a bit old for Solkey, so some things may look off and recording may not work. Update it — on iPhone or iPad,
+                that means updating iOS — or open Solkey in a recent Chrome, Edge, Firefox or Safari.
             </p>
-            <CloseButton ariaLabel="Dismiss" onClick={dismiss} />
+            {/* A plain 40px button (no CloseButton): its touch floor is a pointer-coarse variant, this one is always 40px. */}
+            <button
+                type="button"
+                aria-label="Dismiss"
+                onClick={dismiss}
+                className="shrink-0 w-10 h-10 inline-flex items-center justify-center rounded-full bg-transparent border-0 cursor-pointer text-on-surface-variant hover:text-on-surface focus-ring">
+                <Icon name="x" size={16} />
+            </button>
         </div>
     )
 }

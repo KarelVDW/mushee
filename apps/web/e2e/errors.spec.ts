@@ -1,6 +1,6 @@
 import { type Route } from '@playwright/test'
 
-import { expect, MOCK_SCORE_ID, MOCK_TITLE, test } from './fixtures'
+import { expect, MOCK_SCORE_ID, MOCK_TITLE, stayLocal, test } from './fixtures'
 
 /**
  * Mocked-API error-handling e2e: when the API server is unreachable the app
@@ -35,6 +35,24 @@ test('editor shows a full-page error while the server is down', async ({ page, a
     await page.goto('/scores/e2e-score-1')
     await expect(page.getByRole('heading', { name: "Can't reach the server" })).toBeVisible({ timeout: 15_000 })
     await expect(page.getByRole('button', { name: 'Back to library' })).toBeVisible()
+})
+
+test('a mistyped public address sends a signed-out visitor home, not to a library', async ({ page }) => {
+    await stayLocal(page)
+    await page.goto('/pricing/does-not-exist')
+    await expect(page.getByRole('heading', { name: "This page doesn't exist" })).toBeVisible()
+    await expect(page).toHaveTitle('Page not found — Solkey')
+    await expect(page.getByRole('link', { name: 'Back to your library' })).toHaveCount(0)
+    await page.getByRole('link', { name: 'Go to the home page' }).click()
+    await expect(page).toHaveURL(/\/$/)
+})
+
+test('a signed-in visitor on a missing page goes back to their library', async ({ page, apiMock }) => {
+    void apiMock
+    await page.goto('/pricing/does-not-exist')
+    await expect(page.getByText('Your scores are safe.')).toBeVisible()
+    await page.getByRole('link', { name: 'Back to your library' }).click()
+    await expect(page).toHaveURL(/\/scores$/)
 })
 
 test.describe('a stored document that is not MusicXML-JSON', () => {
