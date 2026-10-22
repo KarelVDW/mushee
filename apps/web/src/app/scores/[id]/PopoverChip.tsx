@@ -2,55 +2,66 @@
 
 import { type ReactNode, type RefObject, useRef, useState } from 'react'
 
-import { ChipToggle } from '@/components/ui'
+import { ChipToggle, type TooltipShortcut } from '@/components/ui'
 
-/**
- * The compact popover sheet: full viewport width just above the dock, scrolling when tall.
- * Shared with the in-score attribute popovers (ScoreAttributePopover), which position it
- * against a `relative` wrapper around the dock rather than the dock's own containing block.
- */
-export const COMPACT_POPOVER_SHEET = 'inset-x-2 bottom-full mb-2 w-auto! max-h-[60vh] overflow-y-auto'
+/** Where a dock popover opens on desktop: upward, right-aligned to its chip, clear of the dock. */
+export const DOCK_POPOVER_POSITION = 'right-0 bottom-[calc(100%+0.75rem)]'
 
-/**
- * Popovers open upward from the dock, clear of its glass panel. In compact (mobile)
- * mode they become a sheet spanning the dock's width instead — anchored popovers
- * would clip at the viewport edges. (`fixed` resolves against the dock, whose
- * backdrop-filter makes it the containing block; the dock spans the viewport.)
- */
-function popoverPosition(compact: boolean): string {
-    return compact ? `fixed! ${COMPACT_POPOVER_SHEET}` : 'right-0 bottom-[calc(100%+0.75rem)]'
-}
+/** How a chip's popover is placed: anchored next to it, or (phones) as the sheet above the dock. */
+export type PopoverVariant = 'anchored' | 'sheet'
 
 interface PopoverChipProps {
     ariaLabel: string
     disabled?: boolean
-    /** Phone layout: the popover opens as the dock-wide sheet (see {@link popoverPosition}). */
+    /** Why it is off: keeps the chip focusable, and its tooltip says this instead. */
+    disabledReason?: string
+    /** Phone layout: the popover opens as the sheet above the dock (Popover's `sheet` variant) instead of anchoring. */
     compact: boolean
     /** Transparent at rest, for a chip inside a ToolGroup well (see ChipToggle). */
     plain?: boolean
     /** The chip's face. */
     chip: ReactNode
-    /** Positioning classes for the popover; defaults to the dock's {@link popoverPosition}. */
+    /** The tooltip's name line (defaults to the aria-label once a hint or shortcut is given), its hint and live shortcut. */
+    tooltip?: string
+    hint?: string
+    shortcut?: TooltipShortcut
+    /** `top` in the dock (the default), `bottom` in the header. */
+    tooltipSide?: 'top' | 'bottom'
+    /** Positioning classes for an anchored popover; defaults to the dock's {@link DOCK_POPOVER_POSITION}. */
     className?: string
     /** Controlled open state, for a popover something else can open too (Shift+T opens transpose). */
     open?: boolean
     onOpenChange?: (open: boolean) => void
-    /** The popover, mounted only while open: anchor it at `anchorRef`, position it with `className`, dismiss with `close`. */
-    children: (popover: { anchorRef: RefObject<HTMLDivElement | null>; className: string; close: () => void }) => ReactNode
+    /**
+     * The popover, mounted only while open: anchor it at `anchorRef`, position it with
+     * `className` (anchored only), render it as `variant`, dismiss with `close`.
+     */
+    children: (popover: {
+        anchorRef: RefObject<HTMLDivElement | null>
+        className: string
+        variant: PopoverVariant
+        close: () => void
+    }) => ReactNode
 }
 
 /**
- * A chip that toggles an anchored popover — the one place the toggle and dismissal wiring
- * lives, for the tool dock's chips and the pitch tools' transpose chip alike. The anchor
- * wraps the chip, so the popover's outside-click dismissal ignores the chip and its own
- * toggle isn't fought. Owns its open state unless `open` is passed.
+ * A chip that toggles a popover — the one place the toggle and dismissal wiring lives, for
+ * the tool dock's chips and the header's transpose chip alike. It is a menu trigger
+ * (aria-haspopup + aria-expanded), not a toggle. The anchor wraps the chip, so the popover's
+ * outside-click dismissal ignores the chip and its own toggle isn't fought. Owns its open
+ * state unless `open` is passed.
  */
 export function PopoverChip({
     ariaLabel,
     disabled,
+    disabledReason,
     compact,
     plain = false,
     chip,
+    tooltip,
+    hint,
+    shortcut,
+    tooltipSide,
     className,
     open: controlledOpen,
     onOpenChange,
@@ -64,13 +75,25 @@ export function PopoverChip({
         onOpenChange?.(next)
     }
     const close = () => setOpen(false)
+    const variant: PopoverVariant = compact ? 'sheet' : 'anchored'
 
     return (
         <div ref={anchorRef} className="relative">
-            <ChipToggle plain={plain} active={open} disabled={disabled} onClick={() => setOpen(!open)} ariaLabel={ariaLabel}>
+            <ChipToggle
+                popup
+                plain={plain}
+                active={open}
+                disabled={disabled}
+                disabledReason={disabledReason}
+                onClick={() => setOpen(!open)}
+                ariaLabel={ariaLabel}
+                tooltip={tooltip}
+                hint={hint}
+                shortcut={shortcut}
+                tooltipSide={tooltipSide}>
                 {chip}
             </ChipToggle>
-            {open && children({ anchorRef, className: className ?? popoverPosition(compact), close })}
+            {open && children({ anchorRef, className: className ?? DOCK_POPOVER_POSITION, variant, close })}
         </div>
     )
 }

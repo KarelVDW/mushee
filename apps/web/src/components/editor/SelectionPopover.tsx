@@ -2,7 +2,7 @@
 
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 
-/** Space kept between the bar and the score wrapper's side edges. */
+/** Space kept between the bar and the score wrapper's side edges (and the visible area's top and bottom). */
 const EDGE_MARGIN = 8
 /** How far the bar may poke above the wrapper — the canvas padding above the first row absorbs it. */
 const MIN_TOP = -20
@@ -16,6 +16,14 @@ interface SelectionPopoverProps {
      */
     x: number
     y: number
+    /**
+     * The scrolling area the score is seen through. The bar stays inside its visible part —
+     * after Select all, the topmost row may have scrolled away under the header, and the bar
+     * waits at the top of what is on screen instead of following it out of sight.
+     */
+    viewport?: { current: HTMLElement | null }
+    /** Opened from the keyboard (Shift+F10, the Menu key): focus moves to the first action. */
+    autoFocus?: boolean
     /** Whether the clipboard holds anything — Paste is hidden (not disabled) when empty, like the OS menu. */
     canPaste: boolean
     onCopy: () => void
@@ -29,16 +37,39 @@ interface SelectionPopoverProps {
  * The floating selection-actions bar — deliberately OS-flavored rather than a `Popover`
  * panel: it mirrors Android's text-selection menu (a horizontal pill of plain text actions
  * hovering over the selection), because it *is* that menu, for notes. Opened by the score's
- * selection-menu gestures (long-press / double-tap / drag-release); dismissed by tapping
- * anywhere else or Escape. Every selection-scoped action lives here — never as extra
- * buttons in the dock (see DESIGN.md).
+ * selection-menu gestures (touch: long-press, double-tap, a second tap on the selected note,
+ * drag-release; mouse: right-click, drag-release) and by Shift+F10 / the Menu key; dismissed
+ * by pressing anywhere else or Escape. Every selection-scoped action lives here — never as
+ * extra buttons in the dock (see DESIGN.md).
  */
-export function SelectionPopover({ x, y, canPaste, onCopy, onPaste, onDelete, onSelectAll, onDismiss }: SelectionPopoverProps) {
+export function SelectionPopover({
+    x,
+    y,
+    viewport,
+    autoFocus = false,
+    canPaste,
+    onCopy,
+    onPaste,
+    onDelete,
+    onSelectAll,
+    onDismiss,
+}: SelectionPopoverProps) {
     const barRef = useRef<HTMLDivElement>(null)
     const [pos, setPos] = useState<{ left: number; top: number } | null>(null)
+    // Bumped on every scroll of the viewport, so the clamp below follows it.
+    const [scrolled, setScrolled] = useState(0)
+
+    useEffect(() => {
+        const scroller = viewport?.current
+        if (!scroller) return
+        const onScroll = () => setScrolled((n) => n + 1)
+        scroller.addEventListener('scroll', onScroll, { passive: true })
+        return () => scroller.removeEventListener('scroll', onScroll)
+    }, [viewport])
 
     // Center the bar on the anchor with its bottom at the anchor's height, clamped inside
-    // the score wrapper's sides and allowed a small overhang past its top (first row).
+    // the score wrapper's sides (with a small overhang past its top, for the first row) and
+    // inside the visible part of the viewport.
     useLayoutEffect(() => {
         const bar = barRef.current
         const parent = bar?.offsetParent as HTMLElement | null
@@ -47,8 +78,26 @@ export function SelectionPopover({ x, y, canPaste, onCopy, onPaste, onDelete, on
             Math.max(x - bar.offsetWidth / 2, EDGE_MARGIN),
             Math.max(EDGE_MARGIN, parent.clientWidth - bar.offsetWidth - EDGE_MARGIN),
         )
-        setPos({ left, top: Math.max(y - bar.offsetHeight, MIN_TOP) })
-    }, [x, y, canPaste])
+        let minTop = MIN_TOP
+        let maxTop = Infinity
+        const scroller = viewport?.current
+        if (scroller) {
+            const visible = scroller.getBoundingClientRect()
+            const origin = parent.getBoundingClientRect()
+            minTop = Math.max(minTop, visible.top - origin.top + EDGE_MARGIN)
+            maxTop = Math.max(minTop, visible.bottom - origin.top - bar.offsetHeight - EDGE_MARGIN)
+        }
+        setPos({ left, top: Math.min(Math.max(y - bar.offsetHeight, minTop), maxTop) })
+    }, [x, y, canPaste, viewport, scrolled])
+
+    // Focus the first action once the bar is placed — a still-hidden bar can't take focus.
+    const placed = pos !== null
+    const focusedRef = useRef(false)
+    useEffect(() => {
+        if (!autoFocus || !placed || focusedRef.current) return
+        focusedRef.current = true
+        barRef.current?.querySelector<HTMLElement>('button')?.focus()
+    }, [autoFocus, placed])
 
     // Tapping anywhere outside dismisses. Attached a tick late so the tail of the gesture
     // that opened the bar can't dismiss it, and on pointerdown so the very touch that
