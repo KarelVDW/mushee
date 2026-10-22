@@ -4,15 +4,15 @@ import { type Accidental, type DurationType, Note, type Pitch, type Score } from
  * A single editing operation on the score, performed relative to the selection.
  *
  * Actions are pure intent: they delegate to the model's own mutators (`Score.replace`,
- * `setDuration`, `setClef`, …) and return the note(s) to select afterward.
+ * `setDuration`, `toggleTuplet`, …) and return the note(s) to select afterward.
  * They never touch React, autosave, or playback — the {@link ScoreManipulator} owns that
  * orchestration. Listeners (keyboard handlers, dock buttons) live in the page and
  * dispatch into the manipulator, which runs the matching action here.
  *
  * An action comes in one of two shapes: `execute` acts on the active note alone (a
  * multi-note selection collapses onto it), while `executeBulk` receives the whole
- * selection and owns how it is applied. `arg` carries the action's parameter — a
- * duration, accidental token, or pitch; parameterless actions ignore it.
+ * selection and owns how it is applied. `A` is the type of the action's parameter
+ * (`void` for a parameterless action), so the compiler checks every dispatch site.
  */
 interface ScoreActionBase {
     id: string
@@ -21,8 +21,8 @@ interface ScoreActionBase {
 }
 
 /** An action on the active note alone. Returns the note to select next. */
-interface SingleNoteAction extends ScoreActionBase {
-    execute: (score: Score, selectedNote: Note, arg?: unknown) => Note
+interface SingleNoteAction<A = void> extends ScoreActionBase {
+    execute: (score: Score, selectedNote: Note, arg: A) => Note
     executeBulk?: never
 }
 
@@ -30,12 +30,18 @@ interface SingleNoteAction extends ScoreActionBase {
  * An action on the whole selection at once (a single selection arrives as a one-note
  * array). Returns the notes to re-anchor the selection on, in score order.
  */
-interface BulkAction extends ScoreActionBase {
+interface BulkAction<A = void> extends ScoreActionBase {
     execute?: never
-    executeBulk: (score: Score, selectedNotes: Note[], arg?: unknown) => Note[]
+    executeBulk: (score: Score, selectedNotes: Note[], arg: A) => Note[]
 }
 
-export type ScoreAction = SingleNoteAction | BulkAction
+export type ScoreAction<A = void> = SingleNoteAction<A> | BulkAction<A>
+
+/**
+ * The dispatch-site argument list for an action taking `A`: empty for a parameterless action,
+ * otherwise exactly one `A`. Wrapped in a tuple so a union `A` doesn't distribute.
+ */
+export type ActionArgs<A> = [A] extends [void] ? [] : [A]
 
 // --- Navigation ---
 
@@ -101,27 +107,25 @@ export const REMOVE_NOTE: ScoreAction = {
     },
 }
 
-/** Set the active note's pitch directly (click-to-pitch on the staff). `arg`: the new {@link Pitch}. */
-export const CHANGE_PITCH: ScoreAction = {
+/** Set the active note's pitch directly (click-to-pitch on the staff). */
+export const CHANGE_PITCH: ScoreAction<Pitch> = {
     id: 'change-pitch',
     label: 'Change pitch',
-    execute: (score, note, arg) => {
-        const [newNote] = score.replace([note], [note.clone({ pitch: arg as Pitch })])
+    execute: (score, note, pitch) => {
+        const [newNote] = score.replace([note], [note.clone({ pitch })])
         return newNote
     },
 }
 
-/** `arg`: an {@link Accidental} token (`'#'`, `'b'`, or `undefined` for natural). */
-export const SET_ACCIDENTAL: ScoreAction = {
+/** Takes an {@link Accidental} token (`'#'`, `'b'`, or `undefined` for natural). */
+export const SET_ACCIDENTAL: ScoreAction<Accidental | undefined> = {
     id: 'set-accidental',
     label: 'Set accidental',
-    executeBulk: (score, notes, arg) => {
-        const accidental = arg as Accidental | undefined
-        return score.replace(
+    executeBulk: (score, notes, accidental) =>
+        score.replace(
             notes,
             notes.map((note) => note.clone({ pitch: note.pitch?.withAccidental(accidental) })),
-        )
-    },
+        ),
 }
 
 /**
@@ -145,11 +149,11 @@ export const MINIMIZE_ACCIDENTALS: ScoreAction = {
 
 // --- Duration editing ---
 
-/** `arg`: the target {@link DurationType}. */
-export const SET_DURATION: ScoreAction = {
+/** Takes the target {@link DurationType}. */
+export const SET_DURATION: ScoreAction<DurationType> = {
     id: 'set-duration',
     label: 'Set duration',
-    execute: (score, note, arg) => score.setDuration(note, { type: arg as DurationType, dots: 0 }) ?? note,
+    execute: (score, note, type) => score.setDuration(note, { type, dots: 0 }) ?? note,
 }
 
 export const TOGGLE_DOT: ScoreAction = {

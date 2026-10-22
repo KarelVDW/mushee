@@ -1,6 +1,7 @@
 import type { BindableCommand } from '@/lib/Keybindings'
 
 import {
+    type ActionArgs,
     LOWER_PITCH,
     MINIMIZE_ACCIDENTALS,
     MOVE_NEXT,
@@ -49,10 +50,10 @@ const fromAction = (action: ScoreAction, group: EditorCommandGroup, defaultShort
  * choice of a dock picker (a duration, an accidental). The id is suffixed with the choice so
  * every keystroke stays its own rebindable command.
  */
-const fromActionWith = (
-    action: ScoreAction,
+const fromActionWith = <A>(
+    action: ScoreAction<A>,
     suffix: string,
-    arg: unknown,
+    arg: A,
     label: string,
     description: string,
     group: EditorCommandGroup,
@@ -63,7 +64,7 @@ const fromActionWith = (
     description,
     group,
     defaultShortcut,
-    run: (manipulator) => manipulator.run(action, arg),
+    run: (manipulator) => manipulator.run(action, ...([arg] as ActionArgs<A>)),
 })
 
 /** The dock's duration picker, one key per value: mnemonic letters (Digit3 is the triplet toggle). */

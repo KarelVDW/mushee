@@ -3,7 +3,7 @@ import { TimeSignature } from '@mushee/notation/model'
 
 import { Keybindings } from '@/lib/Keybindings'
 
-import { MINIMIZE_ACCIDENTALS, REMOVE_NOTE, type ScoreAction } from './actions'
+import { type ActionArgs, MINIMIZE_ACCIDENTALS, REMOVE_NOTE, type ScoreAction } from './actions'
 import { EDITOR_COMMANDS, type EditorCommand } from './commands'
 import { ManipulationHistoryManager, type NoteAddress, type RestoredState, type SelectionAddress } from './ManipulationHistoryManager'
 
@@ -189,21 +189,25 @@ export class ScoreManipulator {
     /**
      * Run an action against the selection, then autosave and re-render. A bulk action receives
      * every selected note and returns the notes to re-anchor the selection on; a single-note
-     * action acts on the active note alone.
+     * action acts on the active note alone. The argument is required exactly when the action
+     * takes one (see {@link ActionArgs}); `A` is inferred from the action alone.
      */
-    run(action: ScoreAction, arg?: unknown): void {
+    run<A>(action: ScoreAction<A>, ...args: ActionArgs<NoInfer<A>>): void {
         const score = this._score
         const selected = this._selectedNote
         if (!score || !selected) return
-        this.manipulate(() => this.execute(action, this._selectedNotes, selected, arg))
+        this.manipulate(() => this.execute(action, this._selectedNotes, selected, ...args))
         this.save(score)
         this.emit()
     }
 
     /** Apply an action to `notes` (bulk) or to `active` alone, then re-anchor the selection on its results. */
-    private execute(action: ScoreAction, notes: Note[], active: Note, arg?: unknown): void {
+    private execute<A>(action: ScoreAction<A>, notes: Note[], active: Note, ...args: ActionArgs<A>): void {
         const score = this._score
         if (!score) return
+        // ActionArgs already proved the argument's presence at the call site; for a
+        // parameterless action this reads `undefined`, which is what `void` stands for.
+        const arg = args[0] as A
         const results = action.executeBulk ? action.executeBulk(score, notes, arg) : [action.execute(score, active, arg)]
         const first = results[0]
         const last = results[results.length - 1]
