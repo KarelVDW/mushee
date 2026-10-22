@@ -1,7 +1,9 @@
+import { TEMPO_MARKING_Y } from '@mushee/notation/engraving/constants'
 import { Measure } from '@mushee/notation/model/Measure'
 import { Score } from '@mushee/notation/model/Score'
 import { Tempo } from '@mushee/notation/model/Tempo'
 import { TimeSignature } from '@mushee/notation/model/TimeSignature'
+import { makeScore } from '@mushee/notation/testing'
 import { describe, expect, it } from 'vitest'
 
 describe('Tempo', () => {
@@ -20,11 +22,26 @@ describe('Tempo', () => {
         expect(new Tempo(m, 0, 120).id).not.toBe(new Tempo(m, 0, 120).id)
     })
 
-    it('layout is context-free and cached forever (same instance on every read)', () => {
-        const score = new Score()
-        const m = new Measure(score, 'treble', new TimeSignature(4, 4))
-        const t = new Tempo(m, 0, 120)
+    it("layout comes from its measure's layout: the marking's x at its beat, rebuilt when the measure changes", () => {
+        const score = makeScore(1)
+        const m = score.measures[0]
+        m.setTempo(2, 120)
+        const t = m.tempoAtBeat(2) as Tempo
+        expect(t.layout).toBe(m.layout.tempoLayoutFor(t))
         expect(t.layout).toBe(t.layout)
+        expect(t.layout.x).toBe(m.layout.getXForBeat(2))
+        expect(t.layout.y).toBe(TEMPO_MARKING_Y)
+        const before = t.layout
+        m.setTempo(0, 90) // any change to the measure rebuilds its layout
+        expect(m.tempos).toContain(t)
+        expect(t.layout).not.toBe(before)
+    })
+
+    it('a measure layout refuses a tempo that is not its own', () => {
+        const score = makeScore(2)
+        score.measures[1].setTempo(0, 90)
+        const stranger = score.measures[1].tempos[0]
+        expect(() => score.measures[0].layout.tempoLayoutFor(stranger)).toThrow('Tempo not part of this measure layout')
     })
 
     it("is written in the measure's felt beat: ♩ = 90 in 4/4, ♩. = 60 in 6/8, half = 45 in 2/2", () => {

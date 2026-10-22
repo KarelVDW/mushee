@@ -13,7 +13,7 @@ const bar = (clef: ClefType, fifths: number) => new Measure(new Score(), clef, n
 /** Build the layout the way MeasureLayout does: explicit clef + drawn accidentals + width context. */
 function layoutFor(m: Measure): KeySignatureLayout {
     const drawnAccidentals = m.keySignature.drawnAccidentals
-    return new KeySignatureLayout({ clef: m.clef, drawnAccidentals, width: new KeySignatureWidth(drawnAccidentals) })
+    return new KeySignatureLayout({ clef: m.clef, width: new KeySignatureWidth(drawnAccidentals) })
 }
 
 const TOP = Staff.yForStaffLine(0) // top staff line

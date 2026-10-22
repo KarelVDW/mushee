@@ -1,46 +1,48 @@
-import { Bravura } from '../../engraving/Bravura'
-import type { Clef } from '../Clef'
-import { CLEF_DEFS, type ClefDef, type ClefSign } from '../clefs'
+import { CLEF_DEFS } from '../clefs'
 import type { ClefType } from '../types'
+import { ClefWidth } from './ClefWidth'
 import { Staff } from './Staff'
 
-const CLEF_GLYPH: Record<ClefSign, string> = { G: 'gClef', F: 'fClef', C: 'cClef' }
-
+/**
+ * A clef's ink: the glyph anchored on its staff line, plus the 8/15 octave
+ * marker of a transposing clef. Depends only on the clef type, so one instance
+ * per type is shared — by every Clef of that type and by app-side clef pickers.
+ */
 export class ClefLayout {
+    private static readonly byType = new Map<ClefType, ClefLayout>()
+
     readonly id = crypto.randomUUID()
+    readonly width: ClefWidth
     readonly glyphName: string
     readonly x: number
     readonly y: number
     /** The 8/15 octave marker drawn above or below the glyph, if the clef transposes. */
     readonly octave: { text: string; x: number; y: number } | undefined
 
-    constructor(clef: Clef) {
-        const config = ClefLayout.glyphFor(clef.type)
-        this.glyphName = config.glyphName
-        this.x = clef.width.paddingLeft
-        this.y = Staff.yForStaffLine(config.lineIndex)
-
-        const marker = ClefLayout.octaveMarker(clef.type)
-        this.octave = marker
-            ? {
-                  text: marker.text,
-                  x: clef.width.paddingLeft + Bravura.width(config.glyphName) / 2,
-                  y: marker.above ? Staff.TOP_Y - 6 : Staff.TOP_Y + Staff.HEIGHT + 13,
-              }
-            : undefined
+    constructor(type: ClefType) {
+        const def = CLEF_DEFS[type]
+        this.width = ClefWidth.of(type)
+        this.glyphName = this.width.glyphName
+        this.x = this.width.paddingLeft
+        // MusicXML numbers clef lines from the bottom (1) up; staff line indices run from the top (0) down.
+        this.y = Staff.yForStaffLine(5 - def.line)
+        this.octave =
+            def.octaveChange === 0
+                ? undefined
+                : {
+                      text: Math.abs(def.octaveChange) === 2 ? '15' : '8',
+                      x: this.x + this.width.content / 2,
+                      y: def.octaveChange > 0 ? Staff.TOP_Y - 6 : Staff.TOP_Y + Staff.HEIGHT + 13,
+                  }
     }
 
-    /** Clef glyph name and the staff-line index (0 = top line) the glyph anchors on. */
-    static glyphFor(type: ClefType): { glyphName: string; lineIndex: number } {
-        const def = CLEF_DEFS[type] as ClefDef | undefined
-        if (!def) throw new Error(`Unknown clef type: ${type}`)
-        return { glyphName: CLEF_GLYPH[def.sign], lineIndex: 5 - def.line }
-    }
-
-    /** The octave marker ("8" or "15", above or below) shown on a clef, if it transposes. */
-    static octaveMarker(type: ClefType): { text: string; above: boolean } | undefined {
-        const oc = CLEF_DEFS[type].octaveChange
-        if (oc === 0) return undefined
-        return { text: Math.abs(oc) === 2 ? '15' : '8', above: oc > 0 }
+    /** The shared layout for `type`. */
+    static of(type: ClefType): ClefLayout {
+        let layout = ClefLayout.byType.get(type)
+        if (!layout) {
+            layout = new ClefLayout(type)
+            ClefLayout.byType.set(type, layout)
+        }
+        return layout
     }
 }

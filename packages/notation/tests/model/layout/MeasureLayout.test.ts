@@ -1,12 +1,6 @@
-import {
-    BARLINE_GAP,
-    BARLINE_THICK_WIDTH,
-    BARLINE_THIN_WIDTH,
-    NUM_STAFF_LINES,
-    SPACE_ABOVE_STAFF,
-    STAVE_LINE_DISTANCE,
-} from '@mushee/notation/engraving/constants'
+import { BARLINE_THIN_WIDTH, NUM_STAFF_LINES, SPACE_ABOVE_STAFF, STAVE_LINE_DISTANCE } from '@mushee/notation/engraving/constants'
 import type { KeySignature } from '@mushee/notation/model/KeySignature'
+import { BarlineLayout } from '@mushee/notation/model/layout/BarlineLayout'
 import { KeySignatureWidth } from '@mushee/notation/model/layout/KeySignatureWidth'
 import { MeasureLayout, type MeasureLayoutContext } from '@mushee/notation/model/layout/MeasureLayout'
 import type { NoteWidth } from '@mushee/notation/model/layout/NoteWidth'
@@ -57,8 +51,8 @@ describe('MeasureLayout', () => {
             const layout = m.layout
             const keyWidth = new KeySignatureWidth(m.keySignature.drawnAccidentals).total
             expect(layout.getXForElement(m.clef)).toBe(0)
-            expect(layout.getXForElement(m.keySignature)).toBe(m.clef.width.total)
-            expect(layout.getXForElement(m.timeSignature)).toBe(m.clef.width.total + keyWidth)
+            expect(layout.getXForElement(m.keySignature)).toBe(m.clef.layout.width.total)
+            expect(layout.getXForElement(m.timeSignature)).toBe(m.clef.layout.width.total + keyWidth)
         })
 
         it('skips a C-major key signature even when the shows-flag is set', () => {
@@ -70,7 +64,7 @@ describe('MeasureLayout', () => {
             // Nothing is drawn, so the key occupies no slot.
             expect(() => m.layout.getXForElement(m.keySignature)).toThrow('Element not spaced in measure')
             // The time signature follows the clef directly.
-            expect(m.layout.getXForElement(m.timeSignature)).toBe(m.clef.width.total)
+            expect(m.layout.getXForElement(m.timeSignature)).toBe(m.clef.layout.width.total)
         })
 
         it('omits clef and time signature for a mid-row measure with unchanged context', () => {
@@ -109,7 +103,7 @@ describe('MeasureLayout', () => {
             }
             // The final slot runs all the way to the end barline.
             const slotEnd = layout.getXForElement(lastNote) + layout.getAllottedWidth(lastNote)
-            expect(slotEnd).toBeCloseTo(layout.measureWidth - MeasureLayout.barlineWidth(m.endBarline))
+            expect(slotEnd).toBeCloseTo(layout.measureWidth - BarlineLayout.widthOf(m.endBarline))
         })
 
         it('throws "Element not spaced in measure" for unknown elements', () => {
@@ -209,22 +203,7 @@ describe('MeasureLayout', () => {
             const bar = m.layout.barline
             if (!bar) throw new Error('expected barline')
             expect(bar.type).toBe('double')
-            expect(bar.x).toBeCloseTo(m.layout.measureWidth - MeasureLayout.barlineWidth('double'))
-        })
-    })
-
-    describe('barlineWidth', () => {
-        it('maps each barline type to its drawn width', () => {
-            expect(MeasureLayout.barlineWidth('none')).toBe(0)
-            expect(MeasureLayout.barlineWidth('single')).toBe(BARLINE_THIN_WIDTH)
-            expect(MeasureLayout.barlineWidth('double')).toBe(BARLINE_THIN_WIDTH + BARLINE_GAP + BARLINE_THIN_WIDTH)
-            expect(MeasureLayout.barlineWidth('end')).toBe(BARLINE_THIN_WIDTH + BARLINE_GAP + BARLINE_THICK_WIDTH)
-            expect(MeasureLayout.barlineWidth(undefined)).toBe(BARLINE_THIN_WIDTH)
-        })
-
-        it('draws end and double barlines wider than a single one', () => {
-            expect(MeasureLayout.barlineWidth('end')).toBeGreaterThan(MeasureLayout.barlineWidth('single'))
-            expect(MeasureLayout.barlineWidth('double')).toBeGreaterThan(MeasureLayout.barlineWidth('single'))
+            expect(bar.x).toBeCloseTo(m.layout.measureWidth - BarlineLayout.widthOf('double'))
         })
     })
 
@@ -248,7 +227,7 @@ describe('MeasureLayout', () => {
             if (!midClef) throw new Error('expected a mid-measure clef')
             const layout = m.layout
             expect(layout.getXForElement(midClef)).toBeGreaterThan(layout.getXForElement(m.notes[0]))
-            expect(layout.getXForElement(m.notes[2])).toBeCloseTo(layout.getXForElement(midClef) + midClef.width.total)
+            expect(layout.getXForElement(m.notes[2])).toBeCloseTo(layout.getXForElement(midClef) + midClef.layout.width.total)
         })
 
         it('orders a clef before a key signature at the same beat', () => {
@@ -261,7 +240,7 @@ describe('MeasureLayout', () => {
             if (!midClef || !midKey) throw new Error('expected mid-measure clef and key')
             const layout = m.layout
             expect(layout.getXForElement(midClef)).toBeLessThan(layout.getXForElement(midKey))
-            expect(layout.getXForElement(midKey)).toBeCloseTo(layout.getXForElement(midClef) + midClef.width.total)
+            expect(layout.getXForElement(midKey)).toBeCloseTo(layout.getXForElement(midClef) + midClef.layout.width.total)
         })
 
         it('orders mid-measure elements at different beats by beat', () => {
@@ -281,7 +260,7 @@ describe('MeasureLayout', () => {
             const midClef = m.clefAtBeat(2)
             if (!midClef) throw new Error('expected a mid-measure clef')
             // Leading run: leading clef, time signature, then the homeless mid clef.
-            expect(m.layout.getXForElement(midClef)).toBe(m.clef.width.total + m.timeSignature.width.total)
+            expect(m.layout.getXForElement(midClef)).toBe(m.clef.layout.width.total + m.timeSignature.layout.width.total)
         })
 
         it('a mid-measure element past the last note folds into the final note slot', () => {
@@ -291,6 +270,33 @@ describe('MeasureLayout', () => {
             const midClef = m.clefAtBeat(3)
             if (!midClef) throw new Error('expected a mid-measure clef')
             expect(m.layout.getXForElement(midClef)).toBeGreaterThan(m.layout.getXForElement(m.notes[1]))
+        })
+    })
+
+    describe('attributes', () => {
+        it('lists every drawn clef, key and time signature left to right with its x and width', () => {
+            const score = makeScore(1)
+            const m = score.measures[0]
+            score.setKeySignature(m.firstNote, 2)
+            m.setClef(2, 'bass')
+            m.setKeySignature(3, 1)
+            const midClef = m.clefAtBeat(2)
+            const midKey = m.keyAtBeat(3)
+            if (!midClef || !midKey) throw new Error('expected mid-measure clef and key')
+            const layout = m.layout
+            expect(layout.attributes.map((a) => a.element)).toEqual([m.clef, m.keySignature, m.timeSignature, midClef, midKey])
+            for (const { element, x } of layout.attributes) expect(x).toBe(layout.getXForElement(element))
+            expect(layout.attributes[0].width).toBe(m.clef.layout.width.total)
+            expect(layout.attributes[2].width).toBe(m.timeSignature.layout.width.total)
+            expect(layout.attributes[3].width).toBe(midClef.layout.width.total)
+            expect(layout.attributes[1].width).toBe(m.keySignature.layout.width.total)
+        })
+
+        it('leaves out what the measure does not draw (a mid-row measure, a C-major key)', () => {
+            const score = makeScore(2)
+            expect(score.measures[1].layout.attributes).toEqual([])
+            const first = score.measures[0]
+            expect(first.layout.attributes.map((a) => a.element)).toEqual([first.clef, first.timeSignature])
         })
     })
 
@@ -356,7 +362,6 @@ describe('MeasureLayout', () => {
                 showsClef: false,
                 showsKeySignature: false,
                 showsTimeSignature: false,
-                accidentals: new Map<Note, string | undefined>(),
                 noteWidths: new Map<Note, NoteWidth>(),
                 keyWidths: new Map<KeySignature, KeySignatureWidth>(),
                 reuseSignature: 'direct-test',

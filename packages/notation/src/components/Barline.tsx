@@ -1,35 +1,16 @@
-import { BARLINE_GAP, BARLINE_THICK_WIDTH, BARLINE_THIN_WIDTH } from '../engraving/constants'
-import type { LayoutBarline } from '../model/layout/types'
+import type { BarlineLayout } from '../model/layout/BarlineLayout'
 import { NOTATION_INK } from './constants'
 
 interface BarlineProps {
-    layout: LayoutBarline
+    layout: BarlineLayout
 }
 
 export function Barline({ layout }: BarlineProps) {
-    const { x, y, height, type } = layout
-
-    switch (type) {
-        case 'none':
-            return null
-
-        case 'single':
-            return <rect x={x} y={y} width={BARLINE_THIN_WIDTH} height={height} fill={NOTATION_INK} />
-
-        case 'double':
-            return (
-                <g>
-                    <rect x={x} y={y} width={BARLINE_THIN_WIDTH} height={height} fill={NOTATION_INK} />
-                    <rect x={x + BARLINE_THIN_WIDTH + BARLINE_GAP} y={y} width={BARLINE_THIN_WIDTH} height={height} fill={NOTATION_INK} />
-                </g>
-            )
-
-        case 'end':
-            return (
-                <g>
-                    <rect x={x} y={y} width={BARLINE_THIN_WIDTH} height={height} fill={NOTATION_INK} />
-                    <rect x={x + BARLINE_THIN_WIDTH + BARLINE_GAP} y={y} width={BARLINE_THICK_WIDTH} height={height} fill={NOTATION_INK} />
-                </g>
-            )
-    }
+    return (
+        <>
+            {layout.strokes.map((stroke, i) => (
+                <rect key={i} x={stroke.x} y={layout.y} width={stroke.width} height={layout.height} fill={NOTATION_INK} />
+            ))}
+        </>
+    )
 }

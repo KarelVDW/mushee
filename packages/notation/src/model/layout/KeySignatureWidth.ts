@@ -10,9 +10,11 @@ export class KeySignatureWidth implements PhysicalWidth {
     readonly paddingRight: number
     readonly content: number
     readonly total: number
+    /** The key's contextual drawn form (own accidentals or cancellation naturals) — what KeySignatureLayout positions. */
+    readonly drawnAccidentals: KeyAccidental[]
 
-    /** `drawnAccidentals` is the key's contextual drawn form (own accidentals or cancellation naturals). */
     constructor(drawnAccidentals: KeyAccidental[]) {
+        this.drawnAccidentals = drawnAccidentals
         if (drawnAccidentals.length === 0) {
             // C major (no accidentals) occupies no horizontal space.
             this.paddingLeft = 0

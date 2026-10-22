@@ -1,9 +1,10 @@
 import { MAX_MEASURES_PER_ROW, NUM_STAFF_LINES } from '../../engraving/constants'
 import type { Measure } from '../Measure'
+import { BarlineLayout } from './BarlineLayout'
 import { Resizer, type Sizeable } from './Resizer'
 import { availableRowWidth } from './rowWidth'
 import { Staff } from './Staff'
-import type { LayoutBarline, LayoutLine } from './types'
+import type { LayoutLine } from './types'
 
 export interface RowLayoutContext {
     index: number
@@ -27,7 +28,7 @@ export class RowLayout {
     readonly measures: Measure[]
     readonly width: number
     readonly staffLines: LayoutLine[]
-    readonly openingBarline: LayoutBarline
+    readonly openingBarline: BarlineLayout
     private readonly _minimalWidths: Map<Measure, number>
     private readonly _scoreWidth: number
     private readonly _measureData = new Map<Measure, { width: number; measureX: number }>()
@@ -60,7 +61,7 @@ export class RowLayout {
             const y = Staff.yForStaffLine(i)
             return { x1: 0, y1: y, x2: this.width, y2: y }
         })
-        this.openingBarline = { x: 0, y: Staff.TOP_Y, height: Staff.HEIGHT, type: 'single' }
+        this.openingBarline = new BarlineLayout('single', 0)
     }
 
     /** Whether this row's inputs are identical — used by ScoreLayout to reuse the instance across rebuilds. */

@@ -3,7 +3,7 @@ import { Note } from '@mushee/notation/model/Note'
 import { Pitch, type PitchStep } from '@mushee/notation/model/Pitch'
 import { Score } from '@mushee/notation/model/Score'
 import { STAFF_MIDDLE_LINE } from '@mushee/notation/model/staffLines'
-import { clef, makeScore, pitched, rest } from '@mushee/notation/testing'
+import { makeScore, pitched, rest } from '@mushee/notation/testing'
 import { describe, expect, it } from 'vitest'
 
 /** Replace a measure's leading rest with a pitched note and return the live note that lands at beat 0. */
@@ -147,15 +147,9 @@ describe('Note', () => {
     })
 
     describe('layout', () => {
-        it('a detached note caches a standalone layout snapshot', () => {
+        it('a detached note has no layout of its own — the ghost note uses NoteLayout.preview', () => {
             const n = new Note({ duration: new Duration(), pitch: new Pitch({ name: 'C', octave: 4 }) })
-            expect(n.layout).toBe(n.layout)
-        })
-
-        it('a detached rest lays out without a pitch (rest glyph, no accidental)', () => {
-            const r = rest('w')
-            expect(r.layout.glyphName).toBe(r.duration.restGlyph)
-            expect(r.layout.accidental).toBeUndefined()
+            expect(() => n.layout).toThrow('Note is not assigned to measure')
         })
 
         it('an attached note delegates into the score layout and stays stable without mutation', () => {
@@ -238,33 +232,6 @@ describe('Note', () => {
             const sharp = new Note({ duration: new Duration(), pitch: new Pitch({ name: 'C', octave: 4, alter: 1 }) })
             const [placedSharp] = score.replace([placed], [sharp])
             expect(placedSharp.layout.accidental?.glyphName).toBe('accidentalSharp')
-        })
-
-        it('a detached note draws no accidental — there is no bar to resolve one in', () => {
-            const detached = new Note({ duration: new Duration(), pitch: new Pitch({ name: 'C', octave: 4, alter: -1 }) })
-            expect(detached.layout.accidental).toBeUndefined()
-        })
-    })
-
-    describe('previewUnder', () => {
-        it('renders the line under the supplied clef, bypassing measure resolution', () => {
-            const note = new Note({ duration: new Duration(), pitch: new Pitch({ name: 'C', octave: 4, alter: 1 }) })
-            const bass = clef('bass')
-            const returned = note.previewUnder(bass)
-            expect(returned).toBe(note)
-            expect(note.clef).toBe(bass)
-            expect(note.line).toBe(bass.lineFor(note.pitch as Pitch))
-            // Preview note has no measure, so no displayed accidental can be resolved for it.
-            expect(note.layout.accidental).toBeUndefined()
-        })
-
-        it('clears the cached detached layout so it re-renders under the preview clef', () => {
-            const note = pitched('C', 4)
-            const before = note.layout
-            note.previewUnder(clef('bass'))
-            const after = note.layout
-            expect(after).not.toBe(before)
-            expect(after.noteY).not.toBe(before.noteY) // the line really moved
         })
     })
 

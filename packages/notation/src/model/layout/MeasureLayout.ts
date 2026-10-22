@@ -1,13 +1,13 @@
 import { sumBy } from 'lodash-es'
 
-import { BARLINE_GAP, BARLINE_THICK_WIDTH, BARLINE_THIN_WIDTH } from '../../engraving/constants'
-import { Clef } from '../Clef'
+import type { Clef } from '../Clef'
 import { KeySignature } from '../KeySignature'
 import type { Measure } from '../Measure'
 import { Note } from '../Note'
+import type { Tempo } from '../Tempo'
 import type { TimeSignature } from '../TimeSignature'
 import type { Tuplet } from '../Tuplet'
-import type { BarlineType } from '../types'
+import { BarlineLayout } from './BarlineLayout'
 import { BeamFinder } from './BeamFinder'
 import { BeamLayout } from './BeamLayout'
 import { KeySignatureLayout } from './KeySignatureLayout'
@@ -16,12 +16,18 @@ import { NoteLayout } from './NoteLayout'
 import type { NoteWidth } from './NoteWidth'
 import type { PhysicalWidth } from './PhysicalWidth'
 import { Resizer, type Sizeable } from './Resizer'
-import { Staff } from './Staff'
+import { TempoLayout } from './TempoLayout'
 import { TupletLayout } from './TupletLayout'
-import type { LayoutBarline } from './types'
 
 /** An element that occupies horizontal space within a measure. */
 export type MeasureElement = Clef | KeySignature | TimeSignature | Note
+
+/** A drawn clef, key signature or time signature: its measure-local x and the width it occupies. */
+export interface MeasureAttribute {
+    element: Clef | KeySignature | TimeSignature
+    x: number
+    width: number
+}
 
 export interface MeasureLayoutContext {
     /** x of this measure within its row (row-local). */
@@ -31,8 +37,7 @@ export interface MeasureLayoutContext {
     showsClef: boolean
     showsKeySignature: boolean
     showsTimeSignature: boolean
-    /** Drawn accidental per note, resolved by DisplayedAccidentals. */
-    accidentals: Map<Note, string | undefined>
+    /** Width per note, carrying its drawn accidental (resolved by DisplayedAccidentals). */
     noteWidths: Map<Note, NoteWidth>
     /** Contextual width per drawn key signature (leading + mid-measure). */
     keyWidths: Map<KeySignature, KeySignatureWidth>
@@ -53,7 +58,9 @@ export class MeasureLayout {
     readonly showsClef: boolean
     readonly showsKeySignature: boolean
     readonly showsTimeSignature: boolean
-    readonly barline: LayoutBarline | null
+    readonly barline: BarlineLayout | null
+    /** Every attribute glyph drawn in this measure, left to right: the leading run, then mid-measure changes. */
+    readonly attributes: ReadonlyArray<MeasureAttribute>
     readonly beams: BeamLayout[]
     readonly reuseSignature: string
 
@@ -61,6 +68,7 @@ export class MeasureLayout {
     private readonly _noteLayouts = new Map<Note, NoteLayout>()
     private readonly _keyLayouts = new Map<KeySignature, KeySignatureLayout>()
     private readonly _tupletLayouts = new Map<Tuplet, TupletLayout>()
+    private readonly _tempoLayouts = new Map<Tempo, TempoLayout>()
     private readonly _beamByNote = new Map<Note, BeamLayout>()
 
     constructor(
@@ -76,7 +84,6 @@ export class MeasureLayout {
         this.reuseSignature = context.reuseSignature
 
         const widthOf = (el: MeasureElement): PhysicalWidth => {
-            if (el instanceof Clef) return el.width
             if (el instanceof KeySignature) {
                 const width = context.keyWidths.get(el)
                 if (!width) throw new Error('Key signature width missing from layout context')
@@ -87,12 +94,13 @@ export class MeasureLayout {
                 if (!width) throw new Error('Note width missing from layout context')
                 return width
             }
-            return el.width
+            // Clefs and time signatures are context-free: their width rides on their shared layout.
+            return el.layout.width
         }
 
         // --- Element order: leading context, then notes merged with mid-measure changes by beat
         // (at equal beats: clefs before keys before the note). ---
-        const leading: MeasureElement[] = []
+        const leading: Array<Clef | KeySignature | TimeSignature> = []
         if (context.showsClef) leading.push(measure.clef)
         if (context.showsKeySignature && measure.keySignature.drawnAccidentals.length > 0) leading.push(measure.keySignature)
         if (context.showsTimeSignature) leading.push(measure.timeSignature)
@@ -106,7 +114,7 @@ export class MeasureLayout {
         // width proportionally to their beats; mid-measure elements ride along as zero-allotted
         // children of the preceding note (notes shift to make room via the minimum). ---
         const totalBeats = sumBy(measure.notes, (n) => n.duration.effectiveBeats)
-        const contentWidth = context.width - MeasureLayout.barlineWidth(measure.endBarline) - sumBy(leading, (el) => widthOf(el).total)
+        const contentWidth = context.width - BarlineLayout.widthOf(measure.endBarline) - sumBy(leading, (el) => widthOf(el).total)
         const widthByBeat = contentWidth / totalBeats
 
         const sizeables: Array<Sizeable & { element: Note; children: Array<Clef | KeySignature> }> = []
@@ -131,9 +139,11 @@ export class MeasureLayout {
 
         const resizer = new Resizer(sizeables)
 
+        const attributes: MeasureAttribute[] = []
         let cursorX = 0
         for (const el of leading) {
             this._xMap.set(el, { x: cursorX, allottedWidth: widthOf(el).total })
+            attributes.push({ element: el, x: cursorX, width: widthOf(el).total })
             cursorX += widthOf(el).total
         }
         for (const el of sizeables) {
@@ -145,36 +155,26 @@ export class MeasureLayout {
                 cursorX -= totalChildWidth
                 for (const child of el.children) {
                     this._xMap.set(child, { x: cursorX, allottedWidth: 0 })
+                    attributes.push({ element: child, x: cursorX, width: widthOf(child).total })
                     cursorX += widthOf(child).total
                 }
             }
         }
+        this.attributes = attributes
 
         // --- Barline geometry ---
         const barlineType = measure.endBarline ?? 'single'
-        if (barlineType === 'none') {
-            this.barline = null
-        } else {
-            this.barline = {
-                x: context.width - MeasureLayout.barlineWidth(measure.endBarline),
-                y: Staff.TOP_Y,
-                height: Staff.HEIGHT,
-                type: barlineType,
-            }
-        }
+        this.barline = barlineType === 'none' ? null : new BarlineLayout(barlineType, context.width - BarlineLayout.widthOf(barlineType))
 
         // --- Note layouts ---
         for (const note of measure.notes) {
-            this._noteLayouts.set(
-                note,
-                new NoteLayout(note, { accidentalGlyph: context.accidentals.get(note), width: widthOf(note) as NoteWidth }),
-            )
+            this._noteLayouts.set(note, new NoteLayout(note, { line: note.line, width: widthOf(note) as NoteWidth }))
         }
 
         // --- Key signature layouts (leading + mid-measure) ---
         for (const [key, width] of context.keyWidths) {
             const clef = measure.clefAtOrBefore(key.beatPosition)
-            this._keyLayouts.set(key, new KeySignatureLayout({ clef, drawnAccidentals: key.drawnAccidentals, width }))
+            this._keyLayouts.set(key, new KeySignatureLayout({ clef, width }))
         }
 
         // --- Beams ---
@@ -188,12 +188,17 @@ export class MeasureLayout {
         for (const tuplet of measure.tuplets) {
             this._tupletLayouts.set(tuplet, new TupletLayout(tuplet, beamContext))
         }
+
+        // --- Tempo markings, at their beat ---
+        for (const tempo of measure.tempos) {
+            this._tempoLayouts.set(tempo, new TempoLayout({ x: this.getXForBeat(tempo.beatPosition) }))
+        }
     }
 
     /** A mid-measure clef/key rides along as a zero-allotted child of the preceding note (or joins the leading run when no note precedes it). */
     private foldIntoPrevious(
         sizeables: Array<Sizeable & { element: Note; children: Array<Clef | KeySignature> }>,
-        leading: MeasureElement[],
+        leading: Array<Clef | KeySignature | TimeSignature>,
         el: Clef | KeySignature,
         widthOf: (el: MeasureElement) => PhysicalWidth,
     ) {
@@ -203,19 +208,6 @@ export class MeasureLayout {
             lastSizeable.children.push(el)
         } else {
             leading.push(el)
-        }
-    }
-
-    static barlineWidth(type: BarlineType | undefined): number {
-        switch (type ?? 'single') {
-            case 'none':
-                return 0
-            case 'single':
-                return BARLINE_THIN_WIDTH
-            case 'double':
-                return BARLINE_THIN_WIDTH + BARLINE_GAP + BARLINE_THIN_WIDTH
-            case 'end':
-                return BARLINE_THIN_WIDTH + BARLINE_GAP + BARLINE_THICK_WIDTH
         }
     }
 
@@ -266,6 +258,12 @@ export class MeasureLayout {
     tupletLayoutFor(tuplet: Tuplet): TupletLayout {
         const layout = this._tupletLayouts.get(tuplet)
         if (!layout) throw new Error('Tuplet not part of this measure layout')
+        return layout
+    }
+
+    tempoLayoutFor(tempo: Tempo): TempoLayout {
+        const layout = this._tempoLayouts.get(tempo)
+        if (!layout) throw new Error('Tempo not part of this measure layout')
         return layout
     }
 

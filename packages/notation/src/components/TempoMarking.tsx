@@ -1,12 +1,13 @@
 import { memo } from 'react'
 
 import type { Tempo } from '../model/Tempo'
-import { BeatUnit, beatUnitWidth } from './BeatUnit'
+import { BEAT_UNIT_STEM_HEIGHT, BeatUnit, beatUnitWidth } from './BeatUnit'
 import { NOTATION_INK } from './constants'
 
-const TEMPO_NOTE_STEM_HEIGHT = 14
 const TEMPO_FONT_SIZE = 10
 const TEMPO_TEXT_GAP = 3
+/** How far the click target reaches past the note, over the `= 90` text. */
+const TEMPO_TEXT_HIT_WIDTH = 40
 
 interface TempoMarkingProps {
     tempo: Tempo
@@ -19,7 +20,7 @@ interface TempoMarkingProps {
 export const TempoMarking = memo(function TempoMarking({ tempo, onClick }: TempoMarkingProps) {
     const { y } = tempo.layout
     const noteWidth = beatUnitWidth(tempo.pulse)
-    const stemY2 = y - TEMPO_NOTE_STEM_HEIGHT
+    const stemY2 = y - BEAT_UNIT_STEM_HEIGHT
     const textX = noteWidth + TEMPO_TEXT_GAP
 
     return (
@@ -32,7 +33,15 @@ export const TempoMarking = memo(function TempoMarking({ tempo, onClick }: Tempo
                 })
             }
             style={onClick ? { cursor: 'pointer' } : undefined}>
-            {onClick && <rect x={-2} y={stemY2 - 2} width={noteWidth + 40} height={TEMPO_NOTE_STEM_HEIGHT + 4} fill="transparent" />}
+            {onClick && (
+                <rect
+                    x={-2}
+                    y={stemY2 - 2}
+                    width={noteWidth + TEMPO_TEXT_HIT_WIDTH}
+                    height={BEAT_UNIT_STEM_HEIGHT + 4}
+                    fill="transparent"
+                />
+            )}
             <g transform={`translate(0, ${y})`}>
                 <BeatUnit duration={tempo.pulse} />
             </g>

@@ -6,12 +6,12 @@ import { SCORE_WIDTH } from '../engraving/constants'
 import type { RecordingWaveformStore } from '../lib/RecordingWaveformStore'
 import { useObservedWidth } from '../lib/useObservedWidth'
 import { useSelectionGestures } from '../lib/useSelectionGestures'
-import type { Note, Pitch, Score as ScoreModel } from '../model'
-import { MeasureLayout as MeasureLayoutModel } from '../model/layout/MeasureLayout'
+import type { Clef, Note, Pitch, Score as ScoreModel } from '../model'
+import { NoteLayout } from '../model/layout/NoteLayout'
 import { Staff } from '../model/layout/Staff'
 import type { ClefType } from '../model/types'
 import { Barline } from './Barline'
-import { INTERACTION_BLUE, MEASURE_BUTTON_GAP, MEASURE_BUTTON_SIZE } from './constants'
+import { INTERACTION_BLUE } from './constants'
 import { CursorIndicator } from './CursorIndicator'
 import { HighlightLayer, type ScoreHighlight } from './HighlightLayer'
 import { Measure } from './Measure'
@@ -146,7 +146,10 @@ export const Score = memo(function Score({
     const svgRef = useRef<SVGSVGElement>(null)
     const [containerWidth, setContainerWidth] = useState(0)
     const [hoveredNote, setHoveredNote] = useState<Note | null>(null)
-    const [ghostNote, setGhostNote] = useState<Note | null>(null)
+    // The hover-to-pitch preview: a detached clone of the selected note at the hovered line, under its clef.
+    const [ghost, setGhost] = useState<{ note: Note; clef: Clef } | null>(null)
+    const ghostNote = ghost?.note ?? null
+    const ghostLayout = useMemo(() => ghost && NoteLayout.preview(ghost.note, ghost.clef), [ghost])
     const selectedIds = useMemo(() => new Set((selectedNotes ?? []).map((n) => n.id)), [selectedNotes])
 
     useObservedWidth(
@@ -334,7 +337,7 @@ export const Score = memo(function Score({
             if (!hit) {
                 gestures.pointerMove(e, null)
                 if (hoveredNote) setHoveredNote(null)
-                if (ghostNote) setGhostNote(null)
+                if (ghostNote) setGhost(null)
                 return
             }
             const { note, localY } = hit
@@ -345,7 +348,7 @@ export const Score = memo(function Score({
             // press note leaves the ghost intact so a press + release in place still commits a
             // pitch change (below).
             if (gestures.pressed()) {
-                if (gestures.dragged() && ghostNote) setGhostNote(null)
+                if (gestures.dragged() && ghostNote) setGhost(null)
                 return
             }
 
@@ -355,8 +358,8 @@ export const Score = memo(function Score({
             const hoverLine = Staff.noteLineForY(localY)
             // hoverLine is a rendered staff line; convert to a pitch under the note's active clef, then spell
             // it under the active key (an F on the F line in G major becomes F♯, with no accidental drawn).
-            if ((hoverLine === note.line && ghostNote) || note !== selectedNote) setGhostNote(null)
-            else setGhostNote(note.clone({ pitch: note.keySignature.spell(note.clef.pitchForLine(hoverLine)) }).previewUnder(note.clef))
+            if ((hoverLine === note.line && ghostNote) || note !== selectedNote) setGhost(null)
+            else setGhost({ note: note.clone({ pitch: note.keySignature.spell(note.clef.pitchForLine(hoverLine)) }), clef: note.clef })
         },
         [resolveHit, gestures, hoveredNote, ghostNote, selectedNote],
     )
@@ -371,7 +374,7 @@ export const Score = memo(function Score({
 
     const handlePointerLeave = useCallback(() => {
         setHoveredNote(null)
-        setGhostNote(null)
+        setGhost(null)
     }, [])
 
     const handleClick = useCallback(() => {
@@ -379,25 +382,13 @@ export const Score = memo(function Score({
         if (gestures.clickSuppressed()) return
         // Clicking the active note at a different staff line commits the previewed (ghost) pitch.
         if (ghostNote?.pitch && selectedNote && onNoteChange) {
-            setGhostNote(null)
+            setGhost(null)
             onNoteChange(selectedNote, ghostNote.pitch)
         }
     }, [gestures, ghostNote, selectedNote, onNoteChange])
 
-    // Measure button positions (last row only)
-    const measureButtonPos = useMemo(() => {
-        const lastRow = rows[rows.length - 1]
-        if (!lastRow || !showMeasureButtons) return null
-        const lastMeasure = lastRow.measures[lastRow.measures.length - 1]
-        const barline = lastMeasure?.layout.barline
-        if (!barline) return null
-        const measureX = lastRow.getMeasureX(lastMeasure)
-        const staffCenterY = barline.y + barline.height / 2
-        const x = measureX + barline.x + MeasureLayoutModel.barlineWidth(lastMeasure.endBarline) + 10
-        const btnTotalHeight = MEASURE_BUTTON_SIZE * 2 + MEASURE_BUTTON_GAP
-        const topY = staffCenterY - btnTotalHeight / 2
-        return { x, topY }
-    }, [rows, showMeasureButtons])
+    // Measure buttons (last row only), placed by the layout
+    const measureButtons = showMeasureButtons ? layout.measureButtons : null
 
     const lastRowIndex = rows.length - 1
 
@@ -484,9 +475,9 @@ export const Score = memo(function Score({
                                         key={`cursor-${selectedNote.id}`}
                                         data-export-exclude
                                         transform={`translate(${measure.layout.getXForElement(selectedNote)}, 0)`}>
-                                        {ghostNote && (
+                                        {ghostNote && ghostLayout && (
                                             <g key={ghostNote.id} opacity={0.35}>
-                                                <NoteGroup note={ghostNote} layoutId={ghostNote.layout.id} />
+                                                <NoteGroup note={ghostNote} layout={ghostLayout} layoutId={ghostLayout.id} />
                                             </g>
                                         )}
                                         <CursorIndicator x={cursorPos.x} y={cursorPos.y} />
@@ -494,9 +485,7 @@ export const Score = memo(function Score({
                                 )}
 
                                 {measure.tempos.map((tempo, ti) => (
-                                    <g
-                                        key={`cursor-${tempo.id}`}
-                                        transform={`translate(${measure.layout.getXForBeat(tempo.beatPosition)}, 0)`}>
+                                    <g key={`cursor-${tempo.id}`} transform={`translate(${tempo.layout.x}, 0)`}>
                                         <TempoMarking
                                             key={`tempo-${ti}`}
                                             tempo={tempo}
@@ -508,8 +497,7 @@ export const Score = memo(function Score({
                                                         score.getIndexForMeasure(tempo.measure),
                                                         tempo.beatPosition,
                                                         tempo.bpm,
-                                                        row.getMeasureX(tempo.measure) +
-                                                            tempo.measure.layout.getXForBeat(tempo.beatPosition),
+                                                        row.getMeasureX(tempo.measure) + tempo.layout.x,
                                                         layout.getYForRow(row) + tempo.layout.y,
                                                     ))
                                             }
@@ -526,25 +514,25 @@ export const Score = memo(function Score({
 
                             <Barline layout={row.openingBarline} />
 
-                            {/* Ties are laid out in row-local coordinates; each renders only the segments on this row */}
-                            {layout.ties.map((tie) => (
-                                <Tie key={`${tie.note.id}-${row.id}`} layout={tie} layoutId={tie.id} rowIndex={row.index} />
+                            {/* Ties are laid out in row-local coordinates; this row draws only its own segments */}
+                            {layout.tieSegmentsOn(row).map(({ tie, segment }) => (
+                                <Tie key={tie.note.id} segment={segment} direction={tie.direction} />
                             ))}
 
-                            {ri === lastRowIndex && measureButtonPos && onAddMeasure && (
+                            {ri === lastRowIndex && measureButtons && onAddMeasure && (
                                 <MeasureButton
-                                    x={measureButtonPos.x}
-                                    y={measureButtonPos.topY}
-                                    size={MEASURE_BUTTON_SIZE}
+                                    x={measureButtons.x}
+                                    y={measureButtons.addY}
+                                    size={measureButtons.size}
                                     label="+"
                                     onClick={onAddMeasure}
                                 />
                             )}
-                            {ri === lastRowIndex && measureButtonPos && onRemoveMeasure && (
+                            {ri === lastRowIndex && measureButtons && onRemoveMeasure && (
                                 <MeasureButton
-                                    x={measureButtonPos.x}
-                                    y={measureButtonPos.topY + MEASURE_BUTTON_SIZE + MEASURE_BUTTON_GAP}
-                                    size={MEASURE_BUTTON_SIZE}
+                                    x={measureButtons.x}
+                                    y={measureButtons.removeY}
+                                    size={measureButtons.size}
                                     label="-"
                                     onClick={onRemoveMeasure}
                                     disabled={!canRemoveMeasure}

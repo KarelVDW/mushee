@@ -24,6 +24,21 @@ export const BEAM_LEVEL_STRIDE = BEAM_WIDTH * 1.5
 /** Length of partial (orphaned) secondary beams */
 export const PARTIAL_BEAM_LENGTH = 10
 
+/** Stem length from the notehead's centre line to the tip */
+export const STEM_HEIGHT = 35
+
+/** Stem stroke width */
+export const STEM_WIDTH = 1.5
+
+/** How far a ledger line reaches past the notehead on each side */
+export const LEDGER_LINE_EXTENSION = 4
+
+/** Horizontal gap between a note's parts: accidental, notehead, dots */
+export const NOTE_ELEMENT_GAP = 1
+
+/** Horizontal room reserved per augmentation dot */
+export const DOT_SPACING = 4
+
 /** Thin barline width in pixels */
 export const BARLINE_THIN_WIDTH = 1
 
@@ -39,6 +54,15 @@ export const TUPLET_OFFSET = 15
 /** Scale for tuplet number glyphs (3/5 of normal notation scale) */
 export const TUPLET_NUMBER_SCALE = GLYPH_SCALE * (3 / 5)
 
+/** Tuplet bracket vertical tick height in pixels */
+export const TUPLET_BRACKET_HEIGHT = 10
+
+/** Stroke thickness of the tuplet bracket's ticks and lines */
+export const TUPLET_BRACKET_THICKNESS = 1
+
+/** Horizontal clearance between the bracket lines and the ratio number on either side */
+export const TUPLET_NUMBER_CLEARANCE = 5
+
 /** Y position of tempo markings within headroom above staff */
 export const TEMPO_MARKING_Y = 15
 
@@ -53,4 +77,14 @@ export const ROW_GAP = 16
 export const ROW_HEIGHT = 160
 export const MAX_MEASURES_PER_ROW = 4
 
+/** Room reserved after the final barline (row budget and minimum score width) for the add/remove-measure buttons */
 export const MEASURE_BUTTON_SPACING = 30
+
+/** Gap between the final barline and the add/remove-measure buttons */
+export const MEASURE_BUTTON_OFFSET = 10
+
+/** Side of each (square) add/remove-measure button */
+export const MEASURE_BUTTON_SIZE = 18
+
+/** Vertical gap between the add and the remove button */
+export const MEASURE_BUTTON_GAP = 3

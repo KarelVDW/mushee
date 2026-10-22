@@ -26,6 +26,11 @@ describe('KeySignatureWidth', () => {
             expect(w.paddingRight).toBe(8)
         })
 
+        it('carries the drawn accidentals it measured', () => {
+            const drawn = key(2).drawnAccidentals
+            expect(new KeySignatureWidth(drawn).drawnAccidentals).toBe(drawn)
+        })
+
         it('content sums each sharp glyph plus the inter-accidental gap', () => {
             // G major: 1 sharp
             expect(new KeySignatureWidth(key(1).drawnAccidentals).content).toBe(SHARP + GAP)

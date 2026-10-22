@@ -1,8 +1,7 @@
 import type { Clef } from './Clef'
 import type { Duration } from './Duration'
 import type { KeySignature } from './KeySignature'
-import { NoteLayout } from './layout/NoteLayout'
-import { NoteWidth } from './layout/NoteWidth'
+import type { NoteLayout } from './layout/NoteLayout'
 import type { Measure } from './Measure'
 import type { Pitch } from './Pitch'
 import { STAFF_MIDDLE_LINE } from './staffLines'
@@ -20,8 +19,6 @@ export class Note {
     readonly duration: Duration
     readonly pitch: Pitch | undefined
     readonly tie: TieType | undefined
-    private _previewClef: Clef | undefined
-    private _detachedLayout: NoteLayout | null = null
 
     constructor(value: { duration: Duration; pitch?: Pitch; tie?: TieType }) {
         this.id = crypto.randomUUID()
@@ -30,16 +27,9 @@ export class Note {
         this.tie = value.tie
     }
 
-    /**
-     * The note's layout. Attached notes delegate into the current ScoreLayout;
-     * a detached note (the editor's ghost/preview note) gets a standalone
-     * snapshot, cached forever since its content and preview clef are fixed.
-     * Without a bar to read context from, a detached note draws no accidental.
-     */
+    /** The note's layout, from the current ScoreLayout (a detached note has none — see NoteLayout.preview). */
     get layout(): NoteLayout {
-        if (this._measure) return this._measure.layout.noteLayoutFor(this)
-        this._detachedLayout ||= new NoteLayout(this, { accidentalGlyph: undefined, width: new NoteWidth(this, undefined) })
-        return this._detachedLayout
+        return this.measure.layout.noteLayoutFor(this)
     }
 
     get measure() {
@@ -69,19 +59,7 @@ export class Note {
         return this.inTuplet || !!this.duration.tripletDivision()
     }
 
-    /**
-     * Render this note as if under `clef`, bypassing measure resolution. Used for
-     * detached preview notes (the editor's ghost note), which aren't part of a
-     * measure's note sequence and so have no beat from which to resolve a clef.
-     */
-    previewUnder(clef: Clef): this {
-        this._previewClef = clef
-        this._detachedLayout = null
-        return this
-    }
-
     get clef(): Clef {
-        if (this._previewClef) return this._previewClef
         return this.measure.clefAtOrBefore(this.measure.beatOffsetOf(this))
     }
 
@@ -92,7 +70,6 @@ export class Note {
 
     get line(): number {
         if (!this.pitch) return this.duration.restLine
-        if (this._previewClef) return this._previewClef.lineFor(this.pitch)
         return this._measure ? this.clef.lineFor(this.pitch) : this.pitch.line
     }
 

@@ -1,7 +1,6 @@
 'use client'
 
-import { Glyph, Staff } from '@mushee/notation/components'
-import { Bravura } from '@mushee/notation/engraving/Bravura'
+import { Glyph } from '@mushee/notation/components'
 import { CLEF_DEFS, type ClefType } from '@mushee/notation/model'
 import { ClefLayout } from '@mushee/notation/model/layout/ClefLayout'
 
@@ -14,22 +13,19 @@ const CLEF_FAMILIES: ClefType[][] = [
     ['baritoneF', 'bass', 'bass8va', 'bass8vb', 'bass15ma', 'bass15mb', 'subBass'],
 ]
 
-/** A clef glyph (with any 8/15 octave marker) drawn in staff coordinates. */
+/** A clef glyph (with any 8/15 octave marker), drawn from the same layout the staff uses. */
 export function ClefGlyph({ type, size = 30, color = 'currentColor' }: { type: ClefType; size?: number; color?: string }) {
-    const config = ClefLayout.glyphFor(type)
+    const { glyphName, x, y, octave } = ClefLayout.of(type)
     // Window over the staff region (lines sit at y 40–80), padded so taller glyphs and octave markers fit.
     const top = 10
     const height = 92
     const width = 28
-    const marker = ClefLayout.octaveMarker(type)
-    const markerX = 4 + Bravura.width(config.glyphName) / 2
-    const markerY = marker?.above ? Staff.yForStaffLine(0) - 6 : Staff.yForStaffLine(4) + 13
     return (
         <svg width={(size * width) / height} height={size} viewBox={`0 ${top} ${width} ${height}`} aria-hidden>
-            <Glyph name={config.glyphName} x={4} y={Staff.yForStaffLine(config.lineIndex)} fill={color} />
-            {marker && (
-                <text x={markerX} y={markerY} fontSize={9} fontWeight={600} textAnchor="middle" dominantBaseline="middle" fill={color}>
-                    {marker.text}
+            <Glyph name={glyphName} x={x} y={y} fill={color} />
+            {octave && (
+                <text x={octave.x} y={octave.y} fontSize={9} fontWeight={600} textAnchor="middle" dominantBaseline="middle" fill={color}>
+                    {octave.text}
                 </text>
             )}
         </svg>

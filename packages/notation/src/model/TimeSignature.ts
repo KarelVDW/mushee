@@ -1,26 +1,19 @@
 import { BEAT_EPSILON, Duration } from './Duration'
 import { TimeSignatureLayout } from './layout/TimeSignatureLayout'
-import { TimeSignatureWidth } from './layout/TimeSignatureWidth'
 
 /**
  * An immutable value object (no measure reference, no identity): instances are
- * shared freely across measures, so its layout and width — which depend only on
- * the digits — are cached forever.
+ * shared freely across measures, so its layout (with its width) — which depends
+ * only on the digits — is cached forever.
  */
 export class TimeSignature {
     readonly beatAmount: number
     readonly beatType: number
     private _layout: TimeSignatureLayout | null = null
-    private _width: TimeSignatureWidth | null = null
 
     constructor(beatAmount: number, beatType: number) {
         this.beatAmount = beatAmount
         this.beatType = beatType
-    }
-
-    get width(): TimeSignatureWidth {
-        this._width ||= new TimeSignatureWidth(this)
-        return this._width
     }
 
     get layout(): TimeSignatureLayout {
@@ -95,15 +88,5 @@ export class TimeSignature {
         const partial = Duration.fromBeats(nextBoundary - filledBeats)
         const fullUnits = Math.round((this.maxBeats - nextBoundary) / unitBeats)
         return [...partial, ...Array.from({ length: fullUnits }, () => this.beatUnit)]
-    }
-
-    /** String digits of the numerator, e.g. [4] or [1, 2] for 12/8 */
-    get beatsDigits(): string[] {
-        return String(this.beatAmount).split('')
-    }
-
-    /** String digits of the denominator */
-    get beatTypeDigits(): string[] {
-        return String(this.beatType).split('')
     }
 }

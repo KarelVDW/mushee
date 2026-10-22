@@ -1,17 +1,29 @@
 import { sumBy } from 'lodash-es'
 
-import { MAX_MEASURES_PER_ROW, MEASURE_BUTTON_SPACING, ROW_GAP, ROW_HEIGHT, SCORE_WIDTH, TEMPO_MARKING_Y } from '../../engraving/constants'
+import {
+    MAX_MEASURES_PER_ROW,
+    MEASURE_BUTTON_GAP,
+    MEASURE_BUTTON_OFFSET,
+    MEASURE_BUTTON_SIZE,
+    MEASURE_BUTTON_SPACING,
+    ROW_GAP,
+    ROW_HEIGHT,
+    SCORE_WIDTH,
+    TEMPO_MARKING_Y,
+} from '../../engraving/constants'
 import type { KeySignature } from '../KeySignature'
 import type { Measure } from '../Measure'
 import type { Note } from '../Note'
 import type { Score } from '../Score'
+import { BarlineLayout } from './BarlineLayout'
 import { DisplayedAccidentals } from './DisplayedAccidentals'
 import { KeySignatureWidth } from './KeySignatureWidth'
 import { MeasureLayout } from './MeasureLayout'
 import { NoteWidth } from './NoteWidth'
 import { RowLayout } from './RowLayout'
 import { availableRowWidth } from './rowWidth'
-import { TieLayout, type TieLayoutContext } from './TieLayout'
+import { Staff } from './Staff'
+import { TieLayout, type TieLayoutContext, type TieSegment } from './TieLayout'
 
 /** Packing converges in one or two passes in practice; the cap only guards pathological oscillation. */
 const MAX_PACKING_ITERATIONS = 10
@@ -30,7 +42,6 @@ interface MeasureFlags {
 /** Per-measure layout inputs derived once per rebuild from the semantic model. */
 interface MeasurePlan {
     measure: Measure
-    accidentals: Map<Note, string | undefined>
     noteWidths: Map<Note, NoteWidth>
     keyWidths: Map<KeySignature, KeySignatureWidth>
     leadingKeyWidth: KeySignatureWidth
@@ -57,10 +68,17 @@ export class ScoreLayout {
     readonly rows: RowLayout[]
     readonly ties: TieLayout[]
     readonly totalHeight: number
+    /**
+     * The add/remove-measure buttons after the final barline, stacked around the staff's
+     * middle line, in the last row's coordinates (inside the MEASURE_BUTTON_SPACING
+     * reserve). Null for a score with no measures or one ending without a barline.
+     */
+    readonly measureButtons: { x: number; addY: number; removeY: number; size: number } | null
 
     private readonly _measureLayouts = new Map<Measure, MeasureLayout>()
     private readonly _rowByMeasure = new Map<Measure, RowLayout>()
     private readonly _tiesByKey = new Map<string, TieLayout>()
+    private readonly _tieSegmentsByRow = new Map<number, Array<{ tie: TieLayout; segment: TieSegment }>>()
 
     constructor(score: Score, previous?: ScoreLayout, scoreWidth: number = SCORE_WIDTH) {
         const plans = ScoreLayout.buildPlans(score)
@@ -130,7 +148,6 @@ export class ScoreLayout {
                 showsClef: flags[i].showsClef,
                 showsKeySignature: flags[i].showsKeySignature,
                 showsTimeSignature: flags[i].showsTimeSignature,
-                accidentals: plan.accidentals,
                 noteWidths: plan.noteWidths,
                 keyWidths: plan.keyWidths,
                 reuseSignature: [
@@ -163,32 +180,46 @@ export class ScoreLayout {
                     previousTie?.contextSignature === TieLayout.signatureFor(context) ? previousTie : new TieLayout(note, nextNote, context)
                 this._tiesByKey.set(key, tie)
                 this.ties.push(tie)
+                for (const segment of tie.segments) {
+                    const onRow = this._tieSegmentsByRow.get(segment.rowIndex) ?? []
+                    onRow.push({ tie, segment })
+                    this._tieSegmentsByRow.set(segment.rowIndex, onRow)
+                }
             }
+        }
+
+        // --- Measure buttons, in the reserve after the final barline ---
+        const lastMeasure = plans.at(-1)?.measure
+        this.measureButtons = lastMeasure ? this.measureButtonsAfter(lastMeasure) : null
+    }
+
+    private measureButtonsAfter(lastMeasure: Measure): ScoreLayout['measureButtons'] {
+        const layout = this.measureLayoutFor(lastMeasure)
+        if (!layout.barline) return null
+        const top = Staff.MIDDLE_Y - (MEASURE_BUTTON_SIZE * 2 + MEASURE_BUTTON_GAP) / 2
+        return {
+            x: this.rowFor(lastMeasure).getMeasureX(lastMeasure) + layout.measureWidth + MEASURE_BUTTON_OFFSET,
+            addY: top,
+            removeY: top + MEASURE_BUTTON_SIZE + MEASURE_BUTTON_GAP,
+            size: MEASURE_BUTTON_SIZE,
         }
     }
 
     private tieContextFor(note: Note, nextNote: Note): TieLayoutContext {
-        const startMeasure = note.measure
-        const endMeasure = nextNote.measure
-        const startRow = this.rowFor(startMeasure)
-        const endRow = this.rowFor(endMeasure)
-        const startLayout = this.measureLayoutFor(startMeasure)
-        const endLayout = this.measureLayoutFor(endMeasure)
+        const startLayout = this.measureLayoutFor(note.measure)
+        const start = this.noteSpan(note)
+        const end = this.noteSpan(nextNote)
         const startNoteLayout = startLayout.noteLayoutFor(note)
-        const endNoteLayout = endLayout.noteLayoutFor(nextNote)
+        const endNoteLayout = this.measureLayoutFor(nextNote.measure).noteLayoutFor(nextNote)
         const stemDir = startLayout.beamFor(note)?.stemDir ?? note.stemDir
         return {
             direction: stemDir === 'up' ? 1 : -1,
-            startRowIndex: startRow.index,
-            endRowIndex: endRow.index,
-            startRowWidth: startRow.width,
-            startX:
-                startRow.getMeasureX(startMeasure) +
-                startLayout.getXForElement(note) +
-                startNoteLayout.noteX +
-                startNoteLayout.width.noteHeadWidth,
+            startRowIndex: start.row.index,
+            endRowIndex: end.row.index,
+            startRowWidth: start.row.width,
+            startX: start.x + startNoteLayout.noteRightX,
             startY: startNoteLayout.noteY,
-            endX: endRow.getMeasureX(endMeasure) + endLayout.getXForElement(nextNote) + endNoteLayout.noteX,
+            endX: end.x + endNoteLayout.noteX,
             endY: endNoteLayout.noteY,
         }
     }
@@ -207,10 +238,10 @@ export class ScoreLayout {
             const noteWidths = new Map(notePairs)
             const keyWidths = new Map<KeySignature, KeySignatureWidth>([[measure.keySignature, leadingKeyWidth], ...midKeyPairs])
             const fixedWidth =
-                sumBy(measure.midMeasureClefs, (clef) => clef.width.total) +
+                sumBy(measure.midMeasureClefs, (clef) => clef.layout.width.total) +
                 sumBy(midKeyPairs, ([, width]) => width.total) +
                 sumBy(notePairs, ([, width]) => width.total) +
-                MeasureLayout.barlineWidth(measure.endBarline)
+                BarlineLayout.widthOf(measure.endBarline)
             const base: MeasureFlags = {
                 showsClef: previousClefType === undefined || previousClefType !== measure.clef.type,
                 showsKeySignature: previousKeyFifths === undefined || previousKeyFifths !== measure.keySignature.fifths,
@@ -224,7 +255,6 @@ export class ScoreLayout {
             previousTimeSignature = measure.timeSignature
             return {
                 measure,
-                accidentals,
                 noteWidths,
                 keyWidths,
                 leadingKeyWidth,
@@ -237,9 +267,9 @@ export class ScoreLayout {
 
     private static minimalWidth(plan: MeasurePlan, flags: MeasureFlags, minimumMeasureWidth: number): number {
         const sum =
-            (flags.showsClef ? plan.measure.clef.width.total : 0) +
+            (flags.showsClef ? plan.measure.clef.layout.width.total : 0) +
             (flags.showsKeySignature ? plan.leadingKeyWidth.total : 0) +
-            (flags.showsTimeSignature ? plan.measure.timeSignature.width.total : 0) +
+            (flags.showsTimeSignature ? plan.measure.timeSignature.layout.width.total : 0) +
             plan.fixedWidth
         return Math.max(sum, minimumMeasureWidth)
     }
@@ -281,8 +311,34 @@ export class ScoreLayout {
         return row.index * (this.rowHeight + this.rowGap)
     }
 
+    /** The tie segments drawn on `row` (row-local), each with the tie it belongs to — the same segment objects while the tie is reused. */
+    tieSegmentsOn(row: RowLayout): ReadonlyArray<{ tie: TieLayout; segment: TieSegment }> {
+        return this._tieSegmentsByRow.get(row.index) ?? []
+    }
+
     getRowForY(y: number): RowLayout | undefined {
         return this.rows[Math.floor(y / (this.rowHeight + this.rowGap))]
+    }
+
+    /**
+     * Where `beat` of `measure` sits on the page: its row-local x (interpolated
+     * through the note slots) and the top of its row, in layout coordinates — the
+     * anchor the playback and recording cursors and the recording waveform share.
+     */
+    pointAtBeat(measure: Measure, beat: number): { x: number; rowY: number } {
+        const row = this.rowFor(measure)
+        return { x: row.getMeasureX(measure) + this.measureLayoutFor(measure).getXForBeat(beat), rowY: this.getYForRow(row) }
+    }
+
+    /** The row `note` is on, and its slot there: row-local x and the width allotted to it. */
+    noteSpan(note: Note): { row: RowLayout; x: number; width: number } {
+        const row = this.rowFor(note.measure)
+        const measureLayout = this.measureLayoutFor(note.measure)
+        return {
+            row,
+            x: row.getMeasureX(note.measure) + measureLayout.getXForElement(note),
+            width: measureLayout.getAllottedWidth(note),
+        }
     }
 
     /**
@@ -303,10 +359,9 @@ export class ScoreLayout {
         let end = -Infinity
         for (const note of notes) {
             if (this._rowByMeasure.get(note.measure) !== row) continue
-            const measureLayout = this.measureLayoutFor(note.measure)
-            const x = row.getMeasureX(note.measure) + measureLayout.getXForElement(note)
-            start = Math.min(start, x)
-            end = Math.max(end, x + measureLayout.getAllottedWidth(note))
+            const span = this.noteSpan(note)
+            start = Math.min(start, span.x)
+            end = Math.max(end, span.x + span.width)
         }
         return { x: (start + end) / 2, y: this.getYForRow(row) + TEMPO_MARKING_Y }
     }

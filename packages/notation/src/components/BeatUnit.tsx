@@ -1,13 +1,14 @@
 'use client'
 
 import { Bravura } from '../engraving/Bravura'
-import { DOTTED_FLAG_SCALE } from '../engraving/constants'
 import { GLYPH_SCALE } from '../engraving/GlyphScale'
 import type { Duration } from '../model/Duration'
+import { NoteLayout } from '../model/layout/NoteLayout'
 import { DOT_RADIUS, NOTATION_INK } from './constants'
 import { Glyph } from './Glyph'
 
-const STEM_HEIGHT = 14
+/** Stem length of the beat-unit note — the tempo marking's hit box spans it too. */
+export const BEAT_UNIT_STEM_HEIGHT = 14
 const STEM_WIDTH = 1.2
 const DOT_GAP = 3
 
@@ -15,7 +16,7 @@ const DOT_GAP = 3
 export function beatUnitWidth(duration: Duration): number {
     const notehead = Bravura.width(duration.noteheadGlyph, GLYPH_SCALE)
     const flag = duration.flagGlyph('up')
-    const flagWidth = flag ? Bravura.width(flag, duration.dots > 0 ? DOTTED_FLAG_SCALE : GLYPH_SCALE) : 0
+    const flagWidth = flag ? Bravura.width(flag, NoteLayout.flagScale(duration) ?? GLYPH_SCALE) : 0
     return Math.max(notehead, flagWidth) + duration.dots * (DOT_GAP + 2 * DOT_RADIUS)
 }
 
@@ -27,14 +28,14 @@ export function beatUnitWidth(duration: Duration): number {
 export function BeatUnit({ duration, fill = NOTATION_INK }: { duration: Duration; fill?: string }) {
     const noteheadWidth = Bravura.width(duration.noteheadGlyph, GLYPH_SCALE)
     const stemX = noteheadWidth - STEM_WIDTH / 2
-    const stemTop = -STEM_HEIGHT
+    const stemTop = -BEAT_UNIT_STEM_HEIGHT
     const flag = duration.flagGlyph('up')
     let dotX = noteheadWidth + DOT_GAP + DOT_RADIUS
     return (
         <g>
             <Glyph name={duration.noteheadGlyph} x={0} y={0} fill={fill} />
             {duration.type !== 'w' && <line x1={stemX} y1={0} x2={stemX} y2={stemTop} stroke={fill} strokeWidth={STEM_WIDTH} />}
-            {flag && <Glyph name={flag} x={stemX} y={stemTop} scale={duration.dots > 0 ? DOTTED_FLAG_SCALE : GLYPH_SCALE} fill={fill} />}
+            {flag && <Glyph name={flag} x={stemX} y={stemTop} scale={NoteLayout.flagScale(duration) ?? GLYPH_SCALE} fill={fill} />}
             {Array.from({ length: duration.dots }, (_, i) => {
                 const cx = dotX
                 dotX += DOT_GAP + 2 * DOT_RADIUS
