@@ -2,18 +2,19 @@
 
 Sheet-music editor with live audio-to-notation recording. pnpm monorepo:
 
-| Path                       | What it is                                                                                                                |
-| -------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| `apps/web`                 | Next.js app (editor UI), dev on **:3200**                                                                                 |
-| `apps/admin`               | Next.js admin console (secret login, hosted at admin.solkey.io), dev on **:3500**                                         |
-| `apps/eval`                | Next.js corpus & benchmarking workbench over the API's eval harness (local only), dev on **:3600**                        |
-| `apps/api`                 | NestJS API + WebSocket recording pipeline, dev on **:4200**                                                               |
-| `apps/inference-crepe`     | Python gRPC service: CREPE forward pass (**:50051**)                                                                      |
-| `packages/notation`        | Score domain: semantic model + layout engine + React notation renderer (TS source, compiled by the consuming apps)        |
-| `packages/playback`        | Score playback engine: soundfont MIDI player, scheduler, ticker and metronome (TS source, compiled by the consuming apps) |
-| `packages/inference-proto` | Shared gRPC contract for the inference service                                                                            |
-| `synthetic-corpus`         | Standalone Python (`uv`) project that builds realistic synthetic recordings for the eval harness (see its README)         |
-| `deploy/k8s`               | Kustomize: `base/` (production-shaped), `overlays/{local,staging,production}/`, opt-in `components/spot-inference/`       |
+| Path                       | What it is                                                                                                                  |
+| -------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `apps/web`                 | Next.js app (editor UI), dev on **:3200**                                                                                   |
+| `apps/admin`               | Next.js admin console (secret login, hosted at admin.solkey.io), dev on **:3500**                                           |
+| `apps/eval`                | Next.js corpus & benchmarking workbench over the API's eval harness (local only), dev on **:3600**                          |
+| `apps/api`                 | NestJS API + WebSocket recording pipeline, dev on **:4200**                                                                 |
+| `apps/inference-crepe`     | Python gRPC service: CREPE forward pass (**:50051**)                                                                        |
+| `packages/notation`        | Score domain: semantic model + layout engine + React notation renderer (TS source, compiled by the consuming apps)          |
+| `packages/playback`        | Score playback engine: soundfont MIDI player, scheduler, ticker and metronome (TS source, compiled by the consuming apps)   |
+| `packages/ui`              | Shared UI kit (web, admin, eval): primitives, `theme.css` tokens, HTTP + QueryClient core (TS source, compiled by the apps) |
+| `packages/inference-proto` | Shared gRPC contract for the inference service                                                                              |
+| `synthetic-corpus`         | Standalone Python (`uv`) project that builds realistic synthetic recordings for the eval harness (see its README)           |
+| `deploy/k8s`               | Kustomize: `base/` (production-shaped), `overlays/{local,staging,production}/`, opt-in `components/spot-inference/`         |
 
 The API owns everything about transcription except the neural-net forward pass,
 which runs behind a `ModelBackend` seam: **in-process TF.js** by default (dev,
