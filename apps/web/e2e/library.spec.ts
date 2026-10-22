@@ -268,10 +268,10 @@ test('the pencil button opens the score, and top-nav controls work', async ({ pa
     await expect(page).toHaveURL(/\/settings$/)
 })
 
-test('"New score" in the settings top nav lands in the library with the create dialog open', async ({ page }) => {
-    await page.goto('/settings')
-    await expect(page.getByRole('button', { name: 'Save changes' })).toBeVisible()
-    await page.getByRole('button', { name: 'New score' }).first().click()
+// "New score" on other pages (settings' top nav) lands here as /scores?new=1. Driven by URL
+// so this spec covers the library's half alone; the settings click lives with that page.
+test('/scores?new=1 opens the library with the create dialog open', async ({ page }) => {
+    await page.goto('/scores?new=1')
 
     await expect(page.getByRole('dialog', { name: 'New score' })).toBeVisible()
     // The ?new=1 flag is dropped once read, so a reload doesn't reopen the dialog.
