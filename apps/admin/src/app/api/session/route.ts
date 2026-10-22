@@ -39,6 +39,9 @@ export async function POST(request: NextRequest) {
     }
 
     if (typeof provided !== 'string' || !(await secretMatches(provided, secret))) {
+        // Re-read after the awaits rather than incrementing `recent`: concurrent
+        // failures from the same IP each land on the latest count, so a burst of
+        // parallel guesses is counted in full.
         const entry = failures.get(key)
         failures.set(key, { count: (entry?.count ?? 0) + 1, lastAt: Date.now() })
         return NextResponse.json({ message: "That secret didn't match." }, { status: 401 })
@@ -58,6 +61,6 @@ export async function POST(request: NextRequest) {
 
 export function DELETE() {
     const response = NextResponse.json({ ok: true })
-    response.cookies.set(SESSION_COOKIE, '', { httpOnly: true, path: '/', maxAge: 0 })
+    response.cookies.delete(SESSION_COOKIE)
     return response
 }

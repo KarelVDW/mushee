@@ -19,7 +19,10 @@ const API_URL = process.env.API_URL ?? 'http://localhost:4200'
  */
 export const maxDuration = 60
 
-async function forward(request: NextRequest, path: string[], method: 'GET' | 'POST' | 'DELETE') {
+type Context = { params: Promise<{ path: string[] }> }
+
+/** One handler for every exported method; `request.method` says which. */
+async function forward(request: NextRequest, { params }: Context) {
     const secret = process.env.ADMIN_SECRET
     if (!secret) {
         return NextResponse.json({ message: 'Admin console is disabled — set ADMIN_SECRET to enable it.' }, { status: 503 })
@@ -30,13 +33,14 @@ async function forward(request: NextRequest, path: string[], method: 'GET' | 'PO
 
     // Rebuild the upstream path from the matched segments (never from raw
     // user input) — encodeURIComponent keeps '..'-style tricks inert.
+    const { path } = await params
     const upstream = `${API_URL}/admin/${path.map(encodeURIComponent).join('/')}${request.nextUrl.search}`
-    const body = method === 'GET' ? undefined : await request.text()
+    const body = request.method === 'GET' ? undefined : await request.text()
 
     let res: Response
     try {
         res = await fetch(upstream, {
-            method,
+            method: request.method,
             headers: {
                 'x-admin-secret': secret,
                 ...(body ? { 'Content-Type': 'application/json' } : {}),
@@ -79,16 +83,4 @@ async function forward(request: NextRequest, path: string[], method: 'GET' | 'PO
     })
 }
 
-type Context = { params: Promise<{ path: string[] }> }
-
-export async function GET(request: NextRequest, context: Context) {
-    return forward(request, (await context.params).path, 'GET')
-}
-
-export async function POST(request: NextRequest, context: Context) {
-    return forward(request, (await context.params).path, 'POST')
-}
-
-export async function DELETE(request: NextRequest, context: Context) {
-    return forward(request, (await context.params).path, 'DELETE')
-}
+export { forward as DELETE, forward as GET, forward as POST }
