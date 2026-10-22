@@ -1,9 +1,9 @@
 import { memo } from 'react'
 
-import { STEM_WIDTH } from '../engraving/constants'
+import { DOT_RADIUS, STEM_WIDTH } from '../engraving/constants'
 import type { NoteLayout } from '../model/layout/NoteLayout'
 import type { LayoutStem } from '../model/layout/types'
-import { DOT_RADIUS, NOTATION_INK } from './constants'
+import { NOTATION_INK } from './constants'
 import { Glyph } from './Glyph'
 
 interface NoteGroupProps {

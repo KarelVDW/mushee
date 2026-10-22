@@ -1,4 +1,4 @@
-import { Instrument, type Score } from '@mushee/notation/model'
+import { Instrument, Score } from '@mushee/notation/model'
 import { makeScore, pitched, rest } from '@mushee/notation/testing'
 import { Metronome } from '@mushee/playback/Metronome'
 import type { MidiPlayer, ScheduledNote } from '@mushee/playback/MidiPlayer'
@@ -265,6 +265,39 @@ describe('Transport', () => {
         raw.currentTime = 6
         fireFrame()
         expect(raw.scheduled.filter((n) => n.instrument === Instrument.Woodblock).length).toBe(clickCount)
+    })
+
+    it('a tempo edit mid-pass keeps the clicks on the notes and nothing in the past', () => {
+        const { player, raw } = fakePlayer()
+        const transport = new Transport(player)
+        transport.setMetronomeEnabled(true)
+        const score = new Score()
+        // Half notes: when the edit lands, the scheduler has walked to beat 2 while the next click is due at beat 1.
+        for (let i = 0; i < 3; i++) score.addMeasure(i).addNotes([pitched('C', 4, 'h'), pitched('D', 4, 'h')])
+        score.measures[0].setTempo(0, 60)
+
+        let late = 0
+        const playUntil = (from: number, to: number) => {
+            // Until the pass plays out (the ticker then asks for no more frames).
+            for (let frame = 0; from + frame / 60 < to && transport.mode === 'playing'; frame++) {
+                raw.currentTime = from + frame / 60
+                const before = raw.scheduled.length
+                fireFrame()
+                late += raw.scheduled.slice(before).filter((n) => n.startTime < raw.currentTime - 1e-9).length
+            }
+        }
+        transport.playScore({ score, startNote: null, cursorEl: svgRect() })
+        playUntil(0, 4.5)
+        // The dock's tempo field edits the marking upstream without touching the selection.
+        score.measures[0].setTempo(0, 30)
+        playUntil(4.5, 20)
+
+        expect(late).toBe(0)
+        const clicks = raw.scheduled.filter((n) => n.instrument === Instrument.Woodblock).map((n) => n.startTime)
+        const notes = raw.scheduled.filter((n) => n.instrument === score.instrument).map((n) => n.startTime)
+        // The click due at 5s keeps its time; the rest follow at the new tempo, and every note lands on a click.
+        expect(clicks).toEqual([0, 1, 2, 3, 4, 5, 7, 9, 11, 13, 15, 17])
+        expect(notes).toEqual([0, 2, 4, 7, 11, 15])
     })
 
     it('setMetronomeEnabled while stopped only stores the preference', () => {

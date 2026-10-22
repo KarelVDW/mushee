@@ -80,6 +80,18 @@ describe('TranscriptionSocket', () => {
         expect(failed.isOpen).toBe(false)
     })
 
+    it('handshake() still settles when called after the socket already opened, and adds no listeners per call', async () => {
+        const socket = new TranscriptionSocket('ws://x', handlers())
+        ws().readyState = FakeWebSocket.OPEN
+        ws().fire('open')
+        const listeners = ws().addEventListener.mock.calls.length
+
+        await socket.handshake()
+        await socket.handshake()
+        expect(socket.isOpen).toBe(true)
+        expect(ws().addEventListener.mock.calls.length).toBe(listeners)
+    })
+
     it('queues audio while handshaking and sends it behind the meta frame once open', () => {
         const socket = new TranscriptionSocket('ws://x', handlers())
         socket.send(chunk(1))

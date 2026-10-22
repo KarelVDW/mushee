@@ -1,10 +1,11 @@
 'use client'
 
 import { Bravura } from '../engraving/Bravura'
+import { DOT_RADIUS } from '../engraving/constants'
 import { GLYPH_SCALE } from '../engraving/GlyphScale'
 import type { Duration } from '../model/Duration'
 import { NoteLayout } from '../model/layout/NoteLayout'
-import { DOT_RADIUS, NOTATION_INK } from './constants'
+import { NOTATION_INK } from './constants'
 import { Glyph } from './Glyph'
 
 /** Stem length of the beat-unit note — the tempo marking's hit box spans it too. */

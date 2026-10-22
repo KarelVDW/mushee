@@ -1,11 +1,11 @@
-import { INTERACTION_BLUE } from '@mushee/notation/components'
+import { INTERACTION_BLUE, RECORDING_CURSOR_RED } from '@mushee/notation/components'
 import type { Score } from '@mushee/notation/model'
 import type { MidiPlayer } from '@mushee/playback/MidiPlayer'
 import type { ScoreScheduler } from '@mushee/playback/ScoreScheduler'
 import type { Tickable } from '@mushee/playback/Ticker'
 
 /** The cursor's fill per mode: the editor's interaction blue while playing, red while a take records. */
-const TONE_FILL = { playback: INTERACTION_BLUE, recording: '#ef4444' } as const
+const TONE_FILL = { playback: INTERACTION_BLUE, recording: RECORDING_CURSOR_RED } as const
 
 export type PlaybackCursorTone = keyof typeof TONE_FILL
 
@@ -13,8 +13,9 @@ export type PlaybackCursorTone = keyof typeof TONE_FILL
  * The score's playback cursor — the one writer of its SVG rect, for playback
  * and recording alike. Positions come from the score's layout
  * (`ScoreLayout.pointAtBeat`); the rect's `x`, `transform` and `display` are
- * written in exactly the form Score.tsx's MutationObserver parses to keep the
- * cursor scrolled into view.
+ * written in exactly the form the scroll-follow observer parses — the
+ * MutationObserver in @mushee/notation's lib/useScrollFollow.ts, used by
+ * ScoreView — to keep the cursor scrolled into view.
  *
  * As a Tickable it follows a playback pass: each frame it moves to the
  * scheduler's position on the shared clock, and hides once the pass has

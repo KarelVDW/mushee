@@ -98,7 +98,13 @@ export class Transport {
         const { score, startNote } = options
 
         this.scheduler.cue(score, startNote)
-        this.metronome.cue(score, startNote?.measure.index ?? 0, startNote ? startNote.measure.beatOffsetOf(startNote) : 0)
+        // The clicks follow the scheduler's clock, so they keep to the notes even when the score is edited mid-pass.
+        this.metronome.cue(
+            score,
+            startNote?.measure.index ?? 0,
+            startNote ? startNote.measure.beatOffsetOf(startNote) : 0,
+            this.scheduler.clock,
+        )
         this.cursor.attach(options.cursorEl)
         this.cursor.follow(score)
 

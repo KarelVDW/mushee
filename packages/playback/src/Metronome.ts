@@ -2,6 +2,7 @@ import { Instrument } from '@mushee/notation/model/Instrument'
 import type { Score } from '@mushee/notation/model/Score'
 
 import type { MidiPlayer } from './MidiPlayer'
+import { PassClock } from './PassClock'
 import { type Tickable, Ticker } from './Ticker'
 
 /** Regular click, and the higher-pitched one that marks the downbeat of every measure. */
@@ -18,7 +19,9 @@ const EPSILON = 1e-6
  * quarter-note units like the rest of the model; the pulse only decides where
  * the clicks fall. Each click's time comes from the score's one clock
  * (`Score.secondsAt`), measured from the start position, so clicks land on the
- * notes ScoreScheduler plays whatever tempo markings sit between them.
+ * notes ScoreScheduler plays whatever tempo markings sit between them. Playing
+ * along with a ScoreScheduler, it follows that scheduler's PassClock, so the two
+ * stay together through an edit mid-pass too.
  */
 export class Metronome implements Tickable {
     /** The click's sound; load it alongside a score's instrument before a pass that clicks. */
@@ -31,29 +34,36 @@ export class Metronome implements Tickable {
     private midiPlayer: Pick<MidiPlayer, 'currentTime' | 'schedule'>
     private measureIdx = 0
     private beat = 0
-    /** Score time (`Score.secondsAt`) of the start position; the pass clock reads 0 there. */
-    private origin = 0
+    /** The clock of a pass the metronome runs on its own (a recording take's click), started from its start position. */
+    private readonly ownClock: PassClock
+    /** The clock the clicks are timed on: its own, or the one the pass was cued to follow. */
+    private clock: PassClock
 
     constructor(midiPlayer: Pick<MidiPlayer, 'currentTime' | 'schedule'>) {
         this.midiPlayer = midiPlayer
+        this.ownClock = new PassClock(midiPlayer)
+        this.clock = this.ownClock
     }
 
     /**
      * Set up the next pass: click through `score` from `startBeat` (quarter
      * units) of measure `startMeasureIndex` — by default the top of the score.
-     * The pass begins on the next reset() (Ticker.play) or joinAt().
+     * The pass begins on the next reset() (Ticker.play) or joinAt(). Pass
+     * `clock` (a ScoreScheduler's) to time the clicks on the notes' clock; its
+     * owner starts it, the metronome only reads it.
      */
-    cue(score: Score, startMeasureIndex = 0, startBeat = 0): void {
+    cue(score: Score, startMeasureIndex = 0, startBeat = 0, clock: PassClock = this.ownClock): void {
         this.score = score
         this.startMeasureIndex = startMeasureIndex
         this.startBeat = startBeat
+        this.clock = clock
     }
 
     reset() {
         this.measureIdx = this.startMeasureIndex
         this.beat = this.startBeat
-        const start = this.score?.measures[this.startMeasureIndex]
-        this.origin = start && this.score ? this.score.secondsAt(start, this.startBeat) : 0
+        // A followed clock belongs to the scheduler's pass, which starts it; restarting it here would undo its re-anchoring.
+        if (this.score && this.clock === this.ownClock) this.clock.start(this.score, this.startMeasureIndex, this.startBeat)
     }
 
     /**
@@ -99,7 +109,7 @@ export class Metronome implements Tickable {
             const beat = Math.ceil(this.beat / pulse - EPSILON) * pulse
             if (beat < measure.maxBeats - EPSILON) {
                 this.beat = beat
-                return { beat, pulse, time: score.secondsAt(measure, beat) - this.origin }
+                return { beat, pulse, time: this.clock.timeAt(this.measureIdx, beat) }
             }
             this.beat = 0
         }

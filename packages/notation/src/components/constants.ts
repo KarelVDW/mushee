@@ -20,6 +20,13 @@ export const INTERACTION_BLUE = '#1e90ff'
 export const INTERACTION_BLUE_BAND = 'rgba(30, 144, 255, 0.14)'
 
 /**
+ * The playback cursor while a take records: red, the universal "recording" signal, so the
+ * cursor itself says the take is live and that what it passes over is being written. Like
+ * INTERACTION_BLUE it is a transient overlay, `data-export-exclude`d with the cursor rect.
+ */
+export const RECORDING_CURSOR_RED = '#ef4444'
+
+/**
  * The pitch-operation highlight (transpose aim / minimize flash) — the brand magenta, the
  * second sanctioned transient exception to the canvas color ban (after the recording
  * waveform): only ever at low opacity, animated away, and `data-export-exclude`d.
@@ -39,9 +46,3 @@ export const WAVEFORM_COLORS = [WAVEFORM_CYAN, HIGHLIGHT_MAGENTA] as const
 export const MEASURE_BUTTON_FILL = 'white'
 export const MEASURE_BUTTON_STROKE = '#dbdddd'
 export const MEASURE_BUTTON_LABEL = '#5a5c5c'
-
-/**
- * Augmentation dot radius. It is an engraving metric (NoteWidth reserves room for it), so it
- * lives in engraving/constants; re-exported here for the renderer's existing imports.
- */
-export { DOT_RADIUS } from '../engraving/constants'
