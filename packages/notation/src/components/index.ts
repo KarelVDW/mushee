@@ -1,4 +1,3 @@
-export { BeatUnit, beatUnitWidth } from './BeatUnit'
 export { INTERACTION_BLUE, NOTATION_INK, WAVEFORM_COLORS } from './constants'
 export { Glyph } from './Glyph'
 export type { ScoreHighlight } from './HighlightLayer'
