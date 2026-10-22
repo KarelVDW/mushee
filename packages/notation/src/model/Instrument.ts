@@ -1,3 +1,5 @@
+import type { Pitch } from './Pitch'
+
 /** User-facing instrument family, used to group every instrument picker in the app. */
 export type InstrumentCategory = 'Keyboard' | 'Strings' | 'Woodwinds' | 'Brass' | 'Voice' | 'Folk & World' | 'Percussion'
 
@@ -34,10 +36,6 @@ export class Instrument {
         Instrument._byId.set(id, this)
     }
 
-    static all(): ReadonlyArray<Instrument> {
-        return Instrument._all
-    }
-
     /** Instruments offered to the user when picking a score's lead voice — excludes percussion-only patches like Woodblock. */
     static selectable(): ReadonlyArray<Instrument> {
         return Instrument._all.filter((i) => i.category !== 'Percussion')
@@ -63,18 +61,18 @@ export class Instrument {
         return Instrument._all.find((i) => i.gmProgram === program) ?? Instrument.Piano
     }
 
-    /** Resolve by display name, case-insensitive. Falls back to Piano. */
-    static byDisplayName(name: string): Instrument {
-        return Instrument.findByDisplayName(name) ?? Instrument.Piano
-    }
-
     /** Resolve by display name, case-insensitive; undefined when no instrument carries that name. */
     static findByDisplayName(name: string): Instrument | undefined {
         const lower = name.trim().toLowerCase()
         return Instrument._all.find((i) => i.displayName.toLowerCase() === lower)
     }
 
-    /** Default instrument; the fallback for unknown GM programs, and names. */
+    /** The MIDI note `written` sounds at on this instrument: `sounding = written + chromaticTranspose`. */
+    soundingMidi(written: Pitch): number {
+        return written.toMidi() + this.chromaticTranspose
+    }
+
+    /** Default instrument; the fallback for unknown GM programs. */
     static readonly Piano = new Instrument('piano', 'Piano', 'Keyboard', 0, 'acoustic_grand_piano')
 
     // Concert-pitch instruments — written = sounding, no transposition.

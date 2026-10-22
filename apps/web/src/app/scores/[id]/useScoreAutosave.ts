@@ -1,6 +1,6 @@
 'use client'
 
-import type { Score } from '@mushee/notation/model'
+import type { Score, ScorePatch } from '@mushee/notation/model'
 import { useCallback, useRef } from 'react'
 
 import { useUpdateScore } from '@/lib/queries'
@@ -16,12 +16,7 @@ export function useScoreAutosave(id: string) {
             if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
             if (saveRetryRef.current) clearTimeout(saveRetryRef.current)
             saveTimeoutRef.current = setTimeout(() => {
-                const body: {
-                    title?: string
-                    measures?: Record<string, unknown>
-                    allMeasures?: unknown[]
-                    partList?: Record<string, unknown>
-                } = {}
+                const body: ScorePatch & { title?: string } = {}
                 if (changes.title !== undefined) body.title = changes.title
                 if (changes.score) {
                     const dirty = changes.score.flushDirty()

@@ -1,7 +1,7 @@
 'use client'
 
 import { Score as ScoreView } from '@mushee/notation/components'
-import { Interval, type IntervalQuality, Measure, type Note, Score } from '@mushee/notation/model'
+import { Interval, type IntervalQuality, type Note, Score } from '@mushee/notation/model'
 import { type ReactNode, useCallback, useEffect, useMemo, useState } from 'react'
 
 import { KEY_NAMES, KeySignatureGlyph } from '@/components/editor/KeySignaturePopover'
@@ -99,19 +99,27 @@ export function TransposePopover({ score, selectedNotes, onApply, onDismiss, onS
         return Interval.fromParts(degree, quality, octaves, direction)
     }, [advanced, tab, semitones, targetFifths, currentFifths, direction, degree, quality, octaves])
 
-    // The preview is its own tiny Score (never the live one): the first affected measure,
-    // rebuilt and transposed from scratch on every input change.
+    // The preview is its own tiny Score (never the live one): an excerpt of the first affected
+    // measure, run through the same `Score.transpose` the Apply button uses — key change,
+    // respelling and all — and rebuilt on every input change. The version isn't read in the
+    // build itself, but a score edit must rebuild the preview.
     const previewVersion = score.version
-    const preview = useMemo(
-        // The version isn't read in the build itself, but a score edit must rebuild the preview.
-        () => buildPreview(score, selectedNotes, interval, effectiveScope),
-        [score, previewVersion, selectedNotes, interval, effectiveScope],
-    )
+    const preview = useMemo(() => {
+        const source = effectiveScope === 'selection' && selectedNotes[0] ? selectedNotes[0].measure : score.firstMeasure
+        const excerpt = source ? Score.excerpt(source, effectiveScope === 'selection' ? selectedNotes : undefined) : null
+        const built = excerpt?.score ?? new Score()
+        if (excerpt && !interval.isUnison) {
+            // In selection scope only the selected notes move; with none in this measure nothing does.
+            if (effectiveScope === 'score') built.transpose(interval)
+            else if (excerpt.notes.length) built.transpose(interval, excerpt.notes)
+        }
+        built.setLayoutWidth(PREVIEW_LAYOUT_WIDTH)
+        return built
+    }, [score, previewVersion, selectedNotes, interval, effectiveScope])
     // A lone measure fills only a slice of the layout width, so the view is zoomed until the
     // measure's actually-used width fills the preview box (the box crops the empty remainder
     // and centers the visible slice).
     const previewZoom = useMemo(() => {
-        preview.setLayoutWidth(PREVIEW_LAYOUT_WIDTH)
         const first = preview.measures[0]?.layout
         const used = first ? first.measureX + first.measureWidth : PREVIEW_LAYOUT_WIDTH
         const scale = Math.min(PREVIEW_MAX_ZOOM, PREVIEW_BOX_WIDTH / used)
@@ -392,31 +400,4 @@ function NumberStepper({ value, min, max, onChange, ariaLabel, suffix, grow }: N
             {stepButton(1)}
         </div>
     )
-}
-
-/**
- * A one-measure throwaway Score previewing the transposition: the first affected measure's
- * notes under its clef/key/meter, run through the same `Score.transpose` the Apply button
- * uses — key change, respelling and all.
- */
-function buildPreview(score: Score, selectedNotes: Note[], interval: Interval, scope: TransposeScope): Score {
-    const source = scope === 'selection' && selectedNotes[0] ? selectedNotes[0].measure : score.firstMeasure
-    const preview = new Score()
-    if (!source) return preview
-    const key = source.keySignature
-    const measure = new Measure(preview, source.clef.type, source.timeSignature, { keyFifths: key.fifths, keyMode: key.mode })
-    preview.addMeasure(0, measure)
-    if (source.notes.length) measure.addNotes(source.notes.map((note) => note.clone({})))
-    if (interval.isUnison) return preview
-    if (scope === 'selection') {
-        // Only the selected notes move — mirror them into the copy by position.
-        const targets = selectedNotes
-            .filter((note) => note.measure === source)
-            .map((note) => measure.notes[source.notes.indexOf(note)])
-            .filter((note): note is Note => note !== undefined)
-        if (targets.length) preview.transpose(interval, targets)
-    } else {
-        preview.transpose(interval)
-    }
-    return preview
 }

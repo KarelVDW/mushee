@@ -1,3 +1,5 @@
+import type { ScorePatch } from '@mushee/notation/model'
+
 import type { StoredShortcuts } from './Keybindings'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4200'
@@ -104,10 +106,7 @@ export function createScore(title: string, score: Record<string, unknown>): Prom
     })
 }
 
-export function updateScore(
-    id: string,
-    data: { title?: string; measures?: Record<string, unknown>; allMeasures?: unknown[]; partList?: Record<string, unknown> },
-): Promise<ScoreMeta> {
+export function updateScore(id: string, data: ScorePatch & { title?: string }): Promise<ScoreMeta> {
     return api(`/scores/${id}`, {
         method: 'PATCH',
         body: JSON.stringify(data),

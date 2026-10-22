@@ -212,7 +212,7 @@ describe('time signature serialization round-trip', () => {
         const score = new Score()
         const measure = new Measure(score, 'treble', new TimeSignature(3, 4))
         measure.complete()
-        score.addMeasure(undefined, measure)
+        score.appendMeasure(measure)
 
         const restored = roundTrip(score).firstMeasure
         if (!restored) throw new Error('expected restored firstMeasure')
@@ -224,10 +224,10 @@ describe('time signature serialization round-trip', () => {
         const score = new Score()
         const m0 = new Measure(score, 'treble', new TimeSignature(4, 4))
         m0.complete()
-        score.addMeasure(undefined, m0)
+        score.appendMeasure(m0)
         const m1 = new Measure(score, 'treble', new TimeSignature(6, 8))
         m1.complete()
-        score.addMeasure(undefined, m1)
+        score.appendMeasure(m1)
 
         const restored = roundTrip(score)
         expect(restored.measures[0].timeSignature.beatAmount).toBe(4)
@@ -486,10 +486,10 @@ describe('edge cases', () => {
         const m0 = new Measure(score, 'treble', new TimeSignature(4, 4))
         m0.complete() // four quarter rests at beats 0,1,2,3
         m0.addClef(4, 'bass') // clef change at the end-of-measure boundary
-        score.addMeasure(undefined, m0)
+        score.appendMeasure(m0)
         const m1 = new Measure(score, 'treble', new TimeSignature(4, 4))
         m1.complete()
-        score.addMeasure(undefined, m1)
+        score.appendMeasure(m1)
 
         // Sanity: the trailing clef is the last clef of m0 and serializes as a standalone attributes entry.
         const input = toInput(score)
@@ -507,10 +507,10 @@ describe('edge cases', () => {
         const m0 = new Measure(score, 'treble', new TimeSignature(4, 4))
         m0.complete()
         m0.addKeySignature(4, 3) // key change at the end-of-measure boundary
-        score.addMeasure(undefined, m0)
+        score.appendMeasure(m0)
         const m1 = new Measure(score, 'treble', new TimeSignature(4, 4))
         m1.complete()
-        score.addMeasure(undefined, m1)
+        score.appendMeasure(m1)
 
         const restored = roundTrip(score)
         expect(restored.measures[1].keySignature.fifths).toBe(3)
@@ -726,10 +726,10 @@ describe('full feature round-trip', () => {
             leadingKeyExplicit: true,
         })
         m0.complete()
-        score.addMeasure(undefined, m0)
+        score.appendMeasure(m0)
         const m1 = new Measure(score, 'bass', new TimeSignature(3, 4), { keyFifths: 2 })
         m1.complete()
-        score.addMeasure(undefined, m1)
+        score.appendMeasure(m1)
 
         // Notes, tempo, mid-measure clef and a tied pair in measure 0.
         score.replace(m0.notes, [

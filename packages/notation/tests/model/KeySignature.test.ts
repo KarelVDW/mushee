@@ -4,33 +4,32 @@ import { key, makeScore } from '@mushee/notation/testing'
 import { describe, expect, it } from 'vitest'
 
 describe('KeySignature', () => {
+    /** The key's alteration of each letter, C to B. */
+    const alters = (fifths: number) => (['C', 'D', 'E', 'F', 'G', 'A', 'B'] as const).map((name) => key(fifths).alterForNote(name))
+
     it('C major (fifths=0) has no sharps or flats', () => {
-        const k = key(0)
-        expect(k.sharps).toEqual([])
-        expect(k.flats).toEqual([])
+        expect(alters(0)).toEqual([0, 0, 0, 0, 0, 0, 0])
     })
 
     it('G major (fifths=1) has F#', () => {
         const k = key(1)
-        expect(k.sharps).toEqual(['F'])
-        expect(k.flats).toEqual([])
+        expect(alters(1)).toEqual([0, 0, 0, 1, 0, 0, 0])
         expect(k.alterForNote('F')).toBe(1)
         expect(k.alterForNote('C')).toBe(0)
     })
 
     it('D major (fifths=2) has F# and C#', () => {
-        expect(key(2).sharps).toEqual(['F', 'C'])
+        expect(alters(2)).toEqual([1, 0, 0, 1, 0, 0, 0])
     })
 
     it('F major (fifths=-1) has Bb', () => {
         const k = key(-1)
-        expect(k.flats).toEqual(['B'])
-        expect(k.sharps).toEqual([])
+        expect(alters(-1)).toEqual([0, 0, 0, 0, 0, 0, -1])
         expect(k.alterForNote('B')).toBe(-1)
     })
 
     it('Bb major (fifths=-2) has Bb and Eb', () => {
-        expect(key(-2).flats).toEqual(['B', 'E'])
+        expect(alters(-2)).toEqual([0, 0, -1, 0, 0, 0, -1])
     })
 
     it('mode is preserved if provided', () => {
@@ -44,11 +43,11 @@ describe('KeySignature', () => {
     })
 
     it('handles all 7 sharps (C# major)', () => {
-        expect(key(7).sharps).toEqual(['F', 'C', 'G', 'D', 'A', 'E', 'B'])
+        expect(alters(7)).toEqual([1, 1, 1, 1, 1, 1, 1])
     })
 
     it('handles all 7 flats (Cb major)', () => {
-        expect(key(-7).flats).toEqual(['B', 'E', 'A', 'D', 'G', 'C', 'F'])
+        expect(alters(-7)).toEqual([-1, -1, -1, -1, -1, -1, -1])
     })
 
     it('majorKeyName names the major tonic of every drawable key', () => {

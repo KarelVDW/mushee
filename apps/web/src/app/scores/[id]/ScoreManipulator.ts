@@ -490,7 +490,7 @@ export class ScoreManipulator {
      */
     private adopt(restored: RestoredState, previous: Score): void {
         restored.score.setLayoutWidth(previous.layoutWidth)
-        if (restored.score.instrument !== previous.instrument) restored.score.redirty({ partList: {} })
+        if (restored.score.instrument !== previous.instrument) restored.score.markInstrumentDirty()
         this._score = restored.score
         const anchor = this.noteAt(restored.selection?.anchor)
         const focus = this.noteAt(restored.selection?.focus)

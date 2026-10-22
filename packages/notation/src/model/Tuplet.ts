@@ -9,14 +9,10 @@ import type { Note } from './Note'
  * geometry is context-dependent and lives in the layout layer.
  */
 export class Tuplet {
-    private _indexMap: Map<Note, number>
-
     constructor(
         readonly measure: Measure,
         readonly notes: Note[],
-    ) {
-        this._indexMap = new Map(notes.map((n, i) => [n, i]))
-    }
+    ) {}
 
     /** Delegates into the current ScoreLayout — context-dependent, never cached here. */
     get layout(): TupletLayout {
@@ -29,9 +25,5 @@ export class Tuplet {
 
     get lastNote() {
         return this.notes[this.notes.length - 1]
-    }
-
-    getIndex(note: Note) {
-        return this._indexMap.get(note) ?? null
     }
 }

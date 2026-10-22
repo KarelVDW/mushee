@@ -1,4 +1,5 @@
 import { Instrument } from '@mushee/notation/model/Instrument'
+import { Pitch } from '@mushee/notation/model/Pitch'
 import { describe, expect, it } from 'vitest'
 
 describe('Instrument', () => {
@@ -26,26 +27,25 @@ describe('Instrument', () => {
         expect(Instrument.byGmProgram(999)).toBe(Instrument.Piano)
     })
 
-    it('all() returns the full registry including the metronome Woodblock', () => {
-        const all = Instrument.all()
-        expect(all).toContain(Instrument.Piano)
-        expect(all).toContain(Instrument.Woodblock)
-        // selectable() is the same set minus Woodblock.
-        expect(all.length).toBe(Instrument.selectable().length + 1)
-    })
-
     it('byId resolves a registered instrument and returns undefined for an unknown id', () => {
         expect(Instrument.byId('trumpet')).toBe(Instrument.Trumpet)
         expect(Instrument.byId('not-an-instrument')).toBeUndefined()
     })
 
-    it('byDisplayName matches case-insensitively after trimming', () => {
-        expect(Instrument.byDisplayName('  fReNcH HoRn ')).toBe(Instrument.FrenchHorn)
-        expect(Instrument.byDisplayName('Trumpet')).toBe(Instrument.Trumpet)
+    it('findByDisplayName matches case-insensitively after trimming', () => {
+        expect(Instrument.findByDisplayName('  fReNcH HoRn ')).toBe(Instrument.FrenchHorn)
+        expect(Instrument.findByDisplayName('Trumpet')).toBe(Instrument.Trumpet)
     })
 
-    it('byDisplayName falls back to Piano for an unknown name', () => {
-        expect(Instrument.byDisplayName('Theremin')).toBe(Instrument.Piano)
+    it('findByDisplayName returns undefined for an unknown name', () => {
+        expect(Instrument.findByDisplayName('Theremin')).toBeUndefined()
+    })
+
+    it('soundingMidi adds the instrument’s chromatic transposition to the written pitch', () => {
+        const c5 = new Pitch({ name: 'C', octave: 5 })
+        expect(Instrument.Piano.soundingMidi(c5)).toBe(72)
+        expect(Instrument.Trumpet.soundingMidi(c5)).toBe(70) // written C sounds B♭
+        expect(Instrument.Guitar.soundingMidi(c5)).toBe(60) // an octave below written
     })
 
     it('guitar and bass guitar sound an octave below written', () => {

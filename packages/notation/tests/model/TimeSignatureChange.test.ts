@@ -99,7 +99,7 @@ describe('Score.setTimeSignature', () => {
             const score = new Score(() => calls++)
             score.addMeasure().complete()
             score.addMeasure().complete()
-            score.clearDirty()
+            score.flushDirty()
             calls = 0
             const version = score.version
             score.setTimeSignature(score.measures[0], new TimeSignature(3, 4))
@@ -120,7 +120,7 @@ describe('Score.setTimeSignature', () => {
 
         it('merges measures when the meter grows', () => {
             const score = new Score()
-            for (let i = 0; i < 4; i++) score.addMeasure(i, new Measure(score, 'treble', new TimeSignature(3, 4))).complete()
+            for (let i = 0; i < 4; i++) score.appendMeasure(new Measure(score, 'treble', new TimeSignature(3, 4))).complete()
             score.setTimeSignature(score.measures[0], new TimeSignature(4, 4))
             expect(score.measures).toHaveLength(3) // 12 beats in 4-beat measures
             expect(score.measures.every((m) => m.beats === 4)).toBe(true)

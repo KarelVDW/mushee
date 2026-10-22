@@ -113,6 +113,33 @@ describe('tie semantics (Score.tiePartner)', () => {
     })
 })
 
+describe('Score.tiedBeats', () => {
+    it('is the note’s own value when it ties into nothing', () => {
+        const score = makeScore(1)
+        const [half] = score.replace([score.measures[0].notes[0], score.measures[0].notes[1]], [pitched('C', 5, 'h')])
+        expect(score.tiedBeats(half)).toBe(2)
+    })
+
+    it('sums a tie chain across a barline', () => {
+        const score = makeScore(2)
+        const [m0, m1] = score.measures
+        // C5: a quarter tied into a half tied into the next bar's quarter — three notes, four beats.
+        const tied = (type: 'q' | 'h') =>
+            new Note({ duration: new Duration({ type }), pitch: new Pitch({ name: 'C', octave: 5 }), tie: 'start' })
+        const [head] = score.replace(m0.notes.slice(1), [tied('q'), tied('h')])
+        score.replace([m1.notes[0]], [pitched('C', 5)])
+        expect(score.tiedBeats(head)).toBe(4)
+        expect(score.tiedBeats(m0.notes[2])).toBe(3) // from the middle of the chain on
+    })
+
+    it('stops at a dangling tie facing another pitch', () => {
+        const score = makeScore(1)
+        const m = score.measures[0]
+        const [start] = score.replace([m.notes[0], m.notes[1]], [tieStartNote(), pitched('D', 5)])
+        expect(score.tiedBeats(start)).toBe(1)
+    })
+})
+
 describe('a tie binds only notes that sound the same', () => {
     function twoNotes(first: Note, second: Note) {
         const score = makeScore(1)

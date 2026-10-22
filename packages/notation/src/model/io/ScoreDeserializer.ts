@@ -139,7 +139,7 @@ export class ScoreDeserializer {
                     }
                 }
             }
-            score.addMeasure(undefined, measure)
+            score.appendMeasure(measure)
         }
         return score
     }

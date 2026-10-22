@@ -10,8 +10,10 @@ import {
     DIVISIONS,
     MXML_NOTE_TYPE,
     type MxmlClefSign,
+    type MxmlMeasure,
     type MxmlMeasureEntry,
     type MxmlNote,
+    type MxmlPartList,
     type MxmlPitch,
     type MxmlTie,
     type ScorePartwise,
@@ -20,7 +22,7 @@ import {
 export class MeasureSerializer {
     constructor(readonly measure: Measure) {}
 
-    serialize() {
+    serialize(): MxmlMeasure {
         const entries: MxmlMeasureEntry[] = []
 
         const previousMeasure = this.measure.score.getPreviousMeasure(this.measure)
@@ -159,19 +161,21 @@ export class ScoreSerializer {
 
     toInput(): ScorePartwise {
         const measures = this.score.measures.map((measure) => new MeasureSerializer(measure).serialize())
+        return { partList: this.partList(), parts: [{ id: 'P1', measures }] }
+    }
+
+    /** The single-part part list naming the score's instrument — in a full document and in a save patch alike. */
+    partList(): MxmlPartList {
         const instrument = this.score.instrument
         return {
-            partList: {
-                scoreParts: [
-                    {
-                        id: 'P1',
-                        partName: instrument.displayName,
-                        scoreInstrument: { id: 'P1-I1', instrumentName: instrument.displayName },
-                        midiInstrument: { id: 'P1-I1', midiProgram: instrument.gmProgram + 1 },
-                    },
-                ],
-            },
-            parts: [{ id: 'P1', measures }],
+            scoreParts: [
+                {
+                    id: 'P1',
+                    partName: instrument.displayName,
+                    scoreInstrument: { id: 'P1-I1', instrumentName: instrument.displayName },
+                    midiInstrument: { id: 'P1-I1', midiProgram: instrument.gmProgram + 1 },
+                },
+            ],
         }
     }
 }

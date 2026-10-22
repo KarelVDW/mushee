@@ -1,10 +1,11 @@
-import { compact, groupBy, keyBy, last, sumBy } from 'lodash-es'
+import { last, sumBy } from 'lodash-es'
 
 import { SCORE_WIDTH } from '../engraving/constants'
 import { BEAT_EPSILON, Duration } from './Duration'
 import { Instrument } from './Instrument'
 import type { Interval } from './Interval'
-import { MeasureSerializer } from './io/ScoreSerializer'
+import type { MxmlMeasure, ScorePatch } from './io/MusicXml'
+import { MeasureSerializer, ScoreSerializer } from './io/ScoreSerializer'
 import { KeySignature } from './KeySignature'
 import { ScoreLayout } from './layout/ScoreLayout'
 import { Measure } from './Measure'
@@ -25,7 +26,7 @@ import { MeasureRebar } from './util/MeasureRebar'
  * recomputes lazily off that version (see ARCHITECTURE.md).
  */
 export class Score {
-    /** Tempo assumed before any explicit marking — matches the playback engines' fallback. */
+    /** Tempo assumed before any explicit marking. */
     static readonly DEFAULT_BPM = 90
 
     readonly measures: Measure[] = []
@@ -61,6 +62,20 @@ export class Score {
         },
     )
 
+    /** Seconds from the top of the score to the start of each measure, indexed by measure position. */
+    private readonly _measureStartSeconds = new Derived(
+        () => this._version,
+        () => {
+            const starts: number[] = []
+            let seconds = 0
+            this.measures.forEach((measure, index) => {
+                starts.push(seconds)
+                seconds += this.secondsInto(measure, index, measure.maxBeats)
+            })
+            return starts
+        },
+    )
+
     /** Tie connections: each tie-starting note mapped to the note it sustains into. */
     private readonly _tiePartners = new Derived(
         () => this._version,
@@ -83,6 +98,44 @@ export class Score {
 
     constructor(onChange?: () => void) {
         this._onChange = onChange
+    }
+
+    /**
+     * A new score's starting point for `instrument`: one measure completed the way the editor
+     * completes one (four quarter rests in 4/4), marked at `bpm`. New scores open at 120 on
+     * purpose — DEFAULT_BPM is only what a score without any marking is assumed to play at.
+     */
+    static blank(instrument: Instrument, bpm = 120): Score {
+        const score = new Score()
+        score._instrument = instrument
+        const measure = score.addMeasure().complete()
+        score.setTempo(measure.firstNote, bpm)
+        return score
+    }
+
+    /**
+     * A detached one-measure copy of `measure` — its leading clef, key (fifths and mode) and
+     * meter, with cloned notes — for previewing an edit without touching the live score.
+     * `notes` are the copies of the given `notes` that belong to `measure`, mirrored by
+     * position (every copied note when none are given), ready to hand to the excerpt's
+     * own mutators.
+     */
+    static excerpt(measure: Measure, notes?: Note[]): { score: Score; notes: Note[] } {
+        const score = new Score()
+        const key = measure.keySignature
+        // Explicit leading clef and key: the excerpt's only measure must keep them through carry-forward.
+        const copy = new Measure(score, measure.clef.type, measure.timeSignature, {
+            keyFifths: key.fifths,
+            keyMode: key.mode,
+            leadingClefExplicit: true,
+            leadingKeyExplicit: true,
+        })
+        copy.addNotes(measure.notes.map((note) => note.clone({})))
+        score.appendMeasure(copy)
+        const mirrored = notes
+            ? notes.filter((note) => note.measure === measure).map((note) => copy.notes[measure.notes.indexOf(note)])
+            : copy.notes
+        return { score, notes: mirrored }
     }
 
     /** Version of the whole score's semantic content; any mutation moves it. */
@@ -142,30 +195,17 @@ export class Score {
      * B♭4) becomes a flute written B♭4 (still sounds B♭4) — the audience hears
      * the same music; the trumpeter's "do" becomes the flutist's "si bémol".
      *
-     * The note rewrite goes through `replace` so tie tracking stays consistent.
-     * Note identities change — callers holding a Note ref (e.g. the editor's
-     * active note) need to re-resolve by position.
+     * The rewrite is {@link transpose}'s whole-score path: keys land in the drawable
+     * range (B major for alto sax is written in A♭, not G♯) and the notes are
+     * respelled for them. Note identities change — callers holding a Note ref
+     * (e.g. the editor's active note) need to re-resolve by position.
      */
     setInstrument(instrument: Instrument) {
         if (this._instrument === instrument) return
 
         const deltaChromatic = this._instrument.chromaticTranspose - instrument.chromaticTranspose
         const deltaDiatonic = this._instrument.diatonicTranspose - instrument.diatonicTranspose
-
-        if (deltaChromatic !== 0 || deltaDiatonic !== 0) {
-            const targets: Note[] = []
-            const values: Note[] = []
-            for (const measure of this.measures) {
-                measure.transposeKeySignatures(deltaChromatic, deltaDiatonic)
-                for (const note of measure.notes) {
-                    targets.push(note)
-                    values.push(note.clone(note.pitch ? { pitch: note.pitch.transposed(deltaChromatic, deltaDiatonic) } : {}))
-                }
-            }
-            if (targets.length > 0) this.replace(targets, values)
-            // Re-propagate the transposed key signatures forward (inherited leading keys follow the explicit ones).
-            this.propagateContext()
-        }
+        if (deltaChromatic !== 0 || deltaDiatonic !== 0) this.transposeWholeScore(deltaChromatic, deltaDiatonic)
 
         this._instrument = instrument
         this._instrumentDirty = true
@@ -196,6 +236,13 @@ export class Score {
         return this._tiePartners.value.get(note) ?? null
     }
 
+    /** How long `note` sounds, in beats: its own value plus every note its tie chain sustains into. */
+    tiedBeats(note: Note): number {
+        let beats = note.duration.effectiveBeats
+        for (let partner = this.tiePartner(note); partner; partner = this.tiePartner(partner)) beats += partner.duration.effectiveBeats
+        return beats
+    }
+
     /**
      * Whether a tie from `note` would bind: it and the note after it are pitched and sound the
      * same (C♯ to D♭ included). The editor offers tying on only where this holds.
@@ -213,8 +260,7 @@ export class Score {
 
     // --- Navigation (the single traversal implementation; Note/Measure delegate here) ---
 
-    getNextMeasure(measure?: Measure): Measure | null {
-        if (!measure) return this.firstMeasure
+    getNextMeasure(measure: Measure): Measure | null {
         const measureIndex = this._indexByMeasure.value.get(measure)
         if (measureIndex === undefined) return null
         return this.measures[measureIndex + 1] ?? null
@@ -236,49 +282,62 @@ export class Score {
 
     // --- Structure mutations ---
 
-    addMeasure(index = this.measures.length, measure?: Measure) {
-        if (!measure) {
-            const previous = this.measures[index - 1]
-            const displaced = previous ? undefined : this.measures[index]
-            if (displaced) {
-                // Inserted at the very start (e.g. a take recorded from measure one): nothing
-                // carries in, so the new measure takes over the leading context of the measure
-                // it pushes aside — which then simply inherits it instead of restating it.
-                measure = new Measure(this, displaced.clef.type, displaced.timeSignature, {
-                    keyFifths: displaced.keySignature.fifths,
-                    keyMode: displaced.keySignature.mode,
-                    leadingClefExplicit: displaced.leadingClefExplicit,
-                    leadingKeyExplicit: displaced.leadingKeyExplicit,
-                })
-                if (displaced.leadingClefExplicit) displaced.makeLeadingClefInherited()
-                if (displaced.leadingKeyExplicit) displaced.makeLeadingKeyInherited()
-            } else {
-                // Inherit the clef and key *leaving* the previous measure (its last ones carry forward).
-                const inheritedClefType = previous?.lastClef.type ?? 'treble'
-                const inheritedKey = previous?.lastKey
-                const inheritedTimeSignature = previous?.timeSignature ?? new TimeSignature(4, 4)
-                measure = new Measure(this, inheritedClefType, inheritedTimeSignature, {
-                    keyFifths: inheritedKey?.fifths ?? 0,
-                    keyMode: inheritedKey?.mode,
-                })
-            }
+    /** Insert a new, empty measure at `index` (default: the end) in the context carried into that position. */
+    addMeasure(index = this.measures.length): Measure {
+        const measure = this.insertMeasure(index, this.createMeasure(index))
+        this.touch()
+        return measure
+    }
+
+    /** Append a measure built elsewhere (the deserializer, the importers) as the new last measure. */
+    appendMeasure(measure: Measure): Measure {
+        this.insertMeasure(this.measures.length, measure)
+        this.touch()
+        return measure
+    }
+
+    /** A new, empty measure for position `index`, in the context carried into it. Not yet in the score. */
+    private createMeasure(index: number): Measure {
+        const previous = this.measures[index - 1]
+        const displaced = previous ? undefined : this.measures[index]
+        if (displaced) {
+            // Inserted at the very start (e.g. a take recorded from measure one): nothing
+            // carries in, so the new measure takes over the leading context of the measure
+            // it pushes aside — which then simply inherits it instead of restating it.
+            const measure = new Measure(this, displaced.clef.type, displaced.timeSignature, {
+                keyFifths: displaced.keySignature.fifths,
+                keyMode: displaced.keySignature.mode,
+                leadingClefExplicit: displaced.leadingClefExplicit,
+                leadingKeyExplicit: displaced.leadingKeyExplicit,
+            })
+            if (displaced.leadingClefExplicit) displaced.makeLeadingClefInherited()
+            if (displaced.leadingKeyExplicit) displaced.makeLeadingKeyInherited()
+            return measure
         }
+        // Inherit the clef and key *leaving* the previous measure (its last ones carry forward).
+        const inheritedKey = previous?.lastKey
+        return new Measure(this, previous?.lastClef.type ?? 'treble', previous?.timeSignature ?? new TimeSignature(4, 4), {
+            keyFifths: inheritedKey?.fifths ?? 0,
+            keyMode: inheritedKey?.mode,
+        })
+    }
+
+    /** Splice `measure` in at `index` and settle barlines and carried context around it. No touch — the calling mutator owns it. */
+    private insertMeasure(index: number, measure: Measure): Measure {
         this.measures.splice(index, 0, measure)
-        const previousMeasure = index > 0 ? this.measures[index - 1] : undefined
-        const nextMeasure = this.measures[index + 1]
-        if (nextMeasure) {
-            // Mid-score insertion: default the new measure's barline, but never overwrite an
-            // explicit style it was built with (e.g. a double barline from a loaded score).
-            if (measure.endBarline === undefined) measure.setEndBarline('single')
+        const previous = this.measures[index - 1]
+        if (this.measures[index + 1]) {
+            // Mid-score insertion — only freshly created measures arrive here, so the barline is positional.
+            measure.setEndBarline('single')
         } else {
             // Appended at the end: the final barline moves to the new measure. Only the
-            // positional 'end' on the previous measure is demoted — an explicit double/none stays.
-            if (previousMeasure?.endBarline === 'end') previousMeasure.setEndBarline('single')
+            // positional 'end' on the previous measure is demoted — an explicit double/none stays,
+            // and so does an explicit style an appended measure was built with (from a loaded score).
+            if (previous?.endBarline === 'end') previous.setEndBarline('single')
             if (measure.endBarline === undefined) measure.setEndBarline('end')
         }
         this.propagateContext()
         this._structureChanged = true
-        this.touch()
         return measure
     }
 
@@ -293,12 +352,13 @@ export class Score {
      */
     addMeasureAdoptingTempo(index: number): Measure {
         const displaced = this.measures[index]
-        const measure = this.addMeasure(index)
+        const measure = this.insertMeasure(index, this.createMeasure(index))
         const marking = displaced?.tempoAtBeat(0)
         if (displaced && marking) {
             displaced.removeTempo(0)
             measure.setTempo(0, marking.bpm)
         }
+        this.touch()
         return measure
     }
 
@@ -447,38 +507,56 @@ export class Score {
      * fewest accidentals under the keys now in effect, so the result is always cleanly
      * spelled — and matches what a preview built the same way shows.
      *
-     * Rewrites go through `replace`, so note identities change; the returned notes are the
-     * final replacements, index-aligned with the transposed notes in score order.
+     * Rewrites go through the `replace` path, so note identities change; the returned notes are
+     * the final replacements, index-aligned with the transposed notes in score order.
      */
     transpose(interval: Interval, notes?: Note[]): Note[] {
-        const targets = notes ?? this.measures.flatMap((m) => m.notes)
-        if (interval.isUnison) return targets
+        if (interval.isUnison) return notes ?? this.measures.flatMap((m) => m.notes)
         // Below this boundary the primitives take the interval's (chromatic, diatonic) pair.
         const { chromatic, diatonic } = interval
-        if (!notes) {
-            for (const measure of this.measures) measure.transposeKeySignatures(chromatic, diatonic)
-            // A score that starts in inherited C major now carries a transposed leading key that
-            // is still marked inherited — promote it to an explicit boundary before propagation,
-            // or propagateContext would reset it to the default C.
-            const first = this.firstMeasure
-            if (first && !first.leadingKeyExplicit && first.keySignature.fifths !== 0) {
-                first.setKeySignature(0, first.keySignature.fifths, first.keySignature.mode)
-            }
-            // Fold overflowed keys to their enharmonic equivalent. Inherited leading keys are
-            // skipped: propagation below re-derives them from the explicit boundaries.
-            for (const measure of this.measures) {
-                for (const key of [...measure.keySignatures]) {
-                    if (key.beatPosition === 0 && !measure.leadingKeyExplicit) continue
-                    const normalized = KeySignature.normalizedFifths(key.fifths)
-                    if (normalized !== key.fifths) measure.setKeySignature(key.beatPosition, normalized, key.mode)
-                }
-            }
-            this.propagateContext()
+        const transposed = notes ? this.transposeNotes(notes, chromatic, diatonic) : this.transposeWholeScore(chromatic, diatonic)
+        this.touch()
+        return transposed
+    }
+
+    /**
+     * The whole-score rewrite {@link transpose} and {@link setInstrument} share: every key is
+     * re-keyed (an inherited leading key promoted so it survives propagation, overflow folded to
+     * the enharmonic key), then every note moves and is respelled for the keys now in effect.
+     * No touch — the calling mutator owns it.
+     */
+    private transposeWholeScore(chromatic: number, diatonic: number): Note[] {
+        for (const measure of this.measures) measure.transposeKeySignatures(chromatic, diatonic)
+        // A score that starts in inherited C major now carries a transposed leading key that
+        // is still marked inherited — promote it to an explicit boundary before propagation,
+        // or propagateContext would reset it to the default C.
+        const first = this.firstMeasure
+        if (first && !first.leadingKeyExplicit && first.keySignature.fifths !== 0) {
+            first.setKeySignature(0, first.keySignature.fifths, first.keySignature.mode)
         }
-        if (!targets.length) return targets
-        const transposed = this.replace(
-            targets,
-            targets.map((note) => note.clone(note.pitch ? { pitch: note.pitch.transposed(chromatic, diatonic) } : {})),
+        // Fold overflowed keys to their enharmonic equivalent. Inherited leading keys are
+        // skipped: propagation below re-derives them from the explicit boundaries.
+        for (const measure of this.measures) {
+            for (const key of [...measure.keySignatures]) {
+                if (key.beatPosition === 0 && !measure.leadingKeyExplicit) continue
+                const normalized = KeySignature.normalizedFifths(key.fifths)
+                if (normalized !== key.fifths) measure.setKeySignature(key.beatPosition, normalized, key.mode)
+            }
+        }
+        this.propagateContext()
+        return this.transposeNotes(
+            this.measures.flatMap((m) => m.notes),
+            chromatic,
+            diatonic,
+        )
+    }
+
+    /** Move `notes` by (chromatic, diatonic) and respell them for the keys in effect. No touch. */
+    private transposeNotes(notes: Note[], chromatic: number, diatonic: number): Note[] {
+        if (!notes.length) return notes
+        const transposed = this.replaceNotes(
+            notes,
+            notes.map((note) => note.clone(note.pitch ? { pitch: note.pitch.transposed(chromatic, diatonic) } : {})),
         )
         return this.respell(transposed)
     }
@@ -489,11 +567,17 @@ export class Score {
      * ink over its notes; then every note is respelled enharmonically (A♭ ↔ G♯) to fit.
      * Applied to a selection, the key signatures stay and only those notes are respelled.
      *
-     * Respelled notes change identity (rewrites go through `replace`); the returned notes
-     * are the final ones, index-aligned with the input (or with all notes in score order).
+     * Respelled notes change identity (rewrites go through the `replace` path); the returned
+     * notes are the final ones, index-aligned with the input (or with all notes in score order).
      */
     minimizeAccidentals(notes?: Note[]): Note[] {
-        if (notes) return this.respell(notes)
+        const respelled = notes ? this.respell(notes) : this.minimizeWholeScore()
+        this.touch()
+        return respelled
+    }
+
+    /** {@link minimizeAccidentals} over the whole score — re-key every region, then respell every note — without the touch. */
+    private minimizeWholeScore(): Note[] {
         // A mid-measure key that merely restates the key in force is invisible, but it would
         // resurface as a boundary once a leading key moves — and a second pass would then carve
         // the bar differently. Every key is about to be re-decided, so drop such latent restatements first.
@@ -505,27 +589,8 @@ export class Score {
         }
         for (const region of this.keyRegions()) {
             if (!region.notes.length) continue
-            const targets = new Set(region.notes)
-            const current = region.key.fifths
-            let best = current
-            // Every audition ranks on the notes' sounding pitch classes, never on spellings this
-            // very pass rewrites — otherwise a second pass would see different counts and could
-            // move the key again.
-            const drawnUnder = (fifths: number) => new AccidentalMinimizer(region.notes, targets, () => fifths, 'sounding').drawnCount
-            let bestRank = [drawnUnder(current), 0, Math.abs(current), current > 0 ? 0 : 1]
-            for (let fifths = -7; fifths <= 7; fifths++) {
-                if (fifths === current) continue
-                const count = drawnUnder(fifths)
-                // Rank: fewest drawn accidentals; then the key already in place (a region whose
-                // notes can't tell keys apart must not drift); then the lighter signature; then
-                // the sharp side of an enharmonic pair.
-                const rank = [count, 1, Math.abs(fifths), fifths > 0 ? 0 : 1]
-                if (AccidentalMinimizer.compareRanks(rank, bestRank) < 0) {
-                    best = fifths
-                    bestRank = rank
-                }
-            }
-            if (best !== current) region.key.measure.setKeySignature(region.key.beatPosition, best)
+            const best = AccidentalMinimizer.bestFifths(region.notes, region.key.fifths)
+            if (best !== region.key.fifths) region.key.measure.setKeySignature(region.key.beatPosition, best)
         }
         this.propagateContext()
         return this.respell(this.measures.flatMap((m) => m.notes))
@@ -569,23 +634,73 @@ export class Score {
             new Set(notes),
             (note) => note.keySignature.fifths,
         )
-        // One single-note replace per respelled note: `replace` inserts its values at the first
+        // One single-note replace per respelled note: a replace inserts its values at the first
         // target's position, so scattered notes can't share one call without reordering the bar.
         return notes.map((note) => {
             const pitch = minimizer.respelled.get(note)
             /* v8 ignore next -- defensive: replace of one note for one equal-duration note always returns exactly that note */
-            return pitch ? (this.replace([note], [note.clone({ pitch })])[0] ?? note) : note
+            return pitch ? (this.replaceNotes([note], [note.clone({ pitch })])[0] ?? note) : note
         })
     }
 
-    /** The tempo (BPM) sounding at `note`: the nearest marking at or before it, else the default. */
-    bpmAt(note: Note | null | undefined): number {
-        if (!note) return Score.DEFAULT_BPM
-        const measure = note.measure
-        const local = measure.tempoAtOrBefore(measure.beatOffsetOf(note))
+    /**
+     * The tempo (BPM) sounding at `beat` of `measure`: the nearest marking at or before it in the
+     * measure, else the tempo carried in from earlier measures, else the default.
+     */
+    bpmAtBeat(measure: Measure, beat: number): number {
+        const local = measure.tempoAtOrBefore(beat)
         if (local) return local.bpm
         /* v8 ignore next -- defensive: tempoMap has one entry per measure index, so the lookup is always defined for an in-score measure */
         return this._tempoMap.value[this.getIndexForMeasure(measure)] ?? Score.DEFAULT_BPM
+    }
+
+    /**
+     * Seconds from the top of the score to `beat` of `measure` — the one clock playback, the
+     * metronome and export share. Every marking takes effect at its exact beat (the default
+     * tempo before the first), each measure lasts its meter's length, and a `beat` past the
+     * measure's end rolls on into the measures after it (past the last one, at the tempo the
+     * score ends in).
+     */
+    secondsAt(measure: Measure, beat: number): number {
+        let index = this.getIndexForMeasure(measure)
+        let remaining = beat
+        while (index < this.measures.length - 1 && remaining >= this.measures[index].maxBeats) {
+            remaining -= this.measures[index].maxBeats
+            index++
+        }
+        return this._measureStartSeconds.value[index] + this.secondsInto(this.measures[index], index, remaining)
+    }
+
+    /**
+     * Where `beats` after the start of `start` falls: the measure and the beat within it, each
+     * measure counted at its meter's length — or null when that lies past the score's last
+     * measure. A position exactly on a barline belongs to the measure it opens.
+     */
+    positionAfter(start: Measure, beats: number): { measure: Measure; beat: number } | null {
+        let remaining = beats
+        for (let index = this.getIndexForMeasure(start); index < this.measures.length; index++) {
+            const measure = this.measures[index]
+            if (remaining < measure.maxBeats) return { measure, beat: remaining }
+            remaining -= measure.maxBeats
+        }
+        return null
+    }
+
+    /** Seconds from the start of `measure` (at position `index`) to `beat` in it, integrated over its markings. */
+    private secondsInto(measure: Measure, index: number, beat: number): number {
+        let seconds = 0
+        let end = beat
+        // Walk back through the markings before `beat`: each one sounds from its beat to `end`.
+        for (let marking = measure.tempoBefore(end); marking; marking = measure.tempoBefore(end)) {
+            seconds += ((end - marking.beatPosition) * 60) / marking.bpm
+            end = marking.beatPosition
+        }
+        return seconds + (end * 60) / this._tempoMap.value[index]
+    }
+
+    /** The tempo (BPM) sounding at `note` ({@link bpmAtBeat} at its onset), or the default without a note. */
+    bpmAt(note: Note | null | undefined): number {
+        return note ? this.bpmAtBeat(note.measure, note.measure.beatOffsetOf(note)) : Score.DEFAULT_BPM
     }
 
     /**
@@ -594,7 +709,10 @@ export class Score {
      * and is clipped to the group's end — freed slot space is padded with tuplet
      * rests by `replace` — so the group's span never changes. A change that covers
      * the whole group from its first slot reads better as plain notation, so it
-     * leaves tuplet space. Returns the note to select next, or null without a note.
+     * leaves tuplet space. A clip may need several tied values (half a subdivided
+     * group from its second slot). Returns the note to select next, or null without
+     * a note, for a value that can't be dotted, or when the clipped span can't be
+     * written at all (a sixth of a beat left by a lone 16th-triplet).
      */
     setDuration(note: Note | null | undefined, value: { type?: DurationType; dots?: number }): Note | null {
         if (!note) return null
@@ -605,16 +723,13 @@ export class Score {
         let durations = [new Duration({ type, dots, ratio })]
         const tuplet = note.measure.tupletGroupOf(note)
         if (tuplet) {
-            /* v8 ignore next -- defensive: `note` came from this same tuplet, so getIndex always finds it */
-            const index = tuplet.getIndex(note) ?? 0
+            const index = tuplet.notes.indexOf(note)
             const remainder = sumBy(tuplet.notes.slice(index), (n) => n.duration.effectiveBeats)
             if (durations[0].effectiveBeats > remainder + BEAT_EPSILON) {
                 durations = index === 0 ? Duration.fromBeats(remainder) : Duration.fromBeats(remainder, ratio)
             }
         }
-        /* v8 ignore next -- defensive: durations starts with one element and is only re-decomposed from a positive remainder, so it is never empty */
         if (!durations.length) return null
-        /* v8 ignore next -- the tie-spread branch never fires: a tuplet clip always reduces to a single written duration (durations.length === 1) */
         const values = durations.map((d, i) =>
             note.clone({ duration: d, ...(note.pitch && i < durations.length - 1 && { tie: 'start' as const }) }),
         )
@@ -626,7 +741,8 @@ export class Score {
      * Toggle the note between plain and triplet notation. A plain note becomes three
      * notes of the next-shorter value (3:2) — its pitch on the first, rests after. A
      * note inside a tuplet collapses the whole group back to plain notes of the same
-     * total length, carrying the selected note's pitch. Returns the note to select
+     * total length, carrying the selected note's pitch — tied across several values
+     * when an incomplete group's length needs them. Returns the note to select
      * next, or null when nothing changed (no shorter value exists, or the group's
      * length isn't representable in plain notes).
      */
@@ -636,9 +752,7 @@ export class Score {
         if (tuplet) {
             const totalBeats = sumBy(tuplet.notes, (n) => n.duration.effectiveBeats)
             const durations = Duration.fromBeats(totalBeats)
-            /* v8 ignore next -- defensive: a tuplet group always spans 2× a plain note value, which decomposes exactly, so the sum always matches */
             if (Math.abs(sumBy(durations, (d) => d.beats) - totalBeats) > BEAT_EPSILON) return null
-            /* v8 ignore next 3 -- the tie-spread branch never fires: the collapsed group total is a single written duration (durations.length === 1) */
             const values = durations.map(
                 (d, i) =>
                     new Note({ duration: d, pitch: note.pitch, ...(note.pitch && i < durations.length - 1 && { tie: 'start' as const }) }),
@@ -653,7 +767,20 @@ export class Score {
         return this.replace([note], values)[0] ?? null
     }
 
-    replace(targets: Note[], values: Note[]) {
+    /**
+     * Write `values` over the consecutive notes `targets`, from the first target's position: a
+     * longer span takes in the notes that follow (appending a measure past the end), a shorter
+     * one is padded with rests, and values flow across barlines as tied pieces. Returns the
+     * written notes in score order.
+     */
+    replace(targets: Note[], values: Note[]): Note[] {
+        const written = this.replaceNotes(targets, values)
+        this.touch()
+        return written
+    }
+
+    /** {@link replace} without the touch — the building block of the composite mutators. */
+    private replaceNotes(targets: Note[], values: Note[]): Note[] {
         if (!targets.length) throw new Error('Replace targets can not be empty')
         if (!values.length) throw new Error('Replace values can not be empty')
         let targetBeats = sumBy(targets, (n) => n.duration.effectiveBeats)
@@ -662,11 +789,13 @@ export class Score {
         while (targetBeats < valueBeats - BEAT_EPSILON) {
             const lastTarget = targets[targets.length - 1]
             let nextNote = lastTarget.getNext()
-            if (!nextNote) this.addMeasure().complete()
-            nextNote = lastTarget.getNext()
+            if (!nextNote) {
+                this.insertMeasure(this.measures.length, this.createMeasure(this.measures.length)).complete()
+                nextNote = lastTarget.getNext()
+            }
             /* v8 ignore next -- defensive: a measure was just appended and filled, so the next note always exists here */
             if (!nextNote) throw new Error('Trouble finding next note')
-            targets = compact([...targets, nextNote])
+            targets = [...targets, nextNote]
             targetBeats += nextNote.duration.effectiveBeats
         }
         if (targetBeats > valueBeats + BEAT_EPSILON) {
@@ -681,15 +810,15 @@ export class Score {
             values = [...values, ...(exact ?? fills[2]).map((d) => new Note({ duration: d }))]
             valueBeats += gap
         }
-        const measuresById = keyBy(
-            targets.map((n) => n.measure),
-            (m) => m.id,
-        )
-        const targetsByMeasure = groupBy(targets, (n) => n.measure.id)
+        const targetsByMeasure = new Map<Measure, Note[]>()
+        for (const note of targets) {
+            const group = targetsByMeasure.get(note.measure)
+            if (group) group.push(note)
+            else targetsByMeasure.set(note.measure, [note])
+        }
         let replaceValues = [...values]
         const allNewNotes = []
-        for (const [measureId, notes] of Object.entries(targetsByMeasure)) {
-            const measure = measuresById[measureId]
+        for (const [measure, notes] of targetsByMeasure) {
             const newNotes = []
             let freeBeats = sumBy(notes, (n) => n.duration.effectiveBeats)
             let remainderNotes: Note[] = []
@@ -707,7 +836,8 @@ export class Score {
                     freeBeats = 0
                     const remainderDurations = Duration.fromBeats(remainderBeats)
                     remainderNotes = remainderDurations.map(
-                        (d, i) => new Note({ duration: d, pitch: note.pitch, ...(i != remainderDurations.length - 1 && { tie: 'start' }) }),
+                        (d, i) =>
+                            new Note({ duration: d, pitch: note.pitch, ...(i !== remainderDurations.length - 1 && { tie: 'start' }) }),
                     )
                 }
             }
@@ -718,42 +848,38 @@ export class Score {
             replaceValues = [...remainderNotes, ...replaceValues]
             allNewNotes.push(...newNotes)
         }
-        this.touch()
         return allNewNotes
     }
 
     // --- Persistence dirty-tracking ---
 
-    clearDirty() {
+    private clearDirty() {
         this._dirtyMeasures.clear()
         this._structureChanged = false
         this._instrumentDirty = false
     }
 
+    /**
+     * Have the next flush send the part list, though the instrument was seeded rather than set —
+     * for a score rebuilt from a snapshot whose instrument differs from the one last saved.
+     */
+    markInstrumentDirty(): void {
+        this._instrumentDirty = true
+    }
+
     /** Serialize dirty state, then clear it. Returns null if nothing changed. */
-    flushDirty(): { measures?: Record<string, unknown>; allMeasures?: unknown[]; partList?: Record<string, unknown> } | null {
+    flushDirty(): ScorePatch | null {
         const hasMeasureChanges = this._structureChanged || this._dirtyMeasures.size > 0
         if (!hasMeasureChanges && !this._instrumentDirty) return null
 
-        const result: { measures?: Record<string, unknown>; allMeasures?: unknown[]; partList?: Record<string, unknown> } = {}
+        const result: ScorePatch = {}
 
-        if (this._instrumentDirty) {
-            result.partList = {
-                scoreParts: [
-                    {
-                        id: 'P1',
-                        partName: this._instrument.displayName,
-                        scoreInstrument: { id: 'P1-I1', instrumentName: this._instrument.displayName },
-                        midiInstrument: { id: 'P1-I1', midiProgram: this._instrument.gmProgram + 1 },
-                    },
-                ],
-            }
-        }
+        if (this._instrumentDirty) result.partList = new ScoreSerializer(this).partList()
 
         if (this._structureChanged) {
             result.allMeasures = this.measures.map((m) => new MeasureSerializer(m).serialize())
         } else if (this._dirtyMeasures.size > 0) {
-            const measures: Record<string, unknown> = {}
+            const measures: Record<string, MxmlMeasure> = {}
             for (const measure of this._dirtyMeasures) {
                 const index = this._indexByMeasure.value.get(measure)
                 if (index !== undefined) {
@@ -774,11 +900,11 @@ export class Score {
      * is safe: a structure change subsumes per-measure dirt, and per-measure
      * dirt is a set union.
      */
-    redirty(flush: { measures?: Record<string, unknown>; allMeasures?: unknown[]; partList?: Record<string, unknown> }): void {
-        if (flush.partList) this._instrumentDirty = true
-        if (flush.allMeasures) this._structureChanged = true
-        if (flush.measures) {
-            for (const key of Object.keys(flush.measures)) {
+    redirty(patch: ScorePatch): void {
+        if (patch.partList) this._instrumentDirty = true
+        if (patch.allMeasures) this._structureChanged = true
+        if (patch.measures) {
+            for (const key of Object.keys(patch.measures)) {
                 const measure = this.measures[Number(key)]
                 if (measure) this._dirtyMeasures.add(measure)
             }

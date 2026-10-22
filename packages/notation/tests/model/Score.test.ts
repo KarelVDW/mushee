@@ -1,13 +1,29 @@
 import { MAX_MEASURES_PER_ROW, SCORE_WIDTH } from '@mushee/notation/engraving/constants'
 import { Duration } from '@mushee/notation/model/Duration'
 import { Instrument } from '@mushee/notation/model/Instrument'
+import { Interval } from '@mushee/notation/model/Interval'
+import { ScoreSerializer } from '@mushee/notation/model/io/ScoreSerializer'
 import { Measure } from '@mushee/notation/model/Measure'
 import { Note } from '@mushee/notation/model/Note'
 import { Pitch } from '@mushee/notation/model/Pitch'
 import { Score } from '@mushee/notation/model/Score'
 import { TimeSignature } from '@mushee/notation/model/TimeSignature'
-import { makeScore, pitched } from '@mushee/notation/testing'
+import type { DurationType } from '@mushee/notation/model/types'
+import { fill, makeScore, p, pitched, q } from '@mushee/notation/testing'
 import { describe, expect, it } from 'vitest'
+
+/** A C4 written under a 3:2 ratio. */
+const tripletC = (type: DurationType, dots = 0) =>
+    new Note({
+        duration: new Duration({ type, dots, ratio: { actualNotes: 3, normalNotes: 2 } }),
+        pitch: new Pitch({ name: 'C', octave: 4 }),
+    })
+
+/** Each note's written value: type, dots as '.', 't' inside a tuplet, '~start' when it ties on. */
+const writtenShape = (notes: Note[]) =>
+    notes.map(
+        (n) => `${n.duration.type}${'.'.repeat(n.duration.dots)}${n.duration.isTuplet ? 't' : ''}${n.tie === 'start' ? '~start' : ''}`,
+    )
 
 describe('Score', () => {
     describe('version & onChange', () => {
@@ -34,6 +50,55 @@ describe('Score', () => {
         it('a score without an onChange callback mutates without error', () => {
             const score = new Score()
             expect(() => score.addMeasure()).not.toThrow()
+        })
+
+        describe('a composite mutator notifies exactly once', () => {
+            /** A two-bar score whose onChange count starts at zero once it is built. */
+            const counted = (notes: Note[]) => {
+                let calls = 0
+                const score = new Score(() => calls++)
+                score.addMeasure().complete()
+                score.addMeasure().complete()
+                fill(score, 0, notes)
+                calls = 0
+                return { score, calls: () => calls }
+            }
+            // Mis-spelled in C (G♯ and A♭ together, D♭ for C♯): every minimize or transpose respells several notes.
+            const misspelled = () => [q(p('G', 4, 1)), q(p('A', 4, -1)), q(p('D', 5, -1)), q()]
+            const cases: [string, Note[], (score: Score) => unknown][] = [
+                ['transpose (whole score)', misspelled(), (s) => s.transpose(Interval.fromParts(2, 'major'))],
+                [
+                    'transpose (selection)',
+                    misspelled(),
+                    (s) => s.transpose(Interval.fromParts(2, 'major'), s.measures[0].notes.slice(0, 3)),
+                ],
+                ['minimizeAccidentals (whole score)', misspelled(), (s) => s.minimizeAccidentals()],
+                ['minimizeAccidentals (selection)', misspelled(), (s) => s.minimizeAccidentals(s.measures[0].notes.slice(0, 3))],
+                // E-major notes already spelled for E: the pass only re-keys, respelling nothing.
+                [
+                    'minimizeAccidentals (key only)',
+                    [q(p('F', 4, 1)), q(p('G', 4, 1)), q(p('C', 5, 1)), q(p('D', 5, 1))],
+                    (s) => s.minimizeAccidentals(),
+                ],
+                ['setInstrument (transposing)', misspelled(), (s) => s.setInstrument(Instrument.Trumpet)],
+                ['setDuration', misspelled(), (s) => s.setDuration(s.measures[0].firstNote, { type: 'h' })],
+                ['toggleTuplet', misspelled(), (s) => s.toggleTuplet(s.measures[0].firstNote)],
+                ['addMeasureAdoptingTempo', misspelled(), (s) => s.addMeasureAdoptingTempo(0)],
+                ['replace', misspelled(), (s) => s.replace(s.measures[1].notes, [new Note({ duration: new Duration({ type: 'w' }) })])],
+            ]
+            it.each(cases)('%s', (_, notes, mutate) => {
+                const { score, calls } = counted(notes)
+                mutate(score)
+                expect(calls()).toBe(1)
+            })
+
+            it('the key-only minimize really re-keys without respelling', () => {
+                const { score } = counted([q(p('F', 4, 1)), q(p('G', 4, 1)), q(p('C', 5, 1)), q(p('D', 5, 1))])
+                const before = [...score.measures[0].notes]
+                score.minimizeAccidentals()
+                expect(score.measures[0].keySignature.fifths).toBe(4)
+                expect(score.measures[0].notes).toEqual(before)
+            })
         })
     })
 
@@ -163,20 +228,11 @@ describe('Score', () => {
             expect(a.endBarline).toBe('double')
         })
 
-        it('preserves an explicit barline on a pre-built measure inserted mid-score', () => {
-            const score = makeScore(2)
-            const withDouble = new Measure(score, 'treble', new TimeSignature(4, 4), { endBarline: 'double' })
-            withDouble.complete()
-            score.addMeasure(1, withDouble)
-            expect(withDouble.endBarline).toBe('double')
-            expect(score.lastMeasure?.endBarline).toBe('end')
-        })
-
         it('preserves an explicit barline on a pre-built measure appended at the end', () => {
             const score = makeScore(1)
             const withNone = new Measure(score, 'treble', new TimeSignature(4, 4), { endBarline: 'none' })
             withNone.complete()
-            score.addMeasure(undefined, withNone)
+            score.appendMeasure(withNone)
             expect(withNone.endBarline).toBe('none')
         })
 
@@ -315,11 +371,6 @@ describe('Score', () => {
             expect(score.getNextMeasure(c)).toBeNull()
             expect(score.getPreviousMeasure(c)).toBe(b)
             expect(score.getPreviousMeasure(a)).toBeNull()
-        })
-
-        it('getNextMeasure() with no arg returns first measure', () => {
-            const score = makeScore(2)
-            expect(score.getNextMeasure()).toBe(score.firstMeasure)
         })
 
         it('getNextMeasure returns null for a measure not in the index map', () => {
@@ -583,6 +634,25 @@ describe('Score', () => {
             const score = makeScore(1)
             expect(score.setDuration(null, { type: 'q' })).toBeNull()
         })
+
+        it('clipping inside a subdivided tuplet ties the remainder', () => {
+            const m = new Score().addMeasure()
+            m.addNotes([tripletC('16'), tripletC('8', 1), tripletC('8'), pitched('C', 4), pitched('C', 4), pitched('C', 4)])
+            // Half a triplet group is left from the second slot: a quarter and a 16th in tuplet space.
+            const next = m.score.setDuration(m.notes[1], { type: 'h', dots: 0 })
+            expect(writtenShape(m.notes.slice(0, 3))).toEqual(['16t', 'qt~start', '16t'])
+            expect(next).toBe(m.notes[1])
+            expect(m.score.tiePartner(m.notes[1])).toBe(m.notes[2])
+        })
+
+        it('a clip too short to write returns null', () => {
+            const m = new Score().addMeasure()
+            m.addNotes([tripletC('16'), pitched('C', 4), pitched('C', 4), pitched('C', 4)])
+            const before = [...m.notes]
+            // A lone 16th-triplet leaves a sixth of a beat, which no plain value spells.
+            expect(m.score.setDuration(m.notes[0], { type: 'q' })).toBeNull()
+            expect(m.notes).toEqual(before)
+        })
     })
 
     describe('toggleTuplet', () => {
@@ -652,18 +722,37 @@ describe('Score', () => {
             const score = makeScore(1)
             expect(score.toggleTuplet(null)).toBeNull()
         })
+
+        it('collapsing an incomplete group ties across plain values', () => {
+            const m = new Score().addMeasure()
+            const dottedQuarter = new Note({ duration: new Duration({ type: 'q', dots: 1 }), pitch: new Pitch({ name: 'C', octave: 4 }) })
+            m.addNotes([tripletC('h'), tripletC('q'), tripletC('8'), tripletC('16'), dottedQuarter])
+            // The group spans two and a half beats: a half tied into an eighth.
+            const next = m.score.toggleTuplet(m.notes[0])
+            expect(writtenShape(m.notes)).toEqual(['h~start', '8', 'q.'])
+            expect(next).toBe(m.notes[0])
+        })
+
+        it('an incomplete group not writable in plain values returns null', () => {
+            const m = new Score().addMeasure()
+            m.addNotes([tripletC('8'), tripletC('8'), pitched('C', 4)])
+            const before = [...m.notes]
+            // Two eighth-triplets span two thirds of a beat, which no plain values spell.
+            expect(m.score.toggleTuplet(m.notes[0])).toBeNull()
+            expect(m.notes).toEqual(before)
+        })
     })
 
     describe('dirty tracking', () => {
         it('flushDirty returns null when nothing changed', () => {
             const score = makeScore(1)
-            score.clearDirty()
+            score.flushDirty()
             expect(score.flushDirty()).toBeNull()
         })
 
         it('flushDirty returns allMeasures after a structure change', () => {
             const score = makeScore(1)
-            score.clearDirty()
+            score.flushDirty()
             score.addMeasure() // structure changes are tracked automatically
             const result = score.flushDirty()
             expect(result?.allMeasures).toHaveLength(2)
@@ -672,7 +761,7 @@ describe('Score', () => {
 
         it('flushDirty returns a measures map for content-only changes', () => {
             const score = makeScore(2)
-            score.clearDirty()
+            score.flushDirty()
             const first = score.firstMeasure
             if (!first) throw new Error('expected firstMeasure')
             first.setTempo(0, 120) // content mutation marks the measure dirty automatically
@@ -688,15 +777,9 @@ describe('Score', () => {
             expect(score.flushDirty()).toBeNull()
         })
 
-        it('clearDirty drops pending changes without serializing them', () => {
-            const score = makeScore(1)
-            score.clearDirty()
-            expect(score.flushDirty()).toBeNull()
-        })
-
         it('redirty restores a failed measures flush so the next flush retries it', () => {
             const score = makeScore(2)
-            score.clearDirty()
+            score.flushDirty()
             const first = score.firstMeasure
             if (!first) throw new Error('expected firstMeasure')
             first.setTempo(0, 120)
@@ -710,8 +793,8 @@ describe('Score', () => {
 
         it('redirty restores structure and instrument flushes', () => {
             const score = makeScore(1)
-            score.clearDirty()
-            score.redirty({ allMeasures: [], partList: {} })
+            score.flushDirty()
+            score.redirty({ allMeasures: [], partList: { scoreParts: [] } })
             const retried = score.flushDirty()
             expect(retried?.allMeasures).toHaveLength(1)
             expect(retried?.partList).toBeDefined()
@@ -719,8 +802,8 @@ describe('Score', () => {
 
         it('redirty ignores measure indices that no longer exist', () => {
             const score = makeScore(1)
-            score.clearDirty()
-            score.redirty({ measures: { '5': {} } })
+            score.flushDirty()
+            score.redirty({ measures: { '5': { number: '6', entries: [] } } })
             expect(score.flushDirty()).toBeNull()
         })
     })
@@ -799,6 +882,33 @@ describe('Score', () => {
             score.setInstrument(Instrument.Trumpet)
             // Concert C major (0) → trumpet writes D major (2 fifths)
             expect(m.keySignature.fifths).toBe(2)
+        })
+
+        it('gives a fresh score (inherited C) an explicit written key', () => {
+            const score = makeScore(2)
+            fill(score, 0, [q(p('C', 5)), q(), q(), q()])
+            score.setInstrument(Instrument.Trumpet)
+            const [first, second] = score.measures
+            expect(first.leadingKeyExplicit).toBe(true)
+            expect(first.keySignature.fifths).toBe(2)
+            expect(second.keySignature.fifths).toBe(2) // carried forward
+            expect(first.firstNote?.pitch?.name).toBe('D')
+        })
+
+        it('folds an undrawable written key to its enharmonic and respells the notes for it', () => {
+            const score = makeScore(1)
+            fill(score, 0, [q(p('B', 4)), q(p('D', 5, 1)), q(p('F', 5, 1)), q(p('A', 5, 1))])
+            score.setKeySignature(score.measures[0].firstNote, 5) // B major
+            const sounding = () => score.measures[0].notes.map((n) => n.pitch && n.pitch.toMidi() + score.instrument.chromaticTranspose)
+            const before = sounding()
+            score.setInstrument(Instrument.AltoSaxophone) // up a major sixth: G♯ major (+8) on paper
+            const m = score.measures[0]
+            expect(m.keySignature.fifths).toBe(-4) // A♭ major
+            expect(sounding()).toEqual(before)
+            // Every note sits in A♭ major, so none draws an accidental.
+            const notes = m.notes.flatMap((n) => (n.pitch ? [n.pitch] : []))
+            expect(notes.map((pitch) => pitch.name)).toEqual(['A', 'C', 'E', 'G'])
+            expect(notes.every((pitch) => pitch.alter === m.keySignature.alterForNote(pitch.name))).toBe(true)
         })
 
         it('does nothing when switching to the same instrument', () => {
@@ -1113,11 +1223,83 @@ describe('Score', () => {
     describe('seedInstrument', () => {
         it('sets the instrument without marking the score dirty', () => {
             const score = makeScore(1)
-            score.clearDirty()
+            score.flushDirty()
             score.seedInstrument(Instrument.Flute)
             expect(score.instrument).toBe(Instrument.Flute)
             // Unlike setInstrument, seeding is for deserialization and leaves nothing to flush.
             expect(score.flushDirty()).toBeNull()
+        })
+    })
+
+    describe('blank', () => {
+        it('opens with one completed measure under the instrument, marked at 120', () => {
+            const score = Score.blank(Instrument.Flute)
+            expect(score.instrument).toBe(Instrument.Flute)
+            expect(score.measures).toHaveLength(1)
+            const [m] = score.measures
+            expect(m.notes.map((n) => (n.isRest ? n.duration.type : 'pitched'))).toEqual(['q', 'q', 'q', 'q'])
+            expect(m.endBarline).toBe('end')
+            expect(m.tempoAtBeat(0)?.bpm).toBe(120)
+            expect(score.bpmAtBeat(m, 0)).not.toBe(Score.DEFAULT_BPM) // a deliberate opening tempo
+        })
+
+        it('takes another opening tempo', () => {
+            expect(Score.blank(Instrument.Piano, 96).measures[0].tempoAtBeat(0)?.bpm).toBe(96)
+        })
+
+        it('is saved whole on its first flush, part list included', () => {
+            const patch = Score.blank(Instrument.Trumpet).flushDirty()
+            expect(patch?.allMeasures).toHaveLength(1)
+            // Like a seeded instrument, a new score's instrument travels in the full document, not the patch.
+            expect(patch?.partList).toBeUndefined()
+        })
+    })
+
+    describe('excerpt', () => {
+        /** A two-bar score in D minor, bass clef, 3/4, with a G4 and A4 opening bar two. */
+        const source = () => {
+            const score = makeScore(2)
+            score.setTimeSignature(score.measures[0], new TimeSignature(3, 4))
+            score.setClef(score.measures[0].firstNote, 'bass')
+            score.setKeySignature(score.measures[0].firstNote, -1, 'minor')
+            fill(score, 1, [q(p('G', 4)), q(p('A', 4)), q()])
+            return score
+        }
+
+        it('copies a measure’s leading clef, key and meter, even where they were only inherited', () => {
+            const score = source()
+            const m = score.measures[1]
+            expect(m.leadingKeyExplicit).toBe(false)
+            const { score: excerpt } = Score.excerpt(m)
+            expect(excerpt.measures).toHaveLength(1)
+            const [copy] = excerpt.measures
+            expect(copy.clef.type).toBe('bass')
+            expect(copy.keySignature.fifths).toBe(-1)
+            expect(copy.keySignature.mode).toBe('minor')
+            expect(copy.timeSignature.equals(new TimeSignature(3, 4))).toBe(true)
+        })
+
+        it('clones the notes into a score of its own, leaving the source untouched', () => {
+            const score = source()
+            const m = score.measures[1]
+            const version = score.version
+            const { score: excerpt, notes } = Score.excerpt(m)
+            expect(notes).toEqual(excerpt.measures[0].notes) // every copy, without a selection
+            expect(notes.map((n) => n.pitch?.name ?? 'rest')).toEqual(['G', 'A', 'rest'])
+            expect(notes.some((n) => m.notes.includes(n))).toBe(false)
+            excerpt.transpose(Interval.fromParts(2, 'major'))
+            expect(excerpt.measures[0].keySignature.fifths).toBe(1) // D minor → E minor
+            expect(score.version).toBe(version)
+            expect(m.notes[0].pitch?.name).toBe('G')
+        })
+
+        it('mirrors the given notes of that measure by position, dropping the rest', () => {
+            const score = source()
+            const [m0, m1] = score.measures
+            const { notes } = Score.excerpt(m1, [m0.notes[0], m1.notes[1]])
+            expect(notes).toHaveLength(1)
+            expect(notes[0].pitch?.name).toBe('A')
+            expect(notes[0].measure.score).not.toBe(score)
         })
     })
 
@@ -1157,10 +1339,10 @@ describe('Score', () => {
             expect(original.keySignature.fifths).toBe(2)
         })
 
-        it('accepts a pre-built measure instead of synthesizing one', () => {
+        it('appendMeasure takes a pre-built measure instead of synthesizing one', () => {
             const score = makeScore(1)
             const prebuilt = new Measure(score, 'treble', new TimeSignature(3, 4))
-            const result = score.addMeasure(score.measures.length, prebuilt)
+            const result = score.appendMeasure(prebuilt)
             // The supplied measure object is appended directly rather than a freshly inherited one.
             expect(result).toBe(prebuilt)
             expect(score.lastMeasure).toBe(prebuilt)
@@ -1297,6 +1479,17 @@ describe('Score', () => {
             expect(score.bpmAt(m.firstNote)).toBe(100)
         })
 
+        it('bpmAtBeat applies a mid-measure marking from its beat on, never before it', () => {
+            const score = makeScore(2)
+            const [m0, m1] = score.measures
+            score.setTempo(m0.noteAtBeat(2), 150) // the score's only marking, at beat 2
+            expect(score.bpmAtBeat(m0, 0)).toBe(Score.DEFAULT_BPM)
+            expect(score.bpmAtBeat(m0, 1.5)).toBe(Score.DEFAULT_BPM) // mid-measure, before the marking
+            expect(score.bpmAtBeat(m0, 2)).toBe(150)
+            expect(score.bpmAtBeat(m0, 3.5)).toBe(150) // mid-measure, after it
+            expect(score.bpmAtBeat(m1, 0)).toBe(150) // carried into the next measure
+        })
+
         it('returns the cached tempo map on a second read without mutation', () => {
             const score = makeScore(2)
             score.setTempo(score.measures[0].firstNote, 110)
@@ -1309,18 +1502,107 @@ describe('Score', () => {
         })
     })
 
+    describe('positionAfter', () => {
+        it('stays in the start measure while the beats fit', () => {
+            const score = makeScore(3)
+            const [, m1] = score.measures
+            expect(score.positionAfter(m1, 0)).toEqual({ measure: m1, beat: 0 })
+            expect(score.positionAfter(m1, 3.5)).toEqual({ measure: m1, beat: 3.5 })
+        })
+
+        it('walks on through later measures at each one’s meter length; a barline opens the next measure', () => {
+            const score = new Score()
+            const m0 = score.appendMeasure(new Measure(score, 'treble', new TimeSignature(3, 4))).complete()
+            const m1 = score.appendMeasure(new Measure(score, 'treble', new TimeSignature(4, 4))).complete()
+            expect(score.positionAfter(m0, 3)).toEqual({ measure: m1, beat: 0 })
+            expect(score.positionAfter(m0, 4.25)).toEqual({ measure: m1, beat: 1.25 })
+        })
+
+        it('is null past the last measure', () => {
+            const score = makeScore(2)
+            const [m0, m1] = score.measures
+            expect(score.positionAfter(m0, 8)).toBeNull()
+            expect(score.positionAfter(m1, 4)).toBeNull()
+            expect(score.positionAfter(m1, 3.99)).toEqual({ measure: m1, beat: 3.99 })
+        })
+    })
+
+    describe('secondsAt', () => {
+        it('runs at the default tempo before any marking', () => {
+            const score = makeScore(2)
+            const [m0, m1] = score.measures
+            expect(score.secondsAt(m0, 0)).toBe(0)
+            expect(score.secondsAt(m0, 3)).toBeCloseTo((3 * 60) / Score.DEFAULT_BPM)
+            expect(score.secondsAt(m1, 1)).toBeCloseTo((5 * 60) / Score.DEFAULT_BPM)
+        })
+
+        it('applies a marking at its exact beat, even in the middle of a note', () => {
+            const score = makeScore(1)
+            const m = fill(score, 0, [pitched('C', 4, 'h'), q(), q()])
+            m.setTempo(0, 60)
+            m.setTempo(1, 120) // inside the half note
+            expect(score.secondsAt(m, 1)).toBeCloseTo(1) // one beat at 60
+            expect(score.secondsAt(m, 2)).toBeCloseTo(1.5) // then half a second per beat
+            expect(score.secondsAt(m, 3.5)).toBeCloseTo(2.25)
+        })
+
+        it('carries the tempo across a measure boundary and times each measure at its meter', () => {
+            const score = new Score()
+            const m0 = score.appendMeasure(new Measure(score, 'treble', new TimeSignature(3, 4))).complete()
+            const m1 = score.appendMeasure(new Measure(score, 'treble', new TimeSignature(4, 4))).complete()
+            m0.setTempo(0, 60)
+            m0.setTempo(2, 120)
+            // 2 s for beats 0-2 at 60, 0.5 s for beat 2-3 at 120, then the next bar at 120.
+            expect(score.secondsAt(m1, 0)).toBeCloseTo(2.5)
+            expect(score.secondsAt(m1, 2)).toBeCloseTo(3.5)
+            expect(score.secondsAt(m0, 3)).toBeCloseTo(2.5) // the 3/4 bar ends after three beats
+        })
+
+        it('rolls a beat past the measure end into the following measures, and on past the last one', () => {
+            const score = makeScore(2)
+            const [m0, m1] = score.measures
+            m1.setTempo(2, 180)
+            expect(score.secondsAt(m0, 5)).toBeCloseTo(score.secondsAt(m1, 1))
+            expect(score.secondsAt(m0, 4)).toBeCloseTo(score.secondsAt(m1, 0))
+            // Past the score's end the clock keeps running at the tempo it ends in.
+            expect(score.secondsAt(m1, 6) - score.secondsAt(m1, 4)).toBeCloseTo((2 * 60) / 180)
+            expect(score.secondsAt(m0, 10)).toBeCloseTo(score.secondsAt(m1, 6))
+        })
+
+        it('follows an edit: the measure starts are rebuilt off the version', () => {
+            const score = makeScore(2)
+            const [m0, m1] = score.measures
+            expect(score.secondsAt(m1, 0)).toBeCloseTo((4 * 60) / Score.DEFAULT_BPM)
+            score.setTempo(m0.firstNote, 120)
+            expect(score.secondsAt(m1, 0)).toBeCloseTo(2)
+        })
+    })
+
     describe('flushDirty instrument changes', () => {
         it('emits a partList when the instrument changed', () => {
             const score = makeScore(1)
-            score.clearDirty()
+            score.flushDirty()
             score.setInstrument(Instrument.Trumpet)
             const result = score.flushDirty()
             expect(result?.partList).toBeDefined()
-            const scoreParts = (result?.partList as { scoreParts: Array<Record<string, unknown>> }).scoreParts
-            expect(scoreParts[0].partName).toBe('Trumpet')
-            const midi = scoreParts[0].midiInstrument as { midiProgram: number }
+            const [part] = result?.partList?.scoreParts ?? []
+            expect(part.partName).toBe('Trumpet')
             // gmProgram is 0-indexed here, +1 in MusicXML.
-            expect(midi.midiProgram).toBe(Instrument.Trumpet.gmProgram + 1)
+            expect(part.midiInstrument?.midiProgram).toBe(Instrument.Trumpet.gmProgram + 1)
+            // The same part list a full document carries.
+            expect(result?.partList).toEqual(new ScoreSerializer(score).toInput().partList)
+        })
+
+        it('markInstrumentDirty sends a seeded instrument with the next flush', () => {
+            const score = makeScore(1)
+            score.flushDirty()
+            score.seedInstrument(Instrument.Flute)
+            expect(score.flushDirty()).toBeNull()
+            score.markInstrumentDirty()
+            const result = score.flushDirty()
+            expect(result?.partList?.scoreParts[0].partName).toBe('Flute')
+            expect(result?.measures).toBeUndefined()
+            expect(result?.allMeasures).toBeUndefined()
         })
 
         it('emits only a partList (no measure entries) when the instrument changes on an empty score', () => {
@@ -1336,7 +1618,7 @@ describe('Score', () => {
 
         it('skips a dirty measure that is no longer part of the score index', () => {
             const score = makeScore(1)
-            score.clearDirty()
+            score.flushDirty()
             const stray = new Measure(score, 'treble', new TimeSignature(4, 4))
             // A stray measure's content mutations still mark it dirty, but it has no index.
             stray.addTempo(0, 100)

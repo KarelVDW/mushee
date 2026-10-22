@@ -101,11 +101,11 @@ describe('api', () => {
 
     it('updateScore() PATCHes the provided data to /scores/:id', async () => {
         fetchMock.mockResolvedValue(okResponse({ id: '2' }))
-        await updateScore('2', { title: 'Renamed', allMeasures: [1, 2] })
+        await updateScore('2', { title: 'Renamed', allMeasures: [{ number: '1', entries: [] }] })
         const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit]
         expect(url).toBe(`${BASE}/scores/2`)
         expect(init.method).toBe('PATCH')
-        expect(JSON.parse(init.body as string)).toEqual({ title: 'Renamed', allMeasures: [1, 2] })
+        expect(JSON.parse(init.body as string)).toEqual({ title: 'Renamed', allMeasures: [{ number: '1', entries: [] }] })
     })
 
     it('deleteScore() sends DELETE to /scores/:id', async () => {

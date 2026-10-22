@@ -119,10 +119,9 @@ export class Measure {
         return this._timeSignature.maxBeats
     }
 
-    beatOffsetOf(el: Note | Clef | KeySignature): number {
-        // Clefs and key signatures carry their own beat so mid-measure changes sort and space at the right position.
-        if (el instanceof Clef || el instanceof KeySignature) return el.beatPosition
-        return this._beatData.value.get(el) ?? 0
+    /** Beats from the start of the measure to `note` (0 for a note not in it). */
+    beatOffsetOf(note: Note): number {
+        return this._beatData.value.get(note) ?? 0
     }
 
     /** Find the note whose beat range contains the given (continuous) beat value. */
@@ -220,6 +219,7 @@ export class Measure {
     /** The leading clef shown at the start of the measure (the clef at beat 0). */
     get clef(): Clef {
         const leading = this._clefs.list.leading
+        /* v8 ignore next -- defensive: the beat-0 clef is created with the measure and only ever replaced, never removed */
         if (!leading) throw new Error('Measure has no leading clef')
         return leading
     }
@@ -230,11 +230,13 @@ export class Measure {
 
     /** The clef in effect at `beatPosition` within this measure — the latest at or before it. */
     clefAtOrBefore(beatPosition: number): Clef {
+        /* v8 ignore next -- defensive: the beat-0 clef is always present, so a beat in the measure always finds one */
         return this._clefs.list.atOrBefore(beatPosition) ?? this.clef
     }
 
     /** The last (highest-beat) clef in the measure — the one carried into the next measure. */
     get lastClef(): Clef {
+        /* v8 ignore next -- defensive: the beat-0 clef is always present, so the list is never empty */
         return this._clefs.list.last ?? this.clef
     }
 
@@ -263,11 +265,6 @@ export class Measure {
         this.touch()
     }
 
-    removeClef(beatPosition: number) {
-        this._clefs.remove(beatPosition)
-        this.touch()
-    }
-
     /**
      * Add or replace the clef at `beatPosition`. Beat 0 marks the leading clef as an explicit change.
      * A mid-measure clef equal to the clef already in effect there is redundant, so it is removed instead.
@@ -293,6 +290,7 @@ export class Measure {
     /** The leading key signature at the start of the measure (the key at beat 0). */
     get keySignature(): KeySignature {
         const leading = this._keys.list.leading
+        /* v8 ignore next -- defensive: the beat-0 key is created with the measure and only ever replaced, never removed */
         if (!leading) throw new Error('Measure has no leading key signature')
         return leading
     }
@@ -303,11 +301,13 @@ export class Measure {
 
     /** The key signature in effect at `beatPosition` within this measure — the latest at or before it. */
     keyAtOrBefore(beatPosition: number): KeySignature {
+        /* v8 ignore next -- defensive: the beat-0 key is always present, so a beat in the measure always finds one */
         return this._keys.list.atOrBefore(beatPosition) ?? this.keySignature
     }
 
     /** The last (highest-beat) key signature in the measure — the one carried into the next measure. */
     get lastKey(): KeySignature {
+        /* v8 ignore next -- defensive: the beat-0 key is always present, so the list is never empty */
         return this._keys.list.last ?? this.keySignature
     }
 
@@ -334,11 +334,6 @@ export class Measure {
 
     addKeySignature(beatPosition: number, fifths: number, mode?: string) {
         this._keys.add(new KeySignature(this, beatPosition, fifths, mode))
-        this.touch()
-    }
-
-    removeKeySignature(beatPosition: number) {
-        this._keys.remove(beatPosition)
         this.touch()
     }
 
@@ -431,6 +426,11 @@ export class Measure {
         return this._tempoList.atOrBefore(beatPosition)
     }
 
+    /** The tempo marking in effect just before `beatPosition` (ignoring one exactly at it), if any. */
+    tempoBefore(beatPosition: number): Tempo | undefined {
+        return this._tempoList.before(beatPosition)
+    }
+
     /** The last (highest-beat) tempo marking in this measure — the one that carries into the next measure. */
     get lastTempo(): Tempo | undefined {
         return this._tempoList.last
@@ -438,8 +438,7 @@ export class Measure {
 
     // --- Note stepping (Score.nextNote/previousNote build on these) ---
 
-    getNextNote(note?: Note): Note | null {
-        if (!note) return this.firstNote
+    getNextNote(note: Note): Note | null {
         const idx = this._notes.indexOf(note)
         if (idx === -1 || idx >= this._notes.length - 1) return null
         return this._notes[idx + 1]
