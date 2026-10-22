@@ -69,6 +69,15 @@ const WAVEFORM_PEAK_DECAY = 0.99
 const PULSE_MIN_OPACITY = 0.35
 export type RecordingState = 'idle' | 'countoff' | 'recording'
 
+/** The score-derived fields of a take's `meta` frame (the MIME type is added at send time). */
+interface TakeMeta {
+    bpm: number
+    timeSignature: { beats: number; beatType: number }
+    chromaticTranspose: number
+    instrumentId: string
+    keyFifths: number
+}
+
 /** One amplitude sample, anchored to the score position it was captured at. */
 export interface WaveformSample {
     /** Time since the recording (post-countoff) began, in ms. */
@@ -165,11 +174,12 @@ export class RecordingEngine implements Tickable {
 
     private midiPlayer: MidiPlayer
     private bpm = DEFAULT_BPM
-    private beatsPerMeasure = 4
     /** Quarter-note length of the felt beat the count-off clicks on (1 in 4/4, 1.5 in 6/8). */
     private pulseBeats = 1
     private countoffEndTime = 0
     private lastNewMeasureTriggeredFor: number | null = null
+    /** The take's score-derived `meta` fields, fixed at start() from the count-off measure. */
+    private meta: TakeMeta | null = null
 
     private stream: MediaStream | null = null
     private mediaRecorder: MediaRecorder | null = null
@@ -281,10 +291,31 @@ export class RecordingEngine implements Tickable {
         const measure = options.score.measures[options.startMeasureIndex]
         const tempo = this.findActiveTempo(options.score, options.startMeasureIndex)
         this.bpm = tempo?.bpm ?? DEFAULT_BPM
-        this.beatsPerMeasure = measure.maxBeats
-        this.pulseBeats = measure.timeSignature?.pulse.beats ?? 1
+        const beatsPerMeasure = measure.maxBeats
+        this.pulseBeats = measure.timeSignature.pulse.beats
+        this.meta = {
+            bpm: this.bpm,
+            timeSignature: { beats: measure.timeSignature.beatAmount, beatType: measure.timeSignature.beatType },
+            // Score notes are stored as written pitch; the mic captures sounding pitch.
+            // The server subtracts this from each detected MIDI to land in written-pitch space.
+            chromaticTranspose: options.score.instrument.chromaticTranspose,
+            // Hint for the server's adaptive pitch profile (frequency window etc.).
+            // Auto-detection from the audio remains authoritative — including
+            // for voice vs instrument, which the server now classifies from
+            // the audio itself (stock YAMNet, no fitted head) and only falls
+            // back to this instrument's family when the classifier abstains.
+            // Deliberately NO sourceKind here: sending one would override the
+            // classifier with a guess that is wrong exactly in the case that
+            // matters (singing a line into an instrument staff).
+            instrumentId: options.score.instrument.id,
+            // Key signature at the take's start measure: sung takes are
+            // spelled on the singer's own tuning grid server-side, and the
+            // key breaks the remaining ties (F♯ vs G♭-territory notes sung
+            // between keys). The score is the one place that knows it.
+            keyFifths: measure.keySignature.fifths,
+        }
 
-        this.countoffEndTime = (this.beatsPerMeasure * 60) / this.bpm
+        this.countoffEndTime = (beatsPerMeasure * 60) / this.bpm
         this.lastNewMeasureTriggeredFor = null
 
         this.analyserCtx = new AudioContext()
@@ -297,8 +328,8 @@ export class RecordingEngine implements Tickable {
         this.lastSampleTime = -Infinity
         this.waveformPeak = 0
 
-        this.paintCursor('#ef4444')
-        this.moveCursor(options.startMeasureIndex, 0)
+        this.paintCursor(options, '#ef4444')
+        this.moveCursor(options, options.startMeasureIndex, 0)
 
         this._state = 'countoff'
         options.onStateChange(this._state)
@@ -311,7 +342,7 @@ export class RecordingEngine implements Tickable {
         // that amount. Over the internet that is 100-400 ms; at 120 bpm a beat is
         // 500 ms, so it could shift a whole take by most of a beat. The count-off
         // is at least a measure long, which is ample slack for the handshake.
-        void this.connect()
+        void this.connect(options)
     }
 
     stop(): void {
@@ -381,8 +412,9 @@ export class RecordingEngine implements Tickable {
         if (this.options) {
             this.options.cursorEl.setAttribute('display', 'none')
             this.options.cursorEl.removeAttribute('fill-opacity')
-            this.paintCursor('#3b82f6')
+            this.paintCursor(this.options, '#3b82f6')
         }
+        this.meta = null
 
         this._state = 'idle'
         const callback = this.options?.onStateChange
@@ -407,7 +439,7 @@ export class RecordingEngine implements Tickable {
                 this.options.cursorEl.removeAttribute('fill-opacity')
                 this.startCapture()
             } else {
-                this.pulseCursor(elapsed)
+                this.pulseCursor(this.options, elapsed)
             }
             return false
         }
@@ -430,7 +462,7 @@ export class RecordingEngine implements Tickable {
             return false
         }
 
-        this.moveCursor(measureIndex, remaining)
+        this.moveCursor(this.options, measureIndex, remaining)
 
         const currentMeasure = this.options.score.measures[measureIndex]
         if (remaining >= currentMeasure.maxBeats - 1 && this.lastNewMeasureTriggeredFor !== measureIndex) {
@@ -479,9 +511,7 @@ export class RecordingEngine implements Tickable {
      * Open the socket and wire its handlers. Runs during the count-off so that
      * nothing asynchronous sits between beat 1 and the first captured sample.
      */
-    private async connect(): Promise<void> {
-        if (!this.stream || !this.options) return
-        const opts = this.options
+    private async connect(opts: RecordingOptions): Promise<void> {
         // Now that connecting happens during the count-off, the user can cancel while
         // the handshake is still in flight. `lifecycle` is the existing token for
         // exactly this race: if it moves, this connect() lost and must stay silent
@@ -590,36 +620,11 @@ export class RecordingEngine implements Tickable {
      * before or after capture starts and both paths call it.
      */
     private sendMeta(): void {
-        if (this.metaSent || !this.options) return
+        if (this.metaSent || !this.meta) return
         const ws = this.ws
         if (!ws || ws.readyState !== WebSocket.OPEN) return
-        const ts = this.options.score.measures[this.options.startMeasureIndex]?.timeSignature
-        ws.send(
-            JSON.stringify({
-                type: 'meta',
-                bpm: this.bpm,
-                timeSignature: ts ? { beats: ts.beatAmount, beatType: ts.beatType } : null,
-                // Score notes are stored as written pitch; the mic captures sounding pitch.
-                // The server subtracts this from each detected MIDI to land in written-pitch space.
-                chromaticTranspose: this.options.score.instrument.chromaticTranspose,
-                // Hint for the server's adaptive pitch profile (frequency window etc.).
-                // Auto-detection from the audio remains authoritative — including
-                // for voice vs instrument, which the server now classifies from
-                // the audio itself (stock YAMNet, no fitted head) and only falls
-                // back to this instrument's family when the classifier abstains.
-                // Deliberately NO sourceKind here: sending one would override the
-                // classifier with a guess that is wrong exactly in the case that
-                // matters (singing a line into an instrument staff).
-                instrumentId: this.options.score.instrument.id,
-                // Key signature at the take's start measure: sung takes are
-                // spelled on the singer's own tuning grid server-side, and the
-                // key breaks the remaining ties (F♯ vs G♭-territory notes sung
-                // between keys). The score is the one place that knows it.
-                keyFifths: this.options.score.measures[this.options.startMeasureIndex]?.keySignature.fifths ?? null,
-                // `null` = the browser's default container; the server probes it.
-                mimeType: this.mimeType,
-            }),
-        )
+        // `mimeType: null` = the browser's default container; the server probes it.
+        ws.send(JSON.stringify({ type: 'meta', ...this.meta, mimeType: this.mimeType }))
         this.metaSent = true
     }
 
@@ -703,23 +708,21 @@ export class RecordingEngine implements Tickable {
      * motion to show yet. Reads the same clock the clicks are scheduled on, so
      * the two can't drift.
      */
-    private pulseCursor(elapsed: number): void {
-        if (!this.options) return
+    private pulseCursor(options: RecordingOptions, elapsed: number): void {
         const beatPhase = ((elapsed * this.bpm) / 60 / this.pulseBeats) % 1
         const opacity = PULSE_MIN_OPACITY + (1 - PULSE_MIN_OPACITY) * Math.pow(1 - beatPhase, 3)
-        this.options.cursorEl.setAttribute('fill-opacity', opacity.toFixed(3))
+        options.cursorEl.setAttribute('fill-opacity', opacity.toFixed(3))
     }
 
-    private moveCursor(measureIndex: number, beat: number): void {
-        if (!this.options) return
-        const pos = this.options.resolvePosition(measureIndex, beat)
+    private moveCursor(options: RecordingOptions, measureIndex: number, beat: number): void {
+        const pos = options.resolvePosition(measureIndex, beat)
         if (!pos) return
-        this.options.cursorEl.setAttribute('x', String(pos.x - 1.5))
-        this.options.cursorEl.setAttribute('transform', `translate(0, ${pos.rowY})`)
-        this.options.cursorEl.setAttribute('display', '')
+        options.cursorEl.setAttribute('x', String(pos.x - 1.5))
+        options.cursorEl.setAttribute('transform', `translate(0, ${pos.rowY})`)
+        options.cursorEl.setAttribute('display', '')
     }
 
-    private paintCursor(color: string): void {
-        this.options?.cursorEl.setAttribute('fill', color)
+    private paintCursor(options: RecordingOptions, color: string): void {
+        options.cursorEl.setAttribute('fill', color)
     }
 }

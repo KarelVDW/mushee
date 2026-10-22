@@ -9,7 +9,10 @@ import { RecordingEngine, type RecordingOptions, RecordingUnsupportedError } fro
 interface MetaFrame {
     type: string
     bpm: number
-    timeSignature: { beats: number; beatType: number } | null
+    timeSignature: { beats: number; beatType: number }
+    chromaticTranspose: number
+    instrumentId: string
+    keyFifths: number
     mimeType: string | null
 }
 
@@ -238,7 +241,7 @@ describe('RecordingEngine', () => {
 
         // meta frame sent on open, then the media recorder started.
         const meta = JSON.parse(socket().sent[0] as string) as MetaFrame
-        expect(meta).toMatchObject({ type: 'meta', bpm: 90 })
+        expect(meta).toMatchObject({ type: 'meta', bpm: 90, chromaticTranspose: 0, instrumentId: 'piano', keyFifths: 0 })
         expect(meta.timeSignature).toEqual({ beats: 4, beatType: 4 })
         expect(lastRecorder?.start).toHaveBeenCalledWith(100)
     })
@@ -791,15 +794,6 @@ describe('RecordingEngine', () => {
         expect(() => engine.reset()).not.toThrow()
     })
 
-    it('moveCursor() and paintCursor() are safe no-ops once the session is torn down', () => {
-        const { player } = fakePlayer()
-        const engine = new RecordingEngine(player)
-        // options is null (never started / already stopped) — both guards short-circuit.
-        const internal = engine as unknown as { moveCursor(m: number, b: number): void; paintCursor(c: string): void }
-        expect(() => internal.moveCursor(0, 0)).not.toThrow()
-        expect(() => internal.paintCursor('#000')).not.toThrow()
-    })
-
     it('anchors a sample to a later recording measure once the take crosses into it', async () => {
         const { player, raw } = fakePlayer()
         const engine = new RecordingEngine(player)
@@ -822,19 +816,11 @@ describe('RecordingEngine', () => {
         expect(sample.beat).toBeGreaterThanOrEqual(0)
     })
 
-    it('connect returns immediately when the stream/options are gone', async () => {
-        const { player } = fakePlayer()
-        const engine = new RecordingEngine(player)
-        // Never started: stream and options are null, so connect bails before opening a socket.
-        const internal = engine as unknown as { connect(): Promise<void> }
-        await expect(internal.connect()).resolves.toBeUndefined()
-        expect(lastSocket).toBeNull()
-    })
-
-    it('beginStreaming aborts silently when the WebSocket constructor throws', async () => {
+    it('reports a lost connection when the WebSocket constructor throws', async () => {
         const { player, raw } = fakePlayer()
         const engine = new RecordingEngine(player)
-        const { options } = makeOptions()
+        const onConnectionLost = vi.fn()
+        const { options } = makeOptions({ onConnectionLost })
         // Make the WebSocket constructor throw on this run.
         vi.stubGlobal(
             'WebSocket',
@@ -845,13 +831,13 @@ describe('RecordingEngine', () => {
                 }
             },
         )
+        // start() connects during the count-off; the throwing constructor is reported right there.
         await engine.start(options)
+        expect(onConnectionLost).toHaveBeenCalledTimes(1)
         raw.currentTime = 3
-        // The transition to recording fires beginStreaming, which swallows the throw.
         expect(() => engine.tick()).not.toThrow()
-        await Promise.resolve()
         expect(engine.state).toBe('recording')
-        // No recorder was created because streaming bailed.
+        // No recorder was created: there is no socket to stream into.
         expect(lastRecorder).toBeNull()
     })
 
@@ -995,22 +981,6 @@ describe('RecordingEngine', () => {
         expect(onConnectionLost).not.toHaveBeenCalled()
         socket().fire('close')
         expect(onConnectionLost).toHaveBeenCalledTimes(1)
-    })
-
-    it('sends a null timeSignature in meta when the start measure has none', async () => {
-        const { player, raw } = fakePlayer()
-        const engine = new RecordingEngine(player)
-        const score = makeScore(4)
-        // Strip the time signature off the count-off measure so the meta serializes null.
-        Object.defineProperty(score.measures[1], 'timeSignature', { get: () => undefined, configurable: true })
-        const { options } = makeOptions({ score, startMeasureIndex: 1 })
-        await engine.start(options)
-        raw.currentTime = 3
-        engine.tick()
-        socket().fire('open')
-        await Promise.resolve()
-        const meta = JSON.parse(socket().sent[0] as string) as MetaFrame
-        expect(meta.timeSignature).toBeNull()
     })
 
     it('does not forward chunks when the websocket is not open', async () => {
