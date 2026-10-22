@@ -20,6 +20,13 @@ export const NEEDS_A_NOTE = 'Select a note first'
 export const TIE_NEEDS_SAME_PITCH = 'Tie needs the next note to be the same pitch.'
 /** Why the clef / key / time / tempo chips are off: a recording is still writing into the score. */
 export const STOP_RECORDING_FIRST = 'Stop recording to change this'
+/** Why sharp or flat is off on a selected rest: Higher or Lower makes it a note first. */
+export const REST_HAS_NO_PITCH = 'Rests have no pitch — use Higher or Lower to make it a note.'
+/** Why the pitch tools are off on a run of rests: only a lone rest turns into a note. */
+export const RESTS_HAVE_NO_PITCH = 'Rests have no pitch — select one to make it a note.'
+
+/** A tool that can act, pressed or not. */
+const ENABLED: ToolState = { active: false, disabled: false }
 
 /** The note values the length picker offers, longest first. */
 export const DURATION_TYPES: readonly DurationType[] = ['w', 'h', 'q', '8', '16']
@@ -93,13 +100,33 @@ export class NoteToolStates {
         return this.manipulator.canTie ? { active, disabled: false } : { active, disabled: true, reason: TIE_NEEDS_SAME_PITCH }
     }
 
-    get accidental(): PickerState<Accidental | undefined> {
-        return { ...(this.needsNote() ?? { active: false, disabled: false }), value: this.manipulator.selectionAccidental }
+    /** Whether every selected note is a rest — nothing in the selection has a pitch to move or sharpen. */
+    private get allRests(): boolean {
+        return this.manipulator.selectedNotes.every((note) => note.isRest)
     }
 
-    /** Higher / Lower and Simplify sharps and flats: anything selected will do. */
+    /** Off on rests alone, which have no pitch to sharpen: a lone rest says how to make it a note. */
+    get accidental(): PickerState<Accidental | undefined> {
+        const value = this.manipulator.selectionAccidental
+        const off = this.needsNote() ?? (this.allRests ? this.restsHaveNoPitch() : null)
+        return { ...(off ?? { active: false, disabled: false }), value }
+    }
+
+    /**
+     * Higher / Lower: anything selected will do — a lone rest becomes a note on the middle line
+     * (RAISE_PITCH) — except a run of nothing but rests, which has nothing to move.
+     */
     get pitch(): ToolState {
-        return this.needsNote() ?? { active: false, disabled: false }
+        return this.needsNote() ?? (this.manipulator.isRangeSelected && this.allRests ? this.restsHaveNoPitch() : null) ?? ENABLED
+    }
+
+    /** Simplify sharps and flats: anything selected will do (a single note means the whole score). */
+    get simplify(): ToolState {
+        return this.needsNote() ?? ENABLED
+    }
+
+    private restsHaveNoPitch(): ToolState {
+        return { active: false, disabled: true, reason: this.manipulator.isRangeSelected ? RESTS_HAVE_NO_PITCH : REST_HAS_NO_PITCH }
     }
 
     /**

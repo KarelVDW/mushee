@@ -96,7 +96,7 @@ export function MoreNoteTools({ manipulator }: { manipulator: ScoreManipulator }
                             label={SIMPLIFY_LABEL}
                             hint="Fewest possible, same sound"
                             shortcut={keybindings.shortcutFor('minimize-accidentals')}
-                            state={tools.pitch}
+                            state={tools.simplify}
                             onClick={() => {
                                 manipulator.minimizeAccidentals()
                                 close()
@@ -417,7 +417,13 @@ function MoreToolsMenu({ manipulator, words, anchorRef, metronome, onMetronomeTo
                     />
                 </div>
                 <div className="flex items-center justify-between gap-3">
-                    <span className="font-label font-semibold text-[15px] leading-tight text-on-surface">Sharp or flat</span>
+                    <span className="flex flex-col gap-0.5 min-w-0">
+                        <span className="font-label font-semibold text-[15px] leading-tight text-on-surface">Sharp or flat</span>
+                        {/* On touch a reason is said inline; "Select a note first" is the section's caption already. */}
+                        {accidental.reason && accidental.reason !== NEEDS_A_NOTE && (
+                            <span className="font-body text-[11px] leading-tight text-on-surface-variant">{accidental.reason}</span>
+                        )}
+                    </span>
                     <Segmented
                         ariaLabel="Sharp or flat"
                         value={accidental.value}

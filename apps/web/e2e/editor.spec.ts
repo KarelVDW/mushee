@@ -710,6 +710,16 @@ test.describe('an empty score', () => {
         await expect(heading).toBeVisible()
     })
 
+    test('sharp or flat is off on the rest, saying why; Higher turns it into a note', async ({ page }) => {
+        const sharp = page.getByRole('group', { name: 'Sharp or flat' }).getByRole('button', { name: 'Sharp' })
+        await expect(sharp).toHaveAttribute('aria-disabled', 'true')
+        await expect(sharp).toHaveAccessibleDescription(/Rests have no pitch — use Higher or Lower to make it a note\./)
+        const heading = page.getByRole('heading', { name: 'Sing, hum or play your tune' })
+        await page.getByRole('button', { name: 'Higher', exact: true }).click()
+        await expect(heading).toHaveCount(0)
+        await expect(sharp).not.toHaveAttribute('aria-disabled', 'true')
+    })
+
     test('from onboarding, focus starts on Start recording', async ({ page }) => {
         await page.goto(`/scores/${MOCK_SCORE_ID}?first=1`)
         await expect(page.getByRole('button', { name: 'Start recording' })).toBeFocused()

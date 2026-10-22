@@ -30,6 +30,7 @@ import { EditorHeader, UNTITLED_SCORE } from './EditorHeader'
 import { KeyboardShortcutsDialog } from './KeyboardShortcutsDialog'
 import { MeasureControls } from './MeasureControls'
 import { NoteToolDock } from './NoteToolDock'
+import { NoteToolStates } from './NoteToolParts'
 import { OneTimeHint, SELECTION_TIP_KEY } from './OneTimeHint'
 import { ConcurrentRecordingDialog, MicBlockedDialog, MicModeGuideDialog, RecordingLimitDialog } from './RecordingDialogs'
 import { RecordingStrip } from './RecordingStrip'
@@ -682,6 +683,7 @@ export default function ScoreEditorPage() {
                                     onPitchUp={() => manipulator.run(RAISE_PITCH)}
                                     onPitchDown={() => manipulator.run(LOWER_PITCH)}
                                     disabled={!activeNote}
+                                    pitch={new NoteToolStates(manipulator).pitch}
                                 />
                             ) : undefined
                         }

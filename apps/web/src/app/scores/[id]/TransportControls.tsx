@@ -152,8 +152,10 @@ interface MobileEditorActionsProps {
     onNext: () => void
     onPitchUp: () => void
     onPitchDown: () => void
-    /** No note selected (nothing to navigate from or nudge). */
+    /** No note selected (nothing to navigate from). */
     disabled: boolean
+    /** The Pitch nudges' state (NoteToolStates.pitch): off with nothing selected or on a run of rests, saying why. */
+    pitch: { disabled: boolean; reason?: string }
 }
 
 /** One labelled pair of the phone's note controls: the white well, its two buttons, and an 11px caption under it. */
@@ -178,7 +180,7 @@ function LabelledWell({ label, children }: { label: string; children: ReactNode 
  * all) are NOT buttons here — they live in the score's selection popover, opened by
  * long-press / double-tap / drag-release.
  */
-export function MobileEditorActions({ transport, onPrevious, onNext, onPitchUp, onPitchDown, disabled }: MobileEditorActionsProps) {
+export function MobileEditorActions({ transport, onPrevious, onNext, onPitchUp, onPitchDown, disabled, pitch }: MobileEditorActionsProps) {
     const roomy = useMediaQuery('(min-width: 400px)')
     const size = roomy ? 44 : 40
     return (
@@ -193,10 +195,20 @@ export function MobileEditorActions({ transport, onPrevious, onNext, onPitchUp, 
                     </TransportBtn>
                 </LabelledWell>
                 <LabelledWell label="Pitch">
-                    <TransportBtn size={size} onClick={onPitchDown} ariaLabel="Lower" disabled={disabled}>
+                    <TransportBtn
+                        size={size}
+                        onClick={onPitchDown}
+                        ariaLabel="Lower"
+                        disabled={pitch.disabled}
+                        disabledReason={pitch.reason}>
                         <Icon name="chevron-down" size={18} />
                     </TransportBtn>
-                    <TransportBtn size={size} onClick={onPitchUp} ariaLabel="Higher" disabled={disabled}>
+                    <TransportBtn
+                        size={size}
+                        onClick={onPitchUp}
+                        ariaLabel="Higher"
+                        disabled={pitch.disabled}
+                        disabledReason={pitch.reason}>
                         <Icon name="chevron-up" size={18} />
                     </TransportBtn>
                 </LabelledWell>

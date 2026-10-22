@@ -15,7 +15,8 @@ export const EMPTY_SCORE_COPY = {
     start: 'Start recording',
     byHand: {
         desktop: 'Or click a beat on the staff to place notes by hand.',
-        touch: 'Or tap the staff to place notes by hand.',
+        // A tap only selects on touch (no hover-to-pitch): the Pitch nudges turn the picked rest into a note.
+        touch: 'Or tap a beat, then use Pitch below to place notes by hand.',
     },
 } as const
 

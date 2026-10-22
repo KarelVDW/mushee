@@ -1,11 +1,13 @@
 import { makeScore, pitched } from '@mushee/notation/testing'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { RAISE_PITCH, SET_ACCIDENTAL, TOGGLE_REST } from '@/app/scores/[id]/actions'
+import { LOWER_PITCH, RAISE_PITCH, SET_ACCIDENTAL, TOGGLE_REST } from '@/app/scores/[id]/actions'
 import { EDITOR_COMMANDS, LENGTH_NEEDS_ONE_NOTE } from '@/app/scores/[id]/commands'
 import {
     NEEDS_A_NOTE,
     NoteToolStates,
+    REST_HAS_NO_PITCH,
+    RESTS_HAVE_NO_PITCH,
     ScoreSettingsWords,
     STOP_RECORDING_FIRST,
     TIE_NEEDS_SAME_PITCH,
@@ -298,12 +300,46 @@ describe('the move-a-note hint', () => {
     })
 })
 
+describe('Higher / Lower on rests', () => {
+    it('turn a lone rest into a note on the middle line, spelled in the key', () => {
+        const { manipulator, notes } = setup(undefined, 2)
+        manipulator.select(notes[4])
+        manipulator.run(RAISE_PITCH)
+        expect(manipulator.selectedNote?.pitch).toMatchObject({ name: 'B', alter: 0, octave: 4 })
+        expect(manipulator.moveNoteHint.pending).toBe(false)
+
+        manipulator.changeKey(-1) // F major from bar 2: its middle line is B flat
+        manipulator.select(allNotes(manipulator)[5])
+        manipulator.run(LOWER_PITCH)
+        expect(manipulator.selectedNote?.pitch).toMatchObject({ name: 'B', alter: -1, octave: 4 })
+    })
+
+    it('leave the rests in a run silent while its notes move', () => {
+        const { manipulator, notes } = setup(undefined, 2)
+        manipulator.select(notes[3])
+        manipulator.extendSelectionTo(notes[4])
+        manipulator.run(RAISE_PITCH)
+        const [moved, rest] = manipulator.selectedNotes
+        expect(moved.pitch?.name).toBe('G')
+        expect(rest.isRest).toBe(true)
+    })
+})
+
 describe('NoteToolStates', () => {
     it('turns every note tool off with nothing selected, saying why', () => {
         const { manipulator } = setup()
         manipulator.select(null)
         const tools = new NoteToolStates(manipulator)
-        for (const state of [tools.duration, tools.dotted, tools.triplet, tools.rest, tools.tie, tools.accidental, tools.pitch]) {
+        for (const state of [
+            tools.duration,
+            tools.dotted,
+            tools.triplet,
+            tools.rest,
+            tools.tie,
+            tools.accidental,
+            tools.pitch,
+            tools.simplify,
+        ]) {
             expect(state).toMatchObject({ disabled: true, reason: NEEDS_A_NOTE })
         }
         expect(tools.duration.value).toBeNull()
@@ -340,6 +376,28 @@ describe('NoteToolStates', () => {
         expect(tools.tie).toMatchObject({ disabled: true, reason: TIE_NEEDS_SAME_PITCH })
         // A sixteenth can't take a dot: off, nothing to explain beyond the tooltip's name.
         expect(tools.dotted).toEqual({ active: false, disabled: true })
+    })
+
+    it('turns sharp or flat off on rests, saying how to make one a note; Higher / Lower stay on for a lone rest', () => {
+        const { manipulator, notes } = setup(undefined, 2)
+        manipulator.select(notes[4]) // bar 2's first rest
+        const lone = new NoteToolStates(manipulator)
+        expect(lone.accidental).toMatchObject({ disabled: true, reason: REST_HAS_NO_PITCH })
+        expect(lone.pitch).toEqual({ active: false, disabled: false })
+
+        manipulator.extendSelectionTo(notes[5])
+        const run = new NoteToolStates(manipulator)
+        expect(run.pitch).toMatchObject({ disabled: true, reason: RESTS_HAVE_NO_PITCH })
+        expect(run.accidental).toMatchObject({ disabled: true, reason: RESTS_HAVE_NO_PITCH })
+        // Simplify still acts on a selection of rests (a run narrows it, there's simply nothing to respell).
+        expect(run.simplify).toEqual({ active: false, disabled: false })
+
+        // A run that holds a note keeps every pitch tool.
+        manipulator.select(notes[3])
+        manipulator.extendSelectionTo(notes[4])
+        const mixed = new NoteToolStates(manipulator)
+        expect(mixed.pitch.disabled).toBe(false)
+        expect(mixed.accidental.disabled).toBe(false)
     })
 
     it('enables Tie where it binds', () => {

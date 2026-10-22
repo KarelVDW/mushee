@@ -160,8 +160,8 @@ test('a take folds the dock into the recording strip beside record-as-stop; toas
     }).toPass({ timeout: 5000 })
 })
 
-test('from onboarding, Start recording hands focus to the dock’s stop as the empty score goes', async ({ page }) => {
-    // The fixture as rests only: a score without a single pitched note, so the empty state shows.
+/** Serve the fixture as rests only: a score without a single pitched note, so the empty state shows. */
+async function serveRestsOnly(page: Page): Promise<void> {
     const stored = JSON.parse(readFileSync(resolve(process.cwd(), 'e2e/fixtures/score.partwise.json'), 'utf8')) as {
         parts: { measures: { entries: Record<string, unknown>[] }[] }[]
     }
@@ -181,6 +181,31 @@ test('from onboarding, Start recording hands focus to the dock’s stop as the e
             },
         }),
     )
+}
+
+test('on the empty score the selected rest gets no move hint, and the Pitch nudges make it a note', async ({ page }) => {
+    await serveRestsOnly(page)
+    await page.reload()
+    const heading = page.getByRole('heading', { name: 'Sing, hum or play your tune' })
+    await expect(heading).toBeVisible()
+    // One instruction on the first screen: the dock doesn't also talk about moving a note.
+    await expect(page.getByText(/^To move a note/)).toHaveCount(0)
+    // By hand on a phone means the Pitch nudges (a tap only selects), and the line says so.
+    await expect(page.getByText('Or tap a beat, then use Pitch below to place notes by hand.')).toBeVisible()
+    // Sharp or flat has nothing to act on, and says so inline.
+    const sheet = await openMore(page)
+    await expect(sheet.getByRole('group', { name: 'Sharp or flat' }).getByRole('button', { name: 'Sharp' })).toBeDisabled()
+    await expect(sheet.getByText('Rests have no pitch — use Higher or Lower to make it a note.').first()).toBeVisible()
+    await sheet.getByRole('button', { name: 'Close' }).tap()
+
+    const patch = waitForAutosave(page)
+    await page.getByRole('button', { name: 'Higher', exact: true }).tap()
+    await patch
+    await expect(heading).toHaveCount(0)
+})
+
+test('from onboarding, Start recording hands focus to the dock’s stop as the empty score goes', async ({ page }) => {
+    await serveRestsOnly(page)
     await mockRecording(page)
     await page.goto(`/scores/${MOCK_SCORE_ID}?first=1`)
     const start = page.getByRole('button', { name: 'Start recording' })
