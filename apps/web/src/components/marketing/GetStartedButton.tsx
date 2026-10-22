@@ -83,3 +83,14 @@ export function GetStartedButton({
         </PrimaryButton>
     )
 }
+
+/**
+ * The line under a get-started CTA ("Free to start — no card…"). It sells signup, so it
+ * follows the button's session check: a signed-in visitor, whose CTA reads "Open library",
+ * doesn't see it.
+ */
+export function GetStartedNote({ children }: { children: ReactNode }) {
+    const { data: session } = useSession()
+    if (session?.user) return null
+    return <>{children}</>
+}

@@ -102,7 +102,8 @@ function CookieBanner({ onCustomize, onDecide }: { onCustomize: () => void; onDe
                 <p className="font-body font-normal text-[14px] leading-normal text-on-surface m-0">
                     {/* Phones get the short version, so the sheet stays clear of the hero's Start free. */}
                     <span className="sm:hidden">
-                        Essential cookies keep you signed in, and anonymous stats are always on. Session replay is optional — your call.
+                        Essential cookies keep you signed in, and anonymous stats are always on. Screen replays that help us fix bugs are up
+                        to you.
                     </span>
                     <span className="max-sm:hidden">
                         Solkey uses essential cookies to keep you signed in, and counts visits without cookies. If you allow it, we&apos;d

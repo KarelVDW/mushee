@@ -43,6 +43,17 @@ TODO. Ranked by importance toward **opening the closed beta**; items within a ph
    `deploy/k8s/overlays/production/api-patch.yaml`; the web vars go into the
    Vercel build env (all `NEXT*PUBLIC*_` are build-time baked). Remaining: DNS,
    the Vercel project, and the smoke test itself.\*
+
+4b. **Landing "Hear an example" score** _(new 2026-10, UX acceptance; numbered 4b so the
+item numbers notes.md references keep pointing at the same entries)_ — the hero's button
+only renders when `NEXT_PUBLIC_EXAMPLE_SHARE_TOKEN` is set, and production runs no demo
+seeder. Sign up a dedicated Solkey account through the app, then run
+`POSTGRES_URL=… POSTGRES_SSL=require pnpm -F @mushee/api example:publish <that email>`
+(idempotent; publishes Frère Jacques at `/s/solkey-example-frere-jacques`), set
+`NEXT_PUBLIC_EXAMPLE_SHARE_TOKEN=solkey-example-frere-jacques` in the Vercel build env and
+redeploy. Check that the landing page shows "Hear an example" and that the score plays.
+Deleting that account deletes the example with it.
+
 5. **Email deliverability**: SendGrid production key, sender domain auth (SPF/DKIM/DMARC),
    real mailboxes receiving. Signup dead-ends at OTP without this.
 6. **Polar production setup**: create products, set `POLAR_PRODUCT_<TIER>_<INTERVAL>` ids,

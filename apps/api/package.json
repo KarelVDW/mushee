@@ -16,6 +16,7 @@
         "db:clean": "tsx --env-file=.env.development scripts/clean-db.ts",
         "db:seed": "tsx --env-file=.env.development scripts/seed-demo.ts",
         "db:reset": "pnpm db:clean && pnpm migration:run && pnpm db:seed",
+        "example:publish": "tsx scripts/publish-example-score.ts",
         "test:recording": "tsx scripts/test-recording-ws.ts",
         "load:recording": "tsx scripts/load-test-recording.ts",
         "verify:recording-integration": "node scripts/verify-recording-integration.mjs",
