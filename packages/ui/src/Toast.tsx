@@ -22,7 +22,13 @@ export interface ToastOptions {
     duration?: number
     /** Keep the toast until the user dismisses it — for errors that ask the user to act. */
     persist?: boolean
+    /** One button — shorthand for `actions: [action]`. */
     action?: ToastAction
+    /**
+     * Up to two buttons, shown in this order (e.g. 'Hear it back' then 'Undo'). With
+     * `action` as well, `action` comes first; anything past the second is dropped.
+     */
+    actions?: ToastAction[]
 }
 
 export interface ToastItem {
@@ -30,7 +36,8 @@ export interface ToastItem {
     message: string
     tone: ToastTone
     icon?: IconName
-    action?: ToastAction
+    /** The toast's buttons in reading order, at most `ToastQueue.MAX_ACTIONS`. */
+    actions: ToastAction[]
 }
 
 type PauseReason = 'hover' | 'focus' | 'touch'
@@ -97,6 +104,7 @@ class DismissTimer {
  */
 export class ToastQueue {
     static readonly MAX_VISIBLE = 2
+    static readonly MAX_ACTIONS = 2
     static readonly INFO_MS = 6000
     static readonly ERROR_MIN_MS = 8000
     static readonly ERROR_MS_PER_WORD = 300
@@ -111,6 +119,12 @@ export class ToastQueue {
         if (tone === 'info') return ToastQueue.INFO_MS
         const words = message.trim().split(/\s+/).filter(Boolean).length
         return Math.max(ToastQueue.ERROR_MIN_MS, words * ToastQueue.ERROR_MS_PER_WORD)
+    }
+
+    /** The buttons a toast shows: `action` first, then `actions`, capped at two. */
+    static actionsFor(options: ToastOptions = {}): ToastAction[] {
+        const { action, actions = [] } = options
+        return [...(action ? [action] : []), ...actions].slice(0, ToastQueue.MAX_ACTIONS)
     }
 
     private nextId = 1
@@ -132,19 +146,20 @@ export class ToastQueue {
     /** Raises a toast and returns its id (for `dismiss`). */
     show(message: string, tone: ToastTone, options: ToastOptions = {}): number {
         const duration = ToastQueue.durationFor(message, tone, options)
-        const { icon, action } = options
+        const { icon } = options
+        const actions = ToastQueue.actionsFor(options)
         // An identical visible toast is refreshed rather than stacked — repeated failures
         // (e.g. a retrying auto-save) shouldn't pile into a wall of red. It takes the newer
-        // icon/action, since a fresh action (an Undo) refers to the latest step.
+        // icon/actions, since a fresh action (an Undo) refers to the latest step.
         const existing = this.items.find((t) => t.message === message && t.tone === tone)
         if (existing) {
-            this.items = this.items.map((t) => (t.id === existing.id ? { ...t, icon, action } : t))
+            this.items = this.items.map((t) => (t.id === existing.id ? { ...t, icon, actions } : t))
             this.timers.get(existing.id)?.restart(duration)
             this.emit()
             return existing.id
         }
         while (this.items.length >= ToastQueue.MAX_VISIBLE) this.remove(this.items[0].id)
-        const item: ToastItem = { id: this.nextId++, message, tone, icon, action }
+        const item: ToastItem = { id: this.nextId++, message, tone, icon, actions }
         this.items = [...this.items, item]
         this.timers.set(item.id, new DismissTimer(duration, () => this.dismiss(item.id)))
         this.emit()
@@ -239,7 +254,7 @@ export function Toaster() {
 }
 
 function ToastCard({ toast }: { toast: ToastItem }) {
-    const { id, action } = toast
+    const { id, actions } = toast
     // Mouse hover pauses while the pointer is over the toast; a finger pauses only while it
     // is down (touch has no "leave", so a hover-style pause would hold forever).
     const reasonOf = (e: PointerEvent): 'hover' | 'touch' => (e.pointerType === 'mouse' ? 'hover' : 'touch')
@@ -282,22 +297,28 @@ function ToastCard({ toast }: { toast: ToastItem }) {
                 <Icon name={toast.icon ?? (toast.tone === 'error' ? 'error' : 'info')} size={16} />
             </span>
             <span className="font-body font-medium text-[13px] leading-[1.4] text-on-surface">{toast.message}</span>
-            {action && (
-                <button
-                    type="button"
-                    aria-label={action.ariaLabel}
-                    onClick={() => {
-                        action.onClick()
-                        toasts.dismiss(id)
-                    }}
-                    className={[
-                        // 40px tall; the negative margin keeps the toast itself at its usual height.
-                        'shrink-0 h-10 -my-1.5 px-3 rounded-full bg-transparent border-0 cursor-pointer whitespace-nowrap',
-                        'font-label font-semibold text-[13px] leading-none text-primary hover:bg-surface-container-low',
-                        'transition-colors duration-150 ease-solkey focus-ring',
-                    ].join(' ')}>
-                    {action.label}
-                </button>
+            {actions.length > 0 && (
+                // Text (tertiary) buttons in reading order; 40px tall, the negative margin keeps
+                // the toast itself at its usual height.
+                <span className="shrink-0 -my-1.5 flex items-center">
+                    {actions.map((action, i) => (
+                        <button
+                            key={i}
+                            type="button"
+                            aria-label={action.ariaLabel}
+                            onClick={() => {
+                                action.onClick()
+                                toasts.dismiss(id)
+                            }}
+                            className={[
+                                'shrink-0 h-10 px-3 rounded-full bg-transparent border-0 cursor-pointer whitespace-nowrap',
+                                'font-label font-semibold text-[13px] leading-none text-primary hover:bg-surface-container-low',
+                                'transition-colors duration-150 ease-solkey focus-ring',
+                            ].join(' ')}>
+                            {action.label}
+                        </button>
+                    ))}
+                </span>
             )}
             <CloseButton ariaLabel="Dismiss" onClick={() => toasts.dismiss(id)} />
         </div>

@@ -44,6 +44,64 @@ describe('Toaster regions', () => {
         const html = render()
         expect(html).toMatch(/<button type="button" aria-label="Undo delete" class="[^"]*h-10[^"]*text-primary[^"]*">Undo<\/button>/)
     })
+
+    it('renders two actions as text buttons in order, before the dismiss ×', () => {
+        showToast('Added bars 3–6.', 'info', {
+            actions: [
+                { label: 'Hear it back', onClick: () => {} },
+                { label: 'Undo', ariaLabel: 'Undo this recording', onClick: () => {} },
+            ],
+        })
+        const html = render()
+        const hear = html.indexOf('>Hear it back</button>')
+        const undo = html.indexOf('aria-label="Undo this recording"')
+        expect(hear).toBeGreaterThan(-1)
+        expect(undo).toBeGreaterThan(hear)
+        expect(html.indexOf('aria-label="Dismiss"')).toBeGreaterThan(undo)
+        // The unlabelled action carries no aria-label attribute at all.
+        expect(html).toMatch(/<button type="button" class="[^"]*h-10[^"]*">Hear it back<\/button>/)
+    })
+})
+
+describe('ToastQueue.actionsFor', () => {
+    const a = { label: 'A', onClick: () => {} }
+    const b = { label: 'B', onClick: () => {} }
+    const c = { label: 'C', onClick: () => {} }
+
+    it('treats action as the one-button shorthand and defaults to none', () => {
+        expect(ToastQueue.actionsFor()).toEqual([])
+        expect(ToastQueue.actionsFor({ action: a })).toEqual([a])
+        expect(ToastQueue.actionsFor({ actions: [a, b] })).toEqual([a, b])
+    })
+
+    it('puts action first and keeps at most two buttons', () => {
+        expect(ToastQueue.actionsFor({ action: c, actions: [a, b] })).toEqual([c, a])
+        expect(ToastQueue.actionsFor({ actions: [a, b, c] })).toEqual([a, b])
+    })
+})
+
+describe('toast actions', () => {
+    it('keeps each action with its own handler, in order', () => {
+        const ran: string[] = []
+        showToast('Added bars 3–6.', 'info', {
+            actions: [
+                { label: 'Hear it back', onClick: () => ran.push('hear') },
+                { label: 'Undo', onClick: () => ran.push('undo') },
+            ],
+        })
+        expect(toasts.visible[0].actions.map((x) => x.label)).toEqual(['Hear it back', 'Undo'])
+        toasts.visible[0].actions[1].onClick()
+        expect(ran).toEqual(['undo'])
+    })
+
+    it('refreshing an identical toast takes the newer actions', () => {
+        const first = { label: 'Undo', onClick: () => {} }
+        const second = { label: 'Undo', onClick: () => {} }
+        showToast('Moved 2 half steps higher.', 'info', { action: first })
+        showToast('Moved 2 half steps higher.', 'info', { actions: [second] })
+        expect(toasts.visible).toHaveLength(1)
+        expect(toasts.visible[0].actions[0]).toBe(second)
+    })
 })
 
 describe('ToastQueue.durationFor', () => {
