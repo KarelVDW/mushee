@@ -8,9 +8,8 @@ const nextConfig: NextConfig = {
     // ffmpeg-static resolves its binary path via __dirname, which bundling
     // rewrites to a phantom /ROOT path — keep it (and pg) as real requires.
     serverExternalPackages: ['ffmpeg-static', 'pg'],
-    // eslint-disable-next-line @typescript-eslint/require-await -- Next's API is async
-    async headers() {
-        return [
+    headers() {
+        return Promise.resolve([
             {
                 source: '/:path*',
                 headers: [
@@ -22,7 +21,7 @@ const nextConfig: NextConfig = {
                     { key: 'Permissions-Policy', value: 'camera=(), geolocation=(), microphone=(self)' },
                 ],
             },
-        ]
+        ])
     },
 }
 

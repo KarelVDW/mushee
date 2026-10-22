@@ -4,9 +4,8 @@ const nextConfig: NextConfig = {
     // The workspace packages (score model + notation renderer, shared UI kit)
     // ship as TypeScript source; this app compiles them along with its own code.
     transpilePackages: ['@mushee/notation', '@mushee/ui'],
-    // eslint-disable-next-line @typescript-eslint/require-await -- Next's API is async
-    async headers() {
-        return [
+    headers() {
+        return Promise.resolve([
             {
                 source: '/:path*',
                 headers: [
@@ -19,7 +18,7 @@ const nextConfig: NextConfig = {
                     { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
                 ],
             },
-        ]
+        ])
     },
 }
 
