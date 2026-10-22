@@ -4,8 +4,18 @@ import { TimeSignature } from '@mushee/notation/model'
 import type { PitchScope } from '@/components/editor/pitchScope'
 import { Keybindings } from '@/lib/Keybindings'
 
-import { type ActionArgs, MINIMIZE_ACCIDENTALS, REMOVE_NOTE, type ScoreAction } from './actions'
+import {
+    type ActionArgs,
+    MINIMIZE_ACCIDENTALS,
+    REMOVE_NOTE,
+    type ScoreAction,
+    SET_ACCIDENTAL,
+    SET_DURATION,
+    TOGGLE_DOT,
+    TOGGLE_TUPLET,
+} from './actions'
 import { EDITOR_COMMANDS, type EditorCommand } from './commands'
+import { EditorSpeech } from './EditorAnnouncer'
 import { ManipulationHistoryManager, type NoteAddress, type RestoredState, type SelectionAddress } from './ManipulationHistoryManager'
 import { MOVE_NOTE_HINT_KEY, OneTimeHint } from './OneTimeHint'
 
@@ -30,6 +40,27 @@ export interface ScoreSettings {
  * a take (⇧R), and stop a running take only (Escape).
  */
 export type TransportRequest = 'toggle' | 'from-start' | 'record' | 'stop-recording'
+
+/**
+ * A big edit that just committed, offered back in an Undo toast (see
+ * {@link ScoreManipulator.onUndoOffer}): what happened in plain words, the Undo button's
+ * accessible name — never the bare 'Undo' the header's history button already has — and the
+ * step it takes back.
+ */
+export interface UndoOffer {
+    message: string
+    undoLabel: string
+    /** {@link ScoreManipulator.editCount} as the edit committed; {@link ScoreManipulator.undoStep} takes it back only while it is the latest. */
+    step: number
+}
+
+/** The Undo toast's button name after a delete from the selection actions. */
+export const UNDO_DELETE_LABEL = 'Undo delete'
+/** The Undo toast's button name after any other big edit. */
+export const UNDO_CHANGE_LABEL = 'Undo this change'
+
+/** Actions whose single-note result is read back as its length ('Eighth note.'), not its pitch. */
+const LENGTH_ACTIONS: ReadonlySet<unknown> = new Set([SET_DURATION, TOGGLE_DOT, TOGGLE_TUPLET])
 
 /** Controls a key press activates natively — Space presses a focused button, toggles a switch. */
 const NATIVELY_ACTIVATED =
@@ -280,6 +311,7 @@ export class ScoreManipulator {
         this.setSingle(note)
         this._quietSelection = quiet && note !== null
         this.emit()
+        if (note && !quiet) this.speakSelection()
     }
 
     /** Whether the current selection was made by a quiet {@link select}: no preview, no stopping playback. */
@@ -295,6 +327,7 @@ export class ScoreManipulator {
         }
         this.setRange(this._anchorNote, focus)
         this.emit()
+        this.speakSelection()
     }
 
     /** Grow/shrink the selection by one note in score order, keeping the anchor (shift+arrows). */
@@ -317,6 +350,7 @@ export class ScoreManipulator {
         if (!first || !last) return
         this.setRange(first, last)
         this.emit()
+        this.speakSelection()
     }
 
     private setSingle(note: Note | null): void {
@@ -364,13 +398,47 @@ export class ScoreManipulator {
      * action acts on the active note alone. The argument is required exactly when the action
      * takes one (see {@link ActionArgs}); `A` is inferred from the action alone.
      */
-    run<A>(action: ScoreAction<A>, ...args: ActionArgs<NoInfer<A>>): void {
+    run<A>(action: ScoreAction<A>, ...args: ActionArgs<NoInfer<A>>): boolean {
         const score = this._score
         const selected = this._selectedNote
-        if (!score || !selected) return
+        if (!score || !selected) return false
         // The first pitch edit retires the dock's how-to-move-a-note hint (before the commit's emit re-renders).
         if (action.movesPitch) this.moveNoteHint.markSeen()
-        this.commit(() => this.execute(action, this._selectedNotes, selected, ...args))
+        const changed = this.commit(() => this.execute(action, this._selectedNotes, selected, ...args))
+        this.speakResult(action, changed, selected)
+        return changed
+    }
+
+    /**
+     * Read back what a run did, for a screen reader: a move (nothing changed) names the note
+     * it landed on; a single-note edit names what it changed — the pitch, the length, or the
+     * note as a whole. Edits of a run and the big edits stay quiet here: their Undo toast speaks.
+     */
+    private speakResult<A>(action: ScoreAction<A>, changed: boolean, before: Note): void {
+        const note = this._selectedNote
+        if (!note) return
+        if (!changed) {
+            if (note !== before) this.speakSelection()
+            return
+        }
+        if (this._selectedNotes.length !== 1 || action === MINIMIZE_ACCIDENTALS) return
+        if (action.movesPitch || action === SET_ACCIDENTAL) this.speak(EditorSpeech.pitch(note))
+        else if (LENGTH_ACTIONS.has(action)) this.speak(EditorSpeech.noteLength(note))
+        else this.speak(EditorSpeech.note(note))
+    }
+
+    /** Say the selection through the live region (see {@link speak}). */
+    private speakSelection(): void {
+        const text = EditorSpeech.selection(this._selectedNotes)
+        if (text) this.speak(text)
+    }
+
+    /**
+     * Say a selection or edit message — except while a recording holds the history: the take
+     * clears the selection and rewrites bars as it goes, and has its own announcements.
+     */
+    private speak(text: string): void {
+        if (!this.historyLocked) this.announce(text)
     }
 
     /** Apply an action to `notes` (bulk) or to `active` alone, then re-anchor the selection on its results. */
@@ -395,13 +463,16 @@ export class ScoreManipulator {
      * (a whole-score selection removes all but the first). The selection lands on whatever now
      * starts at the first removed position (or on the piece's final note when the tail was removed).
      */
-    deleteSelection(): void {
+    deleteSelection({ offerUndo = false }: { offerUndo?: boolean } = {}): void {
         const score = this._score
         if (!score || !this._selectedNote) return
         const covered = this._selectedNotes.some((note) => !note.isRest) ? [] : this.measuresCoveredWhole()
         const removable = covered.length === score.measures.length ? covered.slice(1) : covered
         if (removable.length === 0) {
-            this.run(REMOVE_NOTE)
+            const pitched = this._selectedNotes.filter((note) => !note.isRest).length
+            if (this.run(REMOVE_NOTE) && offerUndo && pitched > 0) {
+                this.offerUndo(pitched === 1 ? 'Deleted the note.' : `Deleted ${pitched} notes.`, UNDO_DELETE_LABEL)
+            }
             return
         }
         this.commit(() => {
@@ -411,6 +482,7 @@ export class ScoreManipulator {
             if (kept.length > 0) this.execute(REMOVE_NOTE, kept, kept[kept.length - 1])
             else this.setSingle(score.measures[landingIndex]?.firstNote ?? score.lastMeasure?.lastNote ?? null)
         })
+        if (offerUndo) this.offerUndo(removable.length === 1 ? 'Removed the bar.' : `Removed ${removable.length} bars.`, UNDO_DELETE_LABEL)
     }
 
     /** The measures every note of which is selected, in score order (the selection is contiguous). */
@@ -423,16 +495,22 @@ export class ScoreManipulator {
     /**
      * The one path every public mutator takes: run `mutate` as an undoable step, autosave the
      * score, and notify subscribers — so no edit can be tracked without being saved or announced.
+     * Returns whether the score changed.
      */
-    private commit(mutate: () => void): void {
+    private commit(mutate: () => void): boolean {
         const score = this._score
-        if (!score) return
+        if (!score) return false
         const version = score.version
         this.manipulate(mutate)
-        // Navigation runs through here too, but changes nothing: only a real change counts.
-        if (score.version !== version) this._editCount++
-        this.save(score)
+        // Navigation runs through here too, but changes nothing: only a real change counts, and
+        // only a real change is saved — so moving around never reads as "Saving…".
+        const changed = score.version !== version
+        if (changed) {
+            this._editCount++
+            this.save(score)
+        }
         this.emit()
+        return changed
     }
 
     /**
@@ -502,6 +580,26 @@ export class ScoreManipulator {
     }
 
     /**
+     * Big edits offer themselves back — registered by the page, which raises the Undo toast:
+     * removing a bar that held notes, a delete from the selection actions, transposing,
+     * simplifying sharps and flats, changing the meter. Single-note edits never do.
+     */
+    onUndoOffer?: (offer: UndoOffer) => void
+
+    private offerUndo(message: string, undoLabel: string = UNDO_CHANGE_LABEL): void {
+        this.onUndoOffer?.({ message, undoLabel, step: this._editCount })
+    }
+
+    /**
+     * Undo the step an {@link UndoOffer} names — only while it is still the latest one, so an
+     * Undo pressed after a newer edit can never take back the wrong thing. Returns whether
+     * anything was undone.
+     */
+    undoStep(step: number): boolean {
+        return step === this._editCount && this.undo()
+    }
+
+    /**
      * Opens the selection actions (copy / paste / delete) over the selection — registered by
      * the page, which owns the popover, like {@link onTransposeRequest}.
      */
@@ -565,14 +663,18 @@ export class ScoreManipulator {
         this.commit(() => score.addMeasure().complete())
     }
 
+    /** Remove the last bar (the canvas's 'Remove last bar'); one that held notes offers an Undo. */
     removeMeasure(): void {
         const score = this._score
         // A score always has at least one bar; the UI disables the control too, this keeps every path honest.
         if (!score || score.measures.length <= 1) return
-        this.commit(() => {
+        const bar = score.measures.length
+        const heldNotes = score.lastMeasure?.notes.some((note) => !note.isRest) ?? false
+        const changed = this.commit(() => {
             score.removeLastMeasure()
             this.setSingle(score.lastMeasure?.lastNote ?? null)
         })
+        if (changed && heldNotes) this.offerUndo(`Removed bar ${bar}.`)
     }
 
     /** Set a tempo at an explicit position (the in-score tempo marking popover, or the dock at {@link activePosition}). */
@@ -611,7 +713,7 @@ export class ScoreManipulator {
         const measure = score?.measures[measureIndex]
         if (!score || !measure) return
         const version = score.version
-        this.commit(() => {
+        const changed = this.commit(() => {
             score.setTimeSignature(measure, new TimeSignature(beatAmount, beatType))
             if (score.version === version) return // same meter — nothing changed
             // Rebarring may have replaced the selected note (split or merged across the new
@@ -620,6 +722,7 @@ export class ScoreManipulator {
             const survived = selected && score.measures.includes(selected.measure)
             this.setSingle(survived ? selected : (score.measures[Math.min(measureIndex, score.measures.length - 1)]?.firstNote ?? null))
         })
+        if (changed) this.offerUndo(`Changed to ${beatAmount}/${beatType} — bars regrouped.`)
     }
 
     /**
@@ -645,8 +748,22 @@ export class ScoreManipulator {
     minimizeAccidentals(): void {
         if (!this._score || !this._selectedNote) return
         const scope: PitchScope = this.selectionNarrowsPitchOps ? 'selection' : 'score'
+        // The pass rewrites the notes it looks at even where the spelling stays; only a
+        // spelling (or key) that really changed is worth an Undo.
+        const before = this.spelling()
         this.run(MINIMIZE_ACCIDENTALS, scope)
         this.onPitchHighlight?.(scope === 'score' ? 'all' : [...this._selectedNotes])
+        if (this.spelling() !== before) this.offerUndo('Tidied sharps and flats.')
+    }
+
+    /** How the score is spelled — every bar's key and every note's written pitch — to tell a respelling that changed something. */
+    private spelling(): string {
+        return (this._score?.measures ?? [])
+            .map((measure) => {
+                const notes = measure.notes.map((note) => (note.pitch ? `${note.pitch.name}${note.pitch.alter}${note.pitch.octave}` : '-'))
+                return `${measure.keyAtOrBefore(0).fifths}:${notes.join(',')}`
+            })
+            .join(';')
     }
 
     /**
@@ -662,7 +779,7 @@ export class ScoreManipulator {
         const score = this._score
         if (!score) return
         const selectionScope = scope === 'selection' && this.selectionNarrowsPitchOps
-        this.commit(() => {
+        const changed = this.commit(() => {
             if (selectionScope) {
                 const result = score.transpose(interval, this._selectedNotes)
                 const first = result[0]
@@ -675,6 +792,14 @@ export class ScoreManipulator {
             }
         })
         this.onPitchHighlight?.(selectionScope ? [...this._selectedNotes] : 'all')
+        if (changed) this.offerUndo(ScoreManipulator.movedWords(interval))
+    }
+
+    /** What a transposition did, in the transpose popover's words: 'Moved 2 half steps higher.' */
+    private static movedWords(interval: Interval): string {
+        const steps = Math.abs(interval.chromatic)
+        if (steps === 0) return 'Respelled the notes.'
+        return `Moved ${steps} half ${steps === 1 ? 'step' : 'steps'} ${interval.chromatic > 0 ? 'higher' : 'lower'}.`
     }
 
     /**

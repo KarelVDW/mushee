@@ -2,9 +2,19 @@ import { Duration, Interval, Note, Pitch } from '@mushee/notation/model'
 import { makeScore, pitched } from '@mushee/notation/testing'
 import { beforeEach, describe, expect, it } from 'vitest'
 
-import { MOVE_NEXT, RAISE_PITCH, REMOVE_NOTE, SET_DURATION, TOGGLE_REST } from '@/app/scores/[id]/actions'
+import {
+    LOWER_PITCH,
+    MOVE_NEXT,
+    MOVE_PREVIOUS,
+    RAISE_PITCH,
+    REMOVE_NOTE,
+    SET_ACCIDENTAL,
+    SET_DURATION,
+    TOGGLE_REST,
+} from '@/app/scores/[id]/actions'
 import { EDITOR_COMMANDS } from '@/app/scores/[id]/commands'
-import { ScoreManipulator } from '@/app/scores/[id]/ScoreManipulator'
+import { EditorSpeech, KeyboardHelpText } from '@/app/scores/[id]/EditorAnnouncer'
+import { ScoreManipulator, UNDO_CHANGE_LABEL, UNDO_DELETE_LABEL, type UndoOffer } from '@/app/scores/[id]/ScoreManipulator'
 import { Keybindings, Shortcut } from '@/lib/Keybindings'
 
 import { allNotes, setupPitched } from './editorFixtures'
@@ -754,5 +764,228 @@ describe('ScoreManipulator pitch operations (transpose / minimize accidentals)',
         }
         command.run(manipulator)
         expect(opened).toBe(1)
+    })
+})
+
+describe('ScoreManipulator autosave', () => {
+    it('saves a real change and never a move that changed nothing', () => {
+        const { manipulator, saves } = setupPitched()
+        manipulator.run(MOVE_NEXT)
+        manipulator.run(MOVE_PREVIOUS)
+        expect(saves).toHaveLength(0)
+        manipulator.run(RAISE_PITCH)
+        expect(saves).toHaveLength(1)
+    })
+})
+
+describe('ScoreManipulator undo offers', () => {
+    function withOffers() {
+        const setup = setupPitched()
+        const offers: UndoOffer[] = []
+        setup.manipulator.onUndoOffer = (offer) => offers.push(offer)
+        return { ...setup, offers }
+    }
+
+    it('offers removing a bar that held notes, naming it — never an empty one, nor the only bar', () => {
+        const { manipulator, offers } = withOffers()
+        manipulator.addMeasure()
+        manipulator.removeMeasure() // the added bar: rests only
+        expect(offers).toEqual([])
+        manipulator.removeMeasure() // the only bar left: refused
+        expect(manipulator.score?.measures).toHaveLength(1)
+        expect(offers).toEqual([])
+
+        manipulator.addMeasure()
+        manipulator.select(manipulator.score?.lastMeasure?.firstNote ?? null)
+        manipulator.run(TOGGLE_REST) // a pitched note in bar 2
+        manipulator.removeMeasure()
+        expect(offers).toEqual([{ message: 'Removed bar 2.', undoLabel: UNDO_CHANGE_LABEL, step: manipulator.editCount }])
+    })
+
+    it('offers a delete from the selection actions, and only when asked', () => {
+        const { manipulator, notes, offers } = withOffers()
+        manipulator.select(notes[0])
+        manipulator.deleteSelection() // Backspace: no offer
+        expect(offers).toEqual([])
+        manipulator.select(allNotes(manipulator)[1])
+        manipulator.deleteSelection({ offerUndo: true })
+        expect(offers.at(-1)).toMatchObject({ message: 'Deleted the note.', undoLabel: UNDO_DELETE_LABEL })
+        const [, , third, fourth] = allNotes(manipulator)
+        manipulator.select(third)
+        manipulator.extendSelectionTo(fourth)
+        manipulator.deleteSelection({ offerUndo: true })
+        expect(offers.at(-1)?.message).toBe('Deleted 2 notes.')
+        // A rest alone, in a bar it doesn't cover whole: nothing changes, nothing is offered.
+        const count = offers.length
+        manipulator.select(allNotes(manipulator)[0])
+        manipulator.deleteSelection({ offerUndo: true })
+        expect(offers).toHaveLength(count)
+    })
+
+    it('offers removing whole bars from the selection actions', () => {
+        const manipulator = new ScoreManipulator()
+        manipulator.attach(makeScore(4), () => undefined)
+        const offers: UndoOffer[] = []
+        manipulator.onUndoOffer = (offer) => offers.push(offer)
+        const measures = manipulator.score?.measures ?? []
+        manipulator.select(measures[1].firstNote)
+        manipulator.extendSelectionTo(measures[1].notes[measures[1].notes.length - 1])
+        manipulator.deleteSelection({ offerUndo: true })
+        expect(offers.at(-1)).toMatchObject({ message: 'Removed the bar.', undoLabel: UNDO_DELETE_LABEL })
+        manipulator.selectAll()
+        manipulator.deleteSelection({ offerUndo: true }) // three bars selected, one is kept
+        expect(offers.at(-1)?.message).toBe('Removed 2 bars.')
+    })
+
+    it('offers a transpose, simplifying sharps and flats and a meter change — each only when it changed something', () => {
+        const { manipulator, offers } = withOffers()
+        manipulator.transpose(Interval.fromSemitones(2), 'score')
+        expect(offers.at(-1)?.message).toBe('Moved 2 half steps higher.')
+        manipulator.transpose(Interval.fromSemitones(-1), 'score')
+        expect(offers.at(-1)?.message).toBe('Moved 1 half step lower.')
+        manipulator.transpose(new Interval(0, 1), 'score')
+        expect(offers.at(-1)?.message).toBe('Respelled the notes.')
+        const before = offers.length
+        manipulator.transpose(new Interval(0, 0), 'score') // no move at all
+        expect(offers).toHaveLength(before)
+
+        manipulator.setTimeSignatureAt(0, 3, 4)
+        expect(offers.at(-1)).toEqual({
+            message: 'Changed to 3/4 — bars regrouped.',
+            undoLabel: UNDO_CHANGE_LABEL,
+            step: manipulator.editCount,
+        })
+        const afterMeter = offers.length
+        manipulator.setTimeSignatureAt(0, 3, 4) // the same meter
+        expect(offers).toHaveLength(afterMeter)
+
+        const { manipulator: plain, offers: plainOffers } = withOffers()
+        plain.minimizeAccidentals() // C major, nothing to respell
+        expect(plainOffers).toEqual([])
+        plain.selectAll()
+        plain.run(SET_ACCIDENTAL, '#')
+        plain.collapseSelection()
+        plain.minimizeAccidentals()
+        expect(plainOffers.at(-1)?.message).toBe('Tidied sharps and flats.')
+    })
+
+    it('undoes the offered step only while it is still the latest', () => {
+        const { manipulator, offers } = withOffers()
+        manipulator.transpose(Interval.fromSemitones(2), 'score')
+        const stale = offers[0]
+        manipulator.run(RAISE_PITCH) // a newer edit
+        expect(manipulator.undoStep(stale.step)).toBe(false)
+        manipulator.transpose(Interval.fromSemitones(2), 'score')
+        const fresh = offers.at(-1)
+        if (!fresh) throw new Error('expected an offer')
+        const before = manipulator.editCount
+        expect(manipulator.undoStep(fresh.step)).toBe(true)
+        expect(manipulator.editCount).toBe(before + 1)
+    })
+
+    it('stays silent without a listener', () => {
+        const { manipulator } = setupPitched()
+        expect(() => manipulator.transpose(Interval.fromSemitones(2), 'score')).not.toThrow()
+    })
+})
+
+describe('ScoreManipulator speech', () => {
+    function listening() {
+        const setup = setupPitched()
+        const said: string[] = []
+        setup.manipulator.onAnnounce = (text) => said.push(text)
+        return { ...setup, said }
+    }
+
+    it('names a picked note and where it sits, and a run by its size and bars', () => {
+        const { manipulator, notes, said } = listening()
+        manipulator.select(notes[2])
+        expect(said.at(-1)).toBe('E, quarter note. Bar 1, beat 3.')
+        manipulator.extendSelectionTo(notes[3])
+        expect(said.at(-1)).toBe('2 notes selected, bar 1.')
+        manipulator.addMeasure()
+        manipulator.selectAll()
+        expect(said.at(-1)).toBe('8 notes selected, bars 1 to 2.')
+        manipulator.collapseSelection()
+        expect(said.at(-1)).toBe('Quarter rest. Bar 2, beat 4.')
+        manipulator.select(allNotes(manipulator)[0])
+        manipulator.extendSelectionByStep(1)
+        expect(said.at(-1)).toBe('2 notes selected, bar 1.')
+    })
+
+    it('reads a move, a pitch edit, a length edit and any other edit back in plain words', () => {
+        const { manipulator, said } = listening()
+        manipulator.run(MOVE_NEXT)
+        expect(said.at(-1)).toBe('D, quarter note. Bar 1, beat 2.')
+        manipulator.run(RAISE_PITCH)
+        expect(said.at(-1)).toBe('E.')
+        manipulator.run(SET_ACCIDENTAL, '#')
+        expect(said.at(-1)).toBe('E sharp.')
+        manipulator.run(SET_DURATION, '8')
+        expect(said.at(-1)).toBe('Eighth note.')
+        manipulator.run(TOGGLE_REST)
+        expect(said.at(-1)).toBe('Eighth rest.')
+
+        // A move that goes nowhere (back from the first note) and an edit of a run say nothing.
+        manipulator.select(allNotes(manipulator)[0])
+        const afterSelect = said.length
+        manipulator.run(MOVE_PREVIOUS)
+        expect(said).toHaveLength(afterSelect)
+        manipulator.selectAll()
+        manipulator.run(RAISE_PITCH)
+        expect(said).toHaveLength(afterSelect + 1) // just the select-all
+    })
+
+    it('counts beats in the felt pulse: two to a bar of 6/8', () => {
+        const { manipulator, said } = listening()
+        manipulator.setTimeSignatureAt(0, 6, 8)
+        const secondBeat = allNotes(manipulator).find((note) => note.measure.beatOffsetOf(note) === 1.5)
+        if (!secondBeat) throw new Error('expected a note on the second dotted-quarter beat')
+        manipulator.select(secondBeat)
+        expect(said.at(-1)).toMatch(new RegExp(`Bar ${secondBeat.measure.index + 1}, beat 2\\.$`))
+        const offBeat = allNotes(manipulator).find((note) => note.measure.beatOffsetOf(note) === 1)
+        if (!offBeat) throw new Error('expected a note between the two beats')
+        manipulator.select(offBeat)
+        expect(said.at(-1)).toMatch(/, beat 1\.$/)
+    })
+
+    it('stays quiet for quiet selections and while a recording holds the history', () => {
+        const { manipulator, notes, said } = listening()
+        manipulator.select(notes[1], { quiet: true })
+        manipulator.select(null)
+        expect(said).toEqual([])
+        const release = manipulator.lockHistory()
+        manipulator.select(notes[2])
+        expect(said).toEqual([])
+        release()
+        manipulator.select(notes[2])
+        expect(said).toHaveLength(1)
+    })
+})
+
+describe('KeyboardHelpText', () => {
+    it('says the default keys in words', () => {
+        const { manipulator } = setupPitched()
+        expect(KeyboardHelpText.of(manipulator.keybindings)).toBe(
+            'Left and right arrows move between notes. Up and down change the pitch. The Keyboard shortcuts button lists them all.',
+        )
+    })
+
+    it('follows a rebound key and drops the sentence of an unbound one', () => {
+        const { manipulator } = setupPitched()
+        const keys = manipulator.keybindings
+        keys.rebind(MOVE_NEXT.id, Shortcut.parse('KeyJ', false, 'j'))
+        keys.rebind(LOWER_PITCH.id, Shortcut.parse('KeyK', false, 'k'))
+        expect(KeyboardHelpText.of(keys)).toBe(
+            'Left arrow and J move between notes. Up arrow and K change the pitch. The Keyboard shortcuts button lists them all.',
+        )
+        keys.unbind(RAISE_PITCH.id)
+        expect(KeyboardHelpText.of(keys)).toBe('Left arrow and J move between notes. The Keyboard shortcuts button lists them all.')
+    })
+})
+
+describe('EditorSpeech', () => {
+    it('says nothing for an empty selection', () => {
+        expect(EditorSpeech.selection([])).toBeNull()
     })
 })
