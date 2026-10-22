@@ -1,6 +1,6 @@
 'use client'
 
-import { type KeyboardEvent, type ReactNode, useEffect, useId, useRef } from 'react'
+import { type KeyboardEvent, type ReactNode, useEffect, useEffectEvent, useId, useRef } from 'react'
 
 import { ModalTitle } from './Brand'
 import { CloseButton } from './Buttons'
@@ -64,11 +64,19 @@ function Scrim({ children, onDismiss }: { children: ReactNode; onDismiss?: () =>
         return () => previouslyFocused?.focus()
     }, [])
 
-    const handleKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
-        if (e.key === 'Escape') {
-            onDismiss?.()
-            return
+    // Escape is heard on the document, not only inside the panel: a control that removes itself
+    // when used (a shortcut row's × in KeyboardShortcutsDialog) drops focus to <body>, and Escape
+    // must still close the dialog from there.
+    const dismiss = useEffectEvent(() => onDismiss?.())
+    useEffect(() => {
+        const onKey = (e: globalThis.KeyboardEvent) => {
+            if (e.key === 'Escape') dismiss()
         }
+        document.addEventListener('keydown', onKey)
+        return () => document.removeEventListener('keydown', onKey)
+    }, [])
+
+    const handleKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
         if (e.key !== 'Tab') return
         // Cycle Tab within the dialog instead of letting it escape into the page behind.
         const focusables = panelRef.current?.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)
