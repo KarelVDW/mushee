@@ -197,9 +197,10 @@ export class RecordingLimitCopy {
         return `That's your ${formatAllowance(limitSeconds ?? usedSeconds)} of recording for today.`
     }
 
+    /** What still works, when recording is back, and that nothing is ever charged — the body then only offers more. */
     get subtitle(): string {
         const when = formatResetWhen(this.init.resetsAt, this.init.now)
-        return `Everything you recorded is in your score. Playing, editing and exporting still work — recording is back ${when}.`
+        return `Everything you recorded is in your score. Playing, editing and exporting still work — recording is back ${when}. ${RecordingLimitCopy.NO_SURPRISES}`
     }
 
     /** What the next plan gives, from the catalogue — never "unlimited"; null at the top of the ladder. */

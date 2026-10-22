@@ -13,16 +13,26 @@ import { useDisplayCurrency } from '@/lib/useDisplayCurrency'
 import { settingsTabPath } from '../../settings/settingsTabs'
 import { MicFailure, RecordingLimitCopy } from './RecordingCopy'
 
-/** The neutral icon row in a recording dialog's body: what is in the way, then the next step. Never red — none of these is an error. */
-function DialogCallout({ icon, title, body }: { icon: IconName; title: string; body: string }) {
+/**
+ * The neutral icon row in a recording dialog's body: the next step, under an optional title for
+ * what is in the way. Never red — none of these is an error.
+ */
+function DialogCallout({ icon, title, body }: { icon: IconName; title?: string; body: string }) {
     return (
         <div className="flex items-center gap-3.5 bg-surface-container-low rounded-[10px] p-4">
             <span className="w-11 h-11 rounded-full shrink-0 bg-surface-container text-on-surface-variant inline-flex items-center justify-center">
                 <Icon name={icon} size={20} />
             </span>
             <div className="flex flex-col gap-0.5">
-                <span className="font-body font-semibold text-[14px] leading-[1.3] text-on-surface">{title}</span>
-                <span className="font-body font-normal text-[12px] leading-[1.4] text-on-surface-variant">{body}</span>
+                {title && <span className="font-body font-semibold text-[14px] leading-[1.3] text-on-surface">{title}</span>}
+                <span
+                    className={
+                        title
+                            ? 'font-body font-normal text-[12px] leading-[1.4] text-on-surface-variant'
+                            : 'font-body font-normal text-[13px] leading-normal text-on-surface'
+                    }>
+                    {body}
+                </span>
             </div>
         </div>
     )
@@ -37,9 +47,10 @@ interface RecordingLimitDialogProps {
 
 /**
  * The day's recording is used up. A normal moment, not an error: it says what the allowance
- * was (in words, never a clock), that everything recorded is in the score, and when recording
- * is back in the viewer's own time; one quiet line that nothing is ever charged; and — only
- * where the catalogue has a next tier — what that tier gives, behind a flat button.
+ * was (in words, never a clock), that everything recorded is in the score, when recording is
+ * back in the viewer's own time, and that nothing is ever charged; then — only where the
+ * catalogue has a next tier — what that tier gives, behind the same flat 'See {plan}' button
+ * the score-limit dialog ends in.
  */
 export function RecordingLimitDialog({ info, onUpgrade, onClose }: RecordingLimitDialogProps) {
     const currency = useDisplayCurrency()
@@ -60,18 +71,15 @@ export function RecordingLimitDialog({ info, onUpgrade, onClose }: RecordingLimi
             width={480}
             footer={
                 <>
-                    <TertiaryButton onClick={onClose}>OK, I&apos;ll wait</TertiaryButton>
+                    <TertiaryButton onClick={onClose}>Not now</TertiaryButton>
                     {next && (
                         <PrimaryButton icon="arrow-right" onClick={() => onUpgrade(next.id)}>
-                            Upgrade to {next.name}
+                            See {next.name}
                         </PrimaryButton>
                     )}
                 </>
             }>
             <div className="flex flex-col gap-2.5 pb-2">
-                <span className="font-body font-normal text-[13px] leading-normal text-on-surface-variant">
-                    {RecordingLimitCopy.NO_SURPRISES}
-                </span>
                 {copy.upgrade && <span className="font-body font-normal text-[13px] leading-normal text-on-surface">{copy.upgrade}</span>}
                 {!BETA_MODE && (
                     <span className="font-body font-normal text-[12px] leading-normal text-on-surface-variant">
@@ -200,9 +208,10 @@ export function ConcurrentRecordingDialog({ onClose }: ConcurrentRecordingDialog
             width={480}
             footer={<PrimaryButton onClick={onClose}>Got it</PrimaryButton>}>
             <div className="flex flex-col gap-3.5 pb-2">
+                {/* No title of its own: the subtitle already says what is in the way (the account's one
+                    recording, not this device's mic) — the callout is what to do about it. */}
                 <DialogCallout
                     icon="mic"
-                    title="Your mic is busy elsewhere"
                     body="Stop that recording, then press record here. Just closed it? Give it about 20 seconds and try again. Nothing in this score changed."
                 />
             </div>

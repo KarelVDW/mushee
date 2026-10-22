@@ -137,7 +137,7 @@ describe('RecordingLimitCopy', () => {
         const copy = new RecordingLimitCopy({ limitSeconds: 180, usedSeconds: 180, now })
         expect(copy.title).toBe("That's your 3 minutes of recording for today.")
         expect(copy.subtitle).toMatch(
-            /^Everything you recorded is in your score\. Playing, editing and exporting still work — recording is back (tonight|today|tomorrow) at .+\.$/,
+            /^Everything you recorded is in your score\. Playing, editing and exporting still work — recording is back (tonight|today|tomorrow) at .+\. No surprise charges — Solkey never bills for extra minutes\.$/,
         )
         expect(new RecordingLimitCopy({ limitSeconds: null, usedSeconds: 10800, now }).title).toBe(
             "That's your 3 hours of recording for today.",

@@ -106,6 +106,9 @@ test('with the day’s recording spent, Record explains at once — no microphon
     await expect(dialog).toBeVisible()
     await expect(page.getByRole('group', { name: 'Recording status' })).toHaveCount(0)
     expect(await page.evaluate(() => (window as unknown as { micAsked?: boolean }).micAsked ?? false)).toBe(false)
+    // Calm, and worded like the score-limit dialog: what still works, nothing charged, 'Not now'.
+    await expect(dialog).toHaveAccessibleDescription(/No surprise charges — Solkey never bills for extra minutes\.$/)
+    await expect(dialog.locator('footer').getByRole('button')).toHaveText(['Not now', 'See Songwriter'])
     await page.keyboard.press('Escape')
     await expect(dialog).toHaveCount(0)
     // The score is untouched: no bar was put in for the recording, and nothing was saved.
