@@ -99,7 +99,7 @@ test('Record is disabled with no note selected and enabled again after tapping o
     const record = page.getByRole('group', { name: 'Note navigation and transport' }).getByRole('button', { name: 'Record' })
     await expect(record).toBeEnabled()
     await record.tap()
-    await expect(page.getByRole('status').filter({ hasText: 'Microphone access was blocked' })).toBeVisible()
+    await expect(page.getByRole('alert').filter({ hasText: 'Microphone access was blocked' })).toBeVisible()
     await expect(record).toBeDisabled()
 
     // Tapping a note on the staff gives a take somewhere to record into again.
