@@ -45,6 +45,7 @@ describe('ScoreLayout', () => {
         expect(score.layout.scoreWidth).toBe(SCORE_WIDTH)
         expect(score.layout.rowGap).toBe(ROW_GAP)
         expect(score.layout.rowHeight).toBe(ROW_HEIGHT)
+        expect(score.layout.rowStride).toBe(ROW_HEIGHT + ROW_GAP)
     })
 
     it('returns the same snapshot instance while the score is unmutated', () => {
@@ -74,7 +75,7 @@ describe('ScoreLayout', () => {
         expect(score.layout.totalHeight).toBe(0)
     })
 
-    it('getYForRow returns row.index × (rowHeight + rowGap)', () => {
+    it('getYForRow returns row.index × rowStride (rowHeight + rowGap)', () => {
         const score = makeScore(8)
         expect(score.layout.getYForRow(score.layout.rows[0])).toBe(0)
         expect(score.layout.getYForRow(score.layout.rows[1])).toBe(ROW_HEIGHT + ROW_GAP)

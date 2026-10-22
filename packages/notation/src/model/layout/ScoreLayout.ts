@@ -217,8 +217,13 @@ export class ScoreLayout {
         return layout
     }
 
+    /** Vertical distance from one row's top to the next: a row plus the gap below it. */
+    get rowStride(): number {
+        return this.rowHeight + this.rowGap
+    }
+
     getYForRow(row: RowLayout): number {
-        return row.index * (this.rowHeight + this.rowGap)
+        return row.index * this.rowStride
     }
 
     /** The tie segments drawn on `row` (row-local), each with the tie it belongs to — the same segment objects while the tie is reused. */
@@ -227,7 +232,7 @@ export class ScoreLayout {
     }
 
     getRowForY(y: number): RowLayout | undefined {
-        return this.rows[Math.floor(y / (this.rowHeight + this.rowGap))]
+        return this.rows[Math.floor(y / this.rowStride)]
     }
 
     /**
