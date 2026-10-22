@@ -235,7 +235,7 @@ interface TransportBtnProps extends TooltipProps, DisableableProps {
     pressed?: boolean
     onClick?: () => void
     ariaLabel: string
-    /** The glyph; `record` draws its own dot instead. */
+    /** The glyph; `record` draws its own (a dot, or the stop square while `active`). */
     children?: ReactNode
 }
 
@@ -270,7 +270,7 @@ export function TransportBtn({
                 onClick={state.off ? undefined : onClick}
                 disabled={state.native}
                 className={[
-                    'rounded-full inline-flex items-center justify-center shrink-0',
+                    'relative rounded-full inline-flex items-center justify-center shrink-0',
                     'size-(--transport-size) pointer-coarse:size-(--transport-size-coarse)',
                     // A pressed toggle keeps its fill under the pointer, as ChipToggle does.
                     state.off ? 'cursor-not-allowed opacity-40' : pressed ? 'cursor-pointer' : `cursor-pointer ${classes.hover}`,
@@ -279,21 +279,36 @@ export function TransportBtn({
                     pressed ? PRESSED_CLASS : active ? classes.active : classes.idle,
                 ].join(' ')}
                 style={sizes}>
-                {tone === 'record' ? <RecordDot active={active} /> : children}
+                {tone === 'record' ? <RecordGlyph active={active} /> : children}
             </button>
         </Tooltip>
     )
 }
 
-/** The record button's dot, 42% of the button's diameter so it follows the coarse size too. */
-function RecordDot({ active }: { active?: boolean }) {
+/**
+ * The record button's glyph, sized to the button so it follows the coarse size too: a dot (42%
+ * of the diameter) at rest, and while a take runs a white rounded stop square (36%) — the
+ * universal stop sign, so the live state reads by shape, not colour alone. The two crossfade
+ * over 150ms; under reduced motion they swap at once.
+ */
+function RecordGlyph({ active }: { active?: boolean }) {
+    const fade = 'absolute transition-opacity duration-150 ease-solkey motion-reduce:transition-none'
     return (
-        <span
-            className={[
-                'size-[42%] rounded-full transition-[background-color] duration-200 ease-solkey',
-                active ? 'bg-on-error shadow-none' : 'bg-error-container shadow-[inset_0_-2px_4px_rgba(0,0,0,0.18)]',
-            ].join(' ')}
-        />
+        <>
+            <span
+                aria-hidden
+                className={[
+                    fade,
+                    'size-[42%] rounded-full bg-error-container shadow-[inset_0_-2px_4px_rgba(0,0,0,0.18)]',
+                    active ? 'opacity-0' : 'opacity-100',
+                ].join(' ')}
+            />
+            <span
+                aria-hidden
+                data-stop-glyph
+                className={[fade, 'size-[36%] rounded-[22%] bg-on-error', active ? 'opacity-100' : 'opacity-0'].join(' ')}
+            />
+        </>
     )
 }
 

@@ -140,6 +140,25 @@ describe('TransportBtn', () => {
         expect(html(createElement(TransportBtn, { size: 36, ariaLabel: 'Stop' }))).not.toContain('aria-pressed')
     })
 
+    it('the record tone draws a dot at rest and crossfades to a stop square while live', () => {
+        const glyphs = (active: boolean) => {
+            const markup = html(createElement(TransportBtn, { size: 48, ariaLabel: 'Record', tone: 'record', active }))
+            const box = document.createElement('div')
+            box.innerHTML = markup
+            const [dot, square] = Array.from(box.querySelectorAll('button > span'))
+            return { dot: dot.className, square: square.className, squareMarked: square.hasAttribute('data-stop-glyph') }
+        }
+        const rest = glyphs(false)
+        expect(rest.dot).toContain('opacity-100')
+        expect(rest.square).toContain('opacity-0')
+        expect(rest.squareMarked).toBe(true)
+        const live = glyphs(true)
+        expect(live.dot).toContain('opacity-0')
+        expect(live.square).toContain('opacity-100')
+        // The swap is a crossfade, and instant under reduced motion.
+        expect(live.square).toContain('motion-reduce:transition-none')
+    })
+
     it('grows on hover only when motion is welcome', () => {
         const play = html(createElement(TransportBtn, { size: 40, ariaLabel: 'Play', tone: 'play' }))
         expect(play).toContain('motion-safe:hover:scale-105')
