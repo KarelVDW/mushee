@@ -3,19 +3,22 @@
 import { useEffect, useState } from 'react'
 
 import { Alert, Icon, PrimaryButton, SecondaryButton, TertiaryButton } from '@/components/ui'
-import type { BillingState } from '@/lib/api'
-import { formatLongDate } from '@/lib/dates'
-import { BETA_PLAN, planById, planPrice, type PlanTier } from '@/lib/plans'
-import { useBillingPortal, useBillingState, useResumeSubscription } from '@/lib/queries'
-import { formatRecordingTime } from '@/lib/recordingTime'
+import { BETA_PLAN, planById, type PlanTier } from '@/lib/plans'
+import { useBillingPortal, useBillingState, usePlanCatalogue, useResumeSubscription, useScores } from '@/lib/queries'
 import { useDisplayCurrency } from '@/lib/useDisplayCurrency'
 
 import { ChangePlanDialog } from './ChangePlanDialog'
 import { PacksDialog } from './PacksDialog'
+import { PlanCardCopy } from './PlanCardCopy'
 import { SettingsSection } from './SettingsSection'
 
+/** The plan dialog while it is open, and the tier it opens on (else the account's current one). */
+interface PlanDialogState {
+    initialTier?: PlanTier['id']
+}
+
 /**
- * Live Polar-backed subscription state: plan, renewal, credits, actions.
+ * Live Polar-backed subscription state: plan, renewal, today's recording time, actions.
  * `requestedPlan` — a tier a pricing card or an upgrade button sent the visitor here for:
  * the plan dialog opens on arrival with that tier selected, wherever plans can be bought.
  * `requestedPacks` — the visitor followed a minute-packs link: the packs dialog opens on
@@ -29,14 +32,16 @@ export function BillingSection({
     requestedPacks?: boolean
 }) {
     const { data: billing, isPending, isError, refetch } = useBillingState()
+    const catalogue = usePlanCatalogue()
+    const scores = useScores()
     const portal = useBillingPortal()
     const resume = useResumeSubscription()
-    const [changePlanOpen, setChangePlanOpen] = useState(false)
+    const [planDialog, setPlanDialog] = useState<PlanDialogState | null>(null)
     const [packsOpen, setPacksOpen] = useState(false)
     const currency = useDisplayCurrency()
 
     useEffect(() => {
-        if (requestedPlan) setChangePlanOpen(true)
+        if (requestedPlan) setPlanDialog({ initialTier: requestedPlan })
     }, [requestedPlan])
     useEffect(() => {
         if (requestedPacks) setPacksOpen(true)
@@ -44,7 +49,7 @@ export function BillingSection({
 
     if (isPending) {
         return (
-            <SettingsSection title="Plan & billing" subtitle="Loading your subscription…">
+            <SettingsSection title="Plan & billing" subtitle="Loading your plan…">
                 <div className="h-20 bg-surface-container-low rounded-md animate-pulse" />
             </SettingsSection>
         )
@@ -52,63 +57,65 @@ export function BillingSection({
     if (isError || !billing) {
         return (
             <SettingsSection title="Plan & billing">
-                <Alert onRetry={() => void refetch()}>Couldn&apos;t load your subscription.</Alert>
+                <Alert onRetry={() => void refetch()}>Couldn&apos;t load your plan.</Alert>
             </SettingsSection>
         )
     }
 
     const isBeta = billing.tierId === 'beta'
-    const plan = planById(billing.tierId)
+    const plan = catalogue.byId(billing.tierId) ?? planById(billing.tierId)
+    const isFree = !isBeta && plan.priceMonthly === 0
     const hasSubscription = Boolean(billing.status)
     // Plans and packs are on offer only where Polar is wired up and the beta isn't running.
     const canPurchase = !isBeta && billing.billingConfigured && !billing.betaMode
-    const periodEnd = billing.currentPeriodEnd ? formatLongDate(billing.currentPeriodEnd) : null
-
-    const priceLine = isBeta
-        ? 'Free during the beta'
-        : hasSubscription
-          ? `${planPrice(plan, billing.interval ?? 'monthly', currency)}${
-                periodEnd ? (billing.cancelAtPeriodEnd ? ` · ends ${periodEnd}` : ` · renews ${periodEnd}`) : ''
-            }`
-          : 'Free'
+    const copy = new PlanCardCopy(billing, plan, catalogue.maxScoresFor(billing.tierId), currency)
+    const scoresLine = scores.data ? copy.scoresLine(scores.data.length) : null
+    const canCancel = canPurchase && hasSubscription && !billing.cancelAtPeriodEnd
+    const openPlans = () => setPlanDialog({})
 
     return (
-        <SettingsSection
-            title="Plan & billing"
-            subtitle={
-                isBeta
-                    ? 'Solkey is in closed beta — your plan is on the house. Paid plans arrive at launch.'
-                    : `You're on the ${billing.tierName} plan. Payments are handled securely by Polar.`
-            }>
+        <SettingsSection title="Plan & billing" subtitle={copy.subtitle}>
             <div className="flex items-center gap-4 p-4 bg-surface-container-low rounded-md">
-                <span className="w-11 h-11 rounded-full bg-primary-soft text-on-primary-soft inline-flex items-center justify-center">
+                <span className="w-11 h-11 shrink-0 rounded-full bg-primary-soft text-on-primary-soft inline-flex items-center justify-center">
                     <Icon name={isBeta ? BETA_PLAN.icon : plan.icon} size={20} />
                 </span>
-                <div className="flex flex-col gap-0.5 flex-1">
+                <div className="flex flex-col gap-0.5 flex-1 min-w-0">
                     <span className="font-body font-semibold text-[15px] leading-[1.3] text-on-surface">{billing.tierName}</span>
-                    <span className="font-body font-normal text-[13px] leading-[1.4] text-on-surface-variant">{priceLine}</span>
+                    <span className="font-body font-normal text-[13px] leading-[1.4] text-on-surface-variant">{copy.priceLine}</span>
                 </div>
-                {canPurchase && <PrimaryButton onClick={() => setChangePlanOpen(true)}>Change plan</PrimaryButton>}
+                {/* Sketch's one step is to look at the plans; a paying account's is a quieter "change". */}
+                {canPurchase &&
+                    (isFree ? (
+                        <PrimaryButton onClick={openPlans}>See plans</PrimaryButton>
+                    ) : (
+                        <SecondaryButton onClick={openPlans}>Change plan</SecondaryButton>
+                    ))}
             </div>
 
-            <CreditsMeter credits={billing.credits} />
+            <div className="flex flex-col gap-2">
+                <RecordingMeterView copy={copy} />
+                {scoresLine && (
+                    <span className="font-body font-normal text-[12px] leading-[1.4] text-on-surface-variant">{scoresLine}</span>
+                )}
+            </div>
 
-            {canPurchase && (
-                <div>
-                    <TertiaryButton onClick={() => setPacksOpen(true)}>Top up with a one-time pack</TertiaryButton>
-                </div>
-            )}
-
-            {(hasSubscription || billing.cancelAtPeriodEnd) && (
-                <div className="flex items-center gap-3 flex-wrap">
+            {(canPurchase || hasSubscription || billing.cancelAtPeriodEnd) && (
+                <div className="flex items-center gap-x-5 gap-y-2 flex-wrap">
                     {billing.cancelAtPeriodEnd && (
                         <SecondaryButton onClick={() => resume.mutate()} disabled={resume.isPending}>
                             Resume subscription
                         </SecondaryButton>
                     )}
-                    <TertiaryButton onClick={() => portal.mutate()}>
-                        {portal.isPending ? 'Opening billing portal…' : 'Invoices & payment method'}
-                    </TertiaryButton>
+                    {canPurchase && <TertiaryButton onClick={() => setPacksOpen(true)}>Buy extra minutes</TertiaryButton>}
+                    {(hasSubscription || billing.cancelAtPeriodEnd) && (
+                        <TertiaryButton onClick={() => portal.mutate()}>
+                            {portal.isPending ? 'Opening…' : 'Invoices & payment method'}
+                        </TertiaryButton>
+                    )}
+                    {/* A visible way out: the plan dialog with Sketch picked, which explains what cancelling keeps. */}
+                    {canCancel && (
+                        <TertiaryButton onClick={() => setPlanDialog({ initialTier: 'free' })}>Cancel subscription</TertiaryButton>
+                    )}
                 </div>
             )}
 
@@ -118,13 +125,13 @@ export function BillingSection({
                 </p>
             )}
 
-            {changePlanOpen && canPurchase && (
+            {planDialog && canPurchase && (
                 <ChangePlanDialog
                     billing={billing}
-                    initialTier={requestedPlan ?? undefined}
-                    onClose={() => setChangePlanOpen(false)}
+                    initialTier={planDialog.initialTier}
+                    onClose={() => setPlanDialog(null)}
                     onShowPacks={() => {
-                        setChangePlanOpen(false)
+                        setPlanDialog(null)
                         setPacksOpen(true)
                     }}
                 />
@@ -134,7 +141,7 @@ export function BillingSection({
                     onClose={() => setPacksOpen(false)}
                     onSeePlans={() => {
                         setPacksOpen(false)
-                        setChangePlanOpen(true)
+                        openPlans()
                     }}
                 />
             )}
@@ -142,43 +149,48 @@ export function BillingSection({
     )
 }
 
-/** Today's recording budget as a small meter (resets at midnight UTC), plus
- *  any purchased pack minutes waiting behind it. */
-function CreditsMeter({ credits }: { credits: BillingState['credits'] }) {
-    const { limitSeconds, usedSeconds, packSeconds } = credits
-    const packLine = packSeconds > 0 && (
-        <div className="flex items-center gap-2 font-body font-normal text-[12px] leading-none text-on-surface-variant">
+/**
+ * Today's recording as a small meter in plain units — time left, and when it refills in
+ * the viewer's own time — plus any purchased pack minutes waiting behind it. A plan without
+ * a daily limit gets one line instead.
+ */
+function RecordingMeterView({ copy }: { copy: PlanCardCopy }) {
+    const { meter, packLine } = copy
+    const packs = packLine && (
+        <div className="flex items-center gap-2 font-body font-normal text-[12px] leading-[1.4] text-on-surface-variant">
             <Icon name="gift" size={14} />
-            <span>
-                <span className="font-mono">{formatRecordingTime(packSeconds)}</span> banked from packs — used once today&apos;s minutes run
-                out, never expires.
-            </span>
+            <span>{packLine}</span>
         </div>
     )
-    if (limitSeconds === null) {
+    if (!meter) {
         return (
             <div className="flex flex-col gap-1.5">
-                <div className="flex items-center gap-2 font-body font-normal text-[13px] text-on-surface-variant">
-                    <Icon name="infinity" size={16} />
-                    Unlimited recording — {formatRecordingTime(usedSeconds)} used today.
-                </div>
-                {packLine}
+                <span className="font-body font-normal text-[13px] leading-[1.4] text-on-surface-variant">{copy.noLimitLine}</span>
+                {packs}
             </div>
         )
     }
-    const pct = Math.min(100, (usedSeconds / limitSeconds) * 100)
     return (
         <div className="flex flex-col gap-1.5">
-            <div className="flex justify-between font-body font-normal text-[12px] leading-none text-on-surface-variant">
-                <span>Recording today</span>
-                <span className="font-mono">
-                    {formatRecordingTime(usedSeconds)} / {formatRecordingTime(limitSeconds)}
-                </span>
+            <div className="flex justify-between gap-x-3 gap-y-1 flex-wrap font-body text-[12px] leading-[1.3]">
+                <span className="text-on-surface-variant">Recording time today</span>
+                <span className="font-medium text-on-surface">{meter.value}</span>
             </div>
-            <div className="h-1.5 rounded-full bg-surface-container overflow-hidden" role="progressbar" aria-valuenow={Math.round(pct)}>
-                <div className={pct >= 100 ? 'h-full bg-error-container' : 'h-full bg-primary-container'} style={{ width: `${pct}%` }} />
+            <div
+                className="h-1.5 rounded-full bg-surface-container overflow-hidden"
+                role="progressbar"
+                aria-label="Recording time used today"
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={Math.round(meter.percent)}
+                aria-valuetext={meter.value}>
+                <div
+                    className={meter.percent >= 100 ? 'h-full bg-error-container' : 'h-full bg-primary-container'}
+                    style={{ width: `${meter.percent}%` }}
+                />
             </div>
-            {packLine}
+            <span className="font-body font-normal text-[12px] leading-[1.4] text-on-surface-variant">{meter.helper}</span>
+            {packs}
         </div>
     )
 }
