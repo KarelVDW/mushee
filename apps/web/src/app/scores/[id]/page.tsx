@@ -9,12 +9,11 @@
 import { type AttributeClickEvent, type MeasureButtonsRect, ScoreView, type SelectionMenuEvent } from '@mushee/notation/components'
 import type { Instrument, Note, Pitch } from '@mushee/notation/model'
 import { ScoreDeserializer } from '@mushee/notation/model/io/ScoreDeserializer'
-import { dismissToast, LoadingScreen } from '@mushee/ui'
 import { useParams, useRouter } from 'next/navigation'
 import { useCallback, useEffect, useId, useRef, useState, useSyncExternalStore } from 'react'
 
 import { SelectionPopover } from '@/components/editor/SelectionPopover'
-import { ErrorScreen, PopoverSheetHost, showToast, TertiaryButton } from '@/components/ui'
+import { dismissToast, ErrorScreen, LoadingScreen, PopoverSheetHost, showToast, TertiaryButton } from '@/components/ui'
 import { ApiError, NetworkError } from '@/lib/api'
 import { withPlan } from '@/lib/plans'
 import { useScoreDocument } from '@/lib/queries'
