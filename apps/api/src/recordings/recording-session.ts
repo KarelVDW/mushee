@@ -1,7 +1,7 @@
 import { Logger } from '@nestjs/common'
 import { Repository } from 'typeorm'
 
-import { positiveIntSetting } from '../common/env'
+import { positiveIntSetting } from '../config/env'
 import { Recording } from './entities/recording.entity'
 import { describeError } from './pipeline/describe-error'
 import type { PipelineHealth, RecordingMeta, RecordingPipeline, ScoreUpdate, SourceResolution } from './pipeline/recording-pipeline'

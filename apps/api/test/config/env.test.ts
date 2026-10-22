@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { positiveIntSetting } from '../../src/common/env'
+import { positiveIntSetting } from '../../src/config/env'
 
 /** The API's one parser for numeric settings (rate limits, body size, recording caps). */
 

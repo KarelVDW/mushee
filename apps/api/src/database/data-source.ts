@@ -4,7 +4,7 @@ import { DataSource, DataSourceOptions } from 'typeorm'
 
 import { AccountDeletion } from '../account/entities/account-deletion.entity'
 import { ProcessedWebhookEvent } from '../billing/entities/processed-webhook-event.entity'
-import { positiveIntSetting } from '../common/env'
+import { positiveIntSetting } from '../config/env'
 import { UserOnboarding } from '../onboarding/entities/user-onboarding.entity'
 import { ActiveRecording } from '../recordings/entities/active-recording.entity'
 import { CreditBalance } from '../recordings/entities/credit-balance.entity'
