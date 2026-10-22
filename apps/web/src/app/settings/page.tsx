@@ -95,12 +95,12 @@ export default function SettingsPage() {
             setRequestedPlan(plan)
         } else if (params.get('checkout') === 'success') {
             landOnPlanTab()
-            showToast('Payment confirmed — welcome to your new plan!', 'info')
+            showToast("Payment confirmed — you're on your new plan now.", 'info')
         } else if (params.get('pack') === 'success') {
             landOnPlanTab()
             // The minutes land via the Polar webhook, usually within seconds —
             // refresh the balance once it has had a moment to arrive.
-            showToast('Payment confirmed — your minutes are on their way!', 'info')
+            showToast('Payment confirmed — your minutes will show up in a moment.', 'info')
             const timer = setTimeout(() => void refreshBillingState(), 4000)
             return () => clearTimeout(timer)
         } else if (params.get('packs') === '1') {
@@ -266,13 +266,15 @@ export default function SettingsPage() {
 function RecordingsSection() {
     const takes = useAllRecordings()
     const scores = useScores()
-    const titles = new Map((scores.data ?? []).map((score) => [score.id, score.title]))
+    // Score names link to their score; without the score list (it failed) rows just skip the name
+    // rather than calling every score deleted.
+    const titles = scores.data && new Map(scores.data.map((score) => [score.id, score.title]))
 
     return (
         <SettingsSection
             title="Recordings"
             subtitle="Every recording you make is kept here, audio included, so you can listen back. ‘Download my data’ covers your scores, not the audio.">
-            {takes.isPending ? (
+            {takes.isPending || scores.isPending ? (
                 <div className="h-12 bg-surface-container-low rounded-md animate-pulse" />
             ) : takes.isError ? (
                 <Alert onRetry={() => void takes.refetch()}>Couldn&apos;t load your recordings.</Alert>
@@ -281,7 +283,11 @@ function RecordingsSection() {
                     No recordings yet. Press record in any score and they&apos;ll show up here.
                 </p>
             ) : (
-                <TakesList takes={takes.data} scroll={false} subtitleFor={(take) => titles.get(take.scoreId) ?? 'Deleted score'} />
+                <TakesList
+                    takes={takes.data}
+                    scroll={false}
+                    scoreTitleFor={titles ? (take) => titles.get(take.scoreId) ?? null : undefined}
+                />
             )}
         </SettingsSection>
     )

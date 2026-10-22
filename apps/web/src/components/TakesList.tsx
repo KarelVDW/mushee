@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useEffect, useRef, useState } from 'react'
 
 import { IconButton, showToast, TertiaryButton } from '@/components/ui'
@@ -68,8 +69,12 @@ function useTakePlayer(): TakePlayer {
 
 interface TakesListProps {
     takes: readonly RecordingSummary[]
-    /** A second line per row (the score's title on cross-score lists). */
-    subtitleFor?: (take: RecordingSummary) => string | undefined
+    /**
+     * Cross-score lists (Settings → Recordings): the title of each row's score, shown as a link
+     * to it, or null once the score is gone — then the row says "Deleted score" in plain text.
+     * Leave it out on a per-score list, where every row shares one score.
+     */
+    scoreTitleFor?: (take: RecordingSummary) => string | null
     /** Constrain the list's height and scroll inside (panels); pages let it grow. */
     scroll?: boolean
 }
@@ -78,7 +83,7 @@ interface TakesListProps {
  * Rows of takes with replay (useTakePlayer) and a two-step inline delete.
  * Shared by the editor's Takes panel and Settings → Your data.
  */
-export function TakesList({ takes, subtitleFor, scroll = true }: TakesListProps) {
+export function TakesList({ takes, scoreTitleFor, scroll = true }: TakesListProps) {
     const remove = useDeleteRecording()
     const player = useTakePlayer()
     const [confirming, setConfirming] = useState<string | null>(null)
@@ -102,7 +107,7 @@ export function TakesList({ takes, subtitleFor, scroll = true }: TakesListProps)
             aria-label="Takes"
             className={['list-none m-0 p-0 flex flex-col gap-1.5', scroll ? 'max-h-72 overflow-y-auto' : ''].join(' ')}>
             {takes.map((take) => {
-                const subtitle = subtitleFor?.(take)
+                const scoreTitle = scoreTitleFor?.(take)
                 return (
                     <li key={take.id} className="flex items-center gap-2 rounded-md bg-surface-container-low px-3 py-2">
                         <IconButton
@@ -118,7 +123,20 @@ export function TakesList({ takes, subtitleFor, scroll = true }: TakesListProps)
                         <div className="flex flex-col gap-0.5 flex-1 min-w-0">
                             <span className="font-body font-medium text-[13px] leading-none text-on-surface truncate">
                                 {formatTakeDate(take.startedAt)}
-                                {subtitle && <span className="font-normal text-on-surface-variant"> · {subtitle}</span>}
+                                {scoreTitle !== undefined && (
+                                    <span className="font-normal text-on-surface-variant">
+                                        {' · '}
+                                        {scoreTitle === null ? (
+                                            'Deleted score'
+                                        ) : (
+                                            <Link
+                                                href={`/scores/${take.scoreId}`}
+                                                className="text-primary underline-offset-2 hover:underline rounded-sm focus-ring">
+                                                {scoreTitle}
+                                            </Link>
+                                        )}
+                                    </span>
+                                )}
                             </span>
                             <span className="font-mono font-normal text-[11px] leading-none text-on-surface-variant">
                                 {formatRecordingTime(take.seconds)}
