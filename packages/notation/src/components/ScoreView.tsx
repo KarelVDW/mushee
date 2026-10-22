@@ -1,29 +1,28 @@
 'use client'
 
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { memo, useCallback, useMemo, useRef, useState } from 'react'
 
 import { SCORE_WIDTH } from '../engraving/constants'
 import type { RecordingWaveformStore } from '../lib/RecordingWaveformStore'
 import { useObservedWidth } from '../lib/useObservedWidth'
+import { useScrollFollow } from '../lib/useScrollFollow'
 import { useSelectionGestures } from '../lib/useSelectionGestures'
-import type { Clef, Note, Pitch, Score as ScoreModel } from '../model'
+import type { Clef, Measure as MeasureModel, Note, Pitch, Score as ScoreModel } from '../model'
 import { NoteLayout } from '../model/layout/NoteLayout'
 import { Staff } from '../model/layout/Staff'
-import type { ClefType } from '../model/types'
 import { Barline } from './Barline'
 import { INTERACTION_BLUE } from './constants'
-import { CursorIndicator } from './CursorIndicator'
 import { HighlightLayer, type ScoreHighlight } from './HighlightLayer'
-import { Measure } from './Measure'
+import { InputCursor } from './InputCursor'
+import { type AttributeClick, Measure } from './Measure'
 import { MeasureButton } from './MeasureButton'
 import { NoteGroup } from './NoteGroup'
 import { RecordingWaveform } from './RecordingWaveform'
 import { StaffLines } from './StaffLines'
-import { TempoMarking } from './TempoMarking'
 import { Tie } from './Tie'
 
-/** Vertical offset from the reference Y to the teardrop tip */
-const CURSOR_Y_OFFSET = 15
+/** Vertical offset from the staff bottom (or the selected note's lowest ink, when lower) to the input cursor's teardrop. */
+const INPUT_CURSOR_GAP = 15
 
 /**
  * Below this container width the layout reflows to the container instead of
@@ -35,22 +34,15 @@ const CURSOR_Y_OFFSET = 15
 const REFLOW_BREAKPOINT = 768
 /** Floor for the reflowed layout width — keeps a crowded measure legible on the narrowest phones. */
 const MIN_LAYOUT_WIDTH = 340
-/** Breathing room kept between the followed row and the scroll viewport's edges. */
-const FOLLOW_SCROLL_MARGIN = 16
 
-/** The nearest ancestor that scrolls vertically — where selection/cursor following happens. */
-function findScrollParent(el: HTMLElement | null): HTMLElement | null {
-    for (let node = el?.parentElement ?? null; node; node = node.parentElement) {
-        const overflowY = getComputedStyle(node).overflowY
-        if (overflowY === 'auto' || overflowY === 'scroll') return node
-    }
-    return null
-}
-
-interface ScoreProps {
+interface ScoreViewProps {
     score: ScoreModel
+    /**
+     * Pass `score.layout.id`. The score mutates in place, so its identity never changes;
+     * this prop is what makes the memo re-render when the score's layout snapshot moves.
+     */
     layoutId: string
-    height?: number
+    /** The active note: the moving end of the selection, see ScoreManipulator._selectedNote. */
     selectedNote?: Note | null
     /** Every selected note (a run when the user drags/shift-selects); drives the highlight. */
     selectedNotes?: Note[]
@@ -77,53 +69,25 @@ interface ScoreProps {
     onRemoveMeasure?: () => void
     canRemoveMeasure?: boolean
     /**
-     * A tempo marking / clef / key signature was clicked. The score only
-     * reports the event — what happens next (the editor opens its popover)
-     * is the parent's call; omit the callback and the glyph renders inert
-     * (the read-only consumers pass nothing). `x`/`y` are pixel coordinates
-     * relative to this component's container, ready to anchor a popover.
+     * A tempo marking, clef, key or time signature was clicked. The score only reports the
+     * event — what happens next (the editor opens its popover) is the parent's call; omit the
+     * callback and the glyphs render inert (the read-only consumers pass nothing).
      */
-    onTempoClick?: (event: TempoClickEvent) => void
-    onClefClick?: (event: ClefClickEvent) => void
-    onKeySignatureClick?: (event: KeySignatureClickEvent) => void
-    onTimeSignatureClick?: (event: TimeSignatureClickEvent) => void
+    onAttributeClick?: (event: AttributeClickEvent) => void
 }
 
 export interface SelectionMenuEvent {
     note: Note
 }
 
-export interface TempoClickEvent {
-    measureIndex: number
-    beatPosition: number
-    bpm: number
-    x: number
-    y: number
-}
+/**
+ * A clicked attribute glyph, discriminated by `kind`, in the measure at `measureIndex`.
+ * `x`/`y` are pixel coordinates relative to the score's container, ready to anchor a popover:
+ * the marking itself for a tempo, the staff top for a clef, key or time signature.
+ */
+export type AttributeClickEvent = AttributeClick & { measureIndex: number; x: number; y: number }
 
-export interface ClefClickEvent {
-    measureIndex: number
-    clef: ClefType
-    x: number
-    y: number
-}
-
-export interface KeySignatureClickEvent {
-    measureIndex: number
-    fifths: number
-    x: number
-    y: number
-}
-
-export interface TimeSignatureClickEvent {
-    measureIndex: number
-    beatAmount: number
-    beatType: number
-    x: number
-    y: number
-}
-
-export const Score = memo(function Score({
+export const ScoreView = memo(function ScoreView({
     score,
     selectedNote,
     selectedNotes,
@@ -137,17 +101,16 @@ export const Score = memo(function Score({
     onAddMeasure,
     onRemoveMeasure,
     canRemoveMeasure = true,
-    onTempoClick,
-    onClefClick,
-    onKeySignatureClick,
-    onTimeSignatureClick,
-}: ScoreProps) {
+    onAttributeClick,
+}: ScoreViewProps) {
     const containerRef = useRef<HTMLDivElement>(null)
     const svgRef = useRef<SVGSVGElement>(null)
     const [containerWidth, setContainerWidth] = useState(0)
     const [hoveredNote, setHoveredNote] = useState<Note | null>(null)
-    // The hover-to-pitch preview: a detached clone of the selected note at the hovered line, under its clef.
-    const [ghost, setGhost] = useState<{ note: Note; clef: Clef } | null>(null)
+    // The hover-to-pitch preview: a detached clone of the selected note (`source`) at the hovered
+    // staff line, under its clef. `line` is that rendered line — the detached clone's own `line`
+    // ignores the clef — so a move along the same line can keep the ghost as it is.
+    const [ghost, setGhost] = useState<{ source: Note; line: number; note: Note; clef: Clef } | null>(null)
     const ghostNote = ghost?.note ?? null
     const ghostLayout = useMemo(() => ghost && NoteLayout.preview(ghost.note, ghost.clef), [ghost])
     const selectedIds = useMemo(() => new Set((selectedNotes ?? []).map((n) => n.id)), [selectedNotes])
@@ -171,16 +134,18 @@ export const Score = memo(function Score({
     const rows = layout.rows
     const totalHeight = layout.totalHeight
     const scaledHeight = containerWidth > 0 ? totalHeight * (containerWidth / layout.scoreWidth) : 0
+    // The svg renders once the container has been measured (and there is a row to draw).
+    const svgMounted = containerWidth > 0 && totalHeight > 0
 
-    // Cursor indicator position (row-local coordinates)
-    const cursorPos = useMemo(() => {
+    // Input-cursor position: note-local x, row-local y
+    const inputCursorPos = useMemo(() => {
         if (!selectedNote) return null
         const x = selectedNote.layout.noteX + selectedNote.layout.width.noteHeadWidth / 2
         let lowestY = selectedNote.layout.noteY
         const stem = selectedNote.layout.stem
         if (stem) lowestY = Math.max(lowestY, stem.y1, stem.y2)
         const bottomStaffY = Staff.TOP_Y + Staff.HEIGHT
-        const y = Math.max(bottomStaffY, lowestY) + CURSOR_Y_OFFSET
+        const y = Math.max(bottomStaffY, lowestY) + INPUT_CURSOR_GAP
         return { x, y }
     }, [selectedNote, selectedNote?.layout.id])
 
@@ -198,109 +163,31 @@ export const Score = memo(function Score({
         [totalHeight, score],
     )
 
-    // SVG coordinate to container-relative pixel position (inverse of clientToSvg)
-    const svgToContainer = useCallback(
-        (svgX: number, svgY: number): { x: number; y: number } | null => {
+    useScrollFollow({ svgRef, containerRef, score, selectedNote, playbackCursorRef, mounted: svgMounted })
+
+    // Attribute glyphs only *report* clicks, in container pixels — opening an editing surface
+    // is the parent's business. One stable handler for every measure (a per-measure adapter
+    // would defeat memo(Measure)); it converts the measure-local point to container pixels at
+    // click time, against the layout the click landed on.
+    const handleAttributeClick = useCallback(
+        (measure: MeasureModel, click: AttributeClick, localX: number, localY: number) => {
             const svg = svgRef.current
             const container = containerRef.current
-            if (!svg || !container) return null
+            if (!svg || !container || !onAttributeClick) return
+            const current = score.layout
+            const row = current.rowFor(measure)
             const svgRect = svg.getBoundingClientRect()
             const containerRect = container.getBoundingClientRect()
-            const scaleX = svgRect.width / score.layout.scoreWidth
-            const scaleY = svgRect.height / totalHeight
-            return {
-                x: svgRect.left + svgX * scaleX - containerRect.left,
-                y: svgRect.top + svgY * scaleY - containerRect.top,
-            }
+            const svgX = row.getMeasureX(measure) + localX
+            const svgY = current.getYForRow(row) + localY
+            onAttributeClick({
+                ...click,
+                measureIndex: score.getIndexForMeasure(measure),
+                x: svgRect.left + svgX * (svgRect.width / current.scoreWidth) - containerRect.left,
+                y: svgRect.top + svgY * (svgRect.height / current.totalHeight) - containerRect.top,
+            })
         },
-        [totalHeight, score],
-    )
-
-    // Scroll the nearest scrollable ancestor so the row at `layoutY` sits inside the
-    // viewport (no-op when it already does) — how the selection and the playback
-    // cursor stay in view on small screens.
-    const scrollRowIntoView = useCallback(
-        (layoutY: number) => {
-            const svg = svgRef.current
-            const scroller = findScrollParent(containerRef.current)
-            if (!svg || !scroller) return
-            const scale = svg.getBoundingClientRect().width / score.layout.scoreWidth
-            const svgTop = svg.getBoundingClientRect().top - scroller.getBoundingClientRect().top + scroller.scrollTop
-            const rowTop = svgTop + layoutY * scale
-            const rowBottom = rowTop + score.layout.rowHeight * scale
-            if (rowTop < scroller.scrollTop + FOLLOW_SCROLL_MARGIN) {
-                scroller.scrollTo({ top: Math.max(0, rowTop - FOLLOW_SCROLL_MARGIN), behavior: 'smooth' })
-            } else if (rowBottom > scroller.scrollTop + scroller.clientHeight - FOLLOW_SCROLL_MARGIN) {
-                scroller.scrollTo({ top: rowBottom - scroller.clientHeight + FOLLOW_SCROLL_MARGIN, behavior: 'smooth' })
-            }
-        },
-        [score],
-    )
-
-    // Keep the selected note's row visible whenever the selection moves (taps,
-    // arrow keys, the mobile note navigator).
-    useEffect(() => {
-        if (!selectedNote) return
-        try {
-            const row = score.layout.rowFor(selectedNote.measure)
-            scrollRowIntoView(score.layout.getYForRow(row))
-        } catch {
-            // A selection can briefly reference a measure detached by an in-flight edit.
-        }
-    }, [selectedNote, score, scrollRowIntoView])
-
-    // Follow playback/recording: the engines drive the cursor rect's transform
-    // directly, so a row change surfaces here as an attribute mutation.
-    useEffect(() => {
-        const cursor = playbackCursorRef?.current
-        if (!cursor || containerWidth === 0) return
-        const observer = new MutationObserver(() => {
-            if (cursor.getAttribute('display') === 'none') return
-            const match = /translate\(\s*0\s*[,\s]\s*([\d.]+)\s*\)/.exec(cursor.getAttribute('transform') ?? '')
-            if (match) scrollRowIntoView(Number(match[1]))
-        })
-        observer.observe(cursor, { attributes: true, attributeFilter: ['transform', 'display'] })
-        return () => observer.disconnect()
-    }, [playbackCursorRef, containerWidth, scrollRowIntoView])
-
-    // Attribute glyphs (tempo / clef / key) only *report* clicks, in container
-    // pixels — opening an editing surface is the parent's business.
-    const handleTempoClick = useCallback(
-        (measureIndex: number, beatPosition: number, bpm: number, svgX: number, svgY: number) => {
-            const pos = svgToContainer(svgX, svgY)
-            if (!pos) return
-            onTempoClick?.({ measureIndex, beatPosition, bpm, x: pos.x, y: pos.y })
-        },
-        [svgToContainer, onTempoClick],
-    )
-
-    const staffTopY = Staff.TOP_Y
-
-    const handleClefClick = useCallback(
-        (measureIndex: number, clef: ClefType, svgX: number, svgY: number) => {
-            const pos = svgToContainer(svgX, svgY)
-            if (!pos) return
-            onClefClick?.({ measureIndex, clef, x: pos.x, y: pos.y })
-        },
-        [svgToContainer, onClefClick],
-    )
-
-    const handleKeySignatureClick = useCallback(
-        (measureIndex: number, fifths: number, svgX: number, svgY: number) => {
-            const pos = svgToContainer(svgX, svgY)
-            if (!pos) return
-            onKeySignatureClick?.({ measureIndex, fifths, x: pos.x, y: pos.y })
-        },
-        [svgToContainer, onKeySignatureClick],
-    )
-
-    const handleTimeSignatureClick = useCallback(
-        (measureIndex: number, beatAmount: number, beatType: number, svgX: number, svgY: number) => {
-            const pos = svgToContainer(svgX, svgY)
-            if (!pos) return
-            onTimeSignatureClick?.({ measureIndex, beatAmount, beatType, x: pos.x, y: pos.y })
-        },
-        [svgToContainer, onTimeSignatureClick],
+        [score, onAttributeClick],
     )
 
     // Resolve the note under a client point (row → measure → note), with the row-local Y.
@@ -337,7 +224,7 @@ export const Score = memo(function Score({
             if (!hit) {
                 gestures.pointerMove(e, null)
                 if (hoveredNote) setHoveredNote(null)
-                if (ghostNote) setGhost(null)
+                if (ghost) setGhost(null)
                 return
             }
             const { note, localY } = hit
@@ -348,7 +235,7 @@ export const Score = memo(function Score({
             // press note leaves the ghost intact so a press + release in place still commits a
             // pitch change (below).
             if (gestures.pressed()) {
-                if (gestures.dragged() && ghostNote) setGhost(null)
+                if (gestures.dragged() && ghost) setGhost(null)
                 return
             }
 
@@ -356,12 +243,21 @@ export const Score = memo(function Score({
             // touch the ghost would flash under every tap.
             if (e.pointerType !== 'mouse') return
             const hoverLine = Staff.noteLineForY(localY)
+            // Only the selected note previews, and never at its own pitch (nothing would change). A
+            // rest has no pitch, so it still previews — and commits — a note at its rest line.
+            const noOp = !!note.pitch && hoverLine === note.line
+            if (note !== selectedNote || noOp) {
+                if (ghost) setGhost(null)
+                return
+            }
+            // Same note, same line: the ghost already shows it — no rebuild per pointer move.
+            if (ghost && ghost.source === note && ghost.line === hoverLine) return
             // hoverLine is a rendered staff line; convert to a pitch under the note's active clef, then spell
             // it under the active key (an F on the F line in G major becomes F♯, with no accidental drawn).
-            if ((hoverLine === note.line && ghostNote) || note !== selectedNote) setGhost(null)
-            else setGhost({ note: note.clone({ pitch: note.keySignature.spell(note.clef.pitchForLine(hoverLine)) }), clef: note.clef })
+            const pitch = note.keySignature.spell(note.clef.pitchForLine(hoverLine))
+            setGhost({ source: note, line: hoverLine, note: note.clone({ pitch }), clef: note.clef })
         },
-        [resolveHit, gestures, hoveredNote, ghostNote, selectedNote],
+        [resolveHit, gestures, hoveredNote, ghost, selectedNote],
     )
 
     const handlePointerDown = useCallback(
@@ -391,10 +287,13 @@ export const Score = memo(function Score({
     const measureButtons = showMeasureButtons ? layout.measureButtons : null
 
     const lastRowIndex = rows.length - 1
+    // Hover reaches only the hovered note's own measure, so the other measures' memos hold. An
+    // edit can detach the hovered note under a still pointer; then nothing is hovered.
+    const hoveredMeasure = hoveredNote?.isAttached ? hoveredNote.measure : null
 
     return (
         <div ref={containerRef} className="relative select-none">
-            {containerWidth > 0 && totalHeight > 0 && score.layout && (
+            {svgMounted && (
                 <svg
                     ref={svgRef}
                     width={containerWidth}
@@ -417,7 +316,8 @@ export const Score = memo(function Score({
                         sample-rate updates never re-render the score itself */}
                     {waveformStore && <RecordingWaveform store={waveformStore} score={score} />}
 
-                    {/* Playback cursor — positioned directly by PlaybackEngine via ref */}
+                    {/* Playback cursor — the host's transport writes its x, transform and display
+                        straight through the ref, outside React (the scroll-follow observes those writes) */}
                     <rect
                         ref={playbackCursorRef}
                         data-export-exclude
@@ -434,76 +334,28 @@ export const Score = memo(function Score({
                             <g key={measure.id} transform={`translate(${row.getMeasureX(measure)}, ${layout.getYForRow(row)})`}>
                                 <Measure
                                     measure={measure}
+                                    layout={layout.measureLayoutFor(measure)}
                                     selectedNoteIds={selectedIds}
-                                    hoveredNote={hoveredNote}
-                                    layoutId={measure.layout.id}
-                                    onClefClick={
-                                        onClefClick &&
-                                        ((clef, localX) =>
-                                            handleClefClick(
-                                                score.getIndexForMeasure(measure),
-                                                clef.type,
-                                                row.getMeasureX(measure) + localX,
-                                                layout.getYForRow(row) + staffTopY,
-                                            ))
-                                    }
-                                    onKeySignatureClick={
-                                        onKeySignatureClick &&
-                                        ((key, localX) =>
-                                            handleKeySignatureClick(
-                                                score.getIndexForMeasure(measure),
-                                                key.fifths,
-                                                row.getMeasureX(measure) + localX,
-                                                layout.getYForRow(row) + staffTopY,
-                                            ))
-                                    }
-                                    onTimeSignatureClick={
-                                        onTimeSignatureClick &&
-                                        ((timeSignature, localX) =>
-                                            handleTimeSignatureClick(
-                                                score.getIndexForMeasure(measure),
-                                                timeSignature.beatAmount,
-                                                timeSignature.beatType,
-                                                row.getMeasureX(measure) + localX,
-                                                layout.getYForRow(row) + staffTopY,
-                                            ))
-                                    }
+                                    hoveredNoteId={hoveredNote && hoveredMeasure === measure ? hoveredNote.id : undefined}
+                                    onAttributeClick={onAttributeClick && handleAttributeClick}
                                 />
 
-                                {selectedNote && selectedNote.measure === measure && cursorPos && (
+                                {/* Pointer-transparent: the overlay paints above the measure's tempo
+                                    markings, whose clicks must still reach them through a ghost. */}
+                                {selectedNote && selectedNote.measure === measure && inputCursorPos && (
                                     <g
                                         key={`cursor-${selectedNote.id}`}
                                         data-export-exclude
+                                        className="pointer-events-none"
                                         transform={`translate(${measure.layout.getXForElement(selectedNote)}, 0)`}>
                                         {ghostNote && ghostLayout && (
                                             <g key={ghostNote.id} opacity={0.35}>
-                                                <NoteGroup note={ghostNote} layout={ghostLayout} layoutId={ghostLayout.id} />
+                                                <NoteGroup layout={ghostLayout} stem={ghostLayout.stem} beamed={false} />
                                             </g>
                                         )}
-                                        <CursorIndicator x={cursorPos.x} y={cursorPos.y} />
+                                        <InputCursor x={inputCursorPos.x} y={inputCursorPos.y} />
                                     </g>
                                 )}
-
-                                {measure.tempos.map((tempo, ti) => (
-                                    <g key={`cursor-${tempo.id}`} transform={`translate(${tempo.layout.x}, 0)`}>
-                                        <TempoMarking
-                                            key={`tempo-${ti}`}
-                                            tempo={tempo}
-                                            layoutId={tempo.layout.id}
-                                            onClick={
-                                                onTempoClick &&
-                                                (() =>
-                                                    handleTempoClick(
-                                                        score.getIndexForMeasure(tempo.measure),
-                                                        tempo.beatPosition,
-                                                        tempo.bpm,
-                                                        row.getMeasureX(tempo.measure) + tempo.layout.x,
-                                                        layout.getYForRow(row) + tempo.layout.y,
-                                                    ))
-                                            }
-                                        />
-                                    </g>
-                                ))}
                             </g>
                         )),
                     )}

@@ -1,49 +1,31 @@
 import { memo } from 'react'
 
-import type { Tempo } from '../model/Tempo'
-import { BEAT_UNIT_STEM_HEIGHT, BeatUnit, beatUnitWidth } from './BeatUnit'
+import type { Duration } from '../model/Duration'
+import { BeatUnit, beatUnitWidth } from './BeatUnit'
 import { NOTATION_INK } from './constants'
 
 const TEMPO_FONT_SIZE = 10
 const TEMPO_TEXT_GAP = 3
 /** How far the click target reaches past the note, over the `= 90` text. */
-const TEMPO_TEXT_HIT_WIDTH = 40
+export const TEMPO_TEXT_HIT_WIDTH = 40
 
 interface TempoMarkingProps {
-    tempo: Tempo
-    /** Omit to render the marking inert (read-only consumers). */
-    onClick?: (e: React.MouseEvent<SVGGElement>) => void
-    layoutId: string
+    /** Row-local y of the marking's notehead centre (its TempoLayout). */
+    y: number
+    /** The felt beat the marking is written in (Tempo.pulse). */
+    pulse: Duration
+    /** The bpm counted in that beat (Tempo.pulseBpm). */
+    pulseBpm: number
 }
 
 /** A metronome mark written in the measure's felt beat: `♩ = 90` in 4/4, `♩. = 60` in 6/8. */
-export const TempoMarking = memo(function TempoMarking({ tempo, onClick }: TempoMarkingProps) {
-    const { y } = tempo.layout
-    const noteWidth = beatUnitWidth(tempo.pulse)
-    const stemY2 = y - BEAT_UNIT_STEM_HEIGHT
-    const textX = noteWidth + TEMPO_TEXT_GAP
+export const TempoMarking = memo(function TempoMarking({ y, pulse, pulseBpm }: TempoMarkingProps) {
+    const textX = beatUnitWidth(pulse) + TEMPO_TEXT_GAP
 
     return (
-        <g
-            onClick={
-                onClick &&
-                ((e) => {
-                    e.stopPropagation()
-                    onClick(e)
-                })
-            }
-            style={onClick ? { cursor: 'pointer' } : undefined}>
-            {onClick && (
-                <rect
-                    x={-2}
-                    y={stemY2 - 2}
-                    width={noteWidth + TEMPO_TEXT_HIT_WIDTH}
-                    height={BEAT_UNIT_STEM_HEIGHT + 4}
-                    fill="transparent"
-                />
-            )}
+        <>
             <g transform={`translate(0, ${y})`}>
-                <BeatUnit duration={tempo.pulse} />
+                <BeatUnit duration={pulse} />
             </g>
             <text
                 x={textX}
@@ -53,9 +35,9 @@ export const TempoMarking = memo(function TempoMarking({ tempo, onClick }: Tempo
                 fontWeight={600}
                 dominantBaseline="central"
                 fill={NOTATION_INK}
-                style={{ userSelect: 'none' }}>
-                = {tempo.pulseBpm}
+                className="select-none">
+                = {pulseBpm}
             </text>
-        </g>
+        </>
     )
 })

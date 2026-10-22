@@ -1,10 +1,11 @@
 import { memo } from 'react'
 
-import type { Clef as ClefModel } from '../model/Clef'
+import type { ClefLayout } from '../model/layout/ClefLayout'
+import { NOTATION_INK } from './constants'
 import { Glyph } from './Glyph'
 
-export const Clef = memo(function Clef({ clef }: { clef: ClefModel; layoutId: string }) {
-    const { glyphName, x, y, octave } = clef.layout
+export const Clef = memo(function Clef({ layout }: { layout: ClefLayout }) {
+    const { glyphName, x, y, octave } = layout
     return (
         <>
             <Glyph name={glyphName} x={x} y={y} />
@@ -17,7 +18,8 @@ export const Clef = memo(function Clef({ clef }: { clef: ClefModel; layoutId: st
                     fontWeight={600}
                     textAnchor="middle"
                     dominantBaseline="middle"
-                    style={{ userSelect: 'none' }}>
+                    fill={NOTATION_INK}
+                    className="select-none">
                     {octave.text}
                 </text>
             )}

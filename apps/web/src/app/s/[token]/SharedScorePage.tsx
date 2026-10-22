@@ -1,6 +1,6 @@
 'use client'
 
-import { Score as ScoreView } from '@mushee/notation/components'
+import { ScoreView } from '@mushee/notation/components'
 import type { Score } from '@mushee/notation/model'
 import type { ScorePartwise } from '@mushee/notation/model/io/MusicXml'
 import { ScoreDeserializer } from '@mushee/notation/model/io/ScoreDeserializer'

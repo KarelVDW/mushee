@@ -1,6 +1,6 @@
 'use client'
 
-import { Score as ScoreView } from '@mushee/notation/components'
+import { ScoreView } from '@mushee/notation/components'
 import { Interval, type IntervalQuality, type Note, Score } from '@mushee/notation/model'
 import { type ReactNode, useCallback, useEffect, useMemo, useState } from 'react'
 

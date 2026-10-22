@@ -10,14 +10,14 @@ describe('package entry points', () => {
         const model = await import('@mushee/notation/model')
         const components = await import('@mushee/notation/components')
         expect(model.Clef).toBeTypeOf('function')
-        expect(components.Score).toBeDefined()
+        expect(components.ScoreView).toBeDefined()
     })
 
     it('load components first, then model, without an init-order error', async () => {
         vi.resetModules()
         const components = await import('@mushee/notation/components')
         const model = await import('@mushee/notation/model')
-        expect(components.Score).toBeDefined()
+        expect(components.ScoreView).toBeDefined()
         expect(model.Clef).toBeTypeOf('function')
     })
 })

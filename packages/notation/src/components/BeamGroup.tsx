@@ -3,7 +3,7 @@ import { memo } from 'react'
 import type { BeamLayout } from '../model/layout/BeamLayout'
 import { NOTATION_INK } from './constants'
 
-export const BeamGroup = memo(function BeamGroup({ beam }: { beam: BeamLayout; layoutId: string }) {
+export const BeamGroup = memo(function BeamGroup({ beam }: { beam: BeamLayout }) {
     const segments = [beam.primary, ...beam.secondaries]
 
     return (
