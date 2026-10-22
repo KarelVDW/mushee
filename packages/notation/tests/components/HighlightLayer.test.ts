@@ -1,7 +1,8 @@
-import { HighlightLayer } from '@mushee/notation/components/HighlightLayer'
 import { makeScore } from '@mushee/notation/testing'
 import type { ReactElement } from 'react'
 import { describe, expect, it } from 'vitest'
+
+import { HighlightLayer } from '../../src/components/HighlightLayer'
 
 /** The layer's <g>: its <style> tag's text and its band rects' props (it renders without hooks). */
 function render(kind: 'pulse' | 'flash') {
