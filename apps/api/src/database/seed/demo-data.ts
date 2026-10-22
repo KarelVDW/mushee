@@ -6,6 +6,9 @@
 
 export const DEMO_PASSWORD = 'mushee-demo'
 
+/** The fixed id of the Frère Jacques example score, in the demo data and wherever it is published. */
+export const EXAMPLE_SCORE_ID = '00000000-0000-4000-8000-000000000041'
+
 export interface DemoAccount {
     email: string
     name: string
@@ -55,18 +58,20 @@ export const DEMO_ACCOUNTS: DemoAccount[] = [
         email: 'examples@mushee.local',
         name: 'Solkey',
         tierId: 'free',
-        scoreIds: ['00000000-0000-4000-8000-000000000041'],
+        scoreIds: [EXAMPLE_SCORE_ID],
     },
 ]
 
 /**
- * The stable share token of the seeded Frère Jacques example, so a local web app can point
+ * The stable share token of the Frère Jacques example, so the web app can point
  * NEXT_PUBLIC_EXAMPLE_SHARE_TOKEN at it. Shaped like the tokens share() mints
- * (ScoresService.isShareToken), but readable: it is meant to be public.
+ * (ScoresService.isShareToken), but readable: it is meant to be public. The demo seeder
+ * publishes it locally; environments without demo data (production, staging) publish it
+ * with scripts/publish-example-score.ts.
  */
 export const EXAMPLE_SHARE_TOKEN = 'solkey-example-frere-jacques'
 
-interface DemoScore {
+export interface DemoScore {
     title: string
     document: Record<string, unknown>
     /** Seeded with sharing on under this token (a public example); unset = private. */
@@ -201,7 +206,7 @@ export const DEMO_SCORES: Record<string, DemoScore> = {
     },
     // The whole round the landing page's hero demo hums two bars of, on the Voice instrument
     // (GM 54, "Voice Oohs"), shared publicly as the "Hear an example" score.
-    '00000000-0000-4000-8000-000000000041': {
+    [EXAMPLE_SCORE_ID]: {
         title: 'Frère Jacques',
         shareToken: EXAMPLE_SHARE_TOKEN,
         document: partDocument({ name: 'Voice', midiProgram: 54 }, [

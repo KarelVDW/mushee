@@ -28,6 +28,7 @@ export const POSTHOG_HOST = process.env.NEXT_PUBLIC_POSTHOG_HOST ?? 'https://eu.
 /**
  * The share token of a Solkey-owned example score (Frère Jacques), which the landing page's
  * "Hear an example" opens at /s/<token> so a visitor can hear a real score before signing up.
- * Per environment (the demo seeder creates one locally); unset = no example link.
+ * Per environment: the demo seeder publishes it locally, `pnpm -F @mushee/api example:publish`
+ * everywhere else (production needs it set in the Vercel build env); unset = no example link.
  */
 export const EXAMPLE_SHARE_TOKEN = process.env.NEXT_PUBLIC_EXAMPLE_SHARE_TOKEN || undefined

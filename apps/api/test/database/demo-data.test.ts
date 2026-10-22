@@ -2,7 +2,7 @@ import 'reflect-metadata'
 
 import { describe, expect, it } from 'vitest'
 
-import { DEMO_ACCOUNTS, DEMO_SCORES, EXAMPLE_SHARE_TOKEN } from '../../src/database/seed/demo-data'
+import { DEMO_ACCOUNTS, DEMO_SCORES, EXAMPLE_SCORE_ID, EXAMPLE_SHARE_TOKEN } from '../../src/database/seed/demo-data'
 import { ScoresService } from '../../src/scores/scores.service'
 
 type Entry = { _type: string; duration?: number }
@@ -11,8 +11,8 @@ type Doc = { parts: { measures: { entries: Entry[] }[] }[]; partList: { scorePar
 describe('demo data', () => {
     const shared = Object.entries(DEMO_SCORES).filter(([, score]) => score.shareToken)
 
-    it('shares exactly one example, under a token the share route accepts', () => {
-        expect(shared.map(([, score]) => score.shareToken)).toEqual([EXAMPLE_SHARE_TOKEN])
+    it('shares exactly one example, the one the publish script publishes, under a token the share route accepts', () => {
+        expect(shared.map(([id, score]) => [id, score.shareToken])).toEqual([[EXAMPLE_SCORE_ID, EXAMPLE_SHARE_TOKEN]])
         expect(ScoresService.isShareToken(EXAMPLE_SHARE_TOKEN)).toBe(true)
     })
 
