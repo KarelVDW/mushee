@@ -1,7 +1,7 @@
 // Test double for src/engraving/Bravura.ts, shared by the notation, web and playback
 // suites (each setup file does `vi.mock(<Bravura module>, () => import(<this module>))`).
-// It keeps the large font data out of tests and gives widths a deterministic table, so
-// width and layout assertions hold in every suite. Deliberately import-free and outside
+// It gives widths a deterministic table instead of the font data, so width and layout
+// assertions hold in every suite. Deliberately import-free and outside
 // the testing barrel: the barrel loads model classes, which load the mocked module.
 
 const widths: Record<string, number> = {
