@@ -248,11 +248,11 @@ test('a packs link opens the minute packs where they can be bought, and only the
 test('the footer cookie-settings button reopens the consent dialog', async ({ page }) => {
     await page.getByRole('button', { name: 'Cookie settings' }).click()
 
-    const dialog = page.getByRole('dialog').filter({ hasText: 'Session replay & linked analytics' })
+    const dialog = page.getByRole('dialog').filter({ hasText: 'Screen replays to help us fix bugs' })
     await expect(dialog).toBeVisible()
 
     // The switch toggles and saving closes the dialog.
-    const analytics = dialog.getByRole('switch', { name: 'Session replay & linked analytics' })
+    const analytics = dialog.getByRole('switch', { name: 'Screen replays to help us fix bugs' })
     const before = await analytics.getAttribute('aria-checked')
     await analytics.click()
     await expect(analytics).toHaveAttribute('aria-checked', before === 'true' ? 'false' : 'true')

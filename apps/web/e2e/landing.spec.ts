@@ -59,7 +59,7 @@ test('cookie banner: Customize opens preferences with a working analytics switch
 
     await page.getByRole('dialog', { name: 'Cookie consent' }).getByRole('button', { name: 'Customize' }).click()
 
-    const analytics = page.getByRole('switch', { name: 'Session replay & linked analytics' })
+    const analytics = page.getByRole('switch', { name: 'Screen replays to help us fix bugs' })
     await expect(analytics).toHaveAttribute('aria-checked', 'false')
     await analytics.click()
     await expect(analytics).toHaveAttribute('aria-checked', 'true')

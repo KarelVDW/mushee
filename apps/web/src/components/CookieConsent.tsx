@@ -1,7 +1,8 @@
 'use client'
 
 import Link from 'next/link'
-import { type ReactNode, useEffect, useState } from 'react'
+import { usePathname } from 'next/navigation'
+import { type ReactNode, type RefObject, useEffect, useRef, useState } from 'react'
 
 import { DialogPanel, Eyebrow, PrimaryButton, SecondaryButton, Switch, TertiaryButton } from '@/components/ui'
 import { getConsent, onConsentSettingsRequested, saveConsent } from '@/lib/consent'
@@ -49,18 +50,64 @@ export function CookieConsent() {
     return decided ? null : <CookieBanner onCustomize={() => setSettingsOpen(true)} onDecide={decide} />
 }
 
-/** First-visit bar: one-tap essential/all choices, or the full preferences. */
+/**
+ * Pads the page's bottom by the banner's footprint while it shows (from its top edge to the
+ * viewport's bottom), so the page can scroll everything — the hero's Start free, the footer —
+ * clear of it. Document-flow pages only: the editor and the library are full-height app
+ * surfaces with their own docked chrome, and padding them would push that chrome off screen.
+ */
+function usePagePaddingUnder(banner: RefObject<HTMLElement | null>) {
+    const pathname = usePathname()
+    const padPage = !pathname?.startsWith('/scores')
+    useEffect(() => {
+        const el = banner.current
+        if (!el || !padPage) return
+        const body = document.body
+        const apply = () => {
+            body.style.paddingBottom = `${Math.max(0, Math.round(window.innerHeight - el.getBoundingClientRect().top))}px`
+        }
+        apply()
+        const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(apply)
+        observer?.observe(el)
+        window.addEventListener('resize', apply)
+        return () => {
+            observer?.disconnect()
+            window.removeEventListener('resize', apply)
+            body.style.paddingBottom = ''
+        }
+    }, [banner, padPage])
+}
+
+/**
+ * First-visit notice: one-tap essential/all choices, or the full preferences. A solid card,
+ * never glass, so the page can't show through its text; on phones a compact full-width bottom
+ * sheet (text, then the two choices side by side, then Customize) with the page padded under it.
+ */
 function CookieBanner({ onCustomize, onDecide }: { onCustomize: () => void; onDecide: (analytics: boolean) => void }) {
+    const ref = useRef<HTMLDivElement>(null)
+    usePagePaddingUnder(ref)
     return (
         <div
+            ref={ref}
             role="dialog"
             aria-label="Cookie consent"
-            className="fixed bottom-5 left-5 right-5 z-(--z-banner) max-w-180 mx-auto glass-panel rounded-lg px-5.5 py-4.5 shadow-(--shadow-tonal) flex items-center gap-5 flex-wrap">
-            <div className="flex-1 min-w-55 flex flex-col gap-1.5">
-                <Eyebrow>Cookies</Eyebrow>
+            className={[
+                'fixed z-(--z-banner) inset-x-0 bottom-0 sm:inset-x-5 sm:bottom-5 sm:max-w-180 sm:mx-auto',
+                'bg-surface-container-lowest editorial-shadow rounded-t-xl sm:rounded-lg',
+                'px-5 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:px-5.5 sm:py-4.5',
+                'flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-3 sm:gap-5',
+            ].join(' ')}>
+            <div className="flex-1 sm:min-w-55 flex flex-col gap-1.5">
+                <Eyebrow className="max-sm:hidden">Cookies</Eyebrow>
                 <p className="font-body font-normal text-[14px] leading-normal text-on-surface m-0">
-                    Solkey uses essential cookies to keep you signed in, plus cookieless, anonymous usage stats. With your permission
-                    we&apos;d also use session replay to improve the editor — that&apos;s entirely up to you.{' '}
+                    {/* Phones get the short version, so the sheet stays clear of the hero's Start free. */}
+                    <span className="sm:hidden">
+                        Essential cookies keep you signed in, and anonymous stats are always on. Session replay is optional — your call.
+                    </span>
+                    <span className="max-sm:hidden">
+                        Solkey uses essential cookies to keep you signed in, and counts visits without cookies. If you allow it, we&apos;d
+                        also record how you use the editor, linked to your account, so we can find and fix bugs. Up to you.
+                    </span>{' '}
                     <Link href="/privacy#cookies" className="text-primary underline">
                         Learn more
                     </Link>
@@ -69,10 +116,18 @@ function CookieBanner({ onCustomize, onDecide }: { onCustomize: () => void; onDe
             </div>
             {/* "Essential only" and "Accept all" carry equal visual weight — the GDPR-parity
                 the component promises. Only "Customize" steps back a level. */}
-            <div className="flex items-center gap-2 shrink-0 flex-wrap">
-                <TertiaryButton onClick={onCustomize}>Customize</TertiaryButton>
-                <SecondaryButton onClick={() => onDecide(false)}>Essential only</SecondaryButton>
-                <SecondaryButton onClick={() => onDecide(true)}>Accept all</SecondaryButton>
+            <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 shrink-0">
+                <div className="grid grid-cols-2 gap-2">
+                    <SecondaryButton fullWidth onClick={() => onDecide(false)}>
+                        Essential only
+                    </SecondaryButton>
+                    <SecondaryButton fullWidth onClick={() => onDecide(true)}>
+                        Accept all
+                    </SecondaryButton>
+                </div>
+                <div className="self-start sm:self-auto">
+                    <TertiaryButton onClick={onCustomize}>Customize</TertiaryButton>
+                </div>
             </div>
         </div>
     )
@@ -103,14 +158,15 @@ function CookiePreferencesDialog({ analytics, onAnalyticsChange, onDecide, onClo
                 <ConsentCategory header={<CategoryTitle title="Essential" status="Always on" />}>
                     Keeps you signed in and remembers this cookie choice. Solkey doesn&apos;t work without these.
                 </ConsentCategory>
-                <ConsentCategory header={<CategoryTitle title="Anonymous statistics" status="Always on · no cookies" />}>
-                    Counts pages and feature use without cookies or anything stored on your device — never linked to who you are (PostHog,
-                    hosted in the EU).
+                <ConsentCategory header={<CategoryTitle title="Anonymous statistics" status="Always on" />}>
+                    Counts pages and features used, without cookies and without knowing who you are (PostHog, in the EU).
                 </ConsentCategory>
+                {/* Replay records whole sessions (inputs masked: lib/analytics.ts maskAllInputs) and links them and
+                    the usage events to the account — the label and text say both, for an informed choice. */}
                 <ConsentCategory
-                    header={<Switch checked={analytics} onChange={onAnalyticsChange} label="Session replay & linked analytics" />}>
-                    Lets us watch anonymized replays of rough edges and connect usage to your account id so we can debug your issues. Uses
-                    one PostHog cookie. Off by default.
+                    header={<Switch checked={analytics} onChange={onAnalyticsChange} label="Screen replays to help us fix bugs" />}>
+                    Lets us replay how you use Solkey on your screen (what you type stays hidden) and link it to your account, so we can fix
+                    your issues faster. Uses one cookie. Off unless you turn it on.
                 </ConsentCategory>
                 <p className="font-body font-normal text-[12px] leading-normal text-on-surface-variant m-0">
                     Details in our{' '}
