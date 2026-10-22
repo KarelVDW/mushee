@@ -293,8 +293,8 @@ export function NoteToolDock({ manipulator, compact = false, settingsExtras, tra
 
 /**
  * The compact popover sheet: full viewport width just above the dock, scrolling when tall.
- * Shared with the in-score attribute popovers (page.tsx), which position it against a
- * `relative` wrapper around the dock rather than the dock's own containing block.
+ * Shared with the in-score attribute popovers (ScoreAttributePopover), which position it
+ * against a `relative` wrapper around the dock rather than the dock's own containing block.
  */
 export const COMPACT_POPOVER_SHEET = 'inset-x-2 bottom-full mb-2 w-auto! max-h-[60vh] overflow-y-auto'
 

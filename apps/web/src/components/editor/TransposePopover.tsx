@@ -359,7 +359,7 @@ function NumberStepper({ value, min, max, onChange, ariaLabel, suffix, grow }: N
                 'bg-surface-container-low text-on-surface cursor-pointer',
                 'enabled:hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-40',
                 'transition-colors duration-150 ease-solkey',
-                'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
+                'focus-ring',
             ].join(' ')}>
             <Icon name={delta > 0 ? 'plus' : 'minus'} size={14} />
         </button>
