@@ -69,6 +69,7 @@ const rows: Recording[] = [
 /** What the bucket holds under each take's folder. */
 const OBJECTS: Record<string, string[]> = {
     'recordings/u1/s1/r-old': ['recordings/u1/s1/r-old/audio.webm', 'recordings/u1/s1/r-old/session.json'],
+    'recordings/u2/s9/r-other': ['recordings/u2/s9/r-other/audio.webm'],
     'recordings/u3/s3/r-failed': ['recordings/u3/s3/r-failed/session.json'],
 }
 
@@ -134,6 +135,12 @@ describe('RecordingsService takes', () => {
         await expect(service.audioFor('u1', 'r-other')).rejects.toBeInstanceOf(ForbiddenException)
         await expect(service.remove('u1', 'r-other')).rejects.toBeInstanceOf(ForbiddenException)
         await expect(service.remove('u1', 'missing')).rejects.toBeInstanceOf(NotFoundException)
+    })
+
+    it('replays any take for support without an owner check, and 404s unknown ids', async () => {
+        const { service } = makeService()
+        expect(await service.audioForSupport('r-other')).toEqual({ stream: 'stream', contentType: 'audio/webm' })
+        await expect(service.audioForSupport('missing')).rejects.toBeInstanceOf(NotFoundException)
     })
 
     it('streams the archived audio with its content type when the backend cannot sign URLs', async () => {

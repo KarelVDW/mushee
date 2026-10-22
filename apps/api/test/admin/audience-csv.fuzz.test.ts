@@ -1,12 +1,9 @@
 import { DataSource } from 'typeorm'
 import { describe, expect, it, vi } from 'vitest'
 
-import { AdminService } from '../../src/admin/admin.service'
+import { AnnouncementsService } from '../../src/admin/announcements.service'
 import { AudienceFilterDto } from '../../src/admin/dto/audience-filter.dto'
 import type { MailService } from '../../src/mail/mail.service'
-import type { RecordingCreditsService } from '../../src/recordings/recording-credits.service'
-import type { ScoresService } from '../../src/scores/scores.service'
-import type { StorageService } from '../../src/storage/storage.service'
 
 /**
  * The audience CSV is opened in spreadsheets and fed to SendGrid Marketing
@@ -67,15 +64,9 @@ function parseCsv(text: string): string[][] {
     return rows
 }
 
-function service(rows: unknown[]): AdminService {
+function service(rows: unknown[]): AnnouncementsService {
     const query = vi.fn(() => Promise.resolve(rows))
-    return new AdminService(
-        { query } as unknown as DataSource,
-        {} as ScoresService,
-        {} as RecordingCreditsService,
-        {} as StorageService,
-        {} as MailService,
-    )
+    return new AnnouncementsService({ query } as unknown as DataSource, {} as MailService)
 }
 
 describe('audience CSV export — round trip + formula guard (fuzz)', () => {

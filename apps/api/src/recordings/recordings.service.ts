@@ -30,8 +30,9 @@ const SIGNED_URL_TTL_SECONDS = 15 * 60
 
 /**
  * A user's takes after the fact: list them, replay their archived audio,
- * delete one, and purge them all with the account. Live recording is
- * RecordingSessionsService's.
+ * delete one, and purge them all with the account. The admin console replays
+ * through here too, so there is one reader of a take folder's layout. Live
+ * recording is RecordingSessionsService's.
  */
 @Injectable()
 export class RecordingsService {
@@ -69,13 +70,28 @@ export class RecordingsService {
         return recording
     }
 
-    /**
-     * The archived audio of a take, for the owner to replay. Prefers a signed URL
-     * (the browser fetches straight from the bucket); backends without URLs — and
-     * signing failures — fall back to streaming the object through the API.
-     */
+    /** The archived audio of a take, for the owner to replay. */
     async audioFor(userId: string, id: string): Promise<RecordingAudio> {
-        const recording = await this.findOwned(userId, id)
+        return this.archivedAudio(await this.findOwned(userId, id))
+    }
+
+    /**
+     * The admin console's ownerless replay: any take by id, for support. The
+     * route is behind AdminSecretGuard, not a user session, so there is no
+     * owner to check against.
+     */
+    async audioForSupport(recordingId: string): Promise<RecordingAudio> {
+        const recording = await this.recordingRepo.findOneBy({ id: recordingId })
+        if (!recording) throw new NotFoundException('Recording not found')
+        return this.archivedAudio(recording)
+    }
+
+    /**
+     * Prefers a signed URL (the browser fetches straight from the bucket);
+     * backends without URLs — and signing failures — fall back to streaming the
+     * object through the API.
+     */
+    private async archivedAudio(recording: Recording): Promise<RecordingAudio> {
         if (!recording.storagePath) throw new NotFoundException('No audio was archived for this recording')
         const audioKey = recording.audioKey ?? (await this.discoverAudioKey(recording.storagePath))
         if (!audioKey) throw new NotFoundException('The archived audio is missing from storage')

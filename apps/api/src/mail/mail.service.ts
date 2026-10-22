@@ -151,6 +151,13 @@ export class MailService {
         return { subject: withToken(plainSubject), text, html }
     }
 
+    /** What the console shows: the e-mail as a sample recipient receives it. */
+    static previewAnnouncement(subject: string, body: string, sampleName = 'Ada'): { subject: string; text: string; html: string } {
+        const rendered = MailService.renderAnnouncement(subject, body)
+        const fill = (s: string) => s.split(NAME_TOKEN).join(sampleName)
+        return { subject: fill(rendered.subject), text: fill(rendered.text), html: fill(rendered.html) }
+    }
+
     /** `**bold**` → <strong>, `[label](https://url)` → <a>; everything else HTML-escaped. */
     static markupToHtml(paragraph: string): string {
         return escapeHtml(paragraph)
