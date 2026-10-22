@@ -54,6 +54,43 @@
 .waveform-bar-exit {
     animation: waveform-bar-out 450ms var(--ease-solkey) forwards;
 }
+/* Reduced motion: bars stand still at their resting opacity. The exit keeps a 1ms run, not
+   `none` — RecordingWaveform drops an exiting bar only on its animationend. */
+@media (prefers-reduced-motion: reduce) {
+    .waveform-bar {
+        animation: none;
+    }
+    .waveform-bar-exit {
+        animation: waveform-bar-out 1ms linear forwards;
+    }
+}
+
+/* Tooltips (components/ui/Tooltip.tsx) fade in; phone popover sheets (Popover variant
+   "sheet") rise 16px as they fade in, so the sheet reads as coming from the dock. Both
+   appear at once under reduced motion. */
+@keyframes tooltip-in {
+    from {
+        opacity: 0;
+    }
+}
+.tooltip-enter {
+    animation: tooltip-in 150ms var(--ease-solkey);
+}
+@keyframes popover-sheet-in {
+    from {
+        opacity: 0;
+        transform: translateY(16px);
+    }
+}
+.popover-sheet-enter {
+    animation: popover-sheet-in 200ms var(--ease-solkey);
+}
+@media (prefers-reduced-motion: reduce) {
+    .tooltip-enter,
+    .popover-sheet-enter {
+        animation: none;
+    }
+}
 
 /* iPhone Mic Mode walkthrough (RecordingDialogs.tsx → MicModeGuideDialog).
    Three phases share one 9s loop; each phase (and the motion inside it) offsets
