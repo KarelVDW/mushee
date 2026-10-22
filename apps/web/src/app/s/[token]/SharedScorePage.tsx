@@ -16,7 +16,7 @@ import { track } from '@/lib/analytics'
 import { ApiError } from '@/lib/api'
 import { useSession } from '@/lib/auth-client'
 import { LIBRARY_PATH, withNext } from '@/lib/nextPath'
-import { BETA_MODE } from '@/lib/plans'
+import { BETA_MODE, withPlan } from '@/lib/plans'
 import { useCreateScore, useSharedScore } from '@/lib/queries'
 import { useTransport } from '@/lib/useTransport'
 
@@ -203,8 +203,8 @@ export function SharedScorePage({ token }: { token: string }) {
             <Footer width="marketing" />
             {limitDialogOpen && (
                 <ScoreLimitDialog
-                    // Every upgrade CTA lands on the plan tab (C9); this page ignores the tier id the dialog passes.
-                    onUpgrade={() => router.push(settingsTabPath('plan'))}
+                    // Every upgrade CTA lands on the plan tab with the next tier picked (C9, S1).
+                    onUpgrade={(planId) => router.push(withPlan(settingsTabPath('plan'), planId))}
                     onClose={() => setLimitDialogOpen(false)}
                 />
             )}

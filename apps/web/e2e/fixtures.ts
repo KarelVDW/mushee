@@ -91,6 +91,19 @@ const TAKES = [
     },
 ]
 
+/** The account's billing state: Sketch, with billing not configured (nothing can be bought). See {@link mockBilling}. */
+const BILLING_STATE = {
+    tierId: 'free',
+    tierName: 'Sketch',
+    status: null,
+    interval: null,
+    currentPeriodEnd: null,
+    cancelAtPeriodEnd: false,
+    billingConfigured: false,
+    betaMode: false,
+    credits: { limitSeconds: 180, usedSeconds: 0, remainingSeconds: 180, packSeconds: 0 },
+}
+
 /** Records the requests the app makes to the mocked API, for assertions. */
 export interface ApiMock {
     /** Bodies of every PATCH /scores/:id (autosave) the app sent. */
@@ -163,19 +176,7 @@ async function installApiMocks(page: Page, mock: ApiMock, { rawDocument }: { raw
         // better-auth session lookup (path varies by client version).
         if (path.includes('get-session') || path.startsWith('/api/auth')) return json(SESSION)
 
-        if (path === '/billing/subscription') {
-            return json({
-                tierId: 'free',
-                tierName: 'Sketch',
-                status: null,
-                interval: null,
-                currentPeriodEnd: null,
-                cancelAtPeriodEnd: false,
-                billingConfigured: false,
-                betaMode: false,
-                credits: { limitSeconds: 180, usedSeconds: 0, remainingSeconds: 180, packSeconds: 0 },
-            })
-        }
+        if (path === '/billing/subscription') return json(BILLING_STATE)
 
         if (path === '/beta/status') return json({ betaMode: false, status: null })
 
@@ -289,6 +290,22 @@ export async function denyMicrophone(page: Page): Promise<void> {
         Object.defineProperty(MediaDevices.prototype, 'getUserMedia', {
             configurable: true,
             value: () => Promise.reject(new DOMException('Permission denied', 'NotAllowedError')),
+        })
+    })
+}
+
+/**
+ * Serve the billing state with `overrides` (e.g. `billingConfigured: true`, so plans can be
+ * bought and an upgrade link opens Change plan). Registered after the fixture mock, so it wins.
+ */
+export async function mockBilling(page: Page, overrides: Record<string, unknown>): Promise<void> {
+    await page.route(/localhost:4999\/billing\/subscription$/, (route) => {
+        if (route.request().method() === 'OPTIONS') return route.fulfill({ status: 204, headers: corsHeaders(route), body: '' })
+        return route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            headers: corsHeaders(route),
+            body: JSON.stringify({ ...BILLING_STATE, ...overrides }),
         })
     })
 }

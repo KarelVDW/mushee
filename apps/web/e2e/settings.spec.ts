@@ -1,6 +1,4 @@
-import type { Page } from '@playwright/test'
-
-import { expect, MOCK_SCORE_ID, MOCK_TITLE, test } from './fixtures'
+import { expect, MOCK_SCORE_ID, MOCK_TITLE, mockBilling, test } from './fixtures'
 
 /**
  * Mocked-API settings e2e: the four tabs and their ?tab= deep links, profile save, the
@@ -13,36 +11,6 @@ test.beforeEach(async ({ page, apiMock }) => {
     await page.goto('/settings')
     await expect(page.getByRole('button', { name: 'Save changes' })).toBeVisible()
 })
-
-/** The billing state the shared mock serves (Sketch, billing not configured), with `overrides`. */
-async function mockBilling(page: Page, overrides: Record<string, unknown>) {
-    await page.route(/localhost:4999\/billing\/subscription$/, (route) => {
-        const headers = {
-            'access-control-allow-origin': route.request().headers()['origin'] ?? '*',
-            'access-control-allow-credentials': 'true',
-            'access-control-allow-methods': 'GET,POST,PATCH,DELETE,OPTIONS',
-            'access-control-allow-headers': 'content-type',
-        }
-        if (route.request().method() === 'OPTIONS') return route.fulfill({ status: 204, headers, body: '' })
-        return route.fulfill({
-            status: 200,
-            contentType: 'application/json',
-            headers,
-            body: JSON.stringify({
-                tierId: 'free',
-                tierName: 'Sketch',
-                status: null,
-                interval: null,
-                currentPeriodEnd: null,
-                cancelAtPeriodEnd: false,
-                billingConfigured: false,
-                betaMode: false,
-                credits: { limitSeconds: 180, usedSeconds: 0, remainingSeconds: 180, packSeconds: 0 },
-                ...overrides,
-            }),
-        })
-    })
-}
 
 test('profile: saving a new name posts the update and confirms with a toast', async ({ page }) => {
     const name = page.getByLabel('Your name')

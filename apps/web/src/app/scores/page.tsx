@@ -185,7 +185,7 @@ export default function ScoresPage() {
         return (
             <ErrorScreen
                 tone="unreachable"
-                title="Can't reach the server"
+                title="Can't connect right now"
                 message="Check your internet connection and try again. Your scores are safe."
                 onRetry={() => void refetch()}
                 retrying={isFetching}

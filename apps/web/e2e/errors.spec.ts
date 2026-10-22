@@ -19,7 +19,7 @@ test('library shows a full-page error while the server is down and recovers on r
 
     await page.goto('/scores')
     // React Query retries transient failures twice before surfacing the error.
-    await expect(page.getByRole('heading', { name: "Can't reach the server" })).toBeVisible({ timeout: 15_000 })
+    await expect(page.getByRole('heading', { name: "Can't connect right now" })).toBeVisible({ timeout: 15_000 })
 
     // Server comes back: the override is removed, the fixture mock answers again.
     await page.unroute(API_PATTERN, refuse)
