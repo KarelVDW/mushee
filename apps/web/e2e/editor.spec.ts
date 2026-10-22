@@ -62,7 +62,7 @@ test('Record is disabled with no note selected and enabled again after clicking 
     const record = page.getByRole('button', { name: 'Record' })
     await expect(record).toBeEnabled()
     await record.click()
-    await expect(page.getByRole('status').filter({ hasText: 'Microphone access was blocked' })).toBeVisible()
+    await expect(page.getByRole('alert').filter({ hasText: 'Microphone access was blocked' })).toBeVisible()
     await expect(record).toBeDisabled()
 
     await page.mouse.click(band.x + band.width / 2, band.y + band.height / 2)

@@ -20,6 +20,28 @@ describe('Icon', () => {
         }
     })
 
+    // One glyph, one meaning: the later UX packages pull these from the registry (metronome
+    // ≠ audio-lines for recordings; square = stop; globe = can't reach Solkey; wifi-off = offline).
+    it('carries every glyph the editor, library and error screens need', () => {
+        const needed: IconName[] = [
+            'metronome',
+            'audio-lines',
+            'square',
+            'more-horizontal',
+            'pencil',
+            'check',
+            'chevron-up',
+            'chevron-down',
+            'info',
+            'globe',
+            'wifi-off',
+            'plus',
+            'minus',
+            'refresh-cw',
+        ]
+        for (const name of needed) expect(iconNames, name).toContain(name)
+    })
+
     // Call sites are type-checked against the registry (IconName); the runtime
     // fallback only guards names that slip past the type, e.g. via casts.
     it('falls back to the crossed-box marker for unknown names', () => {

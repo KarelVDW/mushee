@@ -66,3 +66,28 @@ describe('IconButton', () => {
         expect(neutral).not.toContain('hover:bg-primary-container')
     })
 })
+
+describe('coarse-pointer tap floors', () => {
+    const FLOOR = 'pointer-coarse:min-h-10 pointer-coarse:min-w-10'
+
+    it('give icon, tertiary and close buttons a 40px floor without changing fine-pointer sizes', () => {
+        const icon = html(createElement(IconButton, { icon: 'more-horizontal', ariaLabel: 'More actions', size: 32 }))
+        expect(icon).toContain(FLOOR)
+        expect(icon).toContain('width:32px;height:32px')
+        expect(icon).not.toContain('after:-inset')
+        expect(html(createElement(IconButton, { icon: 'more-horizontal', ariaLabel: 'More actions', size: 40 }))).toContain(
+            'width:40px;height:40px',
+        )
+        const tertiary = html(createElement(TertiaryButton, { children: 'Forgot password?' }))
+        expect(tertiary).toContain(FLOOR)
+        expect(tertiary).toContain('inline-flex items-center justify-center')
+        expect(tertiary).toContain(' py-2 ')
+        expect(html(createElement(CloseButton, { onClick: () => {} }))).toContain(FLOOR)
+    })
+
+    it('grow md primary and secondary buttons past 40px by padding', () => {
+        expect(html(createElement(PrimaryButton, { children: 'Save' }))).toContain('pointer-coarse:py-3.5')
+        expect(html(createElement(SecondaryButton, { children: 'Accept all' }))).toContain('pointer-coarse:py-3.5')
+        expect(html(createElement(PrimaryButton, { children: 'Start free', size: 'lg' }))).not.toContain('pointer-coarse:py')
+    })
+})

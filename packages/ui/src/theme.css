@@ -86,6 +86,8 @@
      loader-glyph Spinner, which turns at a slower 1s. One keyframes rule below. */
     --animate-solkey-spin: solkey-spin 700ms linear infinite;
     --animate-solkey-spin-glyph: solkey-spin 1s linear infinite;
+    /* animate-solkey-pulse — the loading skeletons' slow breath (StaffSkeleton, skeleton rows). */
+    --animate-solkey-pulse: solkey-pulse 1.6s ease-in-out infinite;
 
     /* Type families — exposed as Tailwind utilities (font-display, font-body, …).
      Values reference the next/font CSS variables that each app's layout.tsx sets
@@ -117,6 +119,15 @@ body {
     font-family: var(--font-body);
 }
 
+/* Placeholders in on-surface-variant (5.9:1 on the input fill), not Tailwind's 50% of the
+   text colour (about 2.8:1). In the base layer, so a utility can still override it. */
+@layer base {
+    input::placeholder,
+    textarea::placeholder {
+        color: var(--color-on-surface-variant);
+    }
+}
+
 /* The keyboard focus contract (DESIGN.md): a 2px primary ring, 2px out, on
    :focus-visible only. An @utility rather than a plain class so it lands in
    Tailwind's utilities layer and composes with variants like any utility. */
@@ -140,6 +151,10 @@ body {
     background-size: 40px 40px;
 }
 
+/* Glass for surfaces over the page itself. Blur doesn't nest: a panel opened inside another
+   backdrop-filtered bar (the editor's header, the dock) samples only that bar, so menus,
+   popovers and tooltips use the opaque card instead — bg-surface-container-lowest with
+   .editorial-shadow — and never show the staff through their text. */
 .glass-panel {
     background: rgba(255, 255, 255, 0.85);
     backdrop-filter: blur(12px);
@@ -149,5 +164,26 @@ body {
 @keyframes solkey-spin {
     to {
         transform: rotate(360deg);
+    }
+}
+
+@keyframes solkey-pulse {
+    50% {
+        opacity: 0.45;
+    }
+}
+
+/* Reduced motion, for every app at once: animations and transitions collapse to an instant
+   (0.01ms rather than `none`, so exit animations still fire animationend and clear their
+   element) and smooth scrolling jumps. Motion driven from JS (scroll follow, tickers) checks
+   the media query itself. */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    ::before,
+    ::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
     }
 }
