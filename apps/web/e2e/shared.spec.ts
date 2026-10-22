@@ -47,6 +47,20 @@ test('an unknown or revoked token explains itself instead of erroring', async ({
     await expect(page).toHaveTitle('Shared score — Solkey')
 })
 
+test.describe('a stored document that is not MusicXML-JSON', () => {
+    test.use({ rawDocument: true })
+
+    test('a share link to it shows the load error instead of a score', async ({ page, apiMock }) => {
+        void apiMock
+        await page.goto(`/s/${MOCK_SHARE_TOKEN}`)
+        await expect(page.getByRole('heading', { name: 'The score couldn’t be loaded.' })).toBeVisible()
+        await expect(page.getByTestId('shared-score')).toHaveCount(0)
+        // Nothing to take home: the raw text never becomes a score to copy or export.
+        await expect(page.getByRole('button', { name: 'Save a copy' })).toHaveCount(0)
+        await expect(page.getByRole('button', { name: 'Export score' })).toHaveCount(0)
+    })
+})
+
 test('a visitor without an account is sent to signup with the score as the way back', async ({ page }) => {
     await page.route(/^https?:\/\//, (route) => {
         const url = new URL(route.request().url())
