@@ -22,94 +22,73 @@ export class BeamLayout {
     constructor(group: BeamedRun, context: { xOf: (note: Note) => number; layoutOf: (note: Note) => NoteLayout }) {
         this.notes = group.notes
         this.stemDir = group.stemDir
-        const firstNote = group.notes[0]
-        const lastNote = group.notes[group.notes.length - 1]
+        // Each member's standalone stem (note-local) and its measure-local x — every pass below reads these.
+        const members = group.notes.map((note) => {
+            const stem = context.layoutOf(note).getStem(this.stemDir)
+            return { note, stem, x: context.xOf(note) + stem.x }
+        })
+        const first = members[0]
+        const last = members[members.length - 1]
 
-        const firstStem = context.layoutOf(firstNote).getStem(this.stemDir)
-        const firstStemX = context.xOf(firstNote) + firstStem.x
-        const lastStem = context.layoutOf(lastNote).getStem(this.stemDir)
-        const lastStemX = context.xOf(lastNote) + lastStem.x
-
-        // slope
-        const dx = lastStemX - firstStemX
+        // slope — halved as damping, so the beam slants less steeply than the melodic contour it follows
+        const dx = last.x - first.x
         let slope = 0
         /* v8 ignore next -- divide-by-zero guard: beam notes always occupy distinct x, so dx !== 0 */
         if (dx !== 0) {
-            const rawSlope = (lastStem.y2 - firstStem.y2) / dx
+            const rawSlope = (last.stem.y2 - first.stem.y2) / dx
             slope = Math.max(-BEAM_MAX_SLOPE, Math.min(BEAM_MAX_SLOPE, rawSlope / 2))
         }
 
-        this._stemByNote = new Map()
-
-        let beamFirstY = firstStem.y2
-        for (const n of group.notes) {
-            const originalStem = context.layoutOf(n).getStem(this.stemDir)
-            const stemX = context.xOf(n) + originalStem.x
-            const beamYAtNote = beamFirstY + (stemX - firstStemX) * slope
-
-            if (this.stemDir === 'up' && beamYAtNote > originalStem.y2) {
-                beamFirstY -= beamYAtNote - originalStem.y2
-            } else if (this.stemDir === 'down' && beamYAtNote < originalStem.y2) {
-                beamFirstY += originalStem.y2 - beamYAtNote
+        // Shift the beam line until every stem reaches it.
+        let beamFirstY = first.stem.y2
+        for (const { stem, x } of members) {
+            const beamYAtNote = beamFirstY + (x - first.x) * slope
+            if (this.stemDir === 'up' && beamYAtNote > stem.y2) {
+                beamFirstY -= beamYAtNote - stem.y2
+            } else if (this.stemDir === 'down' && beamYAtNote < stem.y2) {
+                beamFirstY += stem.y2 - beamYAtNote
             }
         }
 
-        for (const n of group.notes) {
-            const originalStem = context.layoutOf(n).getStem(this.stemDir)
-            const stemX = context.xOf(n) + originalStem.x
-            const beamYAtNote = beamFirstY + (stemX - firstStemX) * slope
-            this._stemByNote.set(n, { ...originalStem, y2: beamYAtNote })
-        }
+        this._stemByNote = new Map(members.map(({ note, stem, x }) => [note, { ...stem, y2: beamFirstY + (x - first.x) * slope }]))
 
         // primary
         const dirSign = this.stemDir === 'up' ? 1 : -1
-        const y1 = beamFirstY
-        const y2 = y1 + (lastStemX - firstStemX) * slope
-        this.primary = { x1: firstStemX, y1, x2: lastStemX, y2, thickness: BEAM_WIDTH * dirSign }
-
-        // secondaries
-        const segments: LayoutBeamSegment[] = []
         const thickness = BEAM_WIDTH * dirSign
-        const beamY = beamFirstY - BEAM_LEVEL_STRIDE * -dirSign
-        let segStart: number | null = null
-        let segStartY: number | null = null
-        for (let i = 0; i < group.notes.length; i++) {
-            const n = group.notes[i]
-            if (!n.duration.hasSecondaryBeam) continue
+        this.primary = { x1: first.x, y1: beamFirstY, x2: last.x, y2: beamFirstY + dx * slope, thickness }
 
-            const stemX = context.xOf(n) + context.layoutOf(n).getStem(this.stemDir).x
-            const yAtNote = beamY + (stemX - firstStemX) * slope
+        // secondaries — one level stride further from the noteheads than the primary
+        const segments: LayoutBeamSegment[] = []
+        const beamY = beamFirstY + BEAM_LEVEL_STRIDE * dirSign
+        let run: { x: number; y: number } | null = null
+        for (let i = 0; i < members.length; i++) {
+            const { note, x } = members[i]
+            if (!note.duration.hasSecondaryBeam) continue
 
-            if (segStart === null) segStart = stemX
-            if (segStartY === null) segStartY = yAtNote
+            const yAtNote = beamY + (x - first.x) * slope
+            run ??= { x, y: yAtNote }
 
-            const nextQualifies = i + 1 < group.notes.length && group.notes[i + 1].duration.hasSecondaryBeam
+            const nextQualifies = i + 1 < members.length && members[i + 1].note.duration.hasSecondaryBeam
             if (!nextQualifies) {
-                if (segStart === stemX) {
+                if (run.x === x) {
                     const partialDir = i === 0 ? 1 : -1
-                    const px1 = stemX
-                    const px2 = stemX + partialDir * PARTIAL_BEAM_LENGTH
-                    const py1 = yAtNote
-                    const py2 = yAtNote + partialDir * PARTIAL_BEAM_LENGTH * slope
-                    segments.push({ x1: px1, y1: py1, x2: px2, y2: py2, thickness })
+                    segments.push({
+                        x1: x,
+                        y1: yAtNote,
+                        x2: x + partialDir * PARTIAL_BEAM_LENGTH,
+                        y2: yAtNote + partialDir * PARTIAL_BEAM_LENGTH * slope,
+                        thickness,
+                    })
                 } else {
-                    segments.push({ x1: segStart, y1: segStartY, x2: stemX, y2: yAtNote, thickness })
+                    segments.push({ x1: run.x, y1: run.y, x2: x, y2: yAtNote, thickness })
                 }
-                segStart = null
-                segStartY = null
+                run = null
             }
         }
         this.secondaries = segments
     }
 
-    get firstNote() {
-        return this.notes[0]
-    }
-
-    get lastNote() {
-        return this.notes[this.notes.length - 1]
-    }
-
+    /** The beam-repositioned stem of `note`: note-local, same space as NoteLayout.stem (primary/secondaries are measure-local). */
     getStem(note: Note) {
         return this._stemByNote.get(note)
     }

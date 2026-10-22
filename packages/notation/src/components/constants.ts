@@ -34,5 +34,8 @@ export const MEASURE_BUTTON_FILL = 'white'
 export const MEASURE_BUTTON_STROKE = '#dbdddd'
 export const MEASURE_BUTTON_LABEL = '#5a5c5c'
 
-/** Augmentation dot radius in pixels */
-export const DOT_RADIUS = 2
+/**
+ * Augmentation dot radius. It is an engraving metric (NoteWidth reserves room for it), so it
+ * lives in engraving/constants; re-exported here for the renderer's existing imports.
+ */
+export { DOT_RADIUS } from '../engraving/constants'

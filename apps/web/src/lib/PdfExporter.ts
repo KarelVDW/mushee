@@ -66,7 +66,7 @@ export class PdfExporter {
     /** Draw the rasterized score onto A4-sized canvases, breaking pages between rows. */
     private composePages(image: HTMLImageElement, pointsPerUnit: number, title: string): HTMLCanvasElement[] {
         const layout = this.score.layout
-        const rowStride = layout.rowHeight + layout.rowGap
+        const { rowStride } = layout
         const rowCount = layout.rows.length
         const pixelsPerUnit = pointsPerUnit * RASTER_SCALE
         const rowsPerPage = (firstPage: boolean) => {
@@ -109,8 +109,9 @@ export class PdfExporter {
                     sourceHeight,
                     MARGIN * RASTER_SCALE,
                     contentTop * RASTER_SCALE,
-                    layout.scoreWidth * pointsPerUnit * RASTER_SCALE,
-                    (sourceHeight / pixelsPerUnit) * pointsPerUnit * RASTER_SCALE,
+                    // The image was rasterized at page resolution, so rows copy 1:1.
+                    layout.scoreWidth * pixelsPerUnit,
+                    sourceHeight,
                 )
             }
             canvases.push(canvas)

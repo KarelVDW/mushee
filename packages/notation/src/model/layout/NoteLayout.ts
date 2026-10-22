@@ -1,13 +1,4 @@
-import { Bravura } from '../../engraving/Bravura'
-import {
-    DOT_SPACING,
-    DOTTED_FLAG_SCALE,
-    LEDGER_LINE_EXTENSION,
-    NOTE_ELEMENT_GAP,
-    STAVE_LINE_DISTANCE,
-    STEM_HEIGHT,
-    STEM_WIDTH,
-} from '../../engraving/constants'
+import { DOTTED_FLAG_SCALE, LEDGER_LINE_EXTENSION, STAVE_LINE_DISTANCE, STEM_HEIGHT, STEM_WIDTH } from '../../engraving/constants'
 import type { Clef } from '../Clef'
 import type { Duration } from '../Duration'
 import { Note } from '../Note'
@@ -20,7 +11,8 @@ import type { LayoutGlyph, LayoutLine, LayoutStem } from './types'
 /**
  * The geometry of a single note: notehead, stem, flag, ledger lines,
  * accidental, and dots. Context — the staff line the note sits on and its
- * width (which carries the drawn head and accidental) — is passed in
+ * width (which carries the drawn head and accidental and every horizontal
+ * slot; this class adds the vertical geometry) — is passed in
  * explicitly by the layout layer: MeasureLayout for notes in the score,
  * `preview` for the editor's detached ghost note.
  */
@@ -45,13 +37,12 @@ export class NoteLayout {
         this.glyphName = width.headGlyph
         const hasStem = !!note.pitch && note.duration.type !== 'w'
 
-        let cursorX = width.paddingLeft
+        this.noteX = width.noteX
+        this.noteRightX = width.noteX + width.noteHeadWidth
 
         // accidental (key- and measure-aware: shown only when the alteration isn't already in effect)
-        if (width.accidentalGlyph) {
-            this.accidental = { x: cursorX, y: this.noteY, glyphName: width.accidentalGlyph }
-            cursorX += Bravura.width(width.accidentalGlyph) + NOTE_ELEMENT_GAP
-        }
+        const { accidentalGlyph, accidentalX } = width
+        if (accidentalGlyph && accidentalX !== undefined) this.accidental = { x: accidentalX, y: this.noteY, glyphName: accidentalGlyph }
 
         // ledgerLines
         const ledgerLinePositions: number[] = []
@@ -59,47 +50,26 @@ export class NoteLayout {
             for (let l = STAFF_BOTTOM_LINE - 1; l >= line; l--) ledgerLinePositions.push(Staff.yForNoteLine(l))
             for (let l = STAFF_TOP_LINE + 1; l <= line; l++) ledgerLinePositions.push(Staff.yForNoteLine(l))
         }
+        const ledgerX1 = this.noteX - LEDGER_LINE_EXTENSION
         this.ledgerLines = ledgerLinePositions.map((ly) => ({
-            x1: cursorX,
+            x1: ledgerX1,
             y1: ly,
-            x2: cursorX + width.noteHeadWidth + 2 * LEDGER_LINE_EXTENSION,
+            x2: ledgerX1 + width.noteHeadWidth + 2 * LEDGER_LINE_EXTENSION,
             y2: ly,
         }))
-        cursorX += LEDGER_LINE_EXTENSION
 
-        this.noteX = cursorX
-        this.noteRightX = cursorX + width.noteHeadWidth
-
-        // stem
+        // stem, and the flag at its tip
         if (hasStem) {
             const stemDir = Note.stemDirectionFor(line)
             this.stem = this.getStem(stemDir)
-            // flag
             const flagName = note.duration.flagGlyph(stemDir)
-            if (flagName) {
-                this.flag = {
-                    glyphName: flagName,
-                    x: this.stem.x,
-                    y: this.noteY + (stemDir === 'up' ? -1 : 1) * STEM_HEIGHT,
-                    scale: NoteLayout.flagScale(note.duration),
-                }
-            }
+            if (flagName) this.flag = { glyphName: flagName, x: this.stem.x, y: this.stem.y2, scale: NoteLayout.flagScale(note.duration) }
         }
 
-        cursorX += width.noteHeadWidth + LEDGER_LINE_EXTENSION + NOTE_ELEMENT_GAP
-
-        // dots
-        const numDots = note.duration.dots
-        if (numDots && numDots > 0) {
-            // If the note sits on a line (integer noteLine), shift dots up by half a space
-            const onLine = Number.isInteger(line)
-            const dotY = onLine ? this.noteY - STAVE_LINE_DISTANCE / 2 : this.noteY
-            this.dots = []
-            for (let i = 0; i < numDots; i++) {
-                const offset = NOTE_ELEMENT_GAP + DOT_SPACING
-                this.dots.push({ x: cursorX + offset, y: dotY })
-                cursorX += offset
-            }
+        // dots — lifted half a space when the note sits on a line (integer line), so they stay in a space
+        if (width.dotXs.length > 0) {
+            const dotY = Number.isInteger(line) ? this.noteY - STAVE_LINE_DISTANCE / 2 : this.noteY
+            this.dots = width.dotXs.map((x) => ({ x, y: dotY }))
         }
     }
 

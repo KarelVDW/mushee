@@ -1,5 +1,6 @@
 import { Bravura } from '../../engraving/Bravura'
 import type { Clef } from '../Clef'
+import { type KeyAccidental, KeySignature } from '../KeySignature'
 import { Pitch } from '../Pitch'
 import { LINES_PER_OCTAVE, STAFF_BOTTOM_LINE, STAFF_TOP_LINE } from '../staffLines'
 import { ACCIDENTAL_GAP, type KeySignatureWidth } from './KeySignatureWidth'
@@ -15,6 +16,24 @@ export class KeySignatureLayout {
     readonly id = crypto.randomUUID()
     readonly width: KeySignatureWidth
     readonly accidentals: LayoutGlyph[]
+
+    /**
+     * The accidentals drawn on the staff for `key` in context. Only a switch *to* C major draws
+     * cancellation naturals — one for each of the preceding key's sharps/flats, to mark the
+     * transition; every other key just draws its own accidentals. The preceding key is the one
+     * earlier in the measure for a mid-measure change, else the previous measure's last key, which
+     * makes this the one key input that depends on another measure.
+     */
+    static drawnAccidentalsFor(key: KeySignature): KeyAccidental[] {
+        if (key.fifths !== 0) return KeySignature.accidentalsForFifths(key.fifths)
+        const precedingFifths =
+            key.beatPosition > 0 ? key.measure.keyBefore(key.beatPosition).fifths : (key.measure.getPrevious()?.lastKey.fifths ?? 0)
+        return KeySignature.accidentalsForFifths(precedingFifths).map((a) => ({
+            glyphName: 'accidentalNatural',
+            name: a.name,
+            octave: a.octave,
+        }))
+    }
 
     constructor(context: { clef: Clef; width: KeySignatureWidth }) {
         this.width = context.width

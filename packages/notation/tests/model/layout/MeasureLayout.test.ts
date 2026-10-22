@@ -1,11 +1,10 @@
 import { BARLINE_THIN_WIDTH, NUM_STAFF_LINES, SPACE_ABOVE_STAFF, STAVE_LINE_DISTANCE } from '@mushee/notation/engraving/constants'
-import type { KeySignature } from '@mushee/notation/model/KeySignature'
 import { BarlineLayout } from '@mushee/notation/model/layout/BarlineLayout'
+import { KeySignatureLayout } from '@mushee/notation/model/layout/KeySignatureLayout'
 import { KeySignatureWidth } from '@mushee/notation/model/layout/KeySignatureWidth'
 import { MeasureLayout, type MeasureLayoutContext } from '@mushee/notation/model/layout/MeasureLayout'
-import type { NoteWidth } from '@mushee/notation/model/layout/NoteWidth'
+import { type MeasureFlags, MeasureMetrics } from '@mushee/notation/model/layout/MeasureMetrics'
 import { Measure } from '@mushee/notation/model/Measure'
-import type { Note } from '@mushee/notation/model/Note'
 import { Score } from '@mushee/notation/model/Score'
 import { TimeSignature } from '@mushee/notation/model/TimeSignature'
 import { makeScore, pitched, rest, triplet } from '@mushee/notation/testing'
@@ -24,7 +23,6 @@ describe('MeasureLayout', () => {
         if (!m) throw new Error('expected firstMeasure')
         expect(m.layout.measureX).toBe(0)
         expect(m.layout.measureWidth).toBeGreaterThan(0)
-        expect(m.layout.rowIndex).toBe(0)
     })
 
     it('positions notes left to right in measure-relative coordinates', () => {
@@ -49,18 +47,18 @@ describe('MeasureLayout', () => {
             if (!m) throw new Error('expected firstMeasure')
             score.setKeySignature(m.firstNote, 2)
             const layout = m.layout
-            const keyWidth = new KeySignatureWidth(m.keySignature.drawnAccidentals).total
+            const keyWidth = new KeySignatureWidth(KeySignatureLayout.drawnAccidentalsFor(m.keySignature)).total
             expect(layout.getXForElement(m.clef)).toBe(0)
             expect(layout.getXForElement(m.keySignature)).toBe(m.clef.layout.width.total)
             expect(layout.getXForElement(m.timeSignature)).toBe(m.clef.layout.width.total + keyWidth)
         })
 
-        it('skips a C-major key signature even when the shows-flag is set', () => {
+        it('does not show a C-major key signature with nothing to cancel, even at the score start', () => {
             const score = makeScore(1)
             const m = score.firstMeasure
             if (!m) throw new Error('expected firstMeasure')
-            expect(m.layout.showsKeySignature).toBe(true)
-            expect(m.keySignature.drawnAccidentals).toHaveLength(0)
+            expect(KeySignatureLayout.drawnAccidentalsFor(m.keySignature)).toHaveLength(0)
+            expect(m.layout.showsKeySignature).toBe(false)
             // Nothing is drawn, so the key occupies no slot.
             expect(() => m.layout.getXForElement(m.keySignature)).toThrow('Element not spaced in measure')
             // The time signature follows the clef directly.
@@ -342,6 +340,23 @@ describe('MeasureLayout', () => {
             expect(() => m.layout.tupletLayoutFor(strangerTuplet)).toThrow('Tuplet not part of this measure layout')
         })
 
+        it('stemFor/stemDirFor give a beamed note its beam’s stem and direction, others their own', () => {
+            const { m } = registeredMeasure()
+            // Three C4 sixteenths and a C6 beam stems-up (average line); C6 alone would stem down. The quarter is unbeamed.
+            m.addNotes([pitched('C', 4, '16'), pitched('C', 4, '16'), pitched('C', 4, '16'), pitched('C', 6, '16'), pitched('C', 6, 'q')])
+            const layout = m.layout
+            const [low, , , high, quarter] = m.notes
+            const beam = layout.beamFor(high)
+            if (!beam) throw new Error('expected a beam')
+            expect(high.stemDir).toBe('down')
+            expect(layout.stemDirFor(high)).toBe('up')
+            expect(layout.stemFor(high)).toBe(beam.getStem(high))
+            expect(layout.stemFor(low)).toBe(beam.getStem(low))
+            expect(layout.stemDirFor(quarter)).toBe('down')
+            expect(layout.stemFor(quarter)).toBe(layout.noteLayoutFor(quarter).stem)
+            expect(() => layout.stemFor(pitched('C', 4, 'q'))).toThrow('Note not part of this measure layout')
+        })
+
         it('beamFor maps beamed notes to their beam and others to undefined', () => {
             const { m } = registeredMeasure()
             m.addNotes([pitched('C', 4, '8'), pitched('C', 4, '8'), pitched('C', 4, 'q')])
@@ -354,30 +369,29 @@ describe('MeasureLayout', () => {
     })
 
     describe('explicit-context guards (direct construction)', () => {
-        function bareContext(): MeasureLayoutContext {
+        /** A context whose metrics were measured for `measuredFor` — not necessarily the measure being laid out. */
+        function contextFrom(measuredFor: Measure, flags?: Partial<MeasureFlags>): MeasureLayoutContext {
             return {
+                metrics: new MeasureMetrics(measuredFor, undefined),
                 x: 0,
                 width: 300,
-                rowIndex: 0,
-                showsClef: false,
-                showsKeySignature: false,
-                showsTimeSignature: false,
-                noteWidths: new Map<Note, NoteWidth>(),
-                keyWidths: new Map<KeySignature, KeySignatureWidth>(),
-                reuseSignature: 'direct-test',
+                flags: { showsClef: false, showsKeySignature: false, showsTimeSignature: false, ...flags },
             }
         }
 
-        it('throws when a note width is missing from the context', () => {
+        it('throws when the metrics carry no width for one of its notes', () => {
             const m = new Measure(new Score(), 'treble', new TimeSignature(4, 4))
             m.addNotes([rest('q')])
-            expect(() => new MeasureLayout(m, bareContext())).toThrow('Note width missing from layout context')
+            const other = new Measure(new Score(), 'treble', new TimeSignature(4, 4))
+            expect(() => new MeasureLayout(m, contextFrom(other))).toThrow('Note width missing from measure metrics')
         })
 
-        it('throws when a drawn key signature width is missing from the context', () => {
+        it('throws when the metrics carry no width for its drawn leading key', () => {
             const m = new Measure(new Score(), 'treble', new TimeSignature(4, 4), { keyFifths: 1 })
-            const context = { ...bareContext(), showsKeySignature: true }
-            expect(() => new MeasureLayout(m, context)).toThrow('Key signature width missing from layout context')
+            const other = new Measure(new Score(), 'treble', new TimeSignature(4, 4), { keyFifths: 1 })
+            expect(() => new MeasureLayout(m, contextFrom(other, { showsKeySignature: true }))).toThrow(
+                'Key signature width missing from measure metrics',
+            )
         })
     })
 })

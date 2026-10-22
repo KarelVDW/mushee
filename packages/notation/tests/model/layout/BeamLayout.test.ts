@@ -42,11 +42,11 @@ describe('BeamLayout', () => {
         const { measure, beam } = beamFrom([pitched('C', 4, '8'), pitched('C', 4, '8')])
         const { primary } = beam
 
-        const first = beam.firstNote
-        const last = beam.lastNote
+        const first = beam.notes[0]
+        const last = beam.notes.at(-1)
+        if (!last) throw new Error('expected a beamed note')
         const firstStem = first.layout.getStem(beam.stemDir)
         const lastStem = last.layout.getStem(beam.stemDir)
-        if (!firstStem || !lastStem) throw new Error('expected stems')
 
         const expectedX1 = measure.layout.getXForElement(first) + firstStem.x
         const expectedX2 = measure.layout.getXForElement(last) + lastStem.x
@@ -74,12 +74,13 @@ describe('BeamLayout', () => {
     })
 
     it('clamps a steep pitch jump to the maximum beam slope', () => {
-        // An extreme jump (C4 → C6, both up-stemmable region) would over-tilt without clamping.
-        const { beam } = beamFrom([pitched('C', 4, '8'), pitched('B', 4, '8')])
+        // C4 → G5 still beams stems-up, and even its halved contour is steeper than
+        // BEAM_MAX_SLOPE — so this exercises the clamp branch: the beam lies at exactly the cap.
+        const { beam } = beamFrom([pitched('C', 4, '8'), pitched('G', 5, '8')])
+        expect(beam.stemDir).toBe('up')
         const { primary } = beam
-        const dx = primary.x2 - primary.x1
-        const slope = Math.abs((primary.y2 - primary.y1) / dx)
-        expect(slope).toBeLessThanOrEqual(BEAM_MAX_SLOPE + 1e-9)
+        const slope = (primary.y2 - primary.y1) / (primary.x2 - primary.x1)
+        expect(Math.abs(slope)).toBeCloseTo(BEAM_MAX_SLOPE)
     })
 
     it('getStem returns repositioned stems whose y2 lies on the beam line', () => {
@@ -93,7 +94,6 @@ describe('BeamLayout', () => {
             // The repositioned stem tip sits exactly on the primary beam line. The stored
             // stem.x is note-relative, so reconstruct the absolute beam x to evaluate the line.
             const original = n.layout.getStem(beam.stemDir)
-            if (!original) throw new Error('expected original stem')
             const absStemX = measure.layout.getXForElement(n) + original.x
             const expectedY = primary.y1 + (absStemX - primary.x1) * slope
             expect(stem.y2).toBeCloseTo(expectedY)
@@ -116,7 +116,6 @@ describe('BeamLayout', () => {
 
         for (const n of beam.notes) {
             const original = n.layout.getStem('up')
-            if (!original) throw new Error('expected stem')
             const stemX = measure.layout.getXForElement(n) + original.x
             const beamY = primary.y1 + (stemX - primary.x1) * slope
             // Up-stems point upward (smaller y). The beam must sit at or above every stem tip.
@@ -134,7 +133,6 @@ describe('BeamLayout', () => {
 
         for (const n of beam.notes) {
             const original = n.layout.getStem('down')
-            if (!original) throw new Error('expected stem')
             const stemX = measure.layout.getXForElement(n) + original.x
             const beamY = primary.y1 + (stemX - primary.x1) * slope
             // Down-stems point downward (larger y). The beam must sit at or below every stem tip.
@@ -216,7 +214,6 @@ describe('BeamLayout', () => {
             const n1 = beam.notes[1]
             const s0 = n0.layout.getStem(beam.stemDir)
             const s1 = n1.layout.getStem(beam.stemDir)
-            if (!s0 || !s1) throw new Error('expected stems')
             const x0 = measure.layout.getXForElement(n0) + s0.x
             const x1 = measure.layout.getXForElement(n1) + s1.x
             // Full segment spans the two sixteenth stems, not a fixed partial length.

@@ -7,20 +7,24 @@ import { Note } from '../Note'
 import type { Tempo } from '../Tempo'
 import type { TimeSignature } from '../TimeSignature'
 import type { Tuplet } from '../Tuplet'
+import type { StemDirection } from '../types'
 import { BarlineLayout } from './BarlineLayout'
 import { BeamFinder } from './BeamFinder'
 import { BeamLayout } from './BeamLayout'
 import { KeySignatureLayout } from './KeySignatureLayout'
-import type { KeySignatureWidth } from './KeySignatureWidth'
+import type { MeasureFlags, MeasureMetrics } from './MeasureMetrics'
 import { NoteLayout } from './NoteLayout'
-import type { NoteWidth } from './NoteWidth'
 import type { PhysicalWidth } from './PhysicalWidth'
 import { Resizer, type Sizeable } from './Resizer'
 import { TempoLayout } from './TempoLayout'
 import { TupletLayout } from './TupletLayout'
+import type { LayoutStem } from './types'
 
 /** An element that occupies horizontal space within a measure. */
-export type MeasureElement = Clef | KeySignature | TimeSignature | Note
+type MeasureElement = Clef | KeySignature | TimeSignature | Note
+
+/** A note's share of the measure, with the mid-measure clefs/keys that ride along at its end. */
+type NoteSlot = Sizeable & { element: Note; children: Array<Clef | KeySignature> }
 
 /** A drawn clef, key signature or time signature: its measure-local x and the width it occupies. */
 export interface MeasureAttribute {
@@ -30,19 +34,13 @@ export interface MeasureAttribute {
 }
 
 export interface MeasureLayoutContext {
+    /** The measure's widths and drawn forms, derived once per rebuild. */
+    metrics: MeasureMetrics
     /** x of this measure within its row (row-local). */
     x: number
     width: number
-    rowIndex: number
-    showsClef: boolean
-    showsKeySignature: boolean
-    showsTimeSignature: boolean
-    /** Width per note, carrying its drawn accidental (resolved by DisplayedAccidentals). */
-    noteWidths: Map<Note, NoteWidth>
-    /** Contextual width per drawn key signature (leading + mid-measure). */
-    keyWidths: Map<KeySignature, KeySignatureWidth>
-    /** Input signature for reuse comparison across ScoreLayout rebuilds. */
-    reuseSignature: string
+    /** Which leading attributes this measure is asked to show (diff-based, plus row-start forcing). */
+    flags: MeasureFlags
 }
 
 /**
@@ -54,15 +52,16 @@ export class MeasureLayout {
     readonly id = crypto.randomUUID()
     readonly measureX: number
     readonly measureWidth: number
-    readonly rowIndex: number
     readonly showsClef: boolean
+    /** The leading key is drawn: its flag is set (changed, or a row start) and it has something to draw — C major with nothing to cancel draws nothing. */
     readonly showsKeySignature: boolean
     readonly showsTimeSignature: boolean
     readonly barline: BarlineLayout | null
     /** Every attribute glyph drawn in this measure, left to right: the leading run, then mid-measure changes. */
     readonly attributes: ReadonlyArray<MeasureAttribute>
     readonly beams: BeamLayout[]
-    readonly reuseSignature: string
+    /** Input signature — ScoreLayout reuses the previous instance when it is unchanged. */
+    readonly signature: string
 
     private readonly _xMap = new Map<MeasureElement, { x: number; allottedWidth: number }>()
     private readonly _noteLayouts = new Map<Note, NoteLayout>()
@@ -70,6 +69,7 @@ export class MeasureLayout {
     private readonly _tupletLayouts = new Map<Tuplet, TupletLayout>()
     private readonly _tempoLayouts = new Map<Tempo, TempoLayout>()
     private readonly _beamByNote = new Map<Note, BeamLayout>()
+    private readonly _effectiveStems = new Map<Note, { stem: LayoutStem | undefined; dir: StemDirection }>()
 
     constructor(
         readonly measure: Measure,
@@ -77,90 +77,21 @@ export class MeasureLayout {
     ) {
         this.measureX = context.x
         this.measureWidth = context.width
-        this.rowIndex = context.rowIndex
-        this.showsClef = context.showsClef
-        this.showsKeySignature = context.showsKeySignature
-        this.showsTimeSignature = context.showsTimeSignature
-        this.reuseSignature = context.reuseSignature
+        const { metrics, flags } = context
+        this.showsClef = flags.showsClef
+        this.showsKeySignature = flags.showsKeySignature && metrics.leadingKeyAccidentals.length > 0
+        this.showsTimeSignature = flags.showsTimeSignature
+        this.signature = MeasureLayout.signatureFor(measure, context)
 
         const widthOf = (el: MeasureElement): PhysicalWidth => {
-            if (el instanceof KeySignature) {
-                const width = context.keyWidths.get(el)
-                if (!width) throw new Error('Key signature width missing from layout context')
-                return width
-            }
-            if (el instanceof Note) {
-                const width = context.noteWidths.get(el)
-                if (!width) throw new Error('Note width missing from layout context')
-                return width
-            }
+            if (el instanceof KeySignature) return metrics.keyWidthOf(el)
+            if (el instanceof Note) return metrics.noteWidthOf(el)
             // Clefs and time signatures are context-free: their width rides on their shared layout.
             return el.layout.width
         }
 
-        // --- Element order: leading context, then notes merged with mid-measure changes by beat
-        // (at equal beats: clefs before keys before the note). ---
-        const leading: Array<Clef | KeySignature | TimeSignature> = []
-        if (context.showsClef) leading.push(measure.clef)
-        if (context.showsKeySignature && measure.keySignature.drawnAccidentals.length > 0) leading.push(measure.keySignature)
-        if (context.showsTimeSignature) leading.push(measure.timeSignature)
-
-        const mids: Array<{ el: Clef | KeySignature; beat: number; precedence: number }> = [
-            ...measure.midMeasureClefs.map((clef) => ({ el: clef, beat: clef.beatPosition, precedence: 0 })),
-            ...measure.midMeasureKeySignatures.map((key) => ({ el: key, beat: key.beatPosition, precedence: 1 })),
-        ].sort((a, b) => a.beat - b.beat || a.precedence - b.precedence)
-
-        // --- Spacing: leading elements take their natural width; notes share the remaining
-        // width proportionally to their beats; mid-measure elements ride along as zero-allotted
-        // children of the preceding note (notes shift to make room via the minimum). ---
-        const totalBeats = sumBy(measure.notes, (n) => n.duration.effectiveBeats)
-        const contentWidth = context.width - BarlineLayout.widthOf(measure.endBarline) - sumBy(leading, (el) => widthOf(el).total)
-        const widthByBeat = contentWidth / totalBeats
-
-        const sizeables: Array<Sizeable & { element: Note; children: Array<Clef | KeySignature> }> = []
-        let mi = 0
-        for (const note of measure.notes) {
-            const noteBeat = measure.beatOffsetOf(note)
-            while (mi < mids.length && mids[mi].beat <= noteBeat) {
-                this.foldIntoPrevious(sizeables, leading, mids[mi].el, widthOf)
-                mi++
-            }
-            sizeables.push({
-                default: note.duration.effectiveBeats * widthByBeat,
-                minimum: widthOf(note).total,
-                element: note,
-                children: [],
-            })
-        }
-        while (mi < mids.length) {
-            this.foldIntoPrevious(sizeables, leading, mids[mi].el, widthOf)
-            mi++
-        }
-
-        const resizer = new Resizer(sizeables)
-
-        const attributes: MeasureAttribute[] = []
-        let cursorX = 0
-        for (const el of leading) {
-            this._xMap.set(el, { x: cursorX, allottedWidth: widthOf(el).total })
-            attributes.push({ element: el, x: cursorX, width: widthOf(el).total })
-            cursorX += widthOf(el).total
-        }
-        for (const el of sizeables) {
-            const allottedWidth = resizer.getSize(el)
-            this._xMap.set(el.element, { x: cursorX, allottedWidth })
-            cursorX += allottedWidth
-            if (el.children.length) {
-                const totalChildWidth = sumBy(el.children, (child) => widthOf(child).total)
-                cursorX -= totalChildWidth
-                for (const child of el.children) {
-                    this._xMap.set(child, { x: cursorX, allottedWidth: 0 })
-                    attributes.push({ element: child, x: cursorX, width: widthOf(child).total })
-                    cursorX += widthOf(child).total
-                }
-            }
-        }
-        this.attributes = attributes
+        // --- Spacing: every element's x and allotted width ---
+        this.attributes = this.spaceElements(measure, context, widthOf)
 
         // --- Barline geometry ---
         const barlineType = measure.endBarline ?? 'single'
@@ -168,25 +99,40 @@ export class MeasureLayout {
 
         // --- Note layouts ---
         for (const note of measure.notes) {
-            this._noteLayouts.set(note, new NoteLayout(note, { line: note.line, width: widthOf(note) as NoteWidth }))
+            this._noteLayouts.set(note, new NoteLayout(note, { line: note.line, width: metrics.noteWidthOf(note) }))
         }
 
         // --- Key signature layouts (leading + mid-measure) ---
-        for (const [key, width] of context.keyWidths) {
+        for (const [key, width] of metrics.keyWidths) {
             const clef = measure.clefAtOrBefore(key.beatPosition)
             this._keyLayouts.set(key, new KeySignatureLayout({ clef, width }))
         }
 
         // --- Beams ---
-        const beamContext = { xOf: (note: Note) => this.getXForElement(note), layoutOf: (note: Note) => this.noteLayoutFor(note) }
-        this.beams = new BeamFinder(measure).groups.map((group) => new BeamLayout(group, beamContext))
+        const memberContext = { xOf: (note: Note) => this.getXForElement(note), layoutOf: (note: Note) => this.noteLayoutFor(note) }
+        this.beams = new BeamFinder(measure).groups.map((group) => new BeamLayout(group, memberContext))
         for (const beam of this.beams) {
             for (const note of beam.notes) this._beamByNote.set(note, beam)
         }
 
+        // --- Effective stems: a beam repositions its members' stems and decides their direction ---
+        for (const note of measure.notes) {
+            const beam = this._beamByNote.get(note)
+            this._effectiveStems.set(
+                note,
+                beam ? { stem: beam.getStem(note), dir: beam.stemDir } : { stem: this.noteLayoutFor(note).stem, dir: note.stemDir },
+            )
+        }
+
         // --- Tuplet layouts ---
+        const tupletContext = {
+            ...memberContext,
+            stemOf: (note: Note) => this.stemFor(note),
+            stemDirOf: (note: Note) => this.stemDirFor(note),
+            beamOf: (note: Note) => this.beamFor(note),
+        }
         for (const tuplet of measure.tuplets) {
-            this._tupletLayouts.set(tuplet, new TupletLayout(tuplet, beamContext))
+            this._tupletLayouts.set(tuplet, new TupletLayout(tuplet, tupletContext))
         }
 
         // --- Tempo markings, at their beat ---
@@ -195,32 +141,113 @@ export class MeasureLayout {
         }
     }
 
-    /** A mid-measure clef/key rides along as a zero-allotted child of the preceding note (or joins the leading run when no note precedes it). */
-    private foldIntoPrevious(
-        sizeables: Array<Sizeable & { element: Note; children: Array<Clef | KeySignature> }>,
-        leading: Array<Clef | KeySignature | TimeSignature>,
-        el: Clef | KeySignature,
+    /**
+     * Everything a measure's geometry depends on: its content (the measure's version), its slot in
+     * the row, its flags, and the leading key's drawn form — the one input that depends on the
+     * previous measure (a switch to C major draws the preceding key's naturals).
+     */
+    static signatureFor(measure: Measure, context: MeasureLayoutContext): string {
+        const { flags } = context
+        return [
+            measure.version,
+            context.x,
+            context.width,
+            flags.showsClef,
+            flags.showsKeySignature,
+            flags.showsTimeSignature,
+            context.metrics.leadingKeyAccidentals.map((a) => `${a.glyphName}${a.name}${a.octave}`).join(','),
+        ].join('|')
+    }
+
+    /**
+     * Orders the measure's elements and records each one's x and allotted width: the leading
+     * attributes first, at their natural width, then the notes merged with mid-measure changes
+     * by beat (at equal beats: clefs before keys before the note). Notes share the remaining
+     * width in proportion to their beats; a mid-measure clef/key rides along as a zero-allotted
+     * child of the preceding note, whose minimum grows to make room. Returns the drawn
+     * attributes, left to right.
+     */
+    private spaceElements(
+        measure: Measure,
+        context: MeasureLayoutContext,
         widthOf: (el: MeasureElement) => PhysicalWidth,
-    ) {
-        const lastSizeable = sizeables[sizeables.length - 1]
-        if (lastSizeable) {
-            lastSizeable.minimum += widthOf(el).total
-            lastSizeable.children.push(el)
-        } else {
-            leading.push(el)
+    ): MeasureAttribute[] {
+        const leading: Array<Clef | KeySignature | TimeSignature> = []
+        if (this.showsClef) leading.push(measure.clef)
+        if (this.showsKeySignature) leading.push(measure.keySignature)
+        if (this.showsTimeSignature) leading.push(measure.timeSignature)
+
+        const mids: Array<{ el: Clef | KeySignature; beat: number; precedence: number }> = [
+            ...measure.midMeasureClefs.map((clef) => ({ el: clef, beat: clef.beatPosition, precedence: 0 })),
+            ...measure.midMeasureKeySignatures.map((key) => ({ el: key, beat: key.beatPosition, precedence: 1 })),
+        ].sort((a, b) => a.beat - b.beat || a.precedence - b.precedence)
+
+        const totalBeats = sumBy(measure.notes, (n) => n.duration.effectiveBeats)
+        const contentWidth = context.width - BarlineLayout.widthOf(measure.endBarline) - sumBy(leading, (el) => widthOf(el).total)
+        const widthByBeat = contentWidth / totalBeats
+
+        const slots: NoteSlot[] = []
+        /** A mid-measure clef/key rides along as a zero-allotted child of the preceding note (or joins the leading run when no note precedes it). */
+        const foldIntoPrevious = (el: Clef | KeySignature) => {
+            const previousSlot = slots.at(-1)
+            if (previousSlot) {
+                previousSlot.minimum += widthOf(el).total
+                previousSlot.children.push(el)
+            } else {
+                leading.push(el)
+            }
         }
+        let mi = 0
+        for (const note of measure.notes) {
+            const noteBeat = measure.beatOffsetOf(note)
+            while (mi < mids.length && mids[mi].beat <= noteBeat) {
+                foldIntoPrevious(mids[mi].el)
+                mi++
+            }
+            slots.push({ default: note.duration.effectiveBeats * widthByBeat, minimum: widthOf(note).total, element: note, children: [] })
+        }
+        while (mi < mids.length) {
+            foldIntoPrevious(mids[mi].el)
+            mi++
+        }
+
+        const resizer = new Resizer(slots)
+        const attributes: MeasureAttribute[] = []
+        let cursorX = 0
+        for (const el of leading) {
+            this._xMap.set(el, { x: cursorX, allottedWidth: widthOf(el).total })
+            attributes.push({ element: el, x: cursorX, width: widthOf(el).total })
+            cursorX += widthOf(el).total
+        }
+        for (const slot of slots) {
+            const allottedWidth = resizer.getSize(slot)
+            this._xMap.set(slot.element, { x: cursorX, allottedWidth })
+            cursorX += allottedWidth
+            if (slot.children.length) {
+                const totalChildWidth = sumBy(slot.children, (child) => widthOf(child).total)
+                cursorX -= totalChildWidth
+                for (const child of slot.children) {
+                    this._xMap.set(child, { x: cursorX, allottedWidth: 0 })
+                    attributes.push({ element: child, x: cursorX, width: widthOf(child).total })
+                    cursorX += widthOf(child).total
+                }
+            }
+        }
+        return attributes
+    }
+
+    private spacingOf(el: MeasureElement): { x: number; allottedWidth: number } {
+        const spacing = this._xMap.get(el)
+        if (!spacing) throw new Error('Element not spaced in measure')
+        return spacing
     }
 
     getXForElement(el: MeasureElement): number {
-        const spacing = this._xMap.get(el)
-        if (!spacing) throw new Error('Element not spaced in measure')
-        return spacing.x
+        return this.spacingOf(el).x
     }
 
     getAllottedWidth(el: MeasureElement): number {
-        const spacing = this._xMap.get(el)
-        if (!spacing) throw new Error('Element not spaced in measure')
-        return spacing.allottedWidth
+        return this.spacingOf(el).allottedWidth
     }
 
     getNoteForX(x: number): Note | null {
@@ -234,12 +261,11 @@ export class MeasureLayout {
     }
 
     getXForBeat(beat: number): number {
-        const overshootIndex = this.measure.notes.findIndex((el) => this.measure.beatOffsetOf(el) > beat)
-        const note = overshootIndex === -1 ? this.measure.notes.at(-1) : this.measure.notes[overshootIndex - 1] || this.measure.firstNote
+        const notes = this.measure.notes
+        const overshootIndex = notes.findIndex((el) => this.measure.beatOffsetOf(el) > beat)
+        const note = overshootIndex === -1 ? notes.at(-1) : overshootIndex === 0 ? this.measure.firstNote : notes[overshootIndex - 1]
         if (!note) return 0
-        const spacing = this._xMap.get(note)
-        /* v8 ignore next -- defensive: every note is spaced at construction */
-        if (!spacing) throw new Error('Note not spaced in measure')
+        const spacing = this.spacingOf(note)
         return spacing.x + (spacing.allottedWidth * (beat - this.measure.beatOffsetOf(note))) / note.duration.effectiveBeats
     }
 
@@ -269,5 +295,21 @@ export class MeasureLayout {
 
     beamFor(note: Note): BeamLayout | undefined {
         return this._beamByNote.get(note)
+    }
+
+    /** The stem `note` is drawn with: its beam's repositioned stem, else its own (undefined for rests and whole notes). */
+    stemFor(note: Note): LayoutStem | undefined {
+        return this.effectiveStemOf(note).stem
+    }
+
+    /** The direction `note`'s stem points: its beam's shared direction, else its own. */
+    stemDirFor(note: Note): StemDirection {
+        return this.effectiveStemOf(note).dir
+    }
+
+    private effectiveStemOf(note: Note): { stem: LayoutStem | undefined; dir: StemDirection } {
+        const effective = this._effectiveStems.get(note)
+        if (!effective) throw new Error('Note not part of this measure layout')
+        return effective
     }
 }

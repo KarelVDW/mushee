@@ -14,7 +14,7 @@ import { generateScore, Rng } from '../../support/scoreGenerator'
  */
 
 /** Model references reachable from layout objects — recursing into them would walk the whole score. */
-const MODEL_REFS = new Set(['measure', 'note', 'nextNote', 'notes', 'score', 'element', 'measures', 'tuplet', 'key', 'clef'])
+const MODEL_REFS = new Set(['measure', 'measures', 'note', 'notes', 'element'])
 
 function walk(value: unknown, path: string, seen: Set<object>, problems: string[]) {
     if (typeof value === 'number') {

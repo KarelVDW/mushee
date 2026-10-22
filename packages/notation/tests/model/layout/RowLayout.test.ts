@@ -43,6 +43,11 @@ describe('RowLayout', () => {
         expect(row.width).toBe(SCORE_WIDTH - MEASURE_BUTTON_SPACING)
     })
 
+    it('availableWidth reserves the measure-button spacing on the last row only', () => {
+        expect(RowLayout.availableWidth(SCORE_WIDTH, false)).toBe(SCORE_WIDTH)
+        expect(RowLayout.availableWidth(SCORE_WIDTH, true)).toBe(SCORE_WIDTH - MEASURE_BUTTON_SPACING)
+    })
+
     it('an incomplete last row (≤2 measures) keeps natural widths instead of stretching', () => {
         const score = makeScore(1)
         const row = score.layout.rows[0]
@@ -108,38 +113,40 @@ describe('RowLayout', () => {
         expect(row.getMeasureWidth(m)).toBeCloseTo((SCORE_WIDTH - MEASURE_BUTTON_SPACING) / MAX_MEASURES_PER_ROW)
     })
 
-    describe('matches (reuse check across ScoreLayout rebuilds)', () => {
+    describe('signatureFor (reuse check across ScoreLayout rebuilds)', () => {
         const a = bareMeasure()
         const b = bareMeasure()
         const ctx = context([a, b], [200, 250])
         const row = new RowLayout(ctx)
+        const same = (other: RowLayoutContext) => RowLayout.signatureFor(other) === row.signature
 
-        it('matches an identical context', () => {
-            expect(row.matches(context([a, b], [200, 250]))).toBe(true)
+        it('is the signature of the context the row was built from', () => {
+            expect(row.signature).toBe(RowLayout.signatureFor(ctx))
+            expect(same(context([a, b], [200, 250]))).toBe(true)
         })
 
-        it('rejects a different row index', () => {
-            expect(row.matches(context([a, b], [200, 250], { index: 1 }))).toBe(false)
+        it('differs for a different row index', () => {
+            expect(same(context([a, b], [200, 250], { index: 1 }))).toBe(false)
         })
 
-        it('rejects a flipped isLastRow', () => {
-            expect(row.matches(context([a, b], [200, 250], { isLastRow: false }))).toBe(false)
+        it('differs for a flipped isLastRow', () => {
+            expect(same(context([a, b], [200, 250], { isLastRow: false }))).toBe(false)
         })
 
-        it('rejects a different measure count', () => {
-            expect(row.matches(context([a], [200]))).toBe(false)
+        it('differs for a different measure count', () => {
+            expect(same(context([a], [200]))).toBe(false)
         })
 
-        it('rejects different measure identities', () => {
-            expect(row.matches(context([a, bareMeasure()], [200, 250]))).toBe(false)
+        it('differs for different measure identities', () => {
+            expect(same(context([a, bareMeasure()], [200, 250]))).toBe(false)
         })
 
-        it('rejects a changed minimal width', () => {
-            expect(row.matches(context([a, b], [200, 300]))).toBe(false)
+        it('differs for a changed minimal width', () => {
+            expect(same(context([a, b], [200, 300]))).toBe(false)
         })
 
-        it('rejects a changed score width (responsive reflow)', () => {
-            expect(row.matches(context([a, b], [200, 250], { scoreWidth: 500 }))).toBe(false)
+        it('differs for a changed score width (responsive reflow)', () => {
+            expect(same(context([a, b], [200, 250], { scoreWidth: 500 }))).toBe(false)
         })
     })
 })

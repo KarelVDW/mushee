@@ -28,11 +28,8 @@ const tripletSixteenth = () =>
         pitch: new Pitch({ name: 'C', octave: 4 }),
     })
 
-/** Force every row's geometry to resolve; throws if any Resizer overflows. */
-function layOutAllRows(score: Score) {
-    for (const row of score.layout.rows) void row.width
-    for (const m of score.measures) void m.layout.barline
-}
+/** Lay the score out: the ScoreLayout constructor is where a ResizeError would throw. */
+const layOut = (score: Score) => score.layout
 
 describe('ResizeError regressions', () => {
     describe('row-level overflow', () => {
@@ -42,7 +39,7 @@ describe('ResizeError regressions', () => {
             const notes: Note[] = []
             for (let i = 0; i < 16; i++) notes.push(pitched('C', 4, '16'))
             m.addNotes(notes)
-            expect(() => layOutAllRows(score)).not.toThrow()
+            expect(() => layOut(score)).not.toThrow()
         })
 
         it('does not throw with 4 measures of 16 sixteenths each (max-density row)', () => {
@@ -53,7 +50,7 @@ describe('ResizeError regressions', () => {
                 for (let j = 0; j < 16; j++) notes.push(pitched('C', 4, '16'))
                 m.addNotes(notes)
             }
-            expect(() => layOutAllRows(score)).not.toThrow()
+            expect(() => layOut(score)).not.toThrow()
         })
 
         it('does not throw with sixteenths + accidentals (wider notes)', () => {
@@ -64,7 +61,7 @@ describe('ResizeError regressions', () => {
                 for (let j = 0; j < 16; j++) notes.push(sixteenthSharp())
                 m.addNotes(notes)
             }
-            expect(() => layOutAllRows(score)).not.toThrow()
+            expect(() => layOut(score)).not.toThrow()
         })
 
         it('does not throw when a triplet packs more sixteenths into a beat', () => {
@@ -74,7 +71,7 @@ describe('ResizeError regressions', () => {
             const notes: Note[] = []
             for (let i = 0; i < 24; i++) notes.push(tripletSixteenth())
             m.addNotes(notes)
-            expect(() => layOutAllRows(score)).not.toThrow()
+            expect(() => layOut(score)).not.toThrow()
         })
 
         it('handles a measure whose width approaches SCORE_WIDTH (alone on its row)', () => {
@@ -84,7 +81,7 @@ describe('ResizeError regressions', () => {
             const row = score.layout.rowFor(m)
             expect(row.measures).toEqual([m])
             expect(row.width).toBeLessThanOrEqual(SCORE_WIDTH)
-            expect(() => layOutAllRows(score)).not.toThrow()
+            expect(() => layOut(score)).not.toThrow()
         })
     })
 
@@ -102,7 +99,7 @@ describe('ResizeError regressions', () => {
                 m.addNotes(notes)
             }
             expect(score.layout.rows.length).toBeGreaterThan(1)
-            expect(() => layOutAllRows(score)).not.toThrow()
+            expect(() => layOut(score)).not.toThrow()
         })
     })
 
@@ -123,7 +120,7 @@ describe('ResizeError regressions', () => {
             const replacements: Note[] = []
             for (let i = 0; i < 4; i++) replacements.push(sixteenthSharp())
             m.replaceNotes([target], replacements)
-            expect(() => layOutAllRows(score)).not.toThrow()
+            expect(() => layOut(score)).not.toThrow()
         })
 
         it('removing every note still lays out (empty-measure path)', () => {
@@ -132,9 +129,9 @@ describe('ResizeError regressions', () => {
             const dense: Note[] = []
             for (let i = 0; i < 16; i++) dense.push(sixteenthSharp())
             m.addNotes(dense)
-            expect(() => layOutAllRows(score)).not.toThrow()
+            expect(() => layOut(score)).not.toThrow()
             m.removeNotes(dense)
-            expect(() => layOutAllRows(score)).not.toThrow()
+            expect(() => layOut(score)).not.toThrow()
         })
 
         it('toggling endBarline re-packs without breaking layout', () => {
@@ -142,7 +139,7 @@ describe('ResizeError regressions', () => {
             const m = score.addMeasure()
             for (let i = 0; i < 12; i++) m.addNotes([sixteenthSharp()])
             m.setEndBarline('end')
-            expect(() => layOutAllRows(score)).not.toThrow()
+            expect(() => layOut(score)).not.toThrow()
         })
     })
 
@@ -151,7 +148,7 @@ describe('ResizeError regressions', () => {
             const score = new Score()
             for (let i = 0; i < 5; i++) score.addMeasure().complete()
             score.removeLastMeasure()
-            expect(() => layOutAllRows(score)).not.toThrow()
+            expect(() => layOut(score)).not.toThrow()
         })
 
         it('Score.replace across measure boundaries does not throw', () => {
@@ -163,7 +160,7 @@ describe('ResizeError regressions', () => {
             if (!target) throw new Error('expected firstNote')
             const longNote = new Note({ duration: new Duration({ type: 'w' }) })
             expect(() => score.replace([target], [longNote])).not.toThrow()
-            expect(() => layOutAllRows(score)).not.toThrow()
+            expect(() => layOut(score)).not.toThrow()
         })
 
         it('per-note insertion still re-packs correctly (regression)', () => {
@@ -173,7 +170,7 @@ describe('ResizeError regressions', () => {
                 const m = score.addMeasure()
                 for (let j = 0; j < 16; j++) m.addNotes([sixteenthSharp()])
             }
-            expect(() => layOutAllRows(score)).not.toThrow()
+            expect(() => layOut(score)).not.toThrow()
         })
 
         it('5 dense measures lay out without throwing (minimal repro of fixed bug)', () => {
@@ -182,7 +179,7 @@ describe('ResizeError regressions', () => {
                 const m = score.addMeasure()
                 for (let j = 0; j < 16; j++) m.addNotes([sixteenthSharp()])
             }
-            expect(() => layOutAllRows(score)).not.toThrow()
+            expect(() => layOut(score)).not.toThrow()
         })
 
         it('densified measures end up split across rows within the score width', () => {
@@ -209,7 +206,7 @@ describe('ResizeError regressions', () => {
             const m = score.addMeasure()
             for (let i = 0; i < 16; i++) m.addNotes([sixteenthSharp()])
             score.setLayoutWidth(340)
-            expect(() => layOutAllRows(score)).not.toThrow()
+            expect(() => layOut(score)).not.toThrow()
             for (const row of score.layout.rows) {
                 expect(row.width).toBeLessThanOrEqual(score.layout.scoreWidth)
             }
@@ -233,7 +230,7 @@ describe('ResizeError regressions', () => {
             for (let i = 0; i < 3; i++) score.addMeasure().complete()
             score.setLayoutWidth(340)
             expect(score.layout.scoreWidth).toBe(340)
-            expect(() => layOutAllRows(score)).not.toThrow()
+            expect(() => layOut(score)).not.toThrow()
         })
 
         it('an over-dense measure also lays out at full desktop width', () => {
@@ -250,7 +247,7 @@ describe('ResizeError regressions', () => {
                     }),
                 )
             m.addNotes(notes)
-            expect(() => layOutAllRows(score)).not.toThrow()
+            expect(() => layOut(score)).not.toThrow()
             for (const row of score.layout.rows) {
                 expect(row.width).toBeLessThanOrEqual(score.layout.scoreWidth)
             }
@@ -268,7 +265,7 @@ describe('ResizeError regressions', () => {
             for (let j = 0; j < 10; j++) m1.addNotes([sixteenthSharp()])
             const m2 = score.addMeasure()
             for (let j = 0; j < 16; j++) m2.addNotes([sixteenthSharp()])
-            expect(() => layOutAllRows(score)).not.toThrow()
+            expect(() => layOut(score)).not.toThrow()
         })
 
         it('three measures crossing the budget boundary lay out cleanly', () => {
@@ -277,7 +274,7 @@ describe('ResizeError regressions', () => {
                 const m = score.addMeasure()
                 for (let j = 0; j < 13; j++) m.addNotes([sixteenthSharp()])
             }
-            expect(() => layOutAllRows(score)).not.toThrow()
+            expect(() => layOut(score)).not.toThrow()
         })
 
         it('the last row never exceeds its button-reserving budget', () => {

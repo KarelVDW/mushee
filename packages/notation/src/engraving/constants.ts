@@ -39,6 +39,9 @@ export const NOTE_ELEMENT_GAP = 1
 /** Horizontal room reserved per augmentation dot */
 export const DOT_SPACING = 4
 
+/** Augmentation dot radius */
+export const DOT_RADIUS = 2
+
 /** Thin barline width in pixels */
 export const BARLINE_THIN_WIDTH = 1
 

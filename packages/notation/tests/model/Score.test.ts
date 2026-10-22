@@ -3,6 +3,7 @@ import { Duration } from '@mushee/notation/model/Duration'
 import { Instrument } from '@mushee/notation/model/Instrument'
 import { Interval } from '@mushee/notation/model/Interval'
 import { ScoreSerializer } from '@mushee/notation/model/io/ScoreSerializer'
+import { KeySignatureLayout } from '@mushee/notation/model/layout/KeySignatureLayout'
 import { Measure } from '@mushee/notation/model/Measure'
 import { Note } from '@mushee/notation/model/Note'
 import { Pitch } from '@mushee/notation/model/Pitch'
@@ -1175,7 +1176,7 @@ describe('Score', () => {
                 score.setKeySignature(score.measures[0].firstNote, 1) // G major (F♯)
                 score.setKeySignature(score.measures[1].firstNote, 0) // back to C major
                 const second = score.measures[1]
-                const drawn = second.keySignature.drawnAccidentals
+                const drawn = KeySignatureLayout.drawnAccidentalsFor(second.keySignature)
                 expect(drawn).toHaveLength(1)
                 expect(drawn[0].glyphName).toBe('accidentalNatural')
                 expect(drawn[0].name).toBe('F')
@@ -1188,14 +1189,18 @@ describe('Score', () => {
                 const score = makeScore(2)
                 score.setKeySignature(score.measures[0].firstNote, 2) // D major (F♯, C♯)
                 score.setKeySignature(score.measures[1].firstNote, 1) // G major (F♯)
-                const drawn = score.measures[1].keySignature.drawnAccidentals
+                const drawn = KeySignatureLayout.drawnAccidentalsFor(score.measures[1].keySignature)
                 expect(drawn.map((a) => [a.glyphName, a.name])).toEqual([['accidentalSharp', 'F']]) // just G major's F♯
             })
 
             it('draws no naturals when the key carries forward unchanged', () => {
                 const score = makeScore(2)
                 score.setKeySignature(score.measures[0].firstNote, 1) // G major, carries into measure 1
-                expect(score.measures[1].keySignature.drawnAccidentals.every((a) => a.glyphName !== 'accidentalNatural')).toBe(true)
+                expect(
+                    KeySignatureLayout.drawnAccidentalsFor(score.measures[1].keySignature).every(
+                        (a) => a.glyphName !== 'accidentalNatural',
+                    ),
+                ).toBe(true)
             })
 
             it('draws naturals for a mid-measure change back to C major', () => {
@@ -1206,7 +1211,7 @@ describe('Score', () => {
                 score.setKeySignature(m.noteAtBeat(2), 0) // mid-measure back to C
                 const midKey = m.keyAtBeat(2)
                 if (!midKey) throw new Error('expected mid-measure key')
-                expect(midKey.drawnAccidentals.map((a) => a.glyphName)).toEqual(['accidentalNatural'])
+                expect(KeySignatureLayout.drawnAccidentalsFor(midKey).map((a) => a.glyphName)).toEqual(['accidentalNatural'])
             })
 
             it('refreshes a later cancellation when an earlier key changes', () => {

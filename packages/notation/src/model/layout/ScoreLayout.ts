@@ -1,5 +1,3 @@
-import { sumBy } from 'lodash-es'
-
 import {
     MAX_MEASURES_PER_ROW,
     MEASURE_BUTTON_GAP,
@@ -8,50 +6,19 @@ import {
     MEASURE_BUTTON_SPACING,
     ROW_GAP,
     ROW_HEIGHT,
-    SCORE_WIDTH,
     TEMPO_MARKING_Y,
 } from '../../engraving/constants'
-import type { KeySignature } from '../KeySignature'
 import type { Measure } from '../Measure'
 import type { Note } from '../Note'
 import type { Score } from '../Score'
-import { BarlineLayout } from './BarlineLayout'
-import { DisplayedAccidentals } from './DisplayedAccidentals'
-import { KeySignatureWidth } from './KeySignatureWidth'
 import { MeasureLayout } from './MeasureLayout'
-import { NoteWidth } from './NoteWidth'
+import { type MeasureFlags, MeasureMetrics } from './MeasureMetrics'
 import { RowLayout } from './RowLayout'
-import { availableRowWidth } from './rowWidth'
 import { Staff } from './Staff'
 import { TieLayout, type TieLayoutContext, type TieSegment } from './TieLayout'
 
 /** Packing converges in one or two passes in practice; the cap only guards pathological oscillation. */
 const MAX_PACKING_ITERATIONS = 10
-
-/** A measure narrower than this is padded up — prevents unusably cramped bars. */
-function absoluteMinimumWidth(scoreWidth: number): number {
-    return scoreWidth / (MAX_MEASURES_PER_ROW + 1)
-}
-
-interface MeasureFlags {
-    showsClef: boolean
-    showsKeySignature: boolean
-    showsTimeSignature: boolean
-}
-
-/** Per-measure layout inputs derived once per rebuild from the semantic model. */
-interface MeasurePlan {
-    measure: Measure
-    noteWidths: Map<Note, NoteWidth>
-    keyWidths: Map<KeySignature, KeySignatureWidth>
-    leadingKeyWidth: KeySignatureWidth
-    /** Width of elements present regardless of flags: mid-measure changes, notes, barline. */
-    fixedWidth: number
-    /** Diff-based flags (vs the previous measure); row starts are forced on top during packing. */
-    base: MeasureFlags
-    /** Signature of the leading key's drawn accidentals — the one layout input that depends on the *previous* measure. */
-    leadingKeyDrawnSignature: string
-}
 
 /**
  * The root layout snapshot: packs measures into rows (a bounded fixed-point
@@ -80,116 +47,57 @@ export class ScoreLayout {
     private readonly _tiesByKey = new Map<string, TieLayout>()
     private readonly _tieSegmentsByRow = new Map<number, Array<{ tie: TieLayout; segment: TieSegment }>>()
 
-    constructor(score: Score, previous?: ScoreLayout, scoreWidth: number = SCORE_WIDTH) {
-        const plans = ScoreLayout.buildPlans(score)
+    constructor(score: Score, previous: ScoreLayout | undefined, scoreWidth: number) {
+        const metrics = score.measures.map((measure, i) => new MeasureMetrics(measure, score.measures[i - 1]))
 
         // A measure denser than the packing budget cannot fit any row at the requested
         // width (responsive reflow can request as little as ~340). Widen the layout to
         // the densest measure instead: views render scaled-to-fit against scoreWidth,
         // so the score shrinks on screen rather than the layout failing to resolve.
-        const widestMeasureMinimum = Math.max(
-            0,
-            ...plans.map((plan) => ScoreLayout.minimalWidth(plan, { ...plan.base, showsClef: true, showsKeySignature: true }, 0)),
-        )
+        const widestMeasureMinimum = Math.max(0, ...metrics.map((m) => m.minimalWidth(ScoreLayout.asRowStart(m.baseFlags), 0)))
         this.scoreWidth = Math.max(scoreWidth, widestMeasureMinimum + MEASURE_BUTTON_SPACING)
-        const minimumMeasureWidth = absoluteMinimumWidth(this.scoreWidth)
 
-        // --- Fixed-point packing: flags → widths → rows → row-start flags, until stable ---
-        let flags = plans.map((plan, i) => ({
-            ...plan.base,
-            showsClef: i === 0 || plan.base.showsClef,
-            showsKeySignature: i === 0 || plan.base.showsKeySignature,
-        }))
-        let rowGroups: number[][] = []
-        for (let iteration = 0; iteration < MAX_PACKING_ITERATIONS; iteration++) {
-            const widths = plans.map((plan, i) => ScoreLayout.minimalWidth(plan, flags[i], minimumMeasureWidth))
-            rowGroups = ScoreLayout.packGreedy(widths, this.scoreWidth)
-            const next = plans.map((plan) => ({ ...plan.base }))
-            for (const group of rowGroups) {
-                next[group[0]].showsClef = true
-                next[group[0]].showsKeySignature = true
-            }
-            const stable = next.every(
-                (f, i) =>
-                    f.showsClef === flags[i].showsClef &&
-                    f.showsKeySignature === flags[i].showsKeySignature &&
-                    f.showsTimeSignature === flags[i].showsTimeSignature,
-            )
-            flags = next
-            if (stable) break
-        }
-        const minimalWidths = plans.map((plan, i) => ScoreLayout.minimalWidth(plan, flags[i], minimumMeasureWidth))
+        const { rowGroups, flags, minimalWidths } = ScoreLayout.packRows(metrics, this.scoreWidth, MeasureMetrics.floorFor(this.scoreWidth))
 
         // --- Rows (reusing unchanged ones from the previous snapshot) ---
         this.rows = rowGroups.map((group, rowIndex) => {
             const context = {
                 index: rowIndex,
                 isLastRow: rowIndex === rowGroups.length - 1,
-                measures: group.map((i) => plans[i].measure),
-                minimalWidths: new Map(group.map((i) => [plans[i].measure, minimalWidths[i]])),
+                measures: group.map((i) => metrics[i].measure),
+                minimalWidths: new Map(group.map((i) => [metrics[i].measure, minimalWidths[i]])),
                 scoreWidth: this.scoreWidth,
             }
             const previousRow = previous?.rows[rowIndex]
-            const row = previousRow?.matches(context) ? previousRow : new RowLayout(context)
+            const row = previousRow?.signature === RowLayout.signatureFor(context) ? previousRow : new RowLayout(context)
             for (const measure of context.measures) this._rowByMeasure.set(measure, row)
             return row
         })
         this.totalHeight = this.rows.length * this.rowHeight + Math.max(0, this.rows.length - 1) * this.rowGap
 
         // --- Measure layouts (reusing those whose inputs are unchanged) ---
-        plans.forEach((plan, i) => {
-            const row = this._rowByMeasure.get(plan.measure)
+        metrics.forEach((m, i) => {
+            const row = this._rowByMeasure.get(m.measure)
             /* v8 ignore next -- defensive: packing assigns every measure to a row */
             if (!row) return
             const context = {
-                x: row.getMeasureX(plan.measure),
-                width: row.getMeasureWidth(plan.measure),
-                rowIndex: row.index,
-                showsClef: flags[i].showsClef,
-                showsKeySignature: flags[i].showsKeySignature,
-                showsTimeSignature: flags[i].showsTimeSignature,
-                noteWidths: plan.noteWidths,
-                keyWidths: plan.keyWidths,
-                reuseSignature: [
-                    plan.measure.version,
-                    row.getMeasureX(plan.measure),
-                    row.getMeasureWidth(plan.measure),
-                    row.index,
-                    flags[i].showsClef,
-                    flags[i].showsKeySignature,
-                    flags[i].showsTimeSignature,
-                    plan.leadingKeyDrawnSignature,
-                ].join('|'),
+                metrics: m,
+                x: row.getMeasureX(m.measure),
+                width: row.getMeasureWidth(m.measure),
+                flags: flags[i],
             }
-            const previousLayout = previous?._measureLayouts.get(plan.measure)
+            const previousLayout = previous?._measureLayouts.get(m.measure)
             const layout =
-                previousLayout?.reuseSignature === context.reuseSignature ? previousLayout : new MeasureLayout(plan.measure, context)
-            this._measureLayouts.set(plan.measure, layout)
+                previousLayout?.signature === MeasureLayout.signatureFor(m.measure, context)
+                    ? previousLayout
+                    : new MeasureLayout(m.measure, context)
+            this._measureLayouts.set(m.measure, layout)
         })
 
-        // --- Ties (semantic pairing from the score; geometry from the endpoint layouts) ---
-        this.ties = []
-        for (const measure of score.measures) {
-            for (const note of measure.notes) {
-                const nextNote = score.tiePartner(note)
-                if (!nextNote) continue
-                const context = this.tieContextFor(note, nextNote)
-                const key = `${note.id}|${nextNote.id}`
-                const previousTie = previous?._tiesByKey.get(key)
-                const tie =
-                    previousTie?.contextSignature === TieLayout.signatureFor(context) ? previousTie : new TieLayout(note, nextNote, context)
-                this._tiesByKey.set(key, tie)
-                this.ties.push(tie)
-                for (const segment of tie.segments) {
-                    const onRow = this._tieSegmentsByRow.get(segment.rowIndex) ?? []
-                    onRow.push({ tie, segment })
-                    this._tieSegmentsByRow.set(segment.rowIndex, onRow)
-                }
-            }
-        }
+        this.ties = this.buildTies(score, previous)
 
         // --- Measure buttons, in the reserve after the final barline ---
-        const lastMeasure = plans.at(-1)?.measure
+        const lastMeasure = score.measures.at(-1)
         this.measureButtons = lastMeasure ? this.measureButtonsAfter(lastMeasure) : null
     }
 
@@ -205,13 +113,36 @@ export class ScoreLayout {
         }
     }
 
+    /** Ties: the semantic pairing from the score, geometry from the endpoint layouts (reusing unchanged ones). */
+    private buildTies(score: Score, previous: ScoreLayout | undefined): TieLayout[] {
+        const ties: TieLayout[] = []
+        for (const measure of score.measures) {
+            for (const note of measure.notes) {
+                const nextNote = score.tiePartner(note)
+                if (!nextNote) continue
+                const context = this.tieContextFor(note, nextNote)
+                const key = `${note.id}|${nextNote.id}`
+                const previousTie = previous?._tiesByKey.get(key)
+                const tie = previousTie?.signature === TieLayout.signatureFor(context) ? previousTie : new TieLayout(note, context)
+                this._tiesByKey.set(key, tie)
+                ties.push(tie)
+                for (const segment of tie.segments) {
+                    const onRow = this._tieSegmentsByRow.get(segment.rowIndex) ?? []
+                    onRow.push({ tie, segment })
+                    this._tieSegmentsByRow.set(segment.rowIndex, onRow)
+                }
+            }
+        }
+        return ties
+    }
+
     private tieContextFor(note: Note, nextNote: Note): TieLayoutContext {
         const startLayout = this.measureLayoutFor(note.measure)
         const start = this.noteSpan(note)
         const end = this.noteSpan(nextNote)
         const startNoteLayout = startLayout.noteLayoutFor(note)
         const endNoteLayout = this.measureLayoutFor(nextNote.measure).noteLayoutFor(nextNote)
-        const stemDir = startLayout.beamFor(note)?.stemDir ?? note.stemDir
+        const stemDir = startLayout.stemDirFor(note)
         return {
             direction: stemDir === 'up' ? 1 : -1,
             startRowIndex: start.row.index,
@@ -224,59 +155,40 @@ export class ScoreLayout {
         }
     }
 
-    private static buildPlans(score: Score): MeasurePlan[] {
-        let previousClefType: string | undefined
-        let previousKeyFifths: number | undefined
-        let previousTimeSignature: { beatAmount: number; beatType: number } | undefined
-        return score.measures.map((measure) => {
-            const accidentals = new DisplayedAccidentals(measure).byNote
-            const notePairs = measure.notes.map((note) => [note, new NoteWidth(note, accidentals.get(note))] as [Note, NoteWidth])
-            const leadingKeyWidth = new KeySignatureWidth(measure.keySignature.drawnAccidentals)
-            const midKeyPairs = measure.midMeasureKeySignatures.map(
-                (key) => [key, new KeySignatureWidth(key.drawnAccidentals)] as [KeySignature, KeySignatureWidth],
-            )
-            const noteWidths = new Map(notePairs)
-            const keyWidths = new Map<KeySignature, KeySignatureWidth>([[measure.keySignature, leadingKeyWidth], ...midKeyPairs])
-            const fixedWidth =
-                sumBy(measure.midMeasureClefs, (clef) => clef.layout.width.total) +
-                sumBy(midKeyPairs, ([, width]) => width.total) +
-                sumBy(notePairs, ([, width]) => width.total) +
-                BarlineLayout.widthOf(measure.endBarline)
-            const base: MeasureFlags = {
-                showsClef: previousClefType === undefined || previousClefType !== measure.clef.type,
-                showsKeySignature: previousKeyFifths === undefined || previousKeyFifths !== measure.keySignature.fifths,
-                showsTimeSignature:
-                    !previousTimeSignature ||
-                    previousTimeSignature.beatAmount !== measure.timeSignature.beatAmount ||
-                    previousTimeSignature.beatType !== measure.timeSignature.beatType,
-            }
-            previousClefType = measure.lastClef.type
-            previousKeyFifths = measure.lastKey.fifths
-            previousTimeSignature = measure.timeSignature
-            return {
-                measure,
-                noteWidths,
-                keyWidths,
-                leadingKeyWidth,
-                fixedWidth,
-                base,
-                leadingKeyDrawnSignature: measure.keySignature.drawnAccidentals.map((a) => `${a.glyphName}${a.name}${a.octave}`).join(','),
-            }
-        })
+    /**
+     * Packs measures into rows — a fixed point over flags → widths → rows → row-start flags:
+     * a measure that starts a row draws its clef and key, which widens it, which can move the
+     * row breaks. Iterates until the row starts stop changing. Out of iterations, it keeps the
+     * flags the rows were packed with, so every row still fits its budget (no ResizeError); the
+     * price, in that pathological case only, is that a measure the last pass moved to a row
+     * start may lack its forced clef/key.
+     */
+    private static packRows(
+        metrics: MeasureMetrics[],
+        scoreWidth: number,
+        floor: number,
+    ): { rowGroups: number[][]; flags: MeasureFlags[]; minimalWidths: number[] } {
+        let flags = metrics.map((m, i) => (i === 0 ? ScoreLayout.asRowStart(m.baseFlags) : m.baseFlags))
+        for (let iteration = 1; ; iteration++) {
+            const minimalWidths = metrics.map((m, i) => m.minimalWidth(flags[i], floor))
+            const rowGroups = ScoreLayout.packGreedy(minimalWidths, scoreWidth)
+            const rowStarts = new Set(rowGroups.map((group) => group[0]))
+            const next = metrics.map((m, i) => (rowStarts.has(i) ? ScoreLayout.asRowStart(m.baseFlags) : m.baseFlags))
+            // Only the clef and key flags move with row starts; the time signature is diff-based alone.
+            const stable = next.every((f, i) => f.showsClef === flags[i].showsClef && f.showsKeySignature === flags[i].showsKeySignature)
+            if (stable || iteration === MAX_PACKING_ITERATIONS) return { rowGroups, flags, minimalWidths }
+            flags = next
+        }
     }
 
-    private static minimalWidth(plan: MeasurePlan, flags: MeasureFlags, minimumMeasureWidth: number): number {
-        const sum =
-            (flags.showsClef ? plan.measure.clef.layout.width.total : 0) +
-            (flags.showsKeySignature ? plan.leadingKeyWidth.total : 0) +
-            (flags.showsTimeSignature ? plan.measure.timeSignature.layout.width.total : 0) +
-            plan.fixedWidth
-        return Math.max(sum, minimumMeasureWidth)
+    /** A row start redraws the clef and key in effect. */
+    private static asRowStart(flags: MeasureFlags): MeasureFlags {
+        return { ...flags, showsClef: true, showsKeySignature: true }
     }
 
     /** Greedy row fill, reserving measure-button space on every row while fitting (the historical budget). */
     private static packGreedy(widths: number[], scoreWidth: number): number[][] {
-        const budget = availableRowWidth({ isLastRow: true, scoreWidth })
+        const budget = RowLayout.availableWidth(scoreWidth, true)
         const groups: number[][] = []
         let current: number[] = []
         let currentWidth = 0
@@ -307,8 +219,13 @@ export class ScoreLayout {
         return layout
     }
 
+    /** Vertical distance from one row's top to the next: a row plus the gap below it. */
+    get rowStride(): number {
+        return this.rowHeight + this.rowGap
+    }
+
     getYForRow(row: RowLayout): number {
-        return row.index * (this.rowHeight + this.rowGap)
+        return row.index * this.rowStride
     }
 
     /** The tie segments drawn on `row` (row-local), each with the tie it belongs to — the same segment objects while the tie is reused. */
@@ -317,7 +234,7 @@ export class ScoreLayout {
     }
 
     getRowForY(y: number): RowLayout | undefined {
-        return this.rows[Math.floor(y / (this.rowHeight + this.rowGap))]
+        return this.rows[Math.floor(y / this.rowStride)]
     }
 
     /**
