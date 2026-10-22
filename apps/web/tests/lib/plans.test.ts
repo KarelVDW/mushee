@@ -9,8 +9,10 @@ import {
     isPaidTier,
     isPlanTierId,
     PLAN_TIERS,
+    planBudgetHint,
     planById,
     PlanCatalogue,
+    planCtaLabel,
     planFeatures,
     planPrice,
     recordingBudgetLabel,
@@ -55,14 +57,61 @@ describe('plan catalogue', () => {
         expect(planPrice(arranger, 'monthly')).toBe('$49/mo')
     })
 
-    it('formats recording budgets for seconds, minutes, hours, and unlimited', () => {
-        expect(recordingBudgetLabel(30)).toBe('30 sec of recording / day')
-        expect(recordingBudgetLabel(600)).toBe('10 min of recording / day')
-        expect(recordingBudgetLabel(1800)).toBe('30 min of recording / day')
-        expect(recordingBudgetLabel(10800)).toBe('3 h of recording / day')
-        expect(recordingBudgetLabel(28800)).toBe('8 h of recording / day')
-        expect(recordingBudgetLabel(5400)).toBe('1.5 h of recording / day')
-        expect(recordingBudgetLabel(null)).toBe('Unlimited recording')
+    it('writes recording budgets as allowances in words, and no cap without the word unlimited', () => {
+        expect(recordingBudgetLabel(180)).toBe('3 minutes of recording a day')
+        expect(recordingBudgetLabel(30)).toBe('30 seconds of recording a day')
+        expect(recordingBudgetLabel(600)).toBe('10 minutes of recording a day')
+        expect(recordingBudgetLabel(1800)).toBe('30 minutes of recording a day')
+        expect(recordingBudgetLabel(3600)).toBe('1 hour of recording a day')
+        expect(recordingBudgetLabel(10800)).toBe('3 hours of recording a day')
+        expect(recordingBudgetLabel(28800)).toBe('8 hours of recording a day')
+        expect(recordingBudgetLabel(5400)).toBe('1 h 30 min of recording a day')
+        expect(recordingBudgetLabel(null)).toBe('No daily recording limit')
+    })
+
+    it('words every tier in plain language, never the retired jargon', () => {
+        const copy = [
+            ...PLAN_TIERS.flatMap((p) => [p.tagline, ...planFeatures(p), planCtaLabel(p), planBudgetHint(p) ?? '']),
+            ...planFeatures(BETA_PLAN),
+            recordingBudgetLabel(null),
+            ...CREDIT_PACKS.flatMap((p) => [p.name, p.blurb, p.compare('usd'), p.compare('eur')]),
+        ]
+        // 'recording', never 'take' (C12 glossary) — a retake included.
+        for (const line of copy)
+            expect(line).not.toMatch(/unlimited|audio-to-notation|engraving|keyboard-first|tier|cadence|budget|prorat|\btakes?\b|retake/i)
+        expect(planFeatures(planById('free'))).toEqual([
+            '3 minutes of recording a day',
+            'Up to 5 scores',
+            'Sing or play, see the notes',
+            'Fix notes and hear them back',
+        ])
+        expect(PLAN_TIERS.map((p) => p.tagline)).toEqual([
+            'For trying things out',
+            'For daily writers',
+            'For heavy sessions',
+            'For transcribing every day',
+        ])
+    })
+
+    it('pictures the free budget in 30-second recordings, on the free tier only', () => {
+        expect(planBudgetHint(planById('free'))).toBe('Enough for about six 30-second recordings.')
+        // Derived from the budget the API serves, so a re-tuned free tier stays truthful.
+        expect(planBudgetHint({ id: 'free', dailyRecordingSeconds: 300 })).toBe('Enough for about ten 30-second recordings.')
+        // Past ten the numeral would sit beside the 30, so the length moves behind it.
+        expect(planBudgetHint({ id: 'free', dailyRecordingSeconds: 600 })).toBe('Enough for about 20 recordings of 30 seconds.')
+        expect(planBudgetHint({ id: 'free', dailyRecordingSeconds: 45 })).toBe('Enough for about one 30-second recording.')
+        expect(planBudgetHint({ id: 'free', dailyRecordingSeconds: 20 })).toBeNull()
+        expect(planBudgetHint({ id: 'free', dailyRecordingSeconds: null })).toBeNull()
+        for (const paid of PLAN_TIERS.filter((p) => p.id !== 'free')) expect(planBudgetHint(paid)).toBeNull()
+    })
+
+    it("labels a card's button 'Start free' for the free tier and 'Choose …' for a paid one", () => {
+        expect(planCtaLabel(planById('free'))).toBe('Start free')
+        expect(planCtaLabel(planById('pro'))).toBe('Choose Songwriter')
+        expect(planCtaLabel(planById('studio'))).toBe('Choose Studio')
+        expect(planCtaLabel(planById('arranger'))).toBe('Choose Arranger')
+        // In-app, the database name wins.
+        expect(planCtaLabel({ ...planById('pro'), name: 'Writer' })).toBe('Choose Writer')
     })
 
     it('formats score caps, with the free tier capped and the rest open', () => {
@@ -74,12 +123,12 @@ describe('plan catalogue', () => {
 
     it('puts the recording budget and score cap first in the feature list, API values winning', () => {
         const pro = planById('pro')
-        expect(planFeatures(pro)[0]).toBe('20 min of recording / day')
+        expect(planFeatures(pro)[0]).toBe('20 minutes of recording a day')
         expect(planFeatures(pro)[1]).toBe('As many scores as you like')
         expect(planFeatures(planById('free'))[1]).toBe('Up to 5 scores')
         // A plan merged with re-tuned database entitlements shows those, not the static fallbacks.
         const merged = { ...pro, dailyRecordingSeconds: 600, maxScores: 20 }
-        expect(planFeatures(merged)[0]).toBe('10 min of recording / day')
+        expect(planFeatures(merged)[0]).toBe('10 minutes of recording a day')
         expect(planFeatures(merged)[1]).toBe('Up to 20 scores')
         expect(planFeatures(pro).slice(2)).toEqual(pro.features)
     })
