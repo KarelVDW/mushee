@@ -4,4 +4,4 @@ export { Alert, BusyNotice, ErrorScreen, Spinner, StepProgress } from './Feedbac
 export { Icon, type IconName } from './Icon'
 export { Chip, TextArea, TextField, type TextFieldProps } from './Inputs'
 export { RenderBoundary } from './RenderBoundary'
-export { showToast, Toaster } from './Toast'
+export { dismissToast, showToast, type ToastAction, Toaster, type ToastOptions } from './Toast'

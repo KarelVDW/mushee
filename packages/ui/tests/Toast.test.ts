@@ -1,0 +1,141 @@
+import { createElement } from 'react'
+import { renderToStaticMarkup } from 'react-dom/server'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+
+import { dismissToast, showToast, Toaster, ToastQueue, toasts } from '../src/Toast'
+
+const render = () => renderToStaticMarkup(createElement(Toaster))
+const messages = () => toasts.visible.map((t) => t.message)
+
+beforeEach(() => {
+    vi.useFakeTimers()
+})
+
+afterEach(() => {
+    toasts.clear()
+    vi.useRealTimers()
+})
+
+describe('Toaster regions', () => {
+    it('mounts both live regions while nothing is showing', () => {
+        const html = render()
+        expect(html).toContain('<div role="status" aria-live="polite"')
+        expect(html).toContain('<div role="alert"')
+        expect(html).not.toContain('Dismiss')
+    })
+
+    it('routes info toasts to the status region and errors to the alert region', () => {
+        showToast('Link copied.', 'info')
+        showToast('Microphone access was blocked.')
+        const html = render()
+        const status = html.slice(html.indexOf('role="status"'), html.indexOf('role="alert"'))
+        const alert = html.slice(html.indexOf('role="alert"'))
+        expect(status).toContain('Link copied.')
+        expect(status).not.toContain('Microphone')
+        expect(alert).toContain('Microphone access was blocked.')
+    })
+
+    it('reads the --toast-bottom offset, never under the safe-area inset', () => {
+        expect(render()).toContain('bottom-[max(var(--toast-bottom,1.5rem),env(safe-area-inset-bottom))]')
+    })
+
+    it('renders an action as a 40px button with its own accessible name', () => {
+        showToast('Deleted 3 notes.', 'info', { action: { label: 'Undo', ariaLabel: 'Undo delete', onClick: () => {} } })
+        const html = render()
+        expect(html).toMatch(/<button type="button" aria-label="Undo delete" class="[^"]*h-10[^"]*text-primary[^"]*">Undo<\/button>/)
+    })
+})
+
+describe('ToastQueue.durationFor', () => {
+    it('gives info 6 s and errors max(8 s, 0.3 s per word)', () => {
+        expect(ToastQueue.durationFor('Link copied.', 'info')).toBe(6000)
+        expect(ToastQueue.durationFor('Could not copy.', 'error')).toBe(8000)
+        const thirtyWords = Array.from({ length: 30 }, (_, i) => `word${i}`).join(' ')
+        expect(ToastQueue.durationFor(thirtyWords, 'error')).toBe(9000)
+    })
+
+    it('lets duration override and persist never expire', () => {
+        expect(ToastQueue.durationFor('Saved.', 'info', { duration: 2000 })).toBe(2000)
+        expect(ToastQueue.durationFor('Try recording again.', 'error', { persist: true })).toBeNull()
+    })
+})
+
+describe('toast lifetime', () => {
+    it('dismisses info after 6 s and errors after their reading time', () => {
+        showToast('Link copied.', 'info')
+        showToast('Could not save.')
+        vi.advanceTimersByTime(6000)
+        expect(messages()).toEqual(['Could not save.'])
+        vi.advanceTimersByTime(2000)
+        expect(messages()).toEqual([])
+    })
+
+    it('keeps a persistent toast until it is dismissed', () => {
+        const id = showToast('Try recording again.', 'error', { persist: true })
+        vi.advanceTimersByTime(60_000)
+        expect(messages()).toEqual(['Try recording again.'])
+        dismissToast(id)
+        expect(messages()).toEqual([])
+    })
+
+    it('pauses while hovered or focused and resumes with the time that was left', () => {
+        const id = showToast('Link copied.', 'info')
+        vi.advanceTimersByTime(4000)
+        toasts.pause(id, 'hover')
+        toasts.pause(id, 'focus')
+        vi.advanceTimersByTime(20_000)
+        expect(messages()).toEqual(['Link copied.'])
+        toasts.resume(id, 'hover')
+        vi.advanceTimersByTime(20_000)
+        expect(messages()).toEqual(['Link copied.'])
+        toasts.resume(id, 'focus')
+        vi.advanceTimersByTime(1999)
+        expect(messages()).toEqual(['Link copied.'])
+        vi.advanceTimersByTime(1)
+        expect(messages()).toEqual([])
+    })
+
+    it('refreshes an identical toast with its new duration instead of stacking it', () => {
+        const first = showToast('Could not save.')
+        vi.advanceTimersByTime(7000)
+        const again = showToast('Could not save.', 'error', { duration: 3000 })
+        expect(again).toBe(first)
+        expect(messages()).toEqual(['Could not save.'])
+        vi.advanceTimersByTime(2999)
+        expect(messages()).toEqual(['Could not save.'])
+        vi.advanceTimersByTime(1)
+        expect(messages()).toEqual([])
+    })
+
+    it('shows at most two toasts; a third replaces the oldest', () => {
+        showToast('One.', 'info')
+        showToast('Two.', 'info')
+        showToast('Three.')
+        expect(messages()).toEqual(['Two.', 'Three.'])
+        vi.advanceTimersByTime(6000)
+        expect(messages()).toEqual(['Three.'])
+    })
+
+    it('keeps the original glyph argument working', () => {
+        showToast('Created “Scale Study”.', 'info', 'check')
+        expect(toasts.visible[0].icon).toBe('check')
+    })
+
+    it('notifies subscribers and stops after unsubscribing', () => {
+        const seen: string[][] = []
+        const unsubscribe = toasts.subscribe((items) => seen.push(items.map((t) => t.message)))
+        showToast('One.', 'info')
+        unsubscribe()
+        showToast('Two.', 'info')
+        expect(seen).toEqual([['One.']])
+    })
+
+    it('ignores dismissing a toast that is already gone', () => {
+        const id = showToast('One.', 'info')
+        dismissToast(id)
+        const seen: number[] = []
+        toasts.subscribe((items) => seen.push(items.length))
+        dismissToast(id)
+        expect(seen).toEqual([])
+    })
+})
