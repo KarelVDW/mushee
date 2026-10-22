@@ -2,15 +2,18 @@
 
 Sheet-music editor with live audio-to-notation recording. pnpm monorepo:
 
-| Path                       | What it is                                                                                                         |
-| -------------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| `apps/web`                 | Next.js app (editor UI), dev on **:3200**                                                                          |
-| `apps/admin`               | Next.js admin console (secret login, hosted at admin.solkey.io), dev on **:3500**                                  |
-| `apps/api`                 | NestJS API + WebSocket recording pipeline, dev on **:4200**                                                        |
-| `apps/inference-crepe`     | Python gRPC service: CREPE forward pass (**:50051**)                                                               |
-| `packages/notation`        | Score domain: semantic model + layout engine + React notation renderer (TS source, compiled by the consuming apps) |
-| `packages/inference-proto` | Shared gRPC contract for the inference service                                                                     |
-| `deploy/k8s`               | Kustomize manifests: `base/` (production-shaped) + `overlays/local/`                                               |
+| Path                       | What it is                                                                                                                |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `apps/web`                 | Next.js app (editor UI), dev on **:3200**                                                                                 |
+| `apps/admin`               | Next.js admin console (secret login, hosted at admin.solkey.io), dev on **:3500**                                         |
+| `apps/eval`                | Next.js corpus & benchmarking workbench over the API's eval harness (local only), dev on **:3600**                        |
+| `apps/api`                 | NestJS API + WebSocket recording pipeline, dev on **:4200**                                                               |
+| `apps/inference-crepe`     | Python gRPC service: CREPE forward pass (**:50051**)                                                                      |
+| `packages/notation`        | Score domain: semantic model + layout engine + React notation renderer (TS source, compiled by the consuming apps)        |
+| `packages/playback`        | Score playback engine: soundfont MIDI player, scheduler, ticker and metronome (TS source, compiled by the consuming apps) |
+| `packages/inference-proto` | Shared gRPC contract for the inference service                                                                            |
+| `synthetic-corpus`         | Standalone Python (`uv`) project that builds realistic synthetic recordings for the eval harness (see its README)         |
+| `deploy/k8s`               | Kustomize: `base/` (production-shaped), `overlays/{local,staging,production}/`, opt-in `components/spot-inference/`       |
 
 The API owns everything about transcription except the neural-net forward pass,
 which runs behind a `ModelBackend` seam: **in-process TF.js** by default (dev,
@@ -59,8 +62,8 @@ Prereqs: Node 22 + pnpm, Docker Desktop.
 
 ```sh
 pnpm install
-pnpm setup        # start dev Postgres (:5632) + fresh schema + demo data
-pnpm dev          # web on :3200, admin on :3500, api on :4200 (in-process inference)
+pnpm bootstrap    # start dev Postgres (:5632) + fresh schema + demo data
+pnpm dev          # web on :3200, admin on :3500, eval on :3600, api on :4200 (in-process inference)
 ```
 
 Optionally copy `apps/api/.env.example` → `apps/api/.env.development` (and the
@@ -82,15 +85,15 @@ project on `admin.solkey.io` — see `deploy/k8s/overlays/production/README.md`.
 
 ### Demo accounts
 
-Seeded by `pnpm setup` / `pnpm db:reset` / `pnpm db:seed` (or any environment
+Seeded by `pnpm bootstrap` / `pnpm db:reset` / `pnpm db:seed` (or any environment
 booted with `SEED_DEMO_DATA=true`). Password for all: **`mushee-demo`**.
 
-| Email                 | Tier           | Daily recording                       |
-| --------------------- | -------------- | ------------------------------------- |
-| `demo@mushee.local`   | Studio         | **unlimited** — the main demo account |
-| `free@mushee.local`   | Sketch (free)  | 30 s                                  |
-| `pro@mushee.local`    | Composer (pro) | 10 min                                |
-| `studio@mushee.local` | Studio         | unlimited                             |
+| Email                 | Tier             | Daily recording                 |
+| --------------------- | ---------------- | ------------------------------- |
+| `demo@mushee.local`   | Studio           | **3 h** — the main demo account |
+| `free@mushee.local`   | Sketch (free)    | 3 min                           |
+| `pro@mushee.local`    | Songwriter (pro) | 20 min                          |
+| `studio@mushee.local` | Studio           | 3 h                             |
 
 ### Database scripts
 
@@ -111,7 +114,7 @@ and snapshot the diff into a new migration (see `1782864000000-BetterAuthSchema`
 ### Full backend stack in Docker
 
 ```sh
-docker compose up --build   # api :3000 + both inference services + postgres
+docker compose up --build   # api :3000 + the CREPE inference service + postgres
 ```
 
 Boots migrated + seeded, with MusicXML storage on a named volume. The web dev
@@ -121,16 +124,16 @@ server (`pnpm dev:web`) can point at it with
 ## Deployment (Kubernetes)
 
 Images (build context is always the repo root; `docker compose build` produces
-all three with these exact tags):
+both with these exact tags):
 
 ```sh
 docker build -f apps/api/Dockerfile                   -t mushee/api:latest .
 docker build -f apps/inference-crepe/Dockerfile       -t mushee/crepe-inference:latest .
 ```
 
-The inference services' Python gRPC stubs are generated from
-`packages/inference-proto/inference.proto` inside each Dockerfile (never
-committed); to run a `server.py` directly on the host, generate them first with
+The inference service's Python gRPC stubs are generated from
+`packages/inference-proto/inference.proto` inside its Dockerfile (never
+committed); to run its `server.py` directly on the host, generate them first with
 `packages/inference-proto/generate-python.sh`.
 
 **Local (Docker Desktop k8s)** — self-contained: ephemeral Postgres, dummy
@@ -183,14 +186,14 @@ beta — live in `deploy/runbooks/`. On any other cluster, start from
   point-in-time recovery _and test a restore once_ before launch; enable
   object versioning (or replication) on the GCS bucket holding MusicXML and
   recording archives. Nothing in this repo does this for you.
-- A metrics-server, so the HPAs scale the inference services on CPU (Docker
-  Desktop has none — HPAs stay at min replicas there).
+- A metrics-server, so the HPAs scale the API and the inference service on CPU
+  (Docker Desktop has none — HPAs stay at min replicas there).
 - An Ingress / managed LB for `Service/api` (the local overlay's
   `api-lb` LoadBalancer is local-only).
 
 Scaling: every layer is horizontal — API replicas share state via Postgres
-(recording locks, credits, edit cache), and the inference services are
-stateless tensor→tensor functions behind ClusterIP services with HPAs
+(recording locks, credits, edit cache), and the inference service is a
+stateless tensor→tensor function behind a ClusterIP service with an HPA
 (see `deploy/k8s/base/*.yaml`).
 
 Before switching the model's inference to a new service build, run the parity
@@ -244,18 +247,25 @@ Error-tracking view shows both halves of an incident.
 
 Flip `BETA_MODE=true` on the API and `NEXT_PUBLIC_BETA_MODE=true` on the web
 app to run Solkey as a closed beta: new signups land on the `beta` tier
-(5 min of recording/day), get a waitlist email, and must be approved before
-they can use the app. Approvals happen at `/admin` (accounts whose email is
-in `ADMIN_EMAILS` get the admin role at signup; the seeded
-`demo@mushee.local` account is an admin too) or via
-`POST /admin/beta/signups/:userId/approve`. Flip both vars back to `false`
-to open the doors — pending users are no longer gated.
+(30 min of recording/day), get a waitlist email, and must be approved before
+they can use the app. Approve applicants on the admin console's Waitlist page
+(`apps/admin`, :3500, signed in with `ADMIN_SECRET`), or call
+`POST /admin/beta/signups/:userId/approve` with the `x-admin-secret` header.
+Accounts whose email is in `ADMIN_EMAILS` skip the waitlist (auto-approved at
+signup), start on the Studio tier, receive the waitlist signup notifications
+and are labelled admins in the console — the label grants no API access; that
+is `ADMIN_SECRET`. The seeded demo accounts are pre-approved, so they work in
+beta mode too. Flip both vars back to `false` to open the doors — pending users
+are no longer gated.
 
 ## More docs
 
 - `apps/web/DESIGN.md` + `apps/web/design/` — design system (source of truth for web UI)
-- `apps/web/src/model/ARCHITECTURE.md` — score model/layout architecture
+- `packages/notation/src/model/ARCHITECTURE.md` — score model/layout architecture
 - `apps/web/e2e/README.md` — e2e test suites
+- `apps/admin/README.md` — admin console
+- `apps/eval/README.md` — corpus & benchmarking workbench
+- `apps/api/scripts/eval/README.md` — recording-pipeline eval harness and its findings log
 - `meta/` — developer/agent working notes: `master-todo.md` (beta roadmap) and
   `notes.md` (launch runbooks, architecture decisions, known quirks, and the
   WebSocket-concurrency backlog)

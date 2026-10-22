@@ -4,7 +4,7 @@
     "private": true,
     "type": "module",
     "scripts": {
-        "setup": "docker compose up -d --wait postgres && pnpm db:reset",
+        "bootstrap": "docker compose up -d --wait postgres && pnpm db:reset",
         "dev": "pnpm -r --parallel dev",
         "dev:api": "pnpm --filter @mushee/api dev",
         "dev:web": "pnpm --filter @mushee/web dev",
