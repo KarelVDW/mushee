@@ -65,6 +65,12 @@ describe('GetStartedButton', () => {
         expect(hrefOf(html({ location: 'pricing', plan: 'arranger', children: 'Go Arranger' }))).toBe('/settings?plan=arranger')
     })
 
+    it('keeps the Sketch card a library link when signed in, never a cancel-preselected plan dialog', () => {
+        expect(hrefOf(html({ location: 'pricing', plan: 'free', children: 'Start sketching' }))).toBe('/signup?plan=free')
+        visitor.authed = true
+        expect(hrefOf(html({ location: 'pricing', plan: 'free', children: 'Start sketching' }))).toBe('/scores')
+    })
+
     it('lets children replace the label and its arrow; secondary keeps the link', () => {
         const generic = html({ location: 'nav' })
         const named = html({ location: 'pricing', children: 'Go Studio' })
