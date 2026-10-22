@@ -6,8 +6,8 @@ import { useEffect } from 'react'
 import { BetaPlanCard } from '@/components/BetaPlanCard'
 import { FunnelShell } from '@/components/FunnelShell'
 import { Eyebrow, Icon, ModalTitle, PrimaryButton, SubHeadline, TertiaryButton } from '@/components/ui'
-import { signOut, useSession } from '@/lib/auth-client'
-import { useBetaGate, usePlanCatalogue } from '@/lib/queries'
+import { useSession } from '@/lib/auth-client'
+import { useBetaGate, usePlanCatalogue, useSignOut } from '@/lib/queries'
 
 /**
  * Closed-beta waiting room. Pending users land here after signup; the page
@@ -18,6 +18,7 @@ export default function BetaWaitingPage() {
     const { data: session, isPending: sessionPending } = useSession()
     const gate = useBetaGate({ poll: true, enabled: !!session?.user })
     const betaPlan = usePlanCatalogue().beta
+    const signOut = useSignOut()
 
     // Stay on the waitlist copy until the server has answered.
     const approved = gate.isResolved && !gate.awaitingApproval
@@ -26,13 +27,10 @@ export default function BetaWaitingPage() {
         if (!sessionPending && !session?.user) router.replace('/login')
     }, [sessionPending, session, router])
 
-    async function handleSignOut() {
-        await signOut()
-        router.push('/')
-    }
-
+    // Signing out of the waiting room leads back to the landing page rather than the
+    // sign-in form: until approval, this page is all that signing in again would reach.
     return (
-        <FunnelShell gap={6} action={<TertiaryButton onClick={() => void handleSignOut()}>Sign out</TertiaryButton>}>
+        <FunnelShell gap={6} action={<TertiaryButton onClick={() => void signOut('/')}>Sign out</TertiaryButton>}>
             {approved ? (
                 <>
                     <div className="w-14 h-14 rounded-full bg-primary-soft text-on-primary-soft inline-flex items-center justify-center">

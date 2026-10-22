@@ -21,12 +21,11 @@ import {
     TextField,
     TopNav,
 } from '@/components/ui'
-import { AccountExport } from '@/lib/AccountExport'
 import { track } from '@/lib/analytics'
-import { signOut, updateUser, useSession } from '@/lib/auth-client'
+import { useSession } from '@/lib/auth-client'
 import { downloadBlob } from '@/lib/FileDownload'
 import { type PlanTier, requestedPlanFrom } from '@/lib/plans'
-import { billingKeys, useAllRecordings, useScores } from '@/lib/queries'
+import { billingKeys, useAllRecordings, useExportAccountData, useScores, useSignOut, useUpdateProfile } from '@/lib/queries'
 
 import { BillingSection } from './BillingSection'
 import { ChangePasswordDialog } from './ChangePasswordDialog'
@@ -39,10 +38,11 @@ export default function SettingsPage() {
     const router = useRouter()
     const { data: session } = useSession()
     const queryClient = useQueryClient()
+    const signOut = useSignOut()
     const [tab, setTab] = useState<Tab>('profile')
 
     const [name, setName] = useState(session?.user?.name ?? '')
-    const [saving, setSaving] = useState(false)
+    const updateProfile = useUpdateProfile()
     const [changePwOpen, setChangePwOpen] = useState(false)
     const [deleteOpen, setDeleteOpen] = useState(false)
 
@@ -52,17 +52,8 @@ export default function SettingsPage() {
         if (sessionName !== undefined) setName(sessionName)
     }, [sessionName])
 
-    async function handleSaveProfile() {
-        setSaving(true)
-        try {
-            const { error } = await updateUser({ name: name.trim() })
-            if (error) throw new Error(error.message ?? 'Update failed')
-            showToast('Profile updated.', 'info')
-        } catch {
-            showToast("Your profile couldn't be saved. Please try again.")
-        } finally {
-            setSaving(false)
-        }
+    function handleSaveProfile() {
+        updateProfile.mutate(name.trim(), { onSuccess: () => showToast('Profile updated.', 'info') })
     }
 
     // The tier a signed-in visitor's pricing card asked for (?plan=): BillingSection opens its plan
@@ -96,36 +87,36 @@ export default function SettingsPage() {
         }
     }, [queryClient])
 
-    async function handleSignOut() {
-        await signOut()
-        router.push('/login')
-    }
-
-    const [exporting, setExporting] = useState(false)
+    const exportData = useExportAccountData()
     /** GDPR portability: every score (MusicXML + JSON), profile and settings, zipped in the browser. */
-    async function handleExport() {
+    function handleExport() {
         const user = session?.user
         if (!user) return
-        setExporting(true)
-        try {
-            const archive = await AccountExport.collect({
-                name: user.name,
-                email: user.email,
-                createdAt: user.createdAt ? new Date(user.createdAt).toISOString() : undefined,
-            })
-            downloadBlob(archive.toBlob(), archive.filename)
-            track('data_export_downloaded', { scores: archive.scores.length })
-            showToast(`Your data is downloading (${archive.scores.length} ${archive.scores.length === 1 ? 'score' : 'scores'}).`, 'info')
-        } catch {
-            showToast("Your data couldn't be exported. Please try again.")
-        } finally {
-            setExporting(false)
+        const profile = {
+            name: user.name,
+            email: user.email,
+            createdAt: user.createdAt ? new Date(user.createdAt).toISOString() : undefined,
         }
+        // mutateAsync rather than mutate's onSuccess, which is skipped once this page
+        // unmounts: the download must still land if the user leaves Settings while the
+        // archive builds. A failure has already toasted through the mutation's meta.
+        exportData.mutateAsync(profile).then(
+            (archive) => {
+                downloadBlob(archive.toBlob(), archive.filename)
+                track('data_export_downloaded', { scores: archive.scores.length })
+                showToast(
+                    `Your data is downloading (${archive.scores.length} ${archive.scores.length === 1 ? 'score' : 'scores'}).`,
+                    'info',
+                )
+            },
+            () => undefined,
+        )
     }
 
     return (
         <div className="bg-surface text-on-surface min-h-dvh flex flex-col">
-            <TopNav user={session?.user?.name ?? undefined} onCreate={() => router.push('/scores')} />
+            {/* ?new=1 has the library open its new-score dialog. */}
+            <TopNav user={session?.user?.name ?? undefined} onCreate={() => router.push('/scores?new=1')} />
 
             <main className="flex-1 max-w-5xl mx-auto px-4 sm:px-8 py-6 sm:py-10 flex flex-col gap-6 sm:gap-8 w-full box-border">
                 <PageHeader title="Settings" subtitle="Tweak your profile and account." />
@@ -149,8 +140,8 @@ export default function SettingsPage() {
                                     </span>
                                 </div>
                                 <div className="flex justify-end">
-                                    <PrimaryButton onClick={() => void handleSaveProfile()} disabled={saving || !name.trim()}>
-                                        {saving ? 'Saving…' : 'Save changes'}
+                                    <PrimaryButton onClick={handleSaveProfile} disabled={updateProfile.isPending || !name.trim()}>
+                                        {updateProfile.isPending ? 'Saving…' : 'Save changes'}
                                     </PrimaryButton>
                                 </div>
                             </SettingsSection>
@@ -181,15 +172,15 @@ export default function SettingsPage() {
                                 </SettingsSection>
                                 <SettingsSection title="Sign out" subtitle="Log out of this browser.">
                                     <div>
-                                        <TertiaryButton onClick={() => void handleSignOut()}>Sign out</TertiaryButton>
+                                        <TertiaryButton onClick={() => void signOut('/login')}>Sign out</TertiaryButton>
                                     </div>
                                 </SettingsSection>
                                 <SettingsSection
                                     title="Your data"
                                     subtitle="Download everything Solkey holds for you: your profile, settings, and every score as MusicXML and JSON.">
                                     <div>
-                                        <SecondaryButton onClick={() => void handleExport()} disabled={exporting}>
-                                            {exporting ? 'Preparing your download…' : 'Download my data'}
+                                        <SecondaryButton onClick={handleExport} disabled={exportData.isPending}>
+                                            {exportData.isPending ? 'Preparing your download…' : 'Download my data'}
                                         </SecondaryButton>
                                     </div>
                                     <RecordingsInventory />
@@ -211,7 +202,7 @@ export default function SettingsPage() {
 
             <Footer />
 
-            {changePwOpen && <ChangePasswordDialog onCancel={() => setChangePwOpen(false)} onSuccess={() => setChangePwOpen(false)} />}
+            {changePwOpen && <ChangePasswordDialog onClose={() => setChangePwOpen(false)} />}
 
             {deleteOpen && (
                 <DeleteAccountDialog
@@ -219,7 +210,7 @@ export default function SettingsPage() {
                     onCancel={() => setDeleteOpen(false)}
                     onConfirm={() => {
                         setDeleteOpen(false)
-                        void handleSignOut()
+                        void signOut('/login')
                     }}
                 />
             )}

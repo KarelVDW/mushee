@@ -1,27 +1,33 @@
 'use client'
 
-import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { type FormEvent, Suspense, useEffect, useState } from 'react'
+import { type FormEvent, Suspense, useState } from 'react'
 
 import {
     Alert,
+    AuthFrame,
     AuthShell,
-    Eyebrow,
     Icon,
+    isAcceptablePassword,
     ModalTitle,
-    PasswordStrength,
+    NewPasswordFields,
     PrimaryButton,
-    scorePassword,
+    StepProgress,
     SubHeadline,
     TertiaryButton,
     TextField,
-    Wordmark,
 } from '@/components/ui'
 import { requestPasswordReset, resetPassword } from '@/lib/auth-client'
 
-type Stage = 'request' | 'sent' | 'set-new' | 'done'
-const STAGES: Stage[] = ['request', 'sent', 'set-new', 'done']
+const STAGES = ['request', 'sent', 'set-new', 'done'] as const
+type Stage = (typeof STAGES)[number]
+
+const STAGE_TAGLINE: Record<Stage, string> = {
+    request: "We'll email you a link to set a new one. Takes a minute.",
+    sent: 'Open the link from your inbox to continue.',
+    'set-new': "Pick something memorable. We won't make you change it again.",
+    done: 'Your new password is saved. Welcome back.',
+}
 
 export default function PasswordResetPage() {
     return (
@@ -37,37 +43,27 @@ function PasswordResetPageInner() {
     const tokenFromUrl = searchParams.get('token')
     const errorFromUrl = searchParams.get('error')
 
-    const [stage, setStage] = useState<Stage>(tokenFromUrl ? 'set-new' : 'request')
+    // better-auth lands here with ?token= to set a new password, or with ?error=INVALID_TOKEN
+    // for a dead link, which starts over at the request form.
+    const [stage, setStage] = useState<Stage>(tokenFromUrl && errorFromUrl !== 'INVALID_TOKEN' ? 'set-new' : 'request')
     const [email, setEmail] = useState('')
     const [pw, setPw] = useState('')
     const [pw2, setPw2] = useState('')
-    const [showPw, setShowPw] = useState(false)
     const [resent, setResent] = useState(false)
     const [submitting, setSubmitting] = useState(false)
     const [error, setError] = useState<string | null>(
         errorFromUrl === 'INVALID_TOKEN' ? 'That reset link is invalid or has expired. Request a new one below.' : null,
     )
 
-    useEffect(() => {
-        if (errorFromUrl === 'INVALID_TOKEN') setStage('request')
-    }, [errorFromUrl])
-
-    const pwScore = scorePassword(pw)
-    const pwMatch = pw.length > 0 && pw === pw2
-    const canSetNew = pwScore >= 2 && pwMatch && !!tokenFromUrl
+    const canSetNew = isAcceptablePassword(pw, pw2) && !!tokenFromUrl
     const stageIdx = STAGES.indexOf(stage)
 
     const onBackToSignIn = () => router.push('/login')
 
-    function callbackUrl(): string {
-        if (typeof window === 'undefined') return '/reset-password'
-        return `${window.location.origin}/reset-password`
-    }
-
     async function doRequestReset(addr: string) {
         const { error } = await requestPasswordReset({
             email: addr,
-            redirectTo: callbackUrl(),
+            redirectTo: `${window.location.origin}/reset-password`,
         })
         if (error) {
             setError(error.message ?? 'Could not send reset email.')
@@ -108,194 +104,125 @@ function PasswordResetPageInner() {
 
     return (
         <AuthShell>
-            <main className="w-full max-w-230 mx-auto bg-surface-container-lowest rounded-xl editorial-shadow flex flex-col md:flex-row overflow-hidden md:min-h-145 relative">
-                <div className="absolute -top-[20%] -right-[10%] w-1/2 h-1/2 bg-primary-container/20 rounded-full blur-[96px] pointer-events-none" />
-                <section className="md:w-[42%] bg-surface-container-high p-6 md:p-12 flex flex-col justify-between gap-4">
-                    <Wordmark size={32} />
-                    <div className="flex flex-col gap-4">
-                        <h1 className="font-serif font-normal italic text-[28px] md:text-[48px] leading-none tracking-[-0.01em] text-on-surface m-0">
-                            {stage === 'done' ? (
-                                <>
-                                    You&apos;re
-                                    <br />
-                                    back in.
-                                </>
-                            ) : (
-                                <>
-                                    Reset your
-                                    <br />
-                                    password.
-                                </>
-                            )}
-                        </h1>
-                        <p className="font-body font-normal text-[14px] leading-normal text-on-surface-variant max-w-70 m-0">
-                            {stage === 'request' && "We'll email you a link to set a new one. Takes a minute."}
-                            {stage === 'sent' && 'Open the link from your inbox to continue.'}
-                            {stage === 'set-new' && "Pick something memorable. We won't make you change it again."}
-                            {stage === 'done' && 'Your new password is saved. Welcome back.'}
-                        </p>
-                    </div>
-                </section>
+            <AuthFrame headline={stage === 'done' ? ["You're", 'back in.'] : ['Reset your', 'password.']} tagline={STAGE_TAGLINE[stage]}>
+                <div className="flex-1 flex flex-col gap-6">
+                    <StepProgress step={stageIdx} total={STAGES.length} fill />
 
-                <section className="flex-1 p-6 py-8 md:p-14 flex flex-col relative z-2">
-                    <div className="max-w-90 w-full mx-auto flex-1 flex flex-col gap-6">
-                        <div className="flex items-center gap-2">
-                            {STAGES.map((s, i) => (
-                                <div
-                                    key={s}
-                                    className={[
-                                        'h-1 flex-1 rounded-sm',
-                                        i <= stageIdx ? 'bg-primary-container' : 'bg-surface-container',
-                                    ].join(' ')}
-                                />
-                            ))}
-                            <Eyebrow className="ml-2">
-                                {stageIdx + 1} of {STAGES.length}
-                            </Eyebrow>
-                        </div>
+                    {error && <Alert>{error}</Alert>}
 
-                        {error && <Alert>{error}</Alert>}
-
-                        {stage === 'request' && (
-                            <form
-                                onSubmit={(e) => {
-                                    void handleRequest(e)
-                                }}
-                                className="flex flex-col gap-5 flex-1">
-                                <div className="flex flex-col gap-2 flex-1 justify-center">
-                                    <ModalTitle>Forgot your password?</ModalTitle>
-                                    <SubHeadline>Enter the email on your account and we&apos;ll send a reset link.</SubHeadline>
-                                    <div className="mt-3">
-                                        <TextField label="Email" value={email} onChange={setEmail} placeholder="you@email.com" autoFocus />
-                                    </div>
-                                </div>
-                                <div className="flex flex-col gap-3.5 pt-2">
-                                    <PrimaryButton size="lg" type="submit" emphasis="pop" fullWidth disabled={!email || submitting}>
-                                        {submitting ? 'Sending…' : 'Send reset link'}
-                                    </PrimaryButton>
-                                    <div className="flex justify-center">
-                                        <TertiaryButton onClick={onBackToSignIn}>
-                                            <span className="inline-flex items-center gap-1.5">
-                                                <Icon name="arrow-left" size={13} />
-                                                Back to sign in
-                                            </span>
-                                        </TertiaryButton>
-                                    </div>
-                                </div>
-                            </form>
-                        )}
-
-                        {stage === 'sent' && (
-                            <div className="flex flex-col gap-5 flex-1">
-                                <div className="flex flex-col gap-4 flex-1 justify-center">
-                                    <div className="w-14 h-14 rounded-full bg-primary-soft text-on-primary-soft inline-flex items-center justify-center">
-                                        <Icon name="mail" size={28} />
-                                    </div>
-                                    <ModalTitle>Check your email.</ModalTitle>
-                                    <SubHeadline>
-                                        We sent a reset link to <strong className="text-on-surface">{email || 'your address'}</strong>. The
-                                        link is good for the next 30 minutes.
-                                    </SubHeadline>
-                                    <span className="font-body font-normal text-[13px] leading-normal text-on-surface-variant">
-                                        Don&apos;t see it? Check your spam folder, or{' '}
-                                        <button
-                                            type="button"
-                                            onClick={() => {
-                                                void handleResend()
-                                            }}
-                                            className="bg-transparent border-0 p-0 text-primary cursor-pointer font-body text-[13px] underline">
-                                            {resent ? 'link sent again' : 'resend the link'}
-                                        </button>
-                                        .
-                                    </span>
-                                </div>
-                                <div className="flex flex-col gap-3.5 pt-2">
-                                    <div className="flex justify-center">
-                                        <TertiaryButton onClick={() => setStage('request')}>
-                                            <span className="inline-flex items-center gap-1.5">
-                                                <Icon name="arrow-left" size={13} />
-                                                Use a different email
-                                            </span>
-                                        </TertiaryButton>
-                                    </div>
+                    {stage === 'request' && (
+                        <form
+                            onSubmit={(e) => {
+                                void handleRequest(e)
+                            }}
+                            className="flex flex-col gap-5 flex-1">
+                            <div className="flex flex-col gap-2 flex-1 justify-center">
+                                <ModalTitle>Forgot your password?</ModalTitle>
+                                <SubHeadline>Enter the email on your account and we&apos;ll send a reset link.</SubHeadline>
+                                <div className="mt-3">
+                                    <TextField label="Email" value={email} onChange={setEmail} placeholder="you@email.com" autoFocus />
                                 </div>
                             </div>
-                        )}
-
-                        {stage === 'set-new' && (
-                            <form
-                                onSubmit={(e) => {
-                                    void handleSetNew(e)
-                                }}
-                                className="flex flex-col gap-5 flex-1">
-                                <div className="flex flex-col gap-4 flex-1 justify-center">
-                                    <ModalTitle>Set a new password.</ModalTitle>
-                                    <SubHeadline>At least 8 characters, with a mix of letters and numbers.</SubHeadline>
-                                    <TextField
-                                        label="New password"
-                                        value={pw}
-                                        onChange={setPw}
-                                        type={showPw ? 'text' : 'password'}
-                                        placeholder="••••••••••••"
-                                        autoFocus
-                                        rightSlot={
-                                            <button
-                                                type="button"
-                                                onClick={() => setShowPw(!showPw)}
-                                                aria-label="Toggle password visibility"
-                                                className="bg-transparent border-0 text-outline cursor-pointer p-1 inline-flex">
-                                                <Icon name={showPw ? 'eye-off' : 'eye'} size={18} />
-                                            </button>
-                                        }
-                                    />
-                                    <div className="-mt-2">
-                                        <PasswordStrength password={pw} />
-                                    </div>
-                                    <TextField
-                                        label="Confirm password"
-                                        value={pw2}
-                                        onChange={setPw2}
-                                        type={showPw ? 'text' : 'password'}
-                                        placeholder="••••••••••••"
-                                    />
-                                    {pw2.length > 0 && !pwMatch && (
-                                        <span className="font-body font-medium text-[12px] leading-[1.4] text-error">
-                                            Passwords don&apos;t match yet.
+                            <div className="flex flex-col gap-3.5 pt-2">
+                                <PrimaryButton size="lg" type="submit" emphasis="pop" fullWidth disabled={!email || submitting}>
+                                    {submitting ? 'Sending…' : 'Send reset link'}
+                                </PrimaryButton>
+                                <div className="flex justify-center">
+                                    <TertiaryButton onClick={onBackToSignIn}>
+                                        <span className="inline-flex items-center gap-1.5">
+                                            <Icon name="arrow-left" size={13} />
+                                            Back to sign in
                                         </span>
-                                    )}
-                                </div>
-                                <div className="flex flex-col gap-3.5 pt-2">
-                                    <PrimaryButton size="lg" type="submit" emphasis="pop" fullWidth disabled={!canSetNew || submitting}>
-                                        {submitting ? 'Saving…' : 'Save new password'}
-                                    </PrimaryButton>
-                                    <div className="flex justify-center">
-                                        <TertiaryButton onClick={onBackToSignIn}>Cancel</TertiaryButton>
-                                    </div>
-                                </div>
-                            </form>
-                        )}
-
-                        {stage === 'done' && (
-                            <div className="flex flex-col gap-5 flex-1">
-                                <div className="flex flex-col gap-4 flex-1 justify-center">
-                                    <div className="w-14 h-14 rounded-full bg-primary-container text-on-primary-container inline-flex items-center justify-center">
-                                        <Icon name="check" size={28} />
-                                    </div>
-                                    <ModalTitle>Password updated.</ModalTitle>
-                                    <SubHeadline>You can sign in with your new password now.</SubHeadline>
-                                </div>
-                                <div className="pt-2">
-                                    <Link href="/login" className="no-underline">
-                                        <PrimaryButton size="lg" emphasis="pop" fullWidth icon="arrow-right" onClick={onBackToSignIn}>
-                                            Sign in
-                                        </PrimaryButton>
-                                    </Link>
+                                    </TertiaryButton>
                                 </div>
                             </div>
-                        )}
-                    </div>
-                </section>
-            </main>
+                        </form>
+                    )}
+
+                    {stage === 'sent' && (
+                        <div className="flex flex-col gap-5 flex-1">
+                            <div className="flex flex-col gap-4 flex-1 justify-center">
+                                <div className="w-14 h-14 rounded-full bg-primary-soft text-on-primary-soft inline-flex items-center justify-center">
+                                    <Icon name="mail" size={28} />
+                                </div>
+                                <ModalTitle>Check your email.</ModalTitle>
+                                <SubHeadline>
+                                    We sent a reset link to <strong className="text-on-surface">{email || 'your address'}</strong>. The link
+                                    is good for the next 30 minutes.
+                                </SubHeadline>
+                                <span className="font-body font-normal text-[13px] leading-normal text-on-surface-variant">
+                                    Don&apos;t see it? Check your spam folder, or{' '}
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            void handleResend()
+                                        }}
+                                        className="bg-transparent border-0 p-0 text-primary cursor-pointer font-body text-[13px] underline">
+                                        {resent ? 'link sent again' : 'resend the link'}
+                                    </button>
+                                    .
+                                </span>
+                            </div>
+                            <div className="flex flex-col gap-3.5 pt-2">
+                                <div className="flex justify-center">
+                                    <TertiaryButton onClick={() => setStage('request')}>
+                                        <span className="inline-flex items-center gap-1.5">
+                                            <Icon name="arrow-left" size={13} />
+                                            Use a different email
+                                        </span>
+                                    </TertiaryButton>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {stage === 'set-new' && (
+                        <form
+                            onSubmit={(e) => {
+                                void handleSetNew(e)
+                            }}
+                            className="flex flex-col gap-5 flex-1">
+                            <div className="flex flex-col gap-4 flex-1 justify-center">
+                                <ModalTitle>Set a new password.</ModalTitle>
+                                <SubHeadline>At least 8 characters, with a mix of letters and numbers.</SubHeadline>
+                                <NewPasswordFields
+                                    value={pw}
+                                    onChange={setPw}
+                                    confirm={pw2}
+                                    onConfirmChange={setPw2}
+                                    confirmLabel="Confirm password"
+                                    autoFocus
+                                />
+                            </div>
+                            <div className="flex flex-col gap-3.5 pt-2">
+                                <PrimaryButton size="lg" type="submit" emphasis="pop" fullWidth disabled={!canSetNew || submitting}>
+                                    {submitting ? 'Saving…' : 'Save new password'}
+                                </PrimaryButton>
+                                <div className="flex justify-center">
+                                    <TertiaryButton onClick={onBackToSignIn}>Cancel</TertiaryButton>
+                                </div>
+                            </div>
+                        </form>
+                    )}
+
+                    {stage === 'done' && (
+                        <div className="flex flex-col gap-5 flex-1">
+                            <div className="flex flex-col gap-4 flex-1 justify-center">
+                                <div className="w-14 h-14 rounded-full bg-primary-container text-on-primary-container inline-flex items-center justify-center">
+                                    <Icon name="check" size={28} />
+                                </div>
+                                <ModalTitle>Password updated.</ModalTitle>
+                                <SubHeadline>You can sign in with your new password now.</SubHeadline>
+                            </div>
+                            <div className="pt-2">
+                                <PrimaryButton size="lg" emphasis="pop" fullWidth icon="arrow-right" href="/login">
+                                    Sign in
+                                </PrimaryButton>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            </AuthFrame>
         </AuthShell>
     )
 }

@@ -1,157 +1,174 @@
 'use client'
 
 import Link from 'next/link'
-import { type FormEvent, type ReactNode } from 'react'
+import { type FormEvent, type ReactNode, useState } from 'react'
+
+import { withNext } from '@/lib/nextPath'
 
 import { Wordmark } from './Brand'
 import { PrimaryButton, TertiaryButton } from './Buttons'
 import { Alert } from './Feedback'
-import { Icon } from './Icon'
 import { TextField } from './Inputs'
+import { PasswordField } from './PasswordField'
 
 type AuthMode = 'signin' | 'signup'
+
+const AUTH_COPY: Record<
+    AuthMode,
+    { headline: [string, string]; submit: string; submitting: string; switchPrompt: string; switchLabel: string; switchHref: string }
+> = {
+    signin: {
+        headline: ['Welcome', 'back.'],
+        submit: 'Sign in',
+        submitting: 'Signing in…',
+        switchPrompt: 'New here?',
+        switchLabel: 'Create one',
+        switchHref: '/signup',
+    },
+    signup: {
+        headline: ['Notation', 'made easy.'],
+        submit: 'Create account',
+        submitting: 'Creating account…',
+        switchPrompt: 'Already have an account?',
+        switchLabel: 'Sign in',
+        switchHref: '/login',
+    },
+}
+
+interface AuthFrameProps {
+    /** The display headline, set on two lines. */
+    headline: [string, string]
+    tagline: string
+    /**
+     * Gives phones a compact brand row instead — the wordmark and this one line, with
+     * the headline and tagline from md up. Left out, the panel stacks and keeps its
+     * (smaller) headline and tagline on phones too.
+     */
+    mobileTagline?: string
+    /** The form column's content. */
+    children: ReactNode
+}
+
+/** The auth pages' card: brand panel (wordmark, serif headline, tagline) beside the form column. */
+export function AuthFrame({ headline, tagline, mobileTagline, children }: AuthFrameProps) {
+    return (
+        <main className="w-full max-w-230 mx-auto bg-surface-container-lowest rounded-xl editorial-shadow flex flex-col md:flex-row overflow-hidden md:min-h-145 relative">
+            <div className="absolute -top-[20%] -right-[10%] w-1/2 h-1/2 bg-primary-container/20 rounded-full blur-[96px] pointer-events-none" />
+            <BrandPanel headline={headline} tagline={tagline} mobileTagline={mobileTagline} />
+            <section className="flex-1 p-6 py-8 md:p-14 flex flex-col relative z-2">
+                <div className="max-w-90 w-full mx-auto flex-1 flex flex-col">{children}</div>
+            </section>
+        </main>
+    )
+}
+
+function BrandPanel({ headline, tagline, mobileTagline }: Omit<AuthFrameProps, 'children'>) {
+    const compact = mobileTagline !== undefined
+    return (
+        <section
+            className={[
+                'md:w-[42%] bg-surface-container-high p-6 md:p-12 justify-between gap-4',
+                compact ? 'flex flex-row md:flex-col items-center md:items-stretch relative overflow-hidden' : 'flex flex-col',
+            ].join(' ')}>
+            <Wordmark size={32} />
+            <div className={compact ? 'flex flex-col gap-4 max-md:hidden' : 'flex flex-col gap-4'}>
+                <h1
+                    className={[
+                        'font-serif font-normal italic leading-none tracking-[-0.01em] text-on-surface m-0',
+                        compact ? 'text-[48px]' : 'text-[28px] md:text-[48px]',
+                    ].join(' ')}>
+                    {headline[0]}
+                    <br />
+                    {headline[1]}
+                </h1>
+                <p className="font-body font-normal text-[14px] leading-normal text-on-surface-variant max-w-70 m-0">{tagline}</p>
+            </div>
+            {compact && (
+                <p className="md:hidden font-serif italic text-[17px] leading-snug text-on-surface-variant m-0 text-right">
+                    {mobileTagline}
+                </p>
+            )}
+        </section>
+    )
+}
+
+export interface AuthCredentials {
+    /** Empty when signing in — only the signup form asks for it. */
+    name: string
+    email: string
+    password: string
+}
 
 interface AuthCardProps {
     mode: AuthMode
     /** Optional banner above the form (e.g. closed-beta note). */
     notice?: ReactNode
-    name?: string
-    email: string
-    password: string
-    showPassword: boolean
     loading?: boolean
     /** Blocks submission for a reason other than loading (e.g. a CAPTCHA still to be solved). */
     submitDisabled?: boolean
     /** Rendered between the fields and the submit button (the signup CAPTCHA). */
     beforeSubmit?: ReactNode
     error?: string | null
-    onNameChange?: (v: string) => void
-    onEmailChange: (v: string) => void
-    onPasswordChange: (v: string) => void
-    onToggleShowPassword: () => void
-    onSubmit: (e: FormEvent) => void
+    /** Where the visitor is headed after auth (?next=), carried over when they switch between sign-in and sign-up. */
+    next?: string
+    onSubmit: (credentials: AuthCredentials) => void
 }
 
-export function AuthCard(props: AuthCardProps) {
-    const isSignup = props.mode === 'signup'
-    return (
-        <main className="w-full max-w-230 mx-auto bg-surface-container-lowest rounded-xl editorial-shadow flex flex-col md:flex-row overflow-hidden md:min-h-145 relative">
-            <div className="absolute -top-[20%] -right-[10%] w-1/2 h-1/2 bg-primary-container/20 rounded-full blur-[96px] pointer-events-none" />
-            <BrandPanel mode={props.mode} />
-            <FormPanel {...props} isSignup={isSignup} />
-        </main>
-    )
-}
-
-function BrandPanel({ mode }: { mode: AuthMode }) {
+/** The sign-in / sign-up form in its AuthFrame. It owns the fields; the page owns what submitting does. */
+export function AuthCard({ mode, notice, loading, submitDisabled, beforeSubmit, error, next, onSubmit }: AuthCardProps) {
+    const copy = AUTH_COPY[mode]
     const isSignup = mode === 'signup'
+    const [name, setName] = useState('')
+    const [email, setEmail] = useState('')
+    const [password, setPassword] = useState('')
+
+    const submit = (e: FormEvent) => {
+        e.preventDefault()
+        onSubmit({ name, email, password })
+    }
+
     return (
-        <section className="md:w-[42%] bg-surface-container-high p-6 md:p-12 flex flex-row md:flex-col items-center md:items-stretch justify-between gap-4 relative overflow-hidden">
-            <Wordmark size={32} />
-            <div className="flex flex-col gap-4 max-md:hidden">
-                <h1 className="font-serif font-normal italic text-[48px] leading-none tracking-[-0.01em] text-on-surface m-0">
-                    {isSignup ? (
-                        <>
-                            Notation
-                            <br />
-                            made easy.
-                        </>
-                    ) : (
-                        <>
-                            Welcome
-                            <br />
-                            back.
-                        </>
+        <AuthFrame headline={copy.headline} tagline="The fastest way to get a melody on the page." mobileTagline={copy.headline.join(' ')}>
+            <Tabs mode={mode} next={next} />
+
+            <form onSubmit={submit} className="flex flex-col gap-5 flex-1">
+                <div className="flex flex-col gap-4.5 flex-1 justify-center">
+                    {notice && (
+                        <div className="bg-secondary-soft text-on-secondary-soft rounded-md px-4 py-3 font-body font-normal text-[13px] leading-normal">
+                            {notice}
+                        </div>
                     )}
-                </h1>
-                <p className="font-body font-normal text-[14px] leading-normal text-on-surface-variant max-w-70 m-0">
-                    The fastest way to get a melody on the page.
-                </p>
-            </div>
-            <p className="md:hidden font-serif italic text-[17px] leading-snug text-on-surface-variant m-0 text-right">
-                {isSignup ? 'Notation made easy.' : 'Welcome back.'}
-            </p>
-        </section>
+                    {isSignup && <TextField label="Your name" value={name} onChange={setName} placeholder="Anya Mokri" />}
+                    <TextField label="Email" value={email} onChange={setEmail} placeholder="you@email.com" type="email" />
+                    <PasswordField label="Password" value={password} onChange={setPassword} />
+                    {!isSignup && (
+                        <div className="flex justify-end -mt-2">
+                            <TertiaryButton href="/reset-password">Forgot password?</TertiaryButton>
+                        </div>
+                    )}
+                    {error && <Alert>{error}</Alert>}
+                </div>
+
+                <div className="flex flex-col gap-3.5 pt-2">
+                    {beforeSubmit}
+                    <PrimaryButton size="lg" type="submit" emphasis="pop" fullWidth disabled={loading || submitDisabled}>
+                        {loading ? copy.submitting : copy.submit}
+                    </PrimaryButton>
+                    <div className="flex justify-between items-center">
+                        <span className="font-body font-normal text-[13px] leading-none text-on-surface-variant">{copy.switchPrompt}</span>
+                        <TertiaryButton href={withNext(copy.switchHref, next)}>{copy.switchLabel}</TertiaryButton>
+                    </div>
+                </div>
+            </form>
+        </AuthFrame>
     )
 }
 
-function FormPanel({
-    mode,
-    notice,
-    name,
-    email,
-    password,
-    showPassword,
-    loading,
-    submitDisabled,
-    beforeSubmit,
-    error,
-    onNameChange,
-    onEmailChange,
-    onPasswordChange,
-    onToggleShowPassword,
-    onSubmit,
-    isSignup,
-}: AuthCardProps & { isSignup: boolean }) {
-    return (
-        <section className="flex-1 p-6 py-8 md:p-14 flex flex-col relative z-2">
-            <div className="max-w-90 w-full mx-auto flex-1 flex flex-col">
-                <Tabs mode={mode} />
-
-                <form onSubmit={onSubmit} className="flex flex-col gap-5 flex-1">
-                    <div className="flex flex-col gap-4.5 flex-1 justify-center">
-                        {notice && (
-                            <div className="bg-secondary-soft text-on-secondary-soft rounded-md px-4 py-3 font-body font-normal text-[13px] leading-normal">
-                                {notice}
-                            </div>
-                        )}
-                        {isSignup && <TextField label="Your name" value={name ?? ''} onChange={onNameChange} placeholder="Anya Mokri" />}
-                        <TextField label="Email" value={email} onChange={onEmailChange} placeholder="you@email.com" type="email" />
-                        <TextField
-                            label="Password"
-                            value={password}
-                            onChange={onPasswordChange}
-                            type={showPassword ? 'text' : 'password'}
-                            placeholder="••••••••••••"
-                            rightSlot={
-                                <button
-                                    type="button"
-                                    onClick={onToggleShowPassword}
-                                    aria-label="Show password"
-                                    aria-pressed={showPassword}
-                                    className="bg-transparent border-0 text-outline cursor-pointer p-1 inline-flex">
-                                    <Icon name={showPassword ? 'eye-off' : 'eye'} size={18} />
-                                </button>
-                            }
-                        />
-                        {!isSignup && (
-                            <div className="flex justify-end -mt-2">
-                                <Link href="/reset-password" className="no-underline">
-                                    <TertiaryButton>Forgot password?</TertiaryButton>
-                                </Link>
-                            </div>
-                        )}
-                        {error && <Alert>{error}</Alert>}
-                    </div>
-
-                    <div className="flex flex-col gap-3.5 pt-2">
-                        {beforeSubmit}
-                        <PrimaryButton size="lg" type="submit" emphasis="pop" fullWidth disabled={loading || submitDisabled}>
-                            {loading ? (isSignup ? 'Creating account…' : 'Signing in…') : isSignup ? 'Create account' : 'Sign in'}
-                        </PrimaryButton>
-                        <SwitchModeRow mode={mode} />
-                    </div>
-                </form>
-            </div>
-        </section>
-    )
-}
-
-function Tabs({ mode }: { mode: AuthMode }) {
+function Tabs({ mode, next }: { mode: AuthMode; next?: string }) {
     return (
         <div className="flex items-end gap-6.5 pb-2 mb-8">
-            <ModeTab href="/login" label="Sign in" active={mode === 'signin'} />
-            <ModeTab href="/signup" label="Create account" active={mode === 'signup'} />
+            <ModeTab href={withNext('/login', next)} label="Sign in" active={mode === 'signin'} />
+            <ModeTab href={withNext('/signup', next)} label="Create account" active={mode === 'signup'} />
         </div>
     )
 }
@@ -169,20 +186,6 @@ function ModeTab({ href, label, active }: { href: string; label: string; active:
             ].join(' ')}>
             {label}
         </Link>
-    )
-}
-
-function SwitchModeRow({ mode }: { mode: AuthMode }) {
-    const isSignup = mode === 'signup'
-    return (
-        <div className="flex justify-between items-center">
-            <span className="font-body font-normal text-[13px] leading-none text-on-surface-variant">
-                {isSignup ? 'Already have an account?' : 'New here?'}
-            </span>
-            <Link href={isSignup ? '/login' : '/signup'} className="no-underline">
-                <TertiaryButton>{isSignup ? 'Sign in' : 'Create one'}</TertiaryButton>
-            </Link>
-        </div>
     )
 }
 

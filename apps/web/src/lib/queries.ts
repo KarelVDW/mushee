@@ -1,10 +1,11 @@
 'use client'
 
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useRouter } from 'next/navigation'
 import { useCallback, useMemo } from 'react'
 
+import type { ExportProfile } from './AccountExport'
 import {
-    ApiError,
     type BillingInterval,
     cancelSubscription,
     changePlan,
@@ -40,12 +41,27 @@ import {
     unshareScore,
     updateScore,
 } from './api'
+import { signOut, updateUser } from './auth-client'
 import type { StoredShortcuts } from './Keybindings'
 import { PlanCatalogue } from './plans'
 
-export const scoreKeys = {
+// The meta every mutation here may carry, read by the MutationCache's onError in
+// app/providers.tsx — typed so a misspelt key fails compilation instead of the toast.
+declare module '@tanstack/react-query' {
+    interface Register {
+        mutationMeta: {
+            /** The failure toast's message, in place of the generic network/API phrasing. */
+            errorMessage?: string
+            /** The caller renders the failure itself, so no toast. */
+            silentError?: boolean
+        }
+    }
+}
+
+const scoreKeys = {
     all: ['scores'] as const,
-    list: (search?: string) => ['scores', 'list', search ?? ''] as const,
+    lists: ['scores', 'list'] as const,
+    list: (search?: string) => [...scoreKeys.lists, search ?? ''] as const,
     detail: (id: string) => ['scores', 'detail', id] as const,
 }
 
@@ -83,8 +99,8 @@ export function useCreateScore() {
     return useMutation({
         mutationFn: ({ title, score }: { title: string; score: Record<string, unknown> }) => createScore(title, score),
         onSuccess: () => void queryClient.invalidateQueries({ queryKey: scoreKeys.all }),
-        // The library page renders errors itself: a score-limit refusal opens
-        // the upgrade dialog; anything else gets its own toast.
+        // Callers render errors themselves: a score-limit refusal opens the
+        // upgrade dialog; anything else gets its own toast.
         meta: { silentError: true },
     })
 }
@@ -94,8 +110,8 @@ export function useDuplicateScore() {
     return useMutation({
         mutationFn: (id: string) => duplicateScore(id),
         onSuccess: () => void queryClient.invalidateQueries({ queryKey: scoreKeys.all }),
-        // Like create: a score-limit refusal opens the upgrade dialog on the
-        // library page; anything else gets its own toast there.
+        // Like create: the caller opens the upgrade dialog on a score-limit
+        // refusal and toasts anything else itself.
         meta: { silentError: true },
     })
 }
@@ -107,24 +123,24 @@ export function useDeleteScore() {
         onSuccess: (_data, id) => {
             // Drop the row from every cached list right away; the invalidation
             // then reconciles with the server in the background.
-            queryClient.setQueriesData<ScoreMeta[]>({ queryKey: [...scoreKeys.all, 'list'] }, (rows) =>
-                rows?.filter((row) => row.id !== id),
-            )
+            queryClient.setQueriesData<ScoreMeta[]>({ queryKey: scoreKeys.lists }, (rows) => rows?.filter((row) => row.id !== id))
             void queryClient.invalidateQueries({ queryKey: scoreKeys.all })
         },
         meta: { errorMessage: 'Could not delete the score. Please try again.' },
     })
 }
 
+const sharedKeys = {
+    detail: (token: string) => ['shared', token] as const,
+}
+
 /** A score behind its share token — public, cached for the visit. */
 export function useSharedScore(token: string) {
     return useQuery({
-        queryKey: ['shared', token] as const,
+        queryKey: sharedKeys.detail(token),
         queryFn: () => getSharedScore(token),
         staleTime: Infinity,
         refetchOnWindowFocus: false,
-        // 404 means unknown/revoked; retrying will not change that.
-        retry: (count, error) => !(error instanceof ApiError && error.isClientError) && count < 2,
     })
 }
 
@@ -155,9 +171,10 @@ export function useUnshareScore(id: string) {
     })
 }
 
-export const recordingKeys = {
+const recordingKeys = {
     all: ['recordings'] as const,
-    list: (scoreId?: string) => ['recordings', 'list', scoreId ?? ''] as const,
+    lists: ['recordings', 'list'] as const,
+    list: (scoreId?: string) => [...recordingKeys.lists, scoreId ?? ''] as const,
 }
 
 /** Every take the account holds, newest first (Settings → Your data). */
@@ -183,7 +200,7 @@ export function useDeleteRecording() {
         mutationFn: (id: string) => deleteRecording(id),
         onSuccess: (_data, id) => {
             // The server answers nothing new, so the patched lists are already right — no refetch.
-            queryClient.setQueriesData<RecordingSummary[]>({ queryKey: [...recordingKeys.all, 'list'] }, (rows) =>
+            queryClient.setQueriesData<RecordingSummary[]>({ queryKey: recordingKeys.lists }, (rows) =>
                 rows?.filter((row) => row.id !== id),
             )
         },
@@ -197,7 +214,7 @@ export function useUpdateScore(id: string) {
         mutationFn: (data: Parameters<typeof updateScore>[1]) => updateScore(id, data),
         onSuccess: (meta: ScoreMeta) => {
             // Keep list rows (title, updatedAt) honest without refetching the document.
-            queryClient.setQueriesData<ScoreMeta[]>({ queryKey: [...scoreKeys.all, 'list'] }, (rows) =>
+            queryClient.setQueriesData<ScoreMeta[]>({ queryKey: scoreKeys.lists }, (rows) =>
                 rows?.map((row) => (row.id === meta.id ? meta : row)),
             )
         },
@@ -212,7 +229,7 @@ export function usePatchOnboarding() {
     })
 }
 
-export const settingsKeys = {
+const settingsKeys = {
     all: ['settings'] as const,
 }
 
@@ -261,6 +278,42 @@ export function useRequestAccountDeletion() {
     })
 }
 
+/** Builds the GDPR "download my data" archive (every score, profile and settings) in the browser. */
+export function useExportAccountData() {
+    return useMutation({
+        // Loaded on demand: the exporter pulls in the score model and MusicXML writer, and
+        // this module reaches every route through AuthGate's useBetaGate.
+        mutationFn: async (profile: ExportProfile) => (await import('./AccountExport')).AccountExport.collect(profile),
+        meta: { errorMessage: "Your data couldn't be exported. Please try again." },
+    })
+}
+
+/** Saves the account's display name — the one Settings edits and onboarding asks for. */
+export function useUpdateProfile() {
+    return useMutation({
+        mutationFn: async (name: string) => {
+            const { error } = await updateUser({ name })
+            if (error) throw new Error(error.message ?? 'Update failed')
+        },
+        meta: { errorMessage: "Your profile couldn't be saved. Please try again." },
+    })
+}
+
+/**
+ * Signs out, then leaves for `destination`. The signed-out user's cached queries go
+ * with the session (SessionCacheScope in app/providers.tsx), not here.
+ */
+export function useSignOut() {
+    const router = useRouter()
+    return useCallback(
+        async (destination: string) => {
+            await signOut()
+            router.push(destination)
+        },
+        [router],
+    )
+}
+
 export function useReactivateAccount() {
     const queryClient = useQueryClient()
     return useMutation({
@@ -272,10 +325,14 @@ export function useReactivateAccount() {
 
 // ── Plans (database-driven tier catalogue) ──────────────────────────────────
 
+const planKeys = {
+    all: ['plans'] as const,
+}
+
 /** The tier catalogue as the database knows it (GET /plans). */
 function usePlans() {
     return useQuery({
-        queryKey: ['plans'],
+        queryKey: planKeys.all,
         queryFn: listPlans,
         // The catalogue changes on the order of releases, not clicks.
         staleTime: 5 * 60 * 1000,
@@ -369,7 +426,7 @@ export function useResumeSubscription() {
 
 // ── Closed beta ─────────────────────────────────────────────────────────────
 
-export const betaKeys = {
+const betaKeys = {
     status: ['beta', 'status'] as const,
 }
 

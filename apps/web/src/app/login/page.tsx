@@ -1,11 +1,11 @@
 'use client'
 
-import { useRouter } from 'next/navigation'
-import { type FormEvent, useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { Suspense, useState } from 'react'
 
-import { AuthCard, AuthShell } from '@/components/ui'
+import { AuthCard, type AuthCredentials, AuthShell } from '@/components/ui'
 import { signIn } from '@/lib/auth-client'
-import { nextPathFrom } from '@/lib/nextPath'
+import { nextPathFrom, withNext } from '@/lib/nextPath'
 import { useCheckPendingDeletion } from '@/lib/queries'
 
 import { ReactivateAccountDialog } from './ReactivateAccountDialog'
@@ -16,28 +16,37 @@ interface PendingDeletion {
 }
 
 export default function LoginPage() {
+    // useSearchParams needs a Suspense boundary on this prerendered page. The fallback is
+    // the same form without ?next=, so the prerendered HTML still shows the card.
+    return (
+        <Suspense fallback={<LoginForm />}>
+            <LoginWithNext />
+        </Suspense>
+    )
+}
+
+function LoginWithNext() {
+    const params = useSearchParams()
+    return <LoginForm next={nextPathFrom(`?${params.toString()}`)} />
+}
+
+function LoginForm({ next }: { next?: string }) {
     const router = useRouter()
-    const [email, setEmail] = useState('')
-    const [password, setPassword] = useState('')
-    const [showPassword, setShowPassword] = useState(false)
     const [error, setError] = useState<string | null>(null)
     const [loading, setLoading] = useState(false)
     const [pendingDeletion, setPendingDeletion] = useState<PendingDeletion | null>(null)
     const checkPendingDeletion = useCheckPendingDeletion()
 
     function continueToApp(emailVerified: boolean) {
-        if (!emailVerified) {
-            router.push('/onboarding')
-            return
-        }
         // The auth middleware puts the originally requested path in ?next= so
-        // deep links survive the login bounce. Same-origin paths only — a full
-        // URL here would be an open redirect.
-        router.push(nextPathFrom(window.location.search))
+        // deep links survive the login bounce — through onboarding too, for an
+        // account that still has to verify its email. Same-origin paths only —
+        // a full URL here would be an open redirect.
+        const destination = nextPathFrom(window.location.search)
+        router.push(emailVerified ? destination : withNext('/onboarding', destination))
     }
 
-    function handleSubmit(e: FormEvent) {
-        e.preventDefault()
+    function handleSubmit({ email, password }: AuthCredentials) {
         setError(null)
         setLoading(true)
 
@@ -63,18 +72,7 @@ export default function LoginPage() {
 
     return (
         <AuthShell>
-            <AuthCard
-                mode="signin"
-                email={email}
-                password={password}
-                showPassword={showPassword}
-                error={error}
-                loading={loading}
-                onEmailChange={setEmail}
-                onPasswordChange={setPassword}
-                onToggleShowPassword={() => setShowPassword((v) => !v)}
-                onSubmit={handleSubmit}
-            />
+            <AuthCard mode="signin" error={error} loading={loading} next={next} onSubmit={handleSubmit} />
             {pendingDeletion && (
                 <ReactivateAccountDialog
                     purgeAfter={pendingDeletion.purgeAfter}

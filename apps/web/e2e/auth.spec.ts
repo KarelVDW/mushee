@@ -55,6 +55,15 @@ test('login: the sign-in button submits too, and links lead to signup and reset'
     await expect(page).toHaveURL(/\/scores$/)
 })
 
+test('the sign-in and sign-up links carry ?next= across, so a deep link survives switching forms', async ({ page }) => {
+    // The share page's "save a copy" CTA sends visitors to /signup?next=/s/<token>.
+    await page.goto('/signup?next=%2Fs%2Fe2e-token')
+    await page.getByRole('link', { name: 'Sign in' }).first().click()
+    await expect(page).toHaveURL(/\/login\?next=%2Fs%2Fe2e-token$/)
+    await page.getByRole('link', { name: 'Create one' }).click()
+    await expect(page).toHaveURL(/\/signup\?next=%2Fs%2Fe2e-token$/)
+})
+
 test('signup: filling the form creates the account and moves on to onboarding', async ({ page }) => {
     await page.goto('/signup')
 
@@ -94,6 +103,11 @@ test('reset password: the new-password stage validates strength and match', asyn
     await page.getByLabel('New password').fill('correct-horse-battery')
     await page.getByLabel('Confirm password').fill('correct-horse-battery')
     await expect(save).toBeEnabled()
+
+    // The one eye toggle reveals both fields.
+    await page.getByRole('button', { name: 'Show password' }).click()
+    await expect(page.getByLabel('New password')).toHaveAttribute('type', 'text')
+    await expect(page.getByLabel('Confirm password')).toHaveAttribute('type', 'text')
 
     // A mismatch disables saving again.
     await page.getByLabel('Confirm password').fill('different')

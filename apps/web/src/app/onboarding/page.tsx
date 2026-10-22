@@ -10,7 +10,7 @@ import { type BillingInterval, type OnboardingPatch } from '@/lib/api'
 import { useSession } from '@/lib/auth-client'
 import { nextPathFrom } from '@/lib/nextPath'
 import { BETA_MODE, isPaidTier, type PlanTier, requestedPlanFrom } from '@/lib/plans'
-import { useBetaGate, usePatchOnboarding, usePlanCatalogue, useStartCheckout } from '@/lib/queries'
+import { useBetaGate, usePatchOnboarding, usePlanCatalogue, useStartCheckout, useUpdateProfile } from '@/lib/queries'
 
 import { NO_INSTRUMENT_OPTION, STEP_COUNT, STEP_NAMES, type StepName } from './onboarding-data'
 import {
@@ -30,6 +30,7 @@ import {
 export default function OnboardingPage() {
     const router = useRouter()
     const patchMutation = usePatchOnboarding()
+    const updateProfile = useUpdateProfile()
     const startCheckout = useStartCheckout()
     const plans = usePlanCatalogue()
     const { data: session, refetch } = useSession()
@@ -58,6 +59,13 @@ export default function OnboardingPage() {
     const [tier, setTier] = useState<PlanTier['id']>('pro')
     const [billing, setBilling] = useState<BillingInterval>('monthly')
     const [done, setDone] = useState(false)
+
+    // The session can still be loading at mount (a reload on /onboarding) — seed the
+    // name step from it once it resolves, so the field isn't left empty and blocking.
+    const sessionName = session?.user?.name
+    useEffect(() => {
+        if (sessionName !== undefined) setName(sessionName)
+    }, [sessionName])
 
     // A visitor who came from a pricing card (signup forwards its ?plan=) finds that tier
     // preselected. Read after mount: the page prerenders, where there is no URL to read.
@@ -113,6 +121,9 @@ export default function OnboardingPage() {
         // Persistence is best-effort and never blocks progress; a failure
         // surfaces as a toast through the global mutation error handler.
         if (patch) patchMutation.mutate(patch)
+        // The name is the account's display name (Settings edits the same field), not an
+        // onboarding answer, so it is saved on the user rather than in the patch.
+        if (stepName === 'name' && name.trim() !== sessionName) updateProfile.mutate(name.trim())
         track('onboarding_step_completed', {
             step: stepName,
             ...(stepName === 'mic' ? { mic_permission: micState } : {}),
@@ -159,7 +170,6 @@ export default function OnboardingPage() {
         track('onboarding_skipped', { step: stepName })
         leave()
     }
-    const finish = () => leave()
 
     return (
         <FunnelShell gap={7} action={!done && step > 0 && <TertiaryButton onClick={skip}>Skip for now</TertiaryButton>}>
@@ -195,7 +205,7 @@ export default function OnboardingPage() {
                     awaitingApproval={awaitingApproval}
                     betaPlanName={plans.beta.name}
                     planName={BETA_MODE ? plans.beta.name : plans.byId(tier)?.name}
-                    onFinish={finish}
+                    onFinish={leave}
                 />
             )}
 

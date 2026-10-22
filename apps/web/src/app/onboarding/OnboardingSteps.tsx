@@ -76,9 +76,9 @@ export function VerifyStep({
                             onChange={(v) => setCode(v.replace(/\D/g, '').slice(0, 6))}
                             placeholder="••••••"
                             autoFocus
+                            error={otpError}
                         />
                     </div>
-                    {otpError && <span className="font-body font-medium text-[12px] leading-[1.4] text-error">{otpError}</span>}
                     <div className="flex gap-3 items-center flex-wrap">
                         <PrimaryButton disabled={!/^\d{6}$/.test(code) || verifying} onClick={() => void submitCode()}>
                             {verifying ? 'Verifying…' : 'Verify'}
@@ -159,7 +159,7 @@ export function MicStep({ micState, setMicState }: { micState: MicState; setMicS
                     </PrimaryButton>
                 )}
                 <span className="font-body font-normal text-[12px] leading-[1.4] text-on-surface-variant">
-                    You can revoke this any time from Settings.
+                    You can change this any time in your browser&apos;s site settings.
                 </span>
             </div>
         </StepShell>
@@ -169,7 +169,7 @@ export function MicStep({ micState, setMicState }: { micState: MicState; setMicS
 // 'name' — name
 export function NameStep({ value, onChange }: { value: string; onChange: (v: string) => void }) {
     return (
-        <StepShell title="What should we call you?" subtitle="This shows up on your scores and lets us greet you properly.">
+        <StepShell title="What should we call you?" subtitle="So we can greet you properly.">
             <TextField label="Name" value={value} onChange={onChange} placeholder="Anya Mokri" autoFocus />
         </StepShell>
     )
