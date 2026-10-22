@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 
 import { Alert, Icon, PrimaryButton, SecondaryButton, TertiaryButton } from '@/components/ui'
 import type { BillingState } from '@/lib/api'
+import { formatLongDate } from '@/lib/dates'
 import { BETA_PLAN, planById, planPrice, type PlanTier } from '@/lib/plans'
 import { useBillingPortal, useBillingState, useResumeSubscription } from '@/lib/queries'
 import { formatRecordingTime } from '@/lib/recordingTime'
@@ -50,9 +51,7 @@ export function BillingSection({ requestedPlan }: { requestedPlan?: PlanTier['id
     const hasSubscription = Boolean(billing.status)
     // Plans and packs are on offer only where Polar is wired up and the beta isn't running.
     const canPurchase = !isBeta && billing.billingConfigured && !billing.betaMode
-    const periodEnd = billing.currentPeriodEnd
-        ? new Date(billing.currentPeriodEnd).toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' })
-        : null
+    const periodEnd = billing.currentPeriodEnd ? formatLongDate(billing.currentPeriodEnd) : null
 
     const priceLine = isBeta
         ? 'Free during the beta'
