@@ -352,10 +352,10 @@ test('changing the instrument through the dialog updates the header chip', async
     const dialog = page.getByRole('dialog', { name: 'Change instrument' })
     await expect(dialog).toBeVisible()
 
-    // The confirm names the change; until a different instrument is picked it waits, and says why.
+    // The confirm names the pick; until a different instrument is picked it waits, and says why.
     await expect(dialog).toContainText('Changes the playback sound and how the notes are written for it. Your melody stays the same.')
-    const confirm = dialog.getByRole('button', { name: /^Change to / })
-    await expect(confirm).toHaveText('Change to Piano')
+    const confirm = dialog.getByRole('button', { name: /^Use / })
+    await expect(confirm).toHaveText('Use Piano')
     await expect(confirm).toBeDisabled()
     await expect(confirm).toHaveAccessibleDescription('Pick a different instrument')
     // No 'Instrument · Piano' readout: the picked tile and the confirm already say it.
@@ -363,7 +363,7 @@ test('changing the instrument through the dialog updates the header chip', async
 
     // Violin is a popular tile; picking it names the confirm after it.
     await dialog.getByRole('button', { name: 'Pick Violin', exact: true }).click()
-    await expect(confirm).toHaveText('Change to Violin')
+    await expect(confirm).toHaveText('Use Violin')
     await expect(confirm).toBeEnabled()
 
     const patch = waitForAutosave(page)

@@ -16,8 +16,8 @@ interface ChangeInstrumentDialogProps {
 /**
  * Mounted only while open, so every opening starts from the score's current instrument. The
  * shared picker (popular tiles, 'All instruments', the chord line for a chordal pick) without
- * its 'Instrument · X' readout — the picked tile and the confirm already say it. The confirm
- * names the change ('Change to Violin') and, until a different instrument is picked, says why
+ * its 'Instrument · X' readout — the picked tile and the confirm already say it. The flat
+ * confirm names the pick ('Use Violin') and, until a different instrument is picked, says why
  * it waits.
  */
 export function ChangeInstrumentDialog({ current, onCancel, onConfirm }: ChangeInstrumentDialogProps) {
@@ -35,7 +35,7 @@ export function ChangeInstrumentDialog({ current, onCancel, onConfirm }: ChangeI
                     <TertiaryButton onClick={onCancel}>Cancel</TertiaryButton>
                     <Tooltip reason={dirty ? undefined : 'Pick a different instrument'}>
                         <PrimaryButton disabled={!dirty} onClick={() => dirty && onConfirm(instrument)}>
-                            Change to {instrument.displayName}
+                            Use {instrument.displayName}
                         </PrimaryButton>
                     </Tooltip>
                 </>
