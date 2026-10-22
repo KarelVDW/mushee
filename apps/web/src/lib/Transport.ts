@@ -1,21 +1,24 @@
-import type { Note, Score } from '@mushee/notation/model'
+import type { Instrument, Note, Score } from '@mushee/notation/model'
 import { Metronome } from '@mushee/playback/Metronome'
 import { MidiPlayer } from '@mushee/playback/MidiPlayer'
 import { ScoreScheduler } from '@mushee/playback/ScoreScheduler'
 import type { Tickable } from '@mushee/playback/Ticker'
 import { Ticker } from '@mushee/playback/Ticker'
 
-import { CursorManager } from './CursorManager'
+import { PlaybackCursor } from './PlaybackCursor'
 import { RecordingEngine, type RecordingOptions } from './RecordingEngine'
 
 export type TransportMode = 'stopped' | 'playing' | 'paused' | 'recording'
+
+/** How long a selected note's preview sounds, in seconds. */
+const PREVIEW_SECONDS = 0.75
 
 export interface PlayScoreOptions {
     score: Score
     /** Note to start from; null = top of the score. */
     startNote: Note | null
+    /** The score's cursor rect; the pass's PlaybackCursor draws into it. */
     cursorEl: SVGRectElement
-    resolvePosition: (pos: { measureIndex: number; beat: number }) => { x: number; rowY: number } | null
     /** Fired when the pass plays through to the end (not on stop()). */
     onFinish?: () => void
 }
@@ -35,11 +38,11 @@ export interface PlayScoreOptions {
  * score's existing notes, and playback can never touch the mic.
  */
 export class Transport {
-    readonly midiPlayer: MidiPlayer
+    private readonly midiPlayer: MidiPlayer
     private readonly ticker = new Ticker()
     private readonly scheduler: ScoreScheduler
     private readonly metronome: Metronome
-    private readonly cursor: CursorManager
+    private readonly cursor: PlaybackCursor
     private readonly recorder: RecordingEngine
 
     private _mode: TransportMode = 'stopped'
@@ -49,8 +52,8 @@ export class Transport {
         this.midiPlayer = midiPlayer
         this.scheduler = new ScoreScheduler(midiPlayer)
         this.metronome = new Metronome(midiPlayer)
-        this.cursor = new CursorManager(midiPlayer, this.scheduler)
-        this.recorder = new RecordingEngine(midiPlayer)
+        this.cursor = new PlaybackCursor(midiPlayer, this.scheduler)
+        this.recorder = new RecordingEngine(midiPlayer, this.cursor)
     }
 
     get mode(): TransportMode {
@@ -65,9 +68,20 @@ export class Transport {
         return this.recorder.state !== 'idle'
     }
 
-    /** The mic settings the browser actually granted for the live take (`null` when idle). */
-    get micSettings(): MediaTrackSettings | null {
-        return this.recorder.micSettings
+    /**
+     * Pre-fetch the samples a pass needs: `instrument`'s, plus the metronome
+     * click's unless `metronome` is false (a page that never clicks). Scheduling
+     * a note whose samples are still downloading is a silent skip, so callers
+     * gate playback on this.
+     */
+    async prepare(instrument: Instrument, { metronome = true }: { metronome?: boolean } = {}): Promise<void> {
+        await this.midiPlayer.loadInstruments(metronome ? [instrument, Metronome.INSTRUMENT] : [instrument])
+    }
+
+    /** Sound `note` of `score` briefly — at the pitch the score's instrument sounds it — cutting off any earlier preview. */
+    preview(score: Score, note: Note): void {
+        if (!note.pitch) return
+        this.midiPlayer.preview(score.instrument.soundingMidi(note.pitch), PREVIEW_SECONDS, score.instrument)
     }
 
     /** Play the score from `startNote` (or the top). Stops whatever ran before. */
@@ -75,12 +89,10 @@ export class Transport {
         this.stop()
         const { score, startNote } = options
 
-        this.scheduler.score = score
-        this.scheduler.startNote = startNote
-        this.metronome.score = score
-        this.metronome.startMeasureIndex = startNote?.measure.index ?? 0
-        this.metronome.startBeat = startNote ? startNote.measure.beatOffsetOf(startNote) : 0
-        this.cursor.bind(options.cursorEl, options.resolvePosition)
+        this.scheduler.cue(score, startNote)
+        this.metronome.cue(score, startNote?.measure.index ?? 0, startNote ? startNote.measure.beatOffsetOf(startNote) : 0)
+        this.cursor.attach(options.cursorEl)
+        this.cursor.follow(score)
 
         const tickables: Tickable[] = [this.scheduler, this.cursor]
         if (this._metronomeEnabled) tickables.push(this.metronome)
@@ -113,28 +125,31 @@ export class Transport {
      * unsupported browser), then run the recording engine with the count-off
      * metronome. The metronome always clicks during a take, whatever its
      * playback toggle says. Rethrows engine start failures after cleaning up.
+     * Resolves to the mic settings granted for the take (see
+     * {@link RecordingEngine.start}), or null when no take started.
      */
-    async record(options: RecordingOptions): Promise<void> {
+    async record(options: RecordingOptions): Promise<MediaTrackSettings | null> {
         this.stop()
+        this.cursor.attach(options.cursorEl)
+        let mic: MediaTrackSettings | null
         try {
-            await this.recorder.start(options)
+            mic = await this.recorder.start(options)
         } catch (err) {
             this.stop()
             throw err
         }
         // stop() may have run while the mic permission prompt was open; the
         // engine already released the stream, so don't start a zombie pass.
-        if (this.recorder.state === 'idle') return
+        if (this.recorder.state === 'idle') return null
 
-        this.metronome.score = options.score
-        this.metronome.startMeasureIndex = options.startMeasureIndex
-        this.metronome.startBeat = 0
+        this.metronome.cue(options.score, options.startMeasureIndex)
 
         this.midiPlayer.start()
         this._mode = 'recording'
         this.ticker.play([this.recorder, this.metronome], () => {
             this._mode = 'stopped'
         })
+        return mic
     }
 
     /** Stop everything: clock, playback pass, recording session, cursor. Idempotent. */
@@ -142,7 +157,7 @@ export class Transport {
         this.ticker.stop()
         this.recorder.stop()
         this.midiPlayer.stop()
-        this.cursor.hideCursor()
+        this.cursor.hide()
         this._mode = 'stopped'
     }
 
@@ -156,8 +171,7 @@ export class Transport {
         if (this._mode !== 'playing' && this._mode !== 'paused') return
         if (enabled) {
             // Joining mid-pass: skip the clicks that already elapsed.
-            this.metronome.reset()
-            this.metronome.syncTo(this.midiPlayer.currentTime)
+            this.metronome.joinAt(this.midiPlayer.currentTime)
             this.ticker.addTickable(this.metronome)
         } else {
             this.ticker.removeTickable(this.metronome)

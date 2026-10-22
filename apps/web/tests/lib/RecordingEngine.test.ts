@@ -1,15 +1,20 @@
+import { INTERACTION_BLUE } from '@mushee/notation/components'
 import { Score, TimeSignature } from '@mushee/notation/model'
 import { makeScore } from '@mushee/notation/testing'
-import type { MidiPlayer } from '@mushee/playback/MidiPlayer'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { RecordingEngine, type RecordingOptions, RecordingUnsupportedError } from '@/lib/RecordingEngine'
+import { RecordingUnsupportedError } from '@/lib/Microphone'
+import { PlaybackCursor } from '@/lib/PlaybackCursor'
+import { RecordingEngine, type RecordingOptions } from '@/lib/RecordingEngine'
 
 // Shape of the JSON `meta` frame the engine sends when streaming opens.
 interface MetaFrame {
     type: string
     bpm: number
-    timeSignature: { beats: number; beatType: number } | null
+    timeSignature: { beats: number; beatType: number }
+    chromaticTranspose: number
+    instrumentId: string
+    keyFifths: number
     mimeType: string | null
 }
 
@@ -30,10 +35,17 @@ class FakeAnalyser {
         rememberAnalyser(this)
     }
 }
+let lastContext: FakeAudioContext | null = null
+const rememberContext = (ctx: FakeAudioContext): void => {
+    lastContext = ctx
+}
 class FakeAudioContext {
     createMediaStreamSource = vi.fn(() => ({ connect: vi.fn() }))
     createAnalyser = vi.fn(() => new FakeAnalyser())
     close = vi.fn(() => Promise.resolve())
+    constructor() {
+        rememberContext(this)
+    }
 }
 
 // --- MediaRecorder stub ----------------------------------------------------
@@ -114,8 +126,8 @@ function fakeStream(settings: MediaTrackSettings = { echoCancellation: false, no
 }
 
 function fakePlayer(currentTime = 0) {
-    const raw = { currentTime }
-    return { player: raw as unknown as MidiPlayer, raw }
+    const player = { currentTime }
+    return { player, raw: player }
 }
 
 function svgRect(): SVGRectElement {
@@ -123,28 +135,30 @@ function svgRect(): SVGRectElement {
 }
 
 /**
+ * The cursor the engine under test draws with. Transport attaches it to each
+ * pass's element; these tests drive the engine directly, so makeOptions does.
+ */
+let cursor: PlaybackCursor
+
+/**
  * Build options for a recording starting at `startMeasureIndex`. The score has
- * `measureCount` 4/4 measures. `resolvePosition` returns a stub layout point.
+ * `measureCount` 4/4 measures.
  */
 function makeOptions(over: Partial<RecordingOptions> & { measureCount?: number } = {}) {
     const measureCount = over.measureCount ?? 4
     const score: Score = (over.score as Score) ?? makeScore(measureCount)
     const cursorEl = svgRect()
+    cursor.attach(cursorEl)
     const onStateChange = vi.fn()
     const onNeedNewMeasure = vi.fn()
     const onSample = vi.fn()
     const onScoreUpdate = vi.fn()
     const onLimitReached = vi.fn()
     const onRecordingError = vi.fn()
-    const resolvePosition = vi.fn((measureIndex: number, beat: number): { x: number; rowY: number } | null => ({
-        x: measureIndex * 100 + beat * 10,
-        rowY: 0,
-    }))
     const options: RecordingOptions = {
         score,
         startMeasureIndex: over.startMeasureIndex ?? 0,
         cursorEl,
-        resolvePosition,
         wsUrl: 'ws://localhost/stream',
         onStateChange,
         onNeedNewMeasure,
@@ -164,7 +178,6 @@ function makeOptions(over: Partial<RecordingOptions> & { measureCount?: number }
         onScoreUpdate,
         onLimitReached,
         onRecordingError,
-        resolvePosition,
     }
 }
 
@@ -173,8 +186,11 @@ describe('RecordingEngine', () => {
 
     beforeEach(() => {
         lastAnalyser = null
+        lastContext = null
         lastRecorder = null
         lastSocket = null
+        // Recording never ticks the cursor as a playback pass, so its scheduler side stays idle.
+        cursor = new PlaybackCursor(fakePlayer().player, { positionAt: () => null, hasFinishedAt: () => true })
         getUserMedia = vi.fn(() => Promise.resolve(fakeStream()))
         vi.stubGlobal('navigator', { mediaDevices: { getUserMedia } })
         vi.stubGlobal('AudioContext', FakeAudioContext)
@@ -189,14 +205,14 @@ describe('RecordingEngine', () => {
 
     it('starts idle and tick() is done while idle', () => {
         const { player } = fakePlayer()
-        const engine = new RecordingEngine(player)
+        const engine = new RecordingEngine(player, cursor)
         expect(engine.state).toBe('idle')
         expect(engine.tick()).toBe(true)
     })
 
     it('start() captures mic, enters countoff, paints the cursor and notifies', async () => {
         const { player } = fakePlayer()
-        const engine = new RecordingEngine(player)
+        const engine = new RecordingEngine(player, cursor)
         const { options, cursorEl, onStateChange } = makeOptions()
 
         await engine.start(options)
@@ -215,7 +231,7 @@ describe('RecordingEngine', () => {
 
     it('countoff tick transitions to recording after the countoff window and begins streaming', async () => {
         const { player, raw } = fakePlayer()
-        const engine = new RecordingEngine(player)
+        const engine = new RecordingEngine(player, cursor)
         const { options, onStateChange } = makeOptions()
         await engine.start(options)
 
@@ -238,15 +254,15 @@ describe('RecordingEngine', () => {
 
         // meta frame sent on open, then the media recorder started.
         const meta = JSON.parse(socket().sent[0] as string) as MetaFrame
-        expect(meta).toMatchObject({ type: 'meta', bpm: 90 })
+        expect(meta).toMatchObject({ type: 'meta', bpm: 90, chromaticTranspose: 0, instrumentId: 'piano', keyFifths: 0 })
         expect(meta.timeSignature).toEqual({ beats: 4, beatType: 4 })
         expect(lastRecorder?.start).toHaveBeenCalledWith(100)
     })
 
     it('moves the cursor during recording and emits an anchored amplitude sample', async () => {
         const { player, raw } = fakePlayer()
-        const engine = new RecordingEngine(player)
-        const { options, cursorEl, onSample, resolvePosition } = makeOptions()
+        const engine = new RecordingEngine(player, cursor)
+        const { options, score, cursorEl, onSample } = makeOptions()
         await engine.start(options)
 
         // Force into recording.
@@ -255,7 +271,6 @@ describe('RecordingEngine', () => {
         socket().fire('open')
         await Promise.resolve()
 
-        resolvePosition.mockClear()
         onSample.mockClear()
         // Make the analyser produce a non-zero RMS so the sample carries amplitude.
         analyser().sample = 200
@@ -264,10 +279,13 @@ describe('RecordingEngine', () => {
         engine.tick()
 
         expect(cursorEl.getAttribute('display')).toBe('')
-        expect(resolvePosition).toHaveBeenCalled()
         expect(onSample).toHaveBeenCalledTimes(1)
         const sample = onSample.mock.calls[0][0] as { measureIndex: number; beat: number; amp: number; timeMs: number }
         expect(sample.measureIndex).toBe(0)
+        // The cursor sits at the layout point of the position the sample is anchored to.
+        const point = score.layout.pointAtBeat(score.measures[sample.measureIndex], sample.beat)
+        expect(cursorEl.getAttribute('x')).toBe(String(point.x - 1.5))
+        expect(cursorEl.getAttribute('transform')).toBe(`translate(0, ${point.rowY})`)
         expect(sample.amp).toBeGreaterThan(0)
         expect(sample.amp).toBeLessThanOrEqual(1)
         expect(sample.timeMs).toBeGreaterThanOrEqual(0)
@@ -275,7 +293,7 @@ describe('RecordingEngine', () => {
 
     it('records without a sample consumer (onSample undefined)', async () => {
         const { player, raw } = fakePlayer()
-        const engine = new RecordingEngine(player)
+        const engine = new RecordingEngine(player, cursor)
         const { options, cursorEl } = makeOptions({ onSample: undefined })
         await engine.start(options)
         raw.currentTime = 3
@@ -292,7 +310,7 @@ describe('RecordingEngine', () => {
 
     it('downsamples amplitude to the sample interval', async () => {
         const { player, raw } = fakePlayer()
-        const engine = new RecordingEngine(player)
+        const engine = new RecordingEngine(player, cursor)
         const { options, onSample } = makeOptions()
         await engine.start(options)
         raw.currentTime = 3
@@ -311,65 +329,9 @@ describe('RecordingEngine', () => {
         expect(onSample).toHaveBeenCalledTimes(1)
     })
 
-    it('self-calibrates the waveform gain so quiet capture paths (iOS) still fill the staff', async () => {
-        const { player, raw } = fakePlayer()
-        const engine = new RecordingEngine(player)
-        const { options, onSample } = makeOptions()
-        await engine.start(options)
-        raw.currentTime = 3
-        engine.tick()
-        socket().fire('open')
-        await Promise.resolve()
-
-        onSample.mockClear()
-        // iOS-quiet signal: RMS = 4/128 ≈ 0.031 — the old fixed ×10 gain drew this at ~30%.
-        analyser().sample = 132
-        raw.currentTime = 2.8
-        engine.tick()
-        expect((onSample.mock.calls[0][0] as { amp: number }).amp).toBe(1)
-
-        // Half that level renders at ~half height once calibrated.
-        analyser().sample = 130
-        raw.currentTime = 2.9
-        engine.tick()
-        const amp = (onSample.mock.calls[1][0] as { amp: number }).amp
-        expect(amp).toBeGreaterThan(0.4)
-        expect(amp).toBeLessThan(0.6)
-    })
-
-    it('keeps the fixed desktop gain for hot mics and never calibrates on sub-gate noise', async () => {
-        const { player, raw } = fakePlayer()
-        const engine = new RecordingEngine(player)
-        const { options, onSample } = makeOptions()
-        await engine.start(options)
-        raw.currentTime = 3
-        engine.tick()
-        socket().fire('open')
-        await Promise.resolve()
-
-        onSample.mockClear()
-        // Room noise (RMS ≈ 0.008, below the gate): stays at the fixed gain, not blown up.
-        analyser().sample = 129
-        raw.currentTime = 2.8
-        engine.tick()
-        expect((onSample.mock.calls[0][0] as { amp: number }).amp).toBeCloseTo(0.078, 2)
-
-        // Hot desktop mic (RMS ≈ 0.56): clamps at 1, exactly as the fixed gain did.
-        analyser().sample = 200
-        raw.currentTime = 2.9
-        engine.tick()
-        expect((onSample.mock.calls[1][0] as { amp: number }).amp).toBe(1)
-
-        // Moderate desktop level after the hot peak: still the fixed ×10 gain.
-        analyser().sample = 136 // RMS = 8/128 = 0.0625
-        raw.currentTime = 3.0
-        engine.tick()
-        expect((onSample.mock.calls[2][0] as { amp: number }).amp).toBeCloseTo(0.625, 2)
-    })
-
     it('triggers onNeedNewMeasure as the cursor nears the end of the current measure', async () => {
         const { player, raw } = fakePlayer()
-        const engine = new RecordingEngine(player)
+        const engine = new RecordingEngine(player, cursor)
         // Recording region is measures [1..]; start at index 0 so measure 0 is the count-off.
         const { options, onNeedNewMeasure } = makeOptions({ startMeasureIndex: 0, measureCount: 4 })
         await engine.start(options)
@@ -393,7 +355,7 @@ describe('RecordingEngine', () => {
 
     it('triggers onNeedNewMeasure when the cursor runs off the last measure', async () => {
         const { player, raw } = fakePlayer()
-        const engine = new RecordingEngine(player)
+        const engine = new RecordingEngine(player, cursor)
         const { options, onNeedNewMeasure } = makeOptions({ startMeasureIndex: 0, measureCount: 2 })
         await engine.start(options)
         raw.currentTime = 3
@@ -411,7 +373,7 @@ describe('RecordingEngine', () => {
 
     it('forwards score-update websocket messages to onScoreUpdate', async () => {
         const { player, raw } = fakePlayer()
-        const engine = new RecordingEngine(player)
+        const engine = new RecordingEngine(player, cursor)
         const { options, onScoreUpdate } = makeOptions()
         await engine.start(options)
         raw.currentTime = 3
@@ -435,7 +397,7 @@ describe('RecordingEngine', () => {
 
     it('forwards recording-health messages to onHealth, and only well-formed ones', async () => {
         const { player, raw } = fakePlayer()
-        const engine = new RecordingEngine(player)
+        const engine = new RecordingEngine(player, cursor)
         const onHealth = vi.fn()
         const { options } = makeOptions()
         await engine.start({ ...options, onHealth })
@@ -452,7 +414,7 @@ describe('RecordingEngine', () => {
 
     it('forwards recording-limit messages to onLimitReached with the budget info', async () => {
         const { player, raw } = fakePlayer()
-        const engine = new RecordingEngine(player)
+        const engine = new RecordingEngine(player, cursor)
         const { options, onLimitReached } = makeOptions()
         await engine.start(options)
         raw.currentTime = 3
@@ -474,7 +436,7 @@ describe('RecordingEngine', () => {
 
     it('fills defaults for a recording-limit message with missing fields', async () => {
         const { player, raw } = fakePlayer()
-        const engine = new RecordingEngine(player)
+        const engine = new RecordingEngine(player, cursor)
         const { options, onLimitReached } = makeOptions()
         await engine.start(options)
         raw.currentTime = 3
@@ -488,7 +450,7 @@ describe('RecordingEngine', () => {
 
     it('forwards recording-error messages to onRecordingError and ignores codeless ones', async () => {
         const { player, raw } = fakePlayer()
-        const engine = new RecordingEngine(player)
+        const engine = new RecordingEngine(player, cursor)
         const { options, onRecordingError } = makeOptions()
         await engine.start(options)
         raw.currentTime = 3
@@ -506,7 +468,7 @@ describe('RecordingEngine', () => {
 
     it('tolerates limit/error messages when the optional callbacks are not provided', async () => {
         const { player, raw } = fakePlayer()
-        const engine = new RecordingEngine(player)
+        const engine = new RecordingEngine(player, cursor)
         const { options } = makeOptions({ onLimitReached: undefined, onRecordingError: undefined })
         await engine.start(options)
         raw.currentTime = 3
@@ -522,7 +484,7 @@ describe('RecordingEngine', () => {
 
     it('media recorder forwards non-empty chunks and drops empty ones', async () => {
         const { player, raw } = fakePlayer()
-        const engine = new RecordingEngine(player)
+        const engine = new RecordingEngine(player, cursor)
         const { options } = makeOptions()
         await engine.start(options)
         raw.currentTime = 3
@@ -539,7 +501,7 @@ describe('RecordingEngine', () => {
 
     it('pulses the cursor opacity on the beat during countoff and clears it once recording starts', async () => {
         const { player, raw } = fakePlayer()
-        const engine = new RecordingEngine(player)
+        const engine = new RecordingEngine(player, cursor)
         const { options, cursorEl } = makeOptions()
         await engine.start(options)
 
@@ -563,7 +525,7 @@ describe('RecordingEngine', () => {
 
     it('pulses the count-off cursor once per felt beat — a dotted quarter in 6/8, not every quarter', async () => {
         const { player, raw } = fakePlayer()
-        const engine = new RecordingEngine(player)
+        const engine = new RecordingEngine(player, cursor)
         const score = new Score()
         for (let i = 0; i < 3; i++) {
             const measure = score.addMeasure()
@@ -587,7 +549,7 @@ describe('RecordingEngine', () => {
 
     it('clears the cursor pulse when a take is stopped during countoff', async () => {
         const { player, raw } = fakePlayer()
-        const engine = new RecordingEngine(player)
+        const engine = new RecordingEngine(player, cursor)
         const { options, cursorEl } = makeOptions()
         await engine.start(options)
 
@@ -601,7 +563,7 @@ describe('RecordingEngine', () => {
 
     it('stop() tears down recorder, stream, socket and analyser and returns to idle', async () => {
         const { player, raw } = fakePlayer()
-        const engine = new RecordingEngine(player)
+        const engine = new RecordingEngine(player, cursor)
         const { options, cursorEl, onStateChange } = makeOptions()
         const stream = fakeStream()
         getUserMedia.mockResolvedValueOnce(stream)
@@ -622,7 +584,8 @@ describe('RecordingEngine', () => {
         expect(socket().sent.some((s) => typeof s === 'string' && s.includes('"end"'))).toBe(true)
         expect(lastSocket?.close).not.toHaveBeenCalled()
         expect(cursorEl.getAttribute('display')).toBe('none')
-        expect(cursorEl.getAttribute('fill')).toBe('#3b82f6')
+        // Back to the playback tone the score renders it in, not a near-miss blue.
+        expect(cursorEl.getAttribute('fill')).toBe(INTERACTION_BLUE)
         expect(engine.state).toBe('idle')
         expect(onStateChange).toHaveBeenLastCalledWith('idle')
 
@@ -633,7 +596,7 @@ describe('RecordingEngine', () => {
 
     it('applies score-updates that arrive after stop() while the server drains the take', async () => {
         const { player, raw } = fakePlayer()
-        const engine = new RecordingEngine(player)
+        const engine = new RecordingEngine(player, cursor)
         const onConnectionLost = vi.fn()
         const { options, onScoreUpdate } = makeOptions()
         options.onConnectionLost = onConnectionLost
@@ -658,11 +621,56 @@ describe('RecordingEngine', () => {
         expect(onConnectionLost).not.toHaveBeenCalled()
     })
 
+    it('drops limit, error and health messages that arrive after stop()', async () => {
+        const { player, raw } = fakePlayer()
+        const engine = new RecordingEngine(player, cursor)
+        const onHealth = vi.fn()
+        const { options, onLimitReached, onRecordingError } = makeOptions({ onHealth })
+        await engine.start(options)
+        raw.currentTime = 3
+        engine.tick()
+        socket().fire('open')
+        await Promise.resolve()
+
+        engine.stop()
+        socket().fire('message', { data: JSON.stringify({ type: 'recording-limit', limitSeconds: 30 }) })
+        socket().fire('message', { data: JSON.stringify({ type: 'recording-error', code: 'score-required' }) })
+        socket().fire('message', { data: JSON.stringify({ type: 'recording-health', ok: false }) })
+        expect(onLimitReached).not.toHaveBeenCalled()
+        expect(onRecordingError).not.toHaveBeenCalled()
+        expect(onHealth).not.toHaveBeenCalled()
+    })
+
+    it('ends the socket only once the recorder has flushed, or after a 1 s fallback', async () => {
+        vi.useFakeTimers()
+        try {
+            const { player, raw } = fakePlayer()
+            const engine = new RecordingEngine(player, cursor)
+            const { options } = makeOptions()
+            await engine.start(options)
+            raw.currentTime = 3
+            engine.tick()
+            socket().fire('open')
+            await Promise.resolve()
+            // A recorder that never reports onstop.
+            recorder().stop = vi.fn()
+            recorder().state = 'recording'
+            const sentEnd = () => socket().sent.some((s) => typeof s === 'string' && s.includes('"end"'))
+
+            engine.stop()
+            expect(sentEnd()).toBe(false)
+            vi.advanceTimersByTime(1000)
+            expect(sentEnd()).toBe(true)
+        } finally {
+            vi.useRealTimers()
+        }
+    })
+
     it('closes the socket itself when the server never acknowledges the end frame', async () => {
         vi.useFakeTimers()
         try {
             const { player, raw } = fakePlayer()
-            const engine = new RecordingEngine(player)
+            const engine = new RecordingEngine(player, cursor)
             const { options } = makeOptions()
             await engine.start(options)
             raw.currentTime = 3
@@ -685,7 +693,7 @@ describe('RecordingEngine', () => {
 
     it('stop() tolerates a recorder whose stop() throws', async () => {
         const { player, raw } = fakePlayer()
-        const engine = new RecordingEngine(player)
+        const engine = new RecordingEngine(player, cursor)
         const { options } = makeOptions()
         await engine.start(options)
         raw.currentTime = 3
@@ -702,7 +710,7 @@ describe('RecordingEngine', () => {
 
     it('stop() does not call recorder.stop() when the recorder is already inactive', async () => {
         const { player, raw } = fakePlayer()
-        const engine = new RecordingEngine(player)
+        const engine = new RecordingEngine(player, cursor)
         const { options } = makeOptions()
         await engine.start(options)
         raw.currentTime = 3
@@ -716,7 +724,7 @@ describe('RecordingEngine', () => {
 
     it('stop() tolerates the end-frame send throwing on a half-closed socket', async () => {
         const { player, raw } = fakePlayer()
-        const engine = new RecordingEngine(player)
+        const engine = new RecordingEngine(player, cursor)
         const { options } = makeOptions()
         await engine.start(options)
         raw.currentTime = 3
@@ -734,7 +742,7 @@ describe('RecordingEngine', () => {
 
     it('stop() skips the end frame when the socket is not open', async () => {
         const { player, raw } = fakePlayer()
-        const engine = new RecordingEngine(player)
+        const engine = new RecordingEngine(player, cursor)
         const { options } = makeOptions()
         await engine.start(options)
         raw.currentTime = 3
@@ -750,7 +758,7 @@ describe('RecordingEngine', () => {
 
     it('stop() swallows a rejected analyser-context close', async () => {
         const { player, raw } = fakePlayer()
-        const engine = new RecordingEngine(player)
+        const engine = new RecordingEngine(player, cursor)
         const { options } = makeOptions()
         await engine.start(options)
         raw.currentTime = 3
@@ -758,11 +766,9 @@ describe('RecordingEngine', () => {
         socket().fire('open')
         await Promise.resolve()
 
-        // The analyser AudioContext's close() rejects; stop() must absorb it via .catch(() => {}).
-        const internal = engine as unknown as { analyserCtx: { close: ReturnType<typeof vi.fn> } | null }
-        const analyserCtx = internal.analyserCtx
-        if (!analyserCtx) throw new Error('expected an analyser audio context')
-        analyserCtx.close = vi.fn(() => Promise.reject(new Error('ctx busy')))
+        // The analyser AudioContext's close() rejects; stop() must absorb it.
+        expect(lastContext).not.toBeNull()
+        lastContext?.close.mockImplementation(() => Promise.reject(new Error('ctx busy')))
         expect(() => engine.stop()).not.toThrow()
         await Promise.resolve()
         expect(engine.state).toBe('idle')
@@ -770,14 +776,14 @@ describe('RecordingEngine', () => {
 
     it('stop() is a no-op when already idle', () => {
         const { player } = fakePlayer()
-        const engine = new RecordingEngine(player)
+        const engine = new RecordingEngine(player, cursor)
         engine.stop()
         expect(engine.state).toBe('idle')
     })
 
     it('stop() during countoff (before any socket/recorder) is safe', async () => {
         const { player } = fakePlayer()
-        const engine = new RecordingEngine(player)
+        const engine = new RecordingEngine(player, cursor)
         const { options } = makeOptions()
         await engine.start(options)
         expect(engine.state).toBe('countoff')
@@ -785,24 +791,9 @@ describe('RecordingEngine', () => {
         expect(engine.state).toBe('idle')
     })
 
-    it('reset() is a no-op (ticker resets are ignored)', () => {
-        const { player } = fakePlayer()
-        const engine = new RecordingEngine(player)
-        expect(() => engine.reset()).not.toThrow()
-    })
-
-    it('moveCursor() and paintCursor() are safe no-ops once the session is torn down', () => {
-        const { player } = fakePlayer()
-        const engine = new RecordingEngine(player)
-        // options is null (never started / already stopped) — both guards short-circuit.
-        const internal = engine as unknown as { moveCursor(m: number, b: number): void; paintCursor(c: string): void }
-        expect(() => internal.moveCursor(0, 0)).not.toThrow()
-        expect(() => internal.paintCursor('#000')).not.toThrow()
-    })
-
     it('anchors a sample to a later recording measure once the take crosses into it', async () => {
         const { player, raw } = fakePlayer()
-        const engine = new RecordingEngine(player)
+        const engine = new RecordingEngine(player, cursor)
         const { options, onSample } = makeOptions({ startMeasureIndex: 0, measureCount: 6 })
         await engine.start(options)
         raw.currentTime = 3
@@ -822,19 +813,11 @@ describe('RecordingEngine', () => {
         expect(sample.beat).toBeGreaterThanOrEqual(0)
     })
 
-    it('connect returns immediately when the stream/options are gone', async () => {
-        const { player } = fakePlayer()
-        const engine = new RecordingEngine(player)
-        // Never started: stream and options are null, so connect bails before opening a socket.
-        const internal = engine as unknown as { connect(): Promise<void> }
-        await expect(internal.connect()).resolves.toBeUndefined()
-        expect(lastSocket).toBeNull()
-    })
-
-    it('beginStreaming aborts silently when the WebSocket constructor throws', async () => {
+    it('reports a lost connection when the WebSocket constructor throws', async () => {
         const { player, raw } = fakePlayer()
-        const engine = new RecordingEngine(player)
-        const { options } = makeOptions()
+        const engine = new RecordingEngine(player, cursor)
+        const onConnectionLost = vi.fn()
+        const { options } = makeOptions({ onConnectionLost })
         // Make the WebSocket constructor throw on this run.
         vi.stubGlobal(
             'WebSocket',
@@ -845,19 +828,19 @@ describe('RecordingEngine', () => {
                 }
             },
         )
+        // start() connects during the count-off; the throwing constructor is reported right there.
         await engine.start(options)
+        expect(onConnectionLost).toHaveBeenCalledTimes(1)
         raw.currentTime = 3
-        // The transition to recording fires beginStreaming, which swallows the throw.
         expect(() => engine.tick()).not.toThrow()
-        await Promise.resolve()
         expect(engine.state).toBe('recording')
-        // No recorder was created because streaming bailed.
+        // No recorder was created: there is no socket to stream into.
         expect(lastRecorder).toBeNull()
     })
 
     it('surfaces a connection failure instead of recording into a dead socket', async () => {
         const { player, raw } = fakePlayer()
-        const engine = new RecordingEngine(player)
+        const engine = new RecordingEngine(player, cursor)
         const onConnectionLost = vi.fn()
         const { options } = makeOptions()
         options.onConnectionLost = onConnectionLost
@@ -883,7 +866,7 @@ describe('RecordingEngine', () => {
         // reads `this.ws` at that point silently drops the tail of every take \u2014 the
         // socket must be held in the handler's closure instead.
         const { player, raw } = fakePlayer()
-        const engine = new RecordingEngine(player)
+        const engine = new RecordingEngine(player, cursor)
         const { options } = makeOptions()
         await engine.start(options)
         socket().fire('open')
@@ -906,7 +889,7 @@ describe('RecordingEngine', () => {
         // inside startCapture() meant that frame carried mimeType: null in the normal
         // ordering, and the server fell back to probing the container.
         const { player, raw } = fakePlayer()
-        const engine = new RecordingEngine(player)
+        const engine = new RecordingEngine(player, cursor)
         const { options } = makeOptions()
         class Mp4OnlyRecorder extends FakeMediaRecorder {
             static isTypeSupported = vi.fn((type: string) => type === 'audio/mp4')
@@ -932,7 +915,7 @@ describe('RecordingEngine', () => {
         // user can press stop while the handshake is in flight. That must not surface
         // as a connection failure — the user caused it.
         const { player } = fakePlayer()
-        const engine = new RecordingEngine(player)
+        const engine = new RecordingEngine(player, cursor)
         const onConnectionLost = vi.fn()
         const { options } = makeOptions()
         options.onConnectionLost = onConnectionLost
@@ -951,7 +934,7 @@ describe('RecordingEngine', () => {
         // round-trip was audio that never reached the server, and the server, which
         // treats its first sample as beat 1, notated every note early by that much.
         const { player, raw } = fakePlayer()
-        const engine = new RecordingEngine(player)
+        const engine = new RecordingEngine(player, cursor)
         const { options } = makeOptions()
         await engine.start(options)
 
@@ -983,7 +966,7 @@ describe('RecordingEngine', () => {
 
     it('fires onConnectionLost when the socket closes mid-take', async () => {
         const { player, raw } = fakePlayer()
-        const engine = new RecordingEngine(player)
+        const engine = new RecordingEngine(player, cursor)
         const onConnectionLost = vi.fn()
         const { options } = makeOptions()
         options.onConnectionLost = onConnectionLost
@@ -997,25 +980,9 @@ describe('RecordingEngine', () => {
         expect(onConnectionLost).toHaveBeenCalledTimes(1)
     })
 
-    it('sends a null timeSignature in meta when the start measure has none', async () => {
-        const { player, raw } = fakePlayer()
-        const engine = new RecordingEngine(player)
-        const score = makeScore(4)
-        // Strip the time signature off the count-off measure so the meta serializes null.
-        Object.defineProperty(score.measures[1], 'timeSignature', { get: () => undefined, configurable: true })
-        const { options } = makeOptions({ score, startMeasureIndex: 1 })
-        await engine.start(options)
-        raw.currentTime = 3
-        engine.tick()
-        socket().fire('open')
-        await Promise.resolve()
-        const meta = JSON.parse(socket().sent[0] as string) as MetaFrame
-        expect(meta.timeSignature).toBeNull()
-    })
-
     it('does not forward chunks when the websocket is not open', async () => {
         const { player, raw } = fakePlayer()
-        const engine = new RecordingEngine(player)
+        const engine = new RecordingEngine(player, cursor)
         const { options } = makeOptions()
         await engine.start(options)
         raw.currentTime = 3
@@ -1030,64 +997,65 @@ describe('RecordingEngine', () => {
         expect(socket().sent).toHaveLength(0)
     })
 
-    it('skips moving the cursor when the layout cannot resolve a position', async () => {
-        const { player } = fakePlayer()
-        const engine = new RecordingEngine(player)
-        // resolvePosition returns null => moveCursor bails before touching the cursor element.
-        const { options, cursorEl } = makeOptions({ resolvePosition: vi.fn(() => null) })
-        await engine.start(options)
-        // start() paints the cursor red but the position-based attributes were never set.
-        expect(cursorEl.getAttribute('x')).toBeNull()
-        expect(cursorEl.getAttribute('fill')).toBe('#ef4444')
-    })
-
-    it('findActiveTempo picks the latest tempo when a measure has several (sort comparator)', async () => {
+    it('counts off at the tempo sounding on the count-off downbeat, not a later marking in that bar', async () => {
         const { player, raw } = fakePlayer()
-        const engine = new RecordingEngine(player)
+        const engine = new RecordingEngine(player, cursor)
         const score = makeScore(4)
-        // Two tempos in the count-off measure; the later (beat 2 => 240bpm) wins.
+        // Two tempos in the count-off measure: the one at beat 0 (60bpm) is in effect at the downbeat.
         score.measures[1].setTempo(0, 60)
         score.measures[1].addTempo(2, 240)
         const { options, onStateChange } = makeOptions({ score, startMeasureIndex: 1 })
         await engine.start(options)
-        // 240bpm, 4 beats => countoff = 4*60/240 = 1s.
-        raw.currentTime = 0.9
+        // 60bpm, 4 beats => countoff = 4*60/60 = 4s.
+        raw.currentTime = 3.9
         engine.tick()
         expect(engine.state).toBe('countoff')
-        raw.currentTime = 1.1
+        raw.currentTime = 4.1
         engine.tick()
         expect(onStateChange).toHaveBeenLastCalledWith('recording')
     })
 
-    it('exposes the granted mic settings during a take and clears them on stop', async () => {
+    it('a marking later in the count-off bar does not override the tempo carried into it', async () => {
+        const { player, raw } = fakePlayer()
+        const engine = new RecordingEngine(player, cursor)
+        const score = makeScore(4)
+        score.measures[0].setTempo(0, 120)
+        score.measures[1].setTempo(2, 240)
+        const { options, onStateChange } = makeOptions({ score, startMeasureIndex: 1 })
+        await engine.start(options)
+        // The carried-in 120bpm holds at the downbeat => countoff = 4*60/120 = 2s.
+        raw.currentTime = 1.9
+        engine.tick()
+        expect(engine.state).toBe('countoff')
+        raw.currentTime = 2.1
+        engine.tick()
+        expect(onStateChange).toHaveBeenLastCalledWith('recording')
+    })
+
+    it('start() resolves to the mic settings the browser granted', async () => {
         const { player } = fakePlayer()
-        const engine = new RecordingEngine(player)
+        const engine = new RecordingEngine(player, cursor)
         const { options } = makeOptions()
         // A device that forced voice processing back on despite the constraints.
         getUserMedia.mockResolvedValueOnce(fakeStream({ echoCancellation: true, noiseSuppression: true, autoGainControl: false }))
 
-        expect(engine.micSettings).toBeNull()
-        await engine.start(options)
-        expect(engine.micSettings).toEqual({ echoCancellation: true, noiseSuppression: true, autoGainControl: false })
-        engine.stop()
-        expect(engine.micSettings).toBeNull()
+        await expect(engine.start(options)).resolves.toEqual({ echoCancellation: true, noiseSuppression: true, autoGainControl: false })
     })
 
-    it('tolerates a stream without audio tracks (micSettings stays null)', async () => {
+    it('tolerates a stream without audio tracks (start() resolves to null)', async () => {
         const { player } = fakePlayer()
-        const engine = new RecordingEngine(player)
+        const engine = new RecordingEngine(player, cursor)
         const { options } = makeOptions()
         const stream = fakeStream()
         getUserMedia.mockResolvedValueOnce({ ...stream, getAudioTracks: () => [] })
 
-        await engine.start(options)
-        expect(engine.micSettings).toBeNull()
+        await expect(engine.start(options)).resolves.toBeNull()
         expect(engine.state).toBe('countoff')
     })
 
     it('declares play-and-record on the audio session before the mic opens and restores auto on stop', async () => {
         const { player } = fakePlayer()
-        const engine = new RecordingEngine(player)
+        const engine = new RecordingEngine(player, cursor)
         const { options } = makeOptions()
         const audioSession = { type: 'auto' }
         // Capture the session type at the moment the prompt would appear: iOS
@@ -1109,7 +1077,7 @@ describe('RecordingEngine', () => {
 
     it('restores the audio session when getUserMedia rejects', async () => {
         const { player } = fakePlayer()
-        const engine = new RecordingEngine(player)
+        const engine = new RecordingEngine(player, cursor)
         const { options } = makeOptions()
         const audioSession = { type: 'auto' }
         getUserMedia.mockRejectedValueOnce(new DOMException('denied', 'NotAllowedError'))
@@ -1121,7 +1089,7 @@ describe('RecordingEngine', () => {
 
     it('restores the audio session when stop() races the permission prompt', async () => {
         const { player } = fakePlayer()
-        const engine = new RecordingEngine(player)
+        const engine = new RecordingEngine(player, cursor)
         const { options } = makeOptions()
         const audioSession = { type: 'auto' }
         let resolvePrompt: (stream: unknown) => void = () => {}
@@ -1134,16 +1102,15 @@ describe('RecordingEngine', () => {
         expect(audioSession.type).toBe('auto')
         const stream = fakeStream()
         resolvePrompt(stream)
-        await started
-        // The raced start released the stream and left the session restored.
+        // The raced start released the stream, reports no take and left the session restored.
+        await expect(started).resolves.toBeNull()
         expect(stream.track.stop).toHaveBeenCalled()
         expect(audioSession.type).toBe('auto')
-        expect(engine.micSettings).toBeNull()
     })
 
     it('start() throws RecordingUnsupportedError when mediaDevices is unavailable', async () => {
         const { player } = fakePlayer()
-        const engine = new RecordingEngine(player)
+        const engine = new RecordingEngine(player, cursor)
         const { options } = makeOptions()
 
         // Insecure context / ancient browser: navigator exists but mediaDevices doesn't.
@@ -1159,7 +1126,7 @@ describe('RecordingEngine', () => {
 
     it('records with the first isTypeSupported()-approved format and announces it in meta', async () => {
         const { player, raw } = fakePlayer()
-        const engine = new RecordingEngine(player)
+        const engine = new RecordingEngine(player, cursor)
         const { options } = makeOptions()
         // A Safari-like browser: only MP4 recording is available.
         class Mp4OnlyRecorder extends FakeMediaRecorder {
@@ -1188,7 +1155,7 @@ describe('RecordingEngine', () => {
 
     it('falls back to the browser-default encoding when isTypeSupported is missing', async () => {
         const { player, raw } = fakePlayer()
-        const engine = new RecordingEngine(player)
+        const engine = new RecordingEngine(player, cursor)
         const { options } = makeOptions()
         // FakeMediaRecorder has no static isTypeSupported — pre-2021 Safari.
 
@@ -1206,7 +1173,7 @@ describe('RecordingEngine', () => {
 
     it('falls back to the browser-default encoding when no candidate is supported', async () => {
         const { player, raw } = fakePlayer()
-        const engine = new RecordingEngine(player)
+        const engine = new RecordingEngine(player, cursor)
         const { options } = makeOptions()
         class NoFormatRecorder extends FakeMediaRecorder {
             static isTypeSupported = vi.fn(() => false)
@@ -1227,7 +1194,7 @@ describe('RecordingEngine', () => {
 
     it('uses the active tempo when computing the countoff window', async () => {
         const { player, raw } = fakePlayer()
-        const engine = new RecordingEngine(player)
+        const engine = new RecordingEngine(player, cursor)
         const score = makeScore(4)
         score.measures[0].setTempo(0, 120)
         const { options, onStateChange } = makeOptions({ score, startMeasureIndex: 1 })

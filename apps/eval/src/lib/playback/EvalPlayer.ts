@@ -10,7 +10,7 @@
  * so the saved wav starts at beat 0.
  */
 
-import { Instrument, type Score } from '@mushee/notation/model'
+import type { Instrument, Score } from '@mushee/notation/model'
 import { Metronome } from '@mushee/playback/Metronome'
 import { MidiPlayer } from '@mushee/playback/MidiPlayer'
 import { ScoreScheduler } from '@mushee/playback/ScoreScheduler'
@@ -31,11 +31,9 @@ export interface FinishedRecording {
 /** Ends a pass at a fixed clock time — the take's full length plus tail. */
 class Stopper implements Tickable {
     constructor(
-        private readonly midiPlayer: MidiPlayer,
+        private readonly midiPlayer: Pick<MidiPlayer, 'currentTime'>,
         private readonly endSec: number,
     ) {}
-
-    reset(): void {}
 
     tick(): boolean {
         return this.midiPlayer.currentTime >= this.endSec
@@ -60,16 +58,13 @@ export class EvalPlayer {
 
     /** Pre-fetch samples so replay/click start without a download hiccup. */
     async prepare(instrument: Instrument): Promise<void> {
-        await this.midiPlayer.loadInstruments([instrument, Instrument.Woodblock])
+        await this.midiPlayer.loadInstruments([instrument, Metronome.INSTRUMENT])
     }
 
     playScore(score: Score, options: { metronome: boolean; onFinish?: () => void }): void {
         this.stop()
-        this.scheduler.score = score
-        this.scheduler.startNote = null
-        this.metronome.score = score
-        this.metronome.startMeasureIndex = 0
-        this.metronome.startBeat = 0
+        this.scheduler.cue(score)
+        this.metronome.cue(score)
 
         const tickables: Tickable[] = [this.scheduler]
         if (options.metronome) tickables.push(this.metronome)
@@ -95,9 +90,7 @@ export class EvalPlayer {
         this.stop()
         await this.recorder.start()
 
-        this.metronome.score = clickScore
-        this.metronome.startMeasureIndex = 0
-        this.metronome.startBeat = 0
+        this.metronome.cue(clickScore)
 
         this.midiPlayer.start()
         const clockStartMs = performance.now()

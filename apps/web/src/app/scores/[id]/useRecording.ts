@@ -9,7 +9,9 @@ import { type RefObject, useCallback, useEffect, useRef, useState } from 'react'
 import { showToast } from '@/components/ui'
 import { track } from '@/lib/analytics'
 import { markMicModeGuideConfirmed, needsMicModeGuide, needsMicModeReminder } from '@/lib/micMode'
-import { RecordingEngine, type RecordingLimitInfo, type RecordingState, RecordingUnsupportedError } from '@/lib/RecordingEngine'
+import { Microphone, RecordingUnsupportedError } from '@/lib/Microphone'
+import type { RecordingState } from '@/lib/RecordingEngine'
+import type { RecordingLimitInfo } from '@/lib/TranscriptionSocket'
 import type { Transport } from '@/lib/Transport'
 
 import type { ScoreManipulator } from './ScoreManipulator'
@@ -70,7 +72,7 @@ export function useRecording({
     const micWarmupPending = useRef(false)
 
     const releaseMicWarmup = useCallback(() => {
-        if (micWarmup.current) RecordingEngine.releaseStandaloneMic(micWarmup.current)
+        if (micWarmup.current) Microphone.release(micWarmup.current)
         micWarmup.current = null
     }, [])
 
@@ -97,7 +99,7 @@ export function useRecording({
             if (micWarmupPending.current || micWarmup.current) return
             micWarmupPending.current = true
             try {
-                micWarmup.current = await RecordingEngine.openStandaloneMic()
+                micWarmup.current = await Microphone.open({ audio: true })
             } catch (err) {
                 console.error('Mic warm-up for the Mic Mode guide failed', err)
                 showToast(micErrorToast(err))
@@ -132,25 +134,17 @@ export function useRecording({
         score.addMeasureAdoptingTempo(measureIndex++).complete()
         saveToApi({ score })
 
-        const resolvePosition = (measureIndex: number, beat: number) => {
-            const measure = score.measures[measureIndex]
-            if (!measure) return null
-            const row = score.layout.rowFor(measure)
-            const measureX = row.getMeasureX(measure)
-            return { x: measureX + measure.layout.getXForBeat(beat), rowY: score.layout.getYForRow(row) }
-        }
-
         // Every recording belongs to a score; the gateway requires the id up front.
         const wsUrl =
             (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4200').replace(/^http/, 'ws') +
             `/recording?scoreId=${encodeURIComponent(id)}`
 
+        let mic: MediaTrackSettings | null
         try {
-            await transport.record({
+            mic = await transport.record({
                 score,
                 startMeasureIndex: startIndex,
                 cursorEl,
-                resolvePosition,
                 wsUrl,
                 onStateChange: (state) => {
                     setRecordingState(state)
@@ -158,7 +152,6 @@ export function useRecording({
                     // notes animate out together.
                     if (state === 'idle') waveformStore.clearAll()
                 },
-                onSourceResolved: (resolution) => console.log('source', resolution),
                 onHealth: ({ ok }) => {
                     // The server's transcription backend went away (or came back). Say so:
                     // waveform bars with no notes must read as "Solkey is having trouble",
@@ -249,7 +242,6 @@ export function useRecording({
         // the ones that switch into a call-style route and duck the metronome
         // (Android communication mode, iOS play-and-record) — this measures how
         // common that is before we engineer around it further.
-        const mic = transport.micSettings
         track('recording_started', {
             micEchoCancellation: mic?.echoCancellation ?? null,
             micNoiseSuppression: mic?.noiseSuppression ?? null,

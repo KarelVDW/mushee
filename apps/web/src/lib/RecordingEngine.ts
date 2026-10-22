@@ -1,17 +1,15 @@
-import type { Score } from '@mushee/notation/model'
+import { type Measure, Score } from '@mushee/notation/model'
 import type { MxmlMeasure } from '@mushee/notation/model/io/MusicXml'
-import { MidiPlayer } from '@mushee/playback/MidiPlayer'
+import type { MidiPlayer } from '@mushee/playback/MidiPlayer'
 import type { Tickable } from '@mushee/playback/Ticker'
 
-const DEFAULT_BPM = 90
+import { Microphone } from './Microphone'
+import type { PlaybackCursor } from './PlaybackCursor'
+import { type RecordingErrorCode, type RecordingLimitInfo, type TranscriptionMeta, TranscriptionSocket } from './TranscriptionSocket'
+import { WaveformMeter } from './WaveformMeter'
+
 const CHUNK_MS = 100
 
-/**
- * Cap on chunks held while the socket finishes connecting. At CHUNK_MS per chunk
- * this is a few seconds of audio — far more than a handshake needs, and bounded so
- * a socket that never opens cannot grow the queue without limit.
- */
-const MAX_PENDING_CHUNKS = 100
 /**
  * Recording formats in preference order. Opus (Chrome: WebM, Firefox: Ogg) is
  * what the transcription pipeline was tuned on; MP4/AAC is the only container
@@ -26,45 +24,16 @@ const MIME_TYPE_CANDIDATES = ['audio/webm;codecs=opus', 'audio/webm', 'audio/ogg
  * the raw signal — these are `ideal` hints, so browsers that can't honor them
  * still return a stream instead of throwing.
  */
-const MIC_CONSTRAINTS: MediaTrackConstraints = {
-    echoCancellation: false,
-    noiseSuppression: false,
-    autoGainControl: false,
+const MIC_CONSTRAINTS: MediaStreamConstraints = {
+    audio: {
+        echoCancellation: false,
+        noiseSuppression: false,
+        autoGainControl: false,
+    },
 }
 const SAMPLE_INTERVAL_SEC = 1 / 30 // downsample amplitude to ~30Hz for rendering
-/**
- * How long after sending `end` the socket may stay open waiting for the
- * server's final transcription pass (`score-update`s + `recording-complete`).
- * The server closes as soon as it has flushed; this is only the safety net
- * against a server that never answers.
- */
-const DRAIN_TIMEOUT_MS = 10_000
-
-/**
- * WebKit's Audio Session API (Safari 16.4+, absent everywhere else). When a
- * page starts capturing, iOS yanks the OS audio session from "playback" to
- * play-and-record mid-flight, which can reroute output to the receiver
- * (earpiece) at a fraction of the volume — WebKit bug 218012. Declaring the
- * intent before the mic opens lets iOS pick the route up front.
- */
-type NavigatorWithAudioSession = Navigator & { audioSession?: { type: string } }
-/** Minimum waveform gain: RMS from a desktop mic rarely exceeds ~0.2, so ×10 fills the staff. */
-const WAVEFORM_GAIN = 10
-/**
- * Cap for the self-calibrating waveform gain (see {@link RecordingEngine.sampleAmplitude}):
- * quiet capture paths get boosted at most this much, so a take with no real
- * signal can't blow room noise up into full-height bars.
- */
-const WAVEFORM_GAIN_MAX = 40
-/** RMS below this is room noise or breath, not singing — it never calibrates the meter. */
-const WAVEFORM_NOISE_GATE = 0.01
-/**
- * Per-voiced-sample decay of the calibration peak (~30 Hz sampling → halves
- * after ~2.3 s of singing), so one loud pop at the start doesn't pin the
- * meter low for the rest of the take. Silence doesn't decay it: the gain
- * would otherwise creep up between phrases and pump the noise floor.
- */
-const WAVEFORM_PEAK_DECAY = 0.99
+/** How long stop() waits for the recorder's final chunk before ending the socket anyway. */
+const RECORDER_FLUSH_FALLBACK_MS = 1000
 /** Trough of the cursor's beat pulse; it snaps to full opacity on every metronome click. */
 const PULSE_MIN_OPACITY = 0.35
 export type RecordingState = 'idle' | 'countoff' | 'recording'
@@ -81,41 +50,16 @@ export interface WaveformSample {
     amp: number
 }
 
-/** Sent by the gateway when the daily recording budget runs out (or already had). */
-export interface RecordingLimitInfo {
-    planId: string
-    planName: string
-    /** Daily budget in seconds; `null` on unlimited tiers (never sent in practice). */
-    limitSeconds: number | null
-    usedSeconds: number
-}
-
-/** Reasons the gateway refuses a recording connection. */
-export type RecordingErrorCode = 'score-required' | 'score-not-found' | 'concurrent-recording' | 'beta-pending'
-
-/**
- * Thrown by {@link RecordingEngine.start} when the browser cannot capture audio
- * at all — no `mediaDevices` (ancient browser) or an insecure (non-HTTPS)
- * context, where the API is hidden. Distinct from a permission denial, which
- * surfaces as a `NotAllowedError` DOMException from `getUserMedia` itself.
- */
-export class RecordingUnsupportedError extends Error {
-    constructor() {
-        super('Audio capture is not available in this browser or context')
-        this.name = 'RecordingUnsupportedError'
-    }
-}
-
-export interface ResolveRecordingPosition {
-    (measureIndex: number, beat: number): { x: number; rowY: number } | null
-}
-
 export interface RecordingOptions {
     score: Score
-    /** Index of the freshly inserted empty count-off measure. */
+    /**
+     * Index of the take's first recorded measure (an empty one the caller
+     * inserted). The count-off occupies no measure: it is one measure's worth of
+     * clicks at that measure's meter and tempo, before beat 1.
+     */
     startMeasureIndex: number
+    /** The score's cursor rect; Transport attaches the take's PlaybackCursor to it. */
     cursorEl: SVGRectElement
-    resolvePosition: ResolveRecordingPosition
     wsUrl: string
     onStateChange: (state: RecordingState) => void
     /** Fired when the cursor is about to run off the last available measure. */
@@ -124,8 +68,9 @@ export interface RecordingOptions {
     onSample?: (sample: WaveformSample) => void
     /**
      * Fired when the gateway streams back a score update. Measure keys are
-     * 0-based indices relative to the recording start (i.e., the first recording
-     * measure is `0`, which in the score lives at `startMeasureIndex + 1`).
+     * 0-based indices relative to the take's first measure (key `0` lives at
+     * `startMeasureIndex`). Updates keep arriving after stop() while the server
+     * drains the take's tail.
      */
     onScoreUpdate?: (update: { measures: Record<number, MxmlMeasure> }) => void
     /** Fired when the gateway reports the daily recording budget is spent. */
@@ -139,14 +84,6 @@ export interface RecordingOptions {
      */
     onConnectionLost?: () => void
     /**
-     * The server's verdict on what is at the microphone (voice vs instrument)
-     * and on what evidence — 'classifier' (the audio decided), 'explicit'
-     * (this client declared, which it currently never does) or 'prior' (the
-     * score's instrument family; also the classifier-abstain fallback).
-     * Arrives once per take, ~1.2 s in, when the server locks its profile.
-     */
-    onSourceResolved?: (resolution: { source: 'voice' | 'instrument'; decidedBy: 'explicit' | 'classifier' | 'prior' }) => void
-    /**
      * Transcription health from the server: `ok: false` when its inference
      * backend stops answering (audio is still archived, credits are not metered
      * meanwhile), `ok: true` when it recovers. Surface it — a take that shows
@@ -156,50 +93,42 @@ export interface RecordingOptions {
 }
 
 /**
- * Drives the metronome click schedule and the cursor indicator during a recording session.
- * Mic capture + WebSocket streaming is owned here but not driven by the tick loop.
+ * One recording take: the mic, the count-off and the moving cursor, capture
+ * into a MediaRecorder streamed through a {@link TranscriptionSocket}, and the
+ * live waveform from a {@link WaveformMeter}. As a Tickable it reads the shared
+ * clock that Transport runs — together with the metronome that clicks the
+ * count-off and the take — and turns it into the take's position in the score.
+ * The lifecycle is driven by start()/stop(), so the engine has no ticker reset.
  */
 export class RecordingEngine implements Tickable {
     private _state: RecordingState = 'idle'
     private options: RecordingOptions | null = null
 
-    private midiPlayer: MidiPlayer
-    private bpm = DEFAULT_BPM
-    private beatsPerMeasure = 4
+    private midiPlayer: Pick<MidiPlayer, 'currentTime'>
+    private bpm = Score.DEFAULT_BPM
     /** Quarter-note length of the felt beat the count-off clicks on (1 in 4/4, 1.5 in 6/8). */
     private pulseBeats = 1
     private countoffEndTime = 0
+    /** The take's first measure; the recording's beat 0 is its downbeat. */
+    private startMeasure: Measure | null = null
     private lastNewMeasureTriggeredFor: number | null = null
 
     private stream: MediaStream | null = null
     private mediaRecorder: MediaRecorder | null = null
-    private ws: WebSocket | null = null
-    /**
-     * Encoded chunks captured before the socket finished connecting.
-     *
-     * Capture must begin the instant beat 1 arrives, but the socket may still be
-     * completing its handshake — so chunks are queued here and flushed on open.
-     * A slow network then delays *delivery*, never *capture*, which is what keeps
-     * the audio aligned to the beat grid (see startCapture).
-     */
-    private pendingChunks: Blob[] = []
-    /** True once the `meta` frame has gone out, so it is sent exactly once. */
-    private metaSent = false
     /** Negotiated MediaRecorder MIME type; travels to the server in `meta`. */
     private mimeType: string | null = null
-
-    private analyserCtx: AudioContext | null = null
-    private analyser: AnalyserNode | null = null
-    private analyserData: Uint8Array<ArrayBuffer> | null = null
+    /** The take's socket; null before connecting, once its connection failed or dropped, and after stop(). */
+    private socket: TranscriptionSocket | null = null
+    private meter: WaveformMeter | null = null
     private lastSampleTime = -Infinity
-    /** Running voiced-RMS peak of the take; calibrates the waveform gain (see sampleAmplitude). */
-    private waveformPeak = 0
-    private _micSettings: MediaTrackSettings | null = null
     /** Bumped by every start()/stop() so an in-flight start (awaiting the mic
      *  permission prompt) can detect it lost the race and release the stream. */
     private lifecycle = 0
 
-    constructor(midiPlayer: MidiPlayer) {
+    constructor(
+        midiPlayer: Pick<MidiPlayer, 'currentTime'>,
+        private readonly cursor: PlaybackCursor,
+    ) {
         this.midiPlayer = midiPlayer
     }
 
@@ -208,97 +137,74 @@ export class RecordingEngine implements Tickable {
     }
 
     /**
-     * The mic settings the browser actually granted for the live take (`null`
-     * outside a session). {@link MIC_CONSTRAINTS} are only hints: devices that
-     * force voice processing back on are the ones that switch into a call-style
-     * audio route and duck playback — surfaced so telemetry can measure how
-     * common that is.
+     * Begin a take: open the mic, enter the count-off and connect the socket.
+     * The caller inserts the empty measure at `startMeasureIndex` beforehand and
+     * then runs the clock (`midiPlayer.start()` and the Ticker, with the
+     * metronome) — Transport.record does both.
+     *
+     * Resolves to the mic settings the browser actually granted for the take
+     * (`null` when stop() won the permission race or the stream has no audio
+     * track). {@link MIC_CONSTRAINTS} are only hints: devices that force voice
+     * processing back on are the ones that switch into a call-style audio route
+     * and duck playback — surfaced so telemetry can measure how common that is.
      */
-    get micSettings(): MediaTrackSettings | null {
-        return this._micSettings
-    }
-
-    /**
-     * Open a bare mic stream outside any recording session — the Mic Mode
-     * guide holds one so iOS keeps the Control Center tile visible while the
-     * user follows it. Declares play-and-record first: WebKit refuses
-     * getUserMedia outright (InvalidStateError) while the audio session sits
-     * in a playback-only category, which a note preview leaves behind.
-     */
-    static async openStandaloneMic(): Promise<MediaStream> {
-        if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) {
-            throw new RecordingUnsupportedError()
-        }
-        RecordingEngine.setAudioSessionType('play-and-record')
-        try {
-            return await navigator.mediaDevices.getUserMedia({ audio: true })
-        } catch (err) {
-            RecordingEngine.setAudioSessionType('auto')
-            throw err
-        }
-    }
-
-    /** Stop a standalone mic and hand the audio session back to the OS. */
-    static releaseStandaloneMic(stream: MediaStream): void {
-        stream.getTracks().forEach((t) => t.stop())
-        RecordingEngine.setAudioSessionType('auto')
-    }
-
-    /**
-     * Begin a recording session. Caller is responsible for:
-     *   1. inserting the empty count-off measure so `score.measures[startMeasureIndex]` is it
-     *   2. inserting the first empty recording measure at `startMeasureIndex + 1`
-     *   3. calling `midiPlayer.start()` and running the Ticker afterwards
-     */
-    async start(options: RecordingOptions): Promise<void> {
-        if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) {
-            throw new RecordingUnsupportedError()
-        }
+    async start(options: RecordingOptions): Promise<MediaTrackSettings | null> {
         const token = ++this.lifecycle
         this.options = options
 
-        // Declared before the mic opens so iOS routes output correctly from the
-        // start; stop() restores 'auto' (including a stop() racing the prompt).
-        RecordingEngine.setAudioSessionType('play-and-record')
-
+        // The mic declares the record session before it opens, so iOS routes output
+        // correctly from the start; stop() ends it (including a stop() racing the prompt).
         let stream: MediaStream
         try {
-            stream = await navigator.mediaDevices.getUserMedia({ audio: MIC_CONSTRAINTS })
+            stream = await Microphone.open(MIC_CONSTRAINTS)
         } catch (err) {
-            RecordingEngine.setAudioSessionType('auto')
             if (this.lifecycle === token) this.options = null
             throw err
         }
         if (this.lifecycle !== token) {
-            // stop() ran while the permission prompt was open; without this the
-            // stream is never stopped and the mic indicator stays lit.
-            stream.getTracks().forEach((t) => t.stop())
-            return
+            // stop() ran while the permission prompt was open and already ended the
+            // session; without this the stream is never stopped and the mic indicator stays lit.
+            Microphone.stopTracks(stream)
+            return null
         }
         this.stream = stream
-        this._micSettings = stream.getAudioTracks()[0]?.getSettings() ?? null
 
         const measure = options.score.measures[options.startMeasureIndex]
-        const tempo = this.findActiveTempo(options.score, options.startMeasureIndex)
-        this.bpm = tempo?.bpm ?? DEFAULT_BPM
-        this.beatsPerMeasure = measure.maxBeats
-        this.pulseBeats = measure.timeSignature?.pulse.beats ?? 1
+        this.startMeasure = measure
+        this.bpm = options.score.bpmAtBeat(measure, 0)
+        const beatsPerMeasure = measure.maxBeats
+        this.pulseBeats = measure.timeSignature.pulse.beats
+        // The take's meta frame, bar the MIME type connect() negotiates.
+        const meta: Omit<TranscriptionMeta, 'mimeType'> = {
+            bpm: this.bpm,
+            timeSignature: { beats: measure.timeSignature.beatAmount, beatType: measure.timeSignature.beatType },
+            // Score notes are stored as written pitch; the mic captures sounding pitch.
+            // The server subtracts this from each detected MIDI to land in written-pitch space.
+            chromaticTranspose: options.score.instrument.chromaticTranspose,
+            // Hint for the server's adaptive pitch profile (frequency window etc.).
+            // Auto-detection from the audio remains authoritative — including
+            // for voice vs instrument, which the server now classifies from
+            // the audio itself (stock YAMNet, no fitted head) and only falls
+            // back to this instrument's family when the classifier abstains.
+            // Deliberately NO sourceKind here: sending one would override the
+            // classifier with a guess that is wrong exactly in the case that
+            // matters (singing a line into an instrument staff).
+            instrumentId: options.score.instrument.id,
+            // Key signature at the take's start measure: sung takes are
+            // spelled on the singer's own tuning grid server-side, and the
+            // key breaks the remaining ties (F♯ vs G♭-territory notes sung
+            // between keys). The score is the one place that knows it.
+            keyFifths: measure.keySignature.fifths,
+        }
 
-        this.countoffEndTime = (this.beatsPerMeasure * 60) / this.bpm
+        this.countoffEndTime = (beatsPerMeasure * 60) / this.bpm
         this.lastNewMeasureTriggeredFor = null
 
-        this.analyserCtx = new AudioContext()
-        const source = this.analyserCtx.createMediaStreamSource(this.stream)
-        this.analyser = this.analyserCtx.createAnalyser()
-        this.analyser.fftSize = 256
-        source.connect(this.analyser)
-        this.analyserData = new Uint8Array(new ArrayBuffer(this.analyser.fftSize))
-
+        this.meter = new WaveformMeter(stream)
         this.lastSampleTime = -Infinity
-        this.waveformPeak = 0
 
-        this.paintCursor('#ef4444')
-        this.moveCursor(options.startMeasureIndex, 0)
+        this.cursor.setTone('recording')
+        this.cursor.moveTo(options.score, options.startMeasureIndex, 0)
 
         this._state = 'countoff'
         options.onStateChange(this._state)
@@ -311,7 +217,8 @@ export class RecordingEngine implements Tickable {
         // that amount. Over the internet that is 100-400 ms; at 120 bpm a beat is
         // 500 ms, so it could shift a whole take by most of a beat. The count-off
         // is at least a measure long, which is ample slack for the handshake.
-        void this.connect()
+        void this.connect(options, meta)
+        return stream.getAudioTracks()[0]?.getSettings() ?? null
     }
 
     stop(): void {
@@ -319,48 +226,30 @@ export class RecordingEngine implements Tickable {
         // when nothing else is running yet — and return the audio session to
         // its default, since such a start() has already declared its intent.
         this.lifecycle++
-        RecordingEngine.setAudioSessionType('auto')
+        Microphone.endSession()
         if (this._state === 'idle') return
 
-        this._micSettings = null
-        // Anything still queued belongs to the take being abandoned.
-        this.pendingChunks = []
-        this.metaSent = false
-
-        const ws = this.ws
-        this.ws = null
+        // The socket stops counting for the take now (anything still queued belongs
+        // to the take being abandoned), but only ends once the recorder has flushed.
+        const socket = this.socket
+        this.socket = null
+        socket?.retire()
         const recorder = this.mediaRecorder
         this.mediaRecorder = null
 
         // MediaRecorder.stop() flushes its final ≤100 ms chunk asynchronously
         // (the ondataavailable handler holds its own reference to the socket),
-        // so only send `end` once that flush has happened. The socket then
-        // stays open: the server is still transcribing the take's tail and
-        // streams those last notes back as `score-update`s before answering
-        // `recording-complete` and closing — closing here would drop the
-        // notes from the final moments of every take.
+        // so only end the socket once that flush has happened.
         let finished = false
         const finish = () => {
             if (finished) return
             finished = true
-            if (!ws) return
-            if (ws.readyState !== WebSocket.OPEN) {
-                ws.close()
-                return
-            }
-            try {
-                ws.send(JSON.stringify({ type: 'end' }))
-            } catch {
-                ws.close()
-                return
-            }
-            const fallback = setTimeout(() => ws.close(), DRAIN_TIMEOUT_MS)
-            ws.addEventListener('close', () => clearTimeout(fallback), { once: true })
+            socket?.end()
         }
         if (recorder && recorder.state !== 'inactive') {
             recorder.onstop = finish
             // Safety net for browsers that never fire onstop.
-            setTimeout(finish, 1000)
+            setTimeout(finish, RECORDER_FLUSH_FALLBACK_MS)
             try {
                 recorder.stop()
             } catch {
@@ -370,19 +259,16 @@ export class RecordingEngine implements Tickable {
             finish()
         }
 
-        this.stream?.getTracks().forEach((t) => t.stop())
+        if (this.stream) Microphone.stopTracks(this.stream)
         this.stream = null
 
-        this.analyserCtx?.close().catch(() => {})
-        this.analyserCtx = null
-        this.analyser = null
-        this.analyserData = null
+        this.meter?.close()
+        this.meter = null
 
-        if (this.options) {
-            this.options.cursorEl.setAttribute('display', 'none')
-            this.options.cursorEl.removeAttribute('fill-opacity')
-            this.paintCursor('#3b82f6')
-        }
+        this.cursor.hide()
+        this.cursor.setOpacity(null)
+        this.cursor.setTone('playback')
+        this.startMeasure = null
 
         this._state = 'idle'
         const callback = this.options?.onStateChange
@@ -390,12 +276,8 @@ export class RecordingEngine implements Tickable {
         callback?.(this._state)
     }
 
-    reset(): void {
-        // Lifecycle is driven explicitly by start()/stop(); ignore ticker resets.
-    }
-
     tick(): boolean {
-        if (!this.options || this._state === 'idle') return true
+        if (!this.options || !this.startMeasure || this._state === 'idle') return true
 
         const elapsed = this.midiPlayer.currentTime
 
@@ -404,7 +286,7 @@ export class RecordingEngine implements Tickable {
                 this._state = 'recording'
                 this.options.onStateChange(this._state)
                 // The moving cursor is its own beat feedback from here on.
-                this.options.cursorEl.removeAttribute('fill-opacity')
+                this.cursor.setOpacity(null)
                 this.startCapture()
             } else {
                 this.pulseCursor(elapsed)
@@ -415,220 +297,93 @@ export class RecordingEngine implements Tickable {
         const recordingElapsed = elapsed - this.countoffEndTime
         const beatInRecording = (recordingElapsed * this.bpm) / 60
 
-        let remaining = beatInRecording
-        let measureIndex = this.options.startMeasureIndex
-
-        while (measureIndex < this.options.score.measures.length) {
-            const m = this.options.score.measures[measureIndex]
-            if (remaining < m.maxBeats) break
-            remaining -= m.maxBeats
-            measureIndex++
-        }
-
-        if (measureIndex >= this.options.score.measures.length) {
+        const pos = this.options.score.positionAfter(this.startMeasure, beatInRecording)
+        if (!pos) {
             this.options.onNeedNewMeasure()
             return false
         }
+        const measureIndex = pos.measure.index
 
-        this.moveCursor(measureIndex, remaining)
+        this.cursor.moveTo(this.options.score, measureIndex, pos.beat)
 
-        const currentMeasure = this.options.score.measures[measureIndex]
-        if (remaining >= currentMeasure.maxBeats - 1 && this.lastNewMeasureTriggeredFor !== measureIndex) {
+        if (pos.beat >= pos.measure.maxBeats - 1 && this.lastNewMeasureTriggeredFor !== measureIndex) {
             this.lastNewMeasureTriggeredFor = measureIndex
             this.options.onNeedNewMeasure()
         }
 
-        this.sampleAmplitude(recordingElapsed, measureIndex, remaining)
+        this.sampleAmplitude(recordingElapsed, measureIndex, pos.beat)
 
         return false
     }
 
-    /** Meter the mic (RMS over the analyser window) and emit one anchored sample. */
+    /** Emit one waveform sample anchored to the take's position, at most ~30×/s. */
     private sampleAmplitude(recordingElapsed: number, measureIndex: number, beat: number): void {
-        if (!this.analyser || !this.analyserData || !this.options?.onSample) return
+        if (!this.meter || !this.options?.onSample) return
         if (recordingElapsed - this.lastSampleTime < SAMPLE_INTERVAL_SEC) return
         this.lastSampleTime = recordingElapsed
-
-        this.analyser.getByteTimeDomainData(this.analyserData)
-        let sumSquares = 0
-        for (let i = 0; i < this.analyserData.length; i++) {
-            const v = (this.analyserData[i] - 128) / 128
-            sumSquares += v * v
-        }
-        const rms = Math.sqrt(sumSquares / this.analyserData.length)
-        // Self-calibrating gain: desktop mics deliver RMS around 0.1–0.2, but
-        // iOS forces its voice-processing capture path back on (see
-        // micSettings) and yields a fraction of that — a fixed gain leaves
-        // mobile bars barely visible. Normalize against the take's own voiced
-        // peak so the loudest singing fills the staff on every device; the
-        // gain never drops below the desktop tuning, so hot mics render
-        // exactly as before.
-        if (rms >= WAVEFORM_NOISE_GATE) {
-            this.waveformPeak = Math.max(rms, this.waveformPeak * WAVEFORM_PEAK_DECAY)
-        }
-        const gain = this.waveformPeak > 0 ? Math.min(Math.max(1 / this.waveformPeak, WAVEFORM_GAIN), WAVEFORM_GAIN_MAX) : WAVEFORM_GAIN
         this.options.onSample({
             timeMs: Math.round(recordingElapsed * 1000),
             measureIndex,
             beat,
-            amp: Math.min(rms * gain, 1),
+            amp: this.meter.sample(),
         })
     }
 
     /**
-     * Open the socket and wire its handlers. Runs during the count-off so that
-     * nothing asynchronous sits between beat 1 and the first captured sample.
+     * Open the take's socket. Runs during the count-off so that nothing
+     * asynchronous sits between beat 1 and the first captured sample.
      */
-    private async connect(): Promise<void> {
-        if (!this.stream || !this.options) return
-        const opts = this.options
+    private async connect(opts: RecordingOptions, meta: Omit<TranscriptionMeta, 'mimeType'>): Promise<void> {
         // Now that connecting happens during the count-off, the user can cancel while
         // the handshake is still in flight. `lifecycle` is the existing token for
         // exactly this race: if it moves, this connect() lost and must stay silent
         // rather than report a connection failure the user caused by pressing stop.
         const token = this.lifecycle
-        this.pendingChunks = []
-        this.metaSent = false
         // Negotiated HERE, before the handshake, because the meta frame usually goes
-        // out from the open handler below — during the count-off, before the recorder
+        // out as soon as the socket opens — during the count-off, before the recorder
         // exists. Picking the type in startCapture() meant that frame carried
         // mimeType: null and the server fell back to probing the container, which is
         // exactly what the hint exists to avoid (a streamed Safari MP4 probes badly).
-        this.mimeType = RecordingEngine.pickMimeType()
+        const mimeType = RecordingEngine.pickMimeType()
+        this.mimeType = mimeType
 
-        let ws: WebSocket
+        let socket: TranscriptionSocket
         try {
-            ws = new WebSocket(opts.wsUrl)
+            socket = new TranscriptionSocket(opts.wsUrl, {
+                // Bound now, not read from this.options: stop() nulls the options
+                // while the server is still flushing the take's tail, and those late
+                // updates must still land in the score.
+                onScoreUpdate: opts.onScoreUpdate,
+                // The rest only matter while the take is live.
+                onLimitReached: (info) => this.options?.onLimitReached?.(info),
+                onRecordingError: (code) => this.options?.onRecordingError?.(code),
+                onHealth: (health) => this.options?.onHealth?.(health),
+                onConnectionLost: () => {
+                    this.socket = null
+                    opts.onConnectionLost?.()
+                },
+            })
         } catch {
             opts.onConnectionLost?.()
             return
         }
-        this.ws = ws
+        this.socket = socket
 
-        // A close while this socket is still the engine's and a take is live
-        // means the connection died under the user — surface it instead of
-        // letting them keep singing into a dead socket.
-        ws.addEventListener('close', () => {
-            if (this._state !== 'idle' && this.ws === ws) {
-                this.ws = null
-                opts.onConnectionLost?.()
-            }
-        })
-
-        await new Promise<void>((resolve) => {
-            ws.addEventListener('open', () => resolve(), { once: true })
-            ws.addEventListener('error', () => resolve(), { once: true })
-        })
+        await socket.handshake()
         if (this.lifecycle !== token) {
-            // Cancelled during the handshake; stop() already tore down the socket.
-            ws.close()
+            // Cancelled during the handshake; stop() already ended the socket.
+            socket.close()
             return
         }
-        if (ws.readyState !== WebSocket.OPEN) {
-            if (this.ws === ws) this.ws = null
+        if (!socket.isOpen) {
+            socket.markFailed()
+            if (this.socket === socket) this.socket = null
             opts.onConnectionLost?.()
             return
         }
         // The socket may have opened after capture already began; anything queued
         // in the meantime goes out now, in order, behind the meta frame.
-        this.sendMeta()
-        this.flushPendingChunks()
-
-        ws.addEventListener('message', (event) => {
-            if (typeof event.data !== 'string') return
-            let msg: unknown
-            try {
-                msg = JSON.parse(event.data)
-            } catch {
-                return
-            }
-            if (!msg || typeof msg !== 'object') return
-            const payload = msg as {
-                type?: string
-                measures?: Record<number, MxmlMeasure>
-                code?: RecordingErrorCode
-                planId?: string
-                planName?: string
-                limitSeconds?: number | null
-                usedSeconds?: number
-                source?: 'voice' | 'instrument'
-                decidedBy?: 'explicit' | 'classifier' | 'prior'
-                ok?: boolean
-            }
-            if (payload.type === 'score-update' && payload.measures) {
-                // Via the captured opts, not this.options: stop() nulls the
-                // options while the server is still flushing the take's tail,
-                // and those late updates must still land in the score.
-                opts.onScoreUpdate?.({ measures: payload.measures })
-            } else if (payload.type === 'recording-complete') {
-                // The server has flushed everything for this take; it closes
-                // right after, but close from our side too so the post-stop
-                // drain doesn't depend on it.
-                ws.close()
-            } else if (payload.type === 'recording-limit') {
-                this.options?.onLimitReached?.({
-                    planId: payload.planId ?? 'free',
-                    planName: payload.planName ?? '',
-                    limitSeconds: payload.limitSeconds ?? null,
-                    usedSeconds: payload.usedSeconds ?? 0,
-                })
-            } else if (payload.type === 'recording-error' && payload.code) {
-                this.options?.onRecordingError?.(payload.code)
-            } else if (payload.type === 'recording-source' && payload.source) {
-                this.options?.onSourceResolved?.({
-                    source: payload.source,
-                    decidedBy: payload.decidedBy ?? 'prior',
-                })
-            } else if (payload.type === 'recording-health' && typeof payload.ok === 'boolean') {
-                this.options?.onHealth?.({ ok: payload.ok })
-            }
-        })
-    }
-
-    /**
-     * Send the take's `meta` frame. Idempotent, because the socket may open either
-     * before or after capture starts and both paths call it.
-     */
-    private sendMeta(): void {
-        if (this.metaSent || !this.options) return
-        const ws = this.ws
-        if (!ws || ws.readyState !== WebSocket.OPEN) return
-        const ts = this.options.score.measures[this.options.startMeasureIndex]?.timeSignature
-        ws.send(
-            JSON.stringify({
-                type: 'meta',
-                bpm: this.bpm,
-                timeSignature: ts ? { beats: ts.beatAmount, beatType: ts.beatType } : null,
-                // Score notes are stored as written pitch; the mic captures sounding pitch.
-                // The server subtracts this from each detected MIDI to land in written-pitch space.
-                chromaticTranspose: this.options.score.instrument.chromaticTranspose,
-                // Hint for the server's adaptive pitch profile (frequency window etc.).
-                // Auto-detection from the audio remains authoritative — including
-                // for voice vs instrument, which the server now classifies from
-                // the audio itself (stock YAMNet, no fitted head) and only falls
-                // back to this instrument's family when the classifier abstains.
-                // Deliberately NO sourceKind here: sending one would override the
-                // classifier with a guess that is wrong exactly in the case that
-                // matters (singing a line into an instrument staff).
-                instrumentId: this.options.score.instrument.id,
-                // Key signature at the take's start measure: sung takes are
-                // spelled on the singer's own tuning grid server-side, and the
-                // key breaks the remaining ties (F♯ vs G♭-territory notes sung
-                // between keys). The score is the one place that knows it.
-                keyFifths: this.options.score.measures[this.options.startMeasureIndex]?.keySignature.fifths ?? null,
-                // `null` = the browser's default container; the server probes it.
-                mimeType: this.mimeType,
-            }),
-        )
-        this.metaSent = true
-    }
-
-    /** Deliver anything captured while the socket was still connecting, in order. */
-    private flushPendingChunks(): void {
-        const ws = this.ws
-        if (!ws || ws.readyState !== WebSocket.OPEN) return
-        for (const chunk of this.pendingChunks) ws.send(chunk)
-        this.pendingChunks = []
+        socket.sendMeta({ ...meta, mimeType })
     }
 
     /**
@@ -638,45 +393,27 @@ export class RecordingEngine implements Tickable {
      * systematic timing error in the finished score.
      *
      * The socket is usually already open (it was started at count-off begin); if it
-     * is not, chunks queue in `pendingChunks` rather than blocking or being dropped.
+     * is not, it queues the chunks rather than blocking or dropping them.
      */
     private startCapture(): void {
         if (!this.stream) return
-        // connect() nulls the socket when the handshake failed and has already
+        // connect() drops the socket when the handshake failed and has already
         // reported it; starting a recorder with nowhere to send would just leak.
-        if (!this.ws) return
+        const socket = this.socket
+        if (!socket) return
         this.mediaRecorder = this.mimeType ? new MediaRecorder(this.stream, { mimeType: this.mimeType }) : new MediaRecorder(this.stream)
 
-        this.sendMeta()
-
-        // Captured in the closure, NOT read via `this.ws` per chunk: stop() nulls
-        // `this.ws` and only then stops the recorder, whose final ≤CHUNK_MS of audio
-        // arrives asynchronously afterwards — reading the field at that point would
-        // silently drop the tail of every take. The closure keeps the socket alive
-        // for exactly that last flush (stop() leaves it open until the server has
-        // streamed the take's final notes back).
-        const ws = this.ws
+        // Captured in the closure, NOT read via `this.socket` per chunk: stop() drops
+        // `this.socket` and only then stops the recorder, whose final ≤CHUNK_MS of
+        // audio arrives asynchronously afterwards — reading the field at that point
+        // would silently drop the tail of every take. The closure keeps the socket
+        // for exactly that last flush (it stays open until the server has streamed
+        // the take's final notes back).
         this.mediaRecorder.ondataavailable = (e) => {
             if (e.data.size === 0) return
-            if (ws.readyState === WebSocket.OPEN) {
-                this.flushPendingChunks()
-                ws.send(e.data)
-            } else if (this.ws === ws && this.pendingChunks.length < MAX_PENDING_CHUNKS) {
-                // Socket still handshaking: hold the audio rather than drop it.
-                // Bounded so a socket that never opens cannot grow without limit; the
-                // identity check stops queueing once the take was torn down or the
-                // handshake failed (both null or replace `this.ws`).
-                this.pendingChunks.push(e.data)
-            }
+            socket.send(e.data)
         }
         this.mediaRecorder.start(CHUNK_MS)
-    }
-
-    /** Hint the OS audio session via WebKit's API; no-op on other browsers. */
-    private static setAudioSessionType(type: 'play-and-record' | 'auto'): void {
-        if (typeof navigator === 'undefined') return
-        const session = (navigator as NavigatorWithAudioSession).audioSession
-        if (session) session.type = type
     }
 
     /**
@@ -689,14 +426,6 @@ export class RecordingEngine implements Tickable {
         return MIME_TYPE_CANDIDATES.find((type) => MediaRecorder.isTypeSupported(type)) ?? null
     }
 
-    private findActiveTempo(score: Score, measureIndex: number) {
-        for (let i = measureIndex; i >= 0; i--) {
-            const tempos = [...score.measures[i].tempos].sort((a, b) => b.beatPosition - a.beatPosition)
-            if (tempos.length > 0) return tempos[0]
-        }
-        return null
-    }
-
     /**
      * Blink the cursor in time with the count-off clicks: full opacity on each
      * beat, decaying to a trough — a visual count-in while the cursor has no
@@ -704,22 +433,7 @@ export class RecordingEngine implements Tickable {
      * the two can't drift.
      */
     private pulseCursor(elapsed: number): void {
-        if (!this.options) return
         const beatPhase = ((elapsed * this.bpm) / 60 / this.pulseBeats) % 1
-        const opacity = PULSE_MIN_OPACITY + (1 - PULSE_MIN_OPACITY) * Math.pow(1 - beatPhase, 3)
-        this.options.cursorEl.setAttribute('fill-opacity', opacity.toFixed(3))
-    }
-
-    private moveCursor(measureIndex: number, beat: number): void {
-        if (!this.options) return
-        const pos = this.options.resolvePosition(measureIndex, beat)
-        if (!pos) return
-        this.options.cursorEl.setAttribute('x', String(pos.x - 1.5))
-        this.options.cursorEl.setAttribute('transform', `translate(0, ${pos.rowY})`)
-        this.options.cursorEl.setAttribute('display', '')
-    }
-
-    private paintCursor(color: string): void {
-        this.options?.cursorEl.setAttribute('fill', color)
+        this.cursor.setOpacity(PULSE_MIN_OPACITY + (1 - PULSE_MIN_OPACITY) * Math.pow(1 - beatPhase, 3))
     }
 }
