@@ -70,9 +70,15 @@ describe('plan catalogue', () => {
     })
 
     it('words every tier in plain language, never the retired jargon', () => {
-        const copy = [...PLAN_TIERS.flatMap((p) => [p.tagline, ...planFeatures(p)]), ...planFeatures(BETA_PLAN), recordingBudgetLabel(null)]
+        const copy = [
+            ...PLAN_TIERS.flatMap((p) => [p.tagline, ...planFeatures(p), planCtaLabel(p), planBudgetHint(p) ?? '']),
+            ...planFeatures(BETA_PLAN),
+            recordingBudgetLabel(null),
+            ...CREDIT_PACKS.flatMap((p) => [p.name, p.blurb, p.compare('usd'), p.compare('eur')]),
+        ]
+        // 'recording', never 'take' (C12 glossary) — a retake included.
         for (const line of copy)
-            expect(line).not.toMatch(/unlimited|audio-to-notation|engraving|keyboard-first|tier|cadence|budget|prorat/i)
+            expect(line).not.toMatch(/unlimited|audio-to-notation|engraving|keyboard-first|tier|cadence|budget|prorat|\btakes?\b|retake/i)
         expect(planFeatures(planById('free'))).toEqual([
             '3 minutes of recording a day',
             'Up to 5 scores',
@@ -91,7 +97,8 @@ describe('plan catalogue', () => {
         expect(planBudgetHint(planById('free'))).toBe('Enough for about six 30-second recordings.')
         // Derived from the budget the API serves, so a re-tuned free tier stays truthful.
         expect(planBudgetHint({ id: 'free', dailyRecordingSeconds: 300 })).toBe('Enough for about ten 30-second recordings.')
-        expect(planBudgetHint({ id: 'free', dailyRecordingSeconds: 600 })).toBe('Enough for about 20 30-second recordings.')
+        // Past ten the numeral would sit beside the 30, so the length moves behind it.
+        expect(planBudgetHint({ id: 'free', dailyRecordingSeconds: 600 })).toBe('Enough for about 20 recordings of 30 seconds.')
         expect(planBudgetHint({ id: 'free', dailyRecordingSeconds: 45 })).toBe('Enough for about one 30-second recording.')
         expect(planBudgetHint({ id: 'free', dailyRecordingSeconds: 20 })).toBeNull()
         expect(planBudgetHint({ id: 'free', dailyRecordingSeconds: null })).toBeNull()

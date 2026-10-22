@@ -127,7 +127,7 @@ export const CREDIT_PACKS: CreditPack[] = [
         name: 'Single',
         minutes: 15,
         price: 6,
-        blurb: 'One song, with plenty of retakes.',
+        blurb: 'One song, with room to record it again.',
         compare(c, songwriter = SONGWRITER) {
             const extra = formatMoney(songwriter.priceMonthly - this.price, c)
             return `${songwriter.name} gives you ${dailyMinutes(songwriter)} min every day for ${extra} more a month.`
@@ -296,7 +296,11 @@ export function planBudgetHint(plan: Pick<PlanTier, 'id' | 'dailyRecordingSecond
     if (plan.id !== 'free' || plan.dailyRecordingSeconds === null) return null
     const count = Math.floor(plan.dailyRecordingSeconds / HINT_RECORDING_SECONDS)
     if (count < 1) return null
-    return `Enough for about ${SMALL_COUNTS[count] ?? count} ${HINT_RECORDING_SECONDS}-second recording${count === 1 ? '' : 's'}.`
+    const word = SMALL_COUNTS[count]
+    // Past ten the count is a numeral, so the length moves behind it: "20 recordings of 30 seconds",
+    // never "20 30-second recordings".
+    if (word === undefined) return `Enough for about ${count} recordings of ${HINT_RECORDING_SECONDS} seconds.`
+    return `Enough for about ${word} ${HINT_RECORDING_SECONDS}-second recording${count === 1 ? '' : 's'}.`
 }
 
 /** What a plan card's button says: "Start free" for the free tier, "Choose {plan}" for a paid one. */
