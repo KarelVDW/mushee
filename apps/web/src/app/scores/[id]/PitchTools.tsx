@@ -4,7 +4,7 @@ import { useSyncExternalStore } from 'react'
 
 import type { PitchScope } from '@/components/editor/pitchScope'
 import { TransposePopover } from '@/components/editor/TransposePopover'
-import { ChipToggle, Icon } from '@/components/ui'
+import { Icon } from '@/components/ui'
 
 import { PopoverChip } from './PopoverChip'
 import type { ScoreManipulator } from './ScoreManipulator'
@@ -15,21 +15,8 @@ const HEADER_POPOVER_POSITION = 'right-0 top-[calc(100%+0.5rem)]'
 interface PitchToolsProps {
     manipulator: ScoreManipulator
     /**
-     * Inside a ToolGroup well — the phone dock's score-settings well: plain chips and smaller
-     * icons, no group of its own, and the transpose popover opens from the dock. Otherwise the
-     * tools stand alone in the desktop header.
-     */
-    plain?: boolean
-    /** Phone layout: the transpose popover opens as the dock-wide sheet. */
-    compact?: boolean
-    /**
-     * Transpose needs a selected note, like the dock's other tools (no selected note, no tool).
-     * Off in the header, whose transpose stays available: the whole score needs no selection.
-     */
-    requireSelection?: boolean
-    /**
-     * Transpose popover state, kept by the page so the transpose shortcut opens whichever
-     * instance is rendered (header or dock).
+     * Transpose popover state, kept by the page so the transpose shortcut opens it from
+     * anywhere (on phones it opens inside the dock's More sheet instead).
      */
     transposeOpen: boolean
     onTransposeOpenChange: (open: boolean) => void
@@ -38,65 +25,48 @@ interface PitchToolsProps {
 }
 
 /**
- * The pitch operations — minimize accidentals and transpose. They act on the whole score by
- * default (a multi-note selection narrows them), so they sit with the document-level chrome
- * in the desktop header; phones host them in the dock's score-settings well instead.
+ * The header's pitch tool: a labelled Transpose chip. It acts on the whole score by default
+ * (a multi-note selection narrows it), so it sits with the document-level chrome on desktop.
+ * Simplify sharps and flats lives in the dock's More (desktop popover, phone sheet), and
+ * phones reach Transpose there too.
  */
-export function PitchTools({
-    manipulator,
-    plain = false,
-    compact = false,
-    requireSelection = false,
-    transposeOpen,
-    onTransposeOpenChange,
-    onTransposeAim,
-}: PitchToolsProps) {
+export function PitchTools({ manipulator, transposeOpen, onTransposeOpenChange, onTransposeAim }: PitchToolsProps) {
     useSyncExternalStore(manipulator.subscribe, manipulator.getSnapshot, manipulator.getSnapshot)
+    const keybindings = manipulator.keybindings
+    useSyncExternalStore(keybindings.subscribe, keybindings.getSnapshot, keybindings.getSnapshot)
     const score = manipulator.score
     if (!score) return null
-    const iconSize = plain ? 14 : 16
 
-    const tools = (
-        <>
-            <ChipToggle
-                plain={plain}
-                onClick={() => manipulator.minimizeAccidentals()}
-                disabled={!manipulator.selectedNote}
-                ariaLabel="Minimize accidentals">
-                <Icon name="natural" size={iconSize} />
-            </ChipToggle>
-            <PopoverChip
-                plain={plain}
-                compact={compact}
-                disabled={requireSelection && !manipulator.selectedNote}
-                ariaLabel="Transpose"
-                chip={<Icon name="transpose" size={iconSize} />}
-                className={plain ? undefined : HEADER_POPOVER_POSITION}
-                open={transposeOpen}
-                onOpenChange={onTransposeOpenChange}>
-                {({ anchorRef, className, close }) => (
-                    <TransposePopover
-                        score={score}
-                        selectedNotes={manipulator.selectedNotes}
-                        selectionNarrowsPitchOps={manipulator.selectionNarrowsPitchOps}
-                        anchorRef={anchorRef}
-                        className={className}
-                        onApply={(interval, scope) => {
-                            manipulator.transpose(interval, scope)
-                            close()
-                        }}
-                        onDismiss={close}
-                        onScopeChange={onTransposeAim}
-                    />
-                )}
-            </PopoverChip>
-        </>
-    )
-
-    if (plain) return tools
     return (
-        <div role="group" aria-label="Pitch" className="flex items-center gap-1">
-            {tools}
-        </div>
+        <PopoverChip
+            ariaLabel="Transpose"
+            tooltip="Move the whole song higher or lower"
+            shortcut={keybindings.shortcutFor('transpose')}
+            tooltipSide="bottom"
+            chip={
+                <span className="inline-flex items-center gap-1.5">
+                    <Icon name="transpose" size={14} />
+                    Transpose
+                </span>
+            }
+            className={HEADER_POPOVER_POSITION}
+            open={transposeOpen}
+            onOpenChange={onTransposeOpenChange}>
+            {({ anchorRef, className, close }) => (
+                <TransposePopover
+                    score={score}
+                    selectedNotes={manipulator.selectedNotes}
+                    selectionNarrowsPitchOps={manipulator.selectionNarrowsPitchOps}
+                    anchorRef={anchorRef}
+                    className={className}
+                    onApply={(interval, scope) => {
+                        manipulator.transpose(interval, scope)
+                        close()
+                    }}
+                    onDismiss={close}
+                    onScopeChange={onTransposeAim}
+                />
+            )}
+        </PopoverChip>
     )
 }

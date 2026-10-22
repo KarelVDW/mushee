@@ -1,4 +1,4 @@
-import type { Page } from '@playwright/test'
+import type { Locator, Page } from '@playwright/test'
 
 import { denyMicrophone, expect, MOCK_SCORE_ID, MOCK_SHARE_TOKEN, MOCK_TITLE, SELECTION_BANDS, test, waitForAutosave } from './fixtures'
 
@@ -110,23 +110,74 @@ test('Record is disabled with no note selected and enabled again after tapping o
     await expect(record).toBeEnabled()
 })
 
-test('pitch actions live in the dock and the transpose sheet spans it', async ({ page }) => {
-    // Minimize-accidentals and transpose join the dock's settings well on phones.
-    const settings = page.getByRole('group', { name: 'Score settings' })
-    await expect(settings.getByRole('button', { name: 'Minimize accidentals' })).toBeVisible()
-
-    const trigger = settings.getByRole('button', { name: 'Transpose' })
-    await trigger.tap()
-    const sheet = page.getByRole('dialog', { name: 'Transpose' })
+/** Open the phone dock's More sheet: everything beyond Undo and the note lengths lives there. */
+async function openMore(page: Page) {
+    await page.getByRole('button', { name: 'More tools' }).tap()
+    const sheet = page.getByRole('dialog', { name: 'More tools' })
     await expect(sheet).toBeVisible()
+    return sheet
+}
 
-    // The sheet spans the dock's width instead of anchoring to the chip.
-    const sheetBox = await sheet.boundingBox()
+/** A sheet must sit between the header and the dock: never under the header, never over the tools. */
+async function expectBetweenHeaderAndDock(page: Page, sheet: Locator): Promise<void> {
+    const box = await sheet.boundingBox()
+    const header = await page.locator('header').boundingBox()
+    const tools = await page.getByRole('group', { name: 'Note tools' }).boundingBox()
+    expect(box).not.toBeNull()
+    expect(box?.y ?? -1).toBeGreaterThanOrEqual((header?.y ?? 0) + (header?.height ?? Infinity) - 1)
+    expect((box?.y ?? 0) + (box?.height ?? Infinity)).toBeLessThanOrEqual((tools?.y ?? 0) + 1)
+}
+
+test('the phone dock is one tool row: Undo, the note lengths and More', async ({ page }) => {
+    const tools = page.getByRole('group', { name: 'Note tools' })
+    await expect(tools.getByRole('button', { name: 'Undo' })).toBeVisible()
+    await expect(tools.getByRole('group', { name: 'Note duration' }).getByRole('button')).toHaveCount(5)
+    await expect(tools.getByRole('button', { name: 'More tools' })).toContainText('More')
+    // The rest moved into the sheet: no settings well, no history well, no modifier well.
+    for (const group of ['Score settings', 'History', 'Note modifiers']) {
+        await expect(page.getByRole('group', { name: group })).toHaveCount(0)
+    }
+    // One row: every tool shares the row's line (nothing wrapped onto a second row).
+    const boxes = await tools.locator(':scope > *').evaluateAll((els) => els.map((el) => el.getBoundingClientRect().toJSON() as DOMRect))
+    const top = Math.min(...boxes.map((b) => b.y))
+    for (const box of boxes) expect(box.y).toBeLessThan(top + 12)
+})
+
+test('pitch actions live in the More sheet and the transpose sheet swaps in with Back and Close', async ({ page }) => {
+    const sheet = await openMore(page)
+    await expect(sheet.getByRole('button', { name: 'Simplify sharps and flats' })).toBeVisible()
+    await expectBetweenHeaderAndDock(page, sheet)
+
+    await sheet.getByRole('button', { name: 'Transpose' }).tap()
+    const transpose = page.getByRole('dialog', { name: 'Transpose' })
+    await expect(transpose).toBeVisible()
+    // Sheets never stack: the picker took the menu's place.
+    await expect(page.getByRole('dialog', { name: 'More tools' })).toHaveCount(0)
+
+    // The sheet spans the dock's width instead of anchoring to a chip.
+    const sheetBox = await transpose.boundingBox()
     const viewport = page.viewportSize()
     expect(sheetBox?.width ?? 0).toBeGreaterThan((viewport?.width ?? 0) * 0.9)
+    await expectBetweenHeaderAndDock(page, transpose)
 
-    await trigger.tap() // the chip toggles its own sheet closed
-    await expect(sheet).toHaveCount(0)
+    await transpose.getByRole('button', { name: 'Back' }).tap()
+    await expect(page.getByRole('dialog', { name: 'More tools' })).toBeVisible()
+    await page.getByRole('dialog', { name: 'More tools' }).getByRole('button', { name: 'Close' }).tap()
+    await expect(page.getByRole('dialog')).toHaveCount(0)
+})
+
+test('the More sheet toggles note tools and the metronome', async ({ page }) => {
+    const sheet = await openMore(page)
+    const rest = sheet.getByRole('button', { name: 'Rest', exact: true })
+    const patch = waitForAutosave(page)
+    await rest.tap()
+    await patch
+    await expect(rest).toHaveAttribute('aria-pressed', 'true')
+
+    const metronome = sheet.getByRole('switch', { name: 'Metronome' })
+    await expect(metronome).toHaveAttribute('aria-checked', 'false')
+    await metronome.tap()
+    await expect(metronome).toHaveAttribute('aria-checked', 'true')
 })
 
 test('the score reflows to the phone instead of scaling down', async ({ page }) => {
@@ -266,8 +317,8 @@ test('tapping a note on the staff moves the selection', async ({ page }) => {
 })
 
 test('dock popovers open as sheets that stay on screen', async ({ page }) => {
-    const clef = page.getByRole('button', { name: /^Clef:/ })
-    await clef.tap()
+    const sheet = await openMore(page)
+    await sheet.getByRole('button', { name: /^Clef:/ }).tap()
     const dialog = page.getByRole('dialog', { name: 'Select clef' })
     await expect(dialog).toBeVisible()
     const box = await dialog.boundingBox()
@@ -276,6 +327,36 @@ test('dock popovers open as sheets that stay on screen', async ({ page }) => {
     expect(viewport).not.toBeNull()
     expect(box?.x ?? -1).toBeGreaterThanOrEqual(0)
     expect((box?.x ?? 0) + (box?.width ?? Infinity)).toBeLessThanOrEqual((viewport?.width ?? 0) + 1)
+    await expectBetweenHeaderAndDock(page, dialog)
+
+    // A pick applies, and the sheet closes after showing it.
+    await dialog.getByRole('button', { name: 'Set Bass clef' }).tap()
+    await expect(dialog).toHaveCount(0)
+})
+
+test('the first tap on a note teaches where its actions are, once', async ({ page }) => {
+    const svg = page.locator('.max-w-240 svg').first()
+    const box = await svg.boundingBox()
+    expect(box).not.toBeNull()
+    const tapAt = (fraction: number) => page.touchscreen.tap((box?.x ?? 0) + (box?.width ?? 0) * fraction, (box?.y ?? 0) + 65)
+    const band = svg.locator(SELECTION_BANDS).first()
+    const moveHint = page.getByText(/^To move a note/)
+    await expect(moveHint).toBeVisible()
+
+    await tapAt(0.7)
+    const tip = page.getByRole('status').filter({ hasText: 'Tap the note again to copy or delete it.' })
+    await expect(tip).toBeVisible()
+    // One tip at a time: the dock's own hint steps aside while this one is up.
+    await expect(moveHint).toHaveCount(0)
+
+    // The next tap anywhere clears it, and the dock's hint comes back.
+    const before = await band.boundingBox()
+    await tapAt(0.3)
+    await expect(tip).toHaveCount(0)
+    await expect(moveHint).toBeVisible()
+    // That tap picked another note — and taught once means it stays gone.
+    await expect.poll(async () => (await band.boundingBox())?.x).not.toBe(before?.x)
+    await expect(tip).toHaveCount(0)
 })
 
 // --- Header chips: share / takes / export collapse to icon-only on phones ---

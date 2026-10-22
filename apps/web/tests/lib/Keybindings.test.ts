@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { EDITOR_COMMANDS } from '@/app/scores/[id]/commands'
+import { EDITOR_COMMAND_GROUPS, EDITOR_COMMANDS, SELECTION_MENU_COMMAND } from '@/app/scores/[id]/commands'
 import { type BindableCommand, Keybindings, Shortcut, type StoredShortcuts } from '@/lib/Keybindings'
 
 const COMMANDS: BindableCommand[] = [
@@ -369,6 +369,36 @@ describe('Editor command defaults', () => {
         expect(keybindings.resolve(keydown({ code: 'KeyB', key: 'b' }))?.id).toBe('set-accidental:flat')
         expect(keybindings.resolve(keydown({ code: 'Digit3', key: '#', shiftKey: true }))?.id).toBe('set-accidental:sharp')
         expect(keybindings.resolve(keydown({ code: 'Digit3', key: '3' }))?.id).toBe('toggle-tuplet')
+    })
+
+    it('opens the selection actions on Shift+F10, a fixed physical key no rebind can take', () => {
+        const keybindings = new Keybindings(EDITOR_COMMANDS, { storageKey: 'test:editor-selection-menu', isMac: false })
+        expect(keybindings.resolve(keydown({ code: 'F10', key: 'F10', shiftKey: true }))?.id).toBe(SELECTION_MENU_COMMAND)
+        expect(keybindings.rebind(SELECTION_MENU_COMMAND, recorded({ code: 'KeyJ', key: 'j' })).ok).toBe(false)
+        const taken = keybindings.rebind('toggle-rest', recorded({ code: 'F10', key: 'F10', shiftKey: true }))
+        expect(taken).toMatchObject({ ok: false, reservedBy: { id: SELECTION_MENU_COMMAND } })
+        // The Menu key can't be recorded as a shortcut at all; the command names it for the dialog instead.
+        expect(Shortcut.fromEvent(keydown({ code: 'ContextMenu', key: 'ContextMenu' }))).toBeNull()
+        expect(EDITOR_COMMANDS.find((command) => command.id === SELECTION_MENU_COMMAND)?.alternateKey).toEqual({
+            key: 'ContextMenu',
+            label: 'Menu',
+        })
+    })
+
+    it('lists the commands in plain words, the everyday groups first, with no "Toggle …" labels', () => {
+        expect(EDITOR_COMMAND_GROUPS[0]).toBe('Edit notes')
+        expect(new Set(EDITOR_COMMANDS.map((command) => command.group))).toEqual(new Set(EDITOR_COMMAND_GROUPS))
+        const label = (id: string) => EDITOR_COMMANDS.find((command) => command.id === id)?.label
+        expect(label('raise-pitch')).toBe('Higher')
+        expect(label('lower-pitch')).toBe('Lower')
+        expect(label('toggle-rest')).toBe('Rest on/off')
+        expect(label('toggle-tie')).toBe('Tie on/off')
+        expect(label('toggle-dot')).toBe('Dotted on/off')
+        expect(label('toggle-tuplet')).toBe('Triplet on/off')
+        expect(label('minimize-accidentals')).toBe('Simplify sharps and flats')
+        expect(label('transpose')).toBe('Transpose…')
+        expect(label('collapse-selection')).toBe('Select just this note')
+        expect(EDITOR_COMMANDS.filter((command) => command.label.startsWith('Toggle'))).toEqual([])
     })
 
     it('on a Mac the fixed clipboard shortcuts resolve by typed character and the plain letters still reach the pickers', () => {

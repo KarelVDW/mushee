@@ -61,60 +61,105 @@ test('turning the share link on after an edit keeps the edit and the incremental
     expect(body.allMeasures).toBeUndefined()
 })
 
-test('dotted, triplet, and tie dock toggles edit the selected note', async ({ page }) => {
-    // Tying is offered only where a tie can bind: the first note (C5) can't tie into D5.
-    const tie = page.getByRole('button', { name: 'Tie', exact: true })
+test('dotted sits with the note lengths; triplet and tie live behind More', async ({ page }) => {
+    const more = page.getByRole('button', { name: 'More note tools' })
+    const panel = page.getByRole('dialog', { name: 'More note tools' })
+    // Tying is offered only where a tie can bind: the first note (C5) can't tie into D5 — and says so.
+    await more.click()
+    const tie = panel.getByRole('button', { name: 'Tie', exact: true })
     await expect(tie).toBeDisabled()
+    await expect(tie).toContainText('Tie needs the next note to be the same pitch.')
+    await page.keyboard.press('Escape')
+    await expect(panel).toHaveCount(0)
+
     // Lower the second note onto C5 and step back: now the first note has a note to tie into.
     await focusEditor(page)
     await page.keyboard.press('ArrowRight')
     await page.keyboard.press('ArrowDown')
     await page.keyboard.press('ArrowLeft')
+    await more.click()
     await expect(tie).toBeEnabled()
+    // The toggles keep the panel open, so the state they set stays in view.
     await tie.click()
     await expect(tie).toHaveAttribute('aria-pressed', 'true')
     await tie.click()
     await expect(tie).toHaveAttribute('aria-pressed', 'false')
 
-    const dotted = page.getByRole('button', { name: 'Dotted' })
+    const triplet = panel.getByRole('button', { name: 'Triplet', exact: true })
+    await triplet.click()
+    await expect(triplet).toHaveAttribute('aria-pressed', 'true')
+    await triplet.click()
+    await expect(triplet).toHaveAttribute('aria-pressed', 'false')
+    await page.keyboard.press('Escape')
+
+    const dotted = page.getByRole('group', { name: 'Note length' }).getByRole('button', { name: 'Dotted' })
     const patchDot = waitForAutosave(page)
     await dotted.click()
     await patchDot
     await expect(dotted).toHaveAttribute('aria-pressed', 'true')
     await dotted.click()
     await expect(dotted).toHaveAttribute('aria-pressed', 'false')
-
-    const triplet = page.getByRole('button', { name: 'Triplet' })
-    await triplet.click()
-    await expect(triplet).toHaveAttribute('aria-pressed', 'true')
-    await triplet.click()
-    await expect(triplet).toHaveAttribute('aria-pressed', 'false')
 })
 
-test('the accidental segmented control sets flat, sharp, and natural', async ({ page }) => {
-    const accidentals = page.getByRole('group', { name: 'Accidental' }).getByRole('button')
-    await expect(accidentals).toHaveCount(3)
+test('simplify sharps and flats runs from the More popover', async ({ page }) => {
+    await page.getByRole('button', { name: 'More note tools' }).click()
+    const panel = page.getByRole('dialog', { name: 'More note tools' })
+    // Nothing to respell in C major: the score stays as it is, and the panel closes.
+    await panel.getByRole('button', { name: 'Simplify sharps and flats' }).click()
+    await expect(panel).toHaveCount(0)
+    await expect(page.getByRole('button', { name: 'Key: C major' })).toBeVisible()
+})
+
+test('higher and lower nudge the selected note and autosave', async ({ page }) => {
+    const patch = waitForAutosave(page)
+    await page.getByRole('button', { name: 'Lower', exact: true }).click()
+    const body = (await patch).postDataJSON() as Record<string, unknown>
+    expect(body.measures ?? body.allMeasures).toBeTruthy()
+})
+
+test('on a run of notes the length tools show a mixed state and stay off', async ({ page }) => {
+    // C5 D5 E5 F5 are quarters, the rests too: make the first note a half, then select across it.
+    await page.getByRole('button', { name: 'Half note' }).click()
+    await focusEditor(page)
+    await page.keyboard.press('Shift+ArrowRight')
+    const durations = page.getByRole('group', { name: 'Note duration' }).getByRole('button')
+    // No length is shared by every selected note, so none is pressed — and none can be clicked.
+    for (const button of await durations.all()) await expect(button).toHaveAttribute('aria-pressed', 'false')
+    await expect(page.getByRole('button', { name: 'Quarter note' })).toHaveAttribute('aria-disabled', 'true')
+    // The length keys decline too, rather than changing one note of the run.
+    await page.keyboard.press('e')
+    for (const button of await durations.all()) await expect(button).toHaveAttribute('aria-pressed', 'false')
+})
+
+test('the sharp-or-flat control sets flat, sharp, and natural', async ({ page }) => {
+    const group = page.getByRole('group', { name: 'Sharp or flat' })
+    await expect(group.getByRole('button')).toHaveCount(3)
+    const flat = group.getByRole('button', { name: 'Flat' })
+    const natural = group.getByRole('button', { name: 'Natural' })
+    const sharp = group.getByRole('button', { name: 'Sharp' })
 
     // Flat.
     const patchFlat = waitForAutosave(page)
-    await accidentals.nth(1).click()
+    await flat.click()
     await patchFlat
-    await expect(accidentals.nth(1)).toHaveAttribute('aria-pressed', 'true')
+    await expect(flat).toHaveAttribute('aria-pressed', 'true')
 
     // Sharp replaces it.
-    await accidentals.nth(2).click()
-    await expect(accidentals.nth(2)).toHaveAttribute('aria-pressed', 'true')
-    await expect(accidentals.nth(1)).toHaveAttribute('aria-pressed', 'false')
+    await sharp.click()
+    await expect(sharp).toHaveAttribute('aria-pressed', 'true')
+    await expect(flat).toHaveAttribute('aria-pressed', 'false')
 
     // Natural clears back.
-    await accidentals.nth(0).click()
-    await expect(accidentals.nth(0)).toHaveAttribute('aria-pressed', 'true')
+    await natural.click()
+    await expect(natural).toHaveAttribute('aria-pressed', 'true')
 })
 
 test('selecting a clef from the popover applies it and closes the popover', async ({ page }) => {
     await page.getByRole('button', { name: /^Clef:/ }).click()
     const popover = page.getByRole('dialog', { name: 'Select clef' })
     await expect(popover).toBeVisible()
+    // Treble and Bass lead, with what they are for; the rest wait behind "More clefs".
+    await expect(popover.getByRole('button', { name: 'Set Alto clef' })).toHaveCount(0)
 
     const patch = waitForAutosave(page)
     await popover.getByRole('button', { name: 'Set Bass clef' }).click()
@@ -123,8 +168,35 @@ test('selecting a clef from the popover applies it and closes the popover', asyn
     await expect(page.getByRole('button', { name: 'Clef: Bass' })).toBeVisible()
 })
 
+test('a rarer clef is one "More clefs" away, and stays in view once in use', async ({ page }) => {
+    const clef = page.getByRole('button', { name: /^Clef:/ })
+    await clef.click()
+    const popover = page.getByRole('dialog', { name: 'Select clef' })
+    await popover.getByRole('button', { name: 'More clefs' }).click()
+    const patch = waitForAutosave(page)
+    await popover.getByRole('button', { name: 'Set Alto clef' }).click()
+    await patch
+    await expect(page.getByRole('button', { name: 'Clef: Alto' })).toBeVisible()
+
+    // Reopened, the clef in use sits with Treble and Bass — pressed, no expanding needed.
+    await clef.click()
+    await expect(popover.getByRole('button', { name: 'Set Alto clef' })).toHaveAttribute('aria-pressed', 'true')
+    await expect(popover.getByRole('button', { name: 'More clefs' })).toBeVisible()
+    await page.keyboard.press('Escape')
+})
+
+test('the time popover names meters by their beats and keeps the rest behind More', async ({ page }) => {
+    await page.getByRole('button', { name: /^Time signature:/ }).click()
+    const popover = page.getByRole('dialog', { name: 'Select time signature' })
+    await expect(popover.getByRole('button', { name: 'Set 6/8 time' })).toContainText('2 swaying beats')
+    await expect(popover.getByRole('button', { name: 'Set 3/8 time' })).toHaveCount(0)
+    await popover.getByRole('button', { name: 'More time signatures' }).click()
+    await expect(popover.getByRole('button', { name: 'Set 3/8 time' })).toContainText('3 quick beats')
+    await page.keyboard.press('Escape')
+})
+
 test('selecting a key signature from the popover applies it', async ({ page }) => {
-    await page.getByRole('button', { name: /^Key signature:/ }).click()
+    await page.getByRole('button', { name: /^Key:/ }).click()
     const popover = page.getByRole('dialog', { name: 'Select key signature' })
     await expect(popover).toBeVisible()
 
@@ -133,9 +205,11 @@ test('selecting a key signature from the popover applies it', async ({ page }) =
     await patch
     await expect(popover).toHaveCount(0)
 
-    // Reopen: the chosen key is marked selected.
-    await page.getByRole('button', { name: /^Key signature:/ }).click()
-    await expect(page.getByRole('button', { name: 'G major' })).toHaveAttribute('aria-pressed', 'true')
+    // The chip names the key in words; reopened, the chosen key is marked selected.
+    const chip = page.getByRole('button', { name: 'Key: G major' })
+    await expect(chip).toHaveText('G major')
+    await chip.click()
+    await expect(popover.getByRole('button', { name: 'G major', exact: true })).toHaveAttribute('aria-pressed', 'true')
     await page.keyboard.press('Escape')
 })
 
@@ -161,30 +235,33 @@ test('the tempo popover sets a bpm through the input and Enter commits it', asyn
     const popover = page.getByRole('dialog', { name: 'Set tempo' })
     await expect(popover).toBeVisible()
 
-    const bpm = popover.getByRole('spinbutton', { name: 'BPM' })
+    const bpm = popover.getByRole('spinbutton', { name: 'Tempo (bpm)' })
     await bpm.fill('90')
     const patch = waitForAutosave(page)
-    await popover.getByRole('button', { name: 'Set' }).click()
+    await popover.getByRole('button', { name: 'Set tempo' }).click()
     await patch
     await expect(popover).toHaveCount(0)
     await expect(page.getByRole('button', { name: 'Tempo: 90 bpm' })).toBeVisible()
 })
 
-test('the transpose popover moves the whole score up two semitones', async ({ page }) => {
-    await page.getByRole('button', { name: 'Transpose' }).click()
+test('the transpose popover moves the whole score up two half steps', async ({ page }) => {
+    await page.getByRole('button', { name: 'Transpose', exact: true }).click()
     const popover = page.getByRole('dialog', { name: 'Transpose' })
     await expect(popover).toBeVisible()
 
     // While the popover is open, its target range pulses magenta on the canvas.
     await expect(page.locator('[data-score-highlight="pulse"]')).toBeVisible()
 
-    // Apply stays disabled until an actual interval is dialed in.
+    // Apply stays disabled until an actual move is dialed in.
     const apply = popover.getByRole('button', { name: 'Apply' })
     await expect(apply).toBeDisabled()
+    await expect(popover).toContainText('No change yet')
 
-    await popover.getByRole('button', { name: 'Increase semitones' }).click()
-    await popover.getByRole('button', { name: 'Increase semitones' }).click()
+    await popover.getByRole('button', { name: 'Half step higher' }).click()
+    await popover.getByRole('button', { name: 'Half step higher' }).click()
     await expect(apply).toBeEnabled()
+    // The readout says what will happen, in plain words — and where the whole score lands.
+    await expect(popover).toContainText('2 half steps higher — now in D major')
 
     const patch = waitForAutosave(page)
     await apply.click()
@@ -193,18 +270,22 @@ test('the transpose popover moves the whole score up two semitones', async ({ pa
     await patch
     await expect(popover).toHaveCount(0)
     // C major up a major second lands in D major: the dock's key control follows.
-    await expect(page.getByRole('button', { name: 'Key signature: 2♯' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Key: D major' })).toBeVisible()
     // The flash is transient: it clears on its own.
     await expect(page.locator('[data-score-highlight]')).toHaveCount(0)
 })
 
-test('the transpose popover expands to advanced options and transposes to a target key', async ({ page }) => {
-    await page.getByRole('button', { name: 'Transpose' }).click()
+test('the transpose popover expands to more options and transposes to a target key', async ({ page }) => {
+    await page.getByRole('button', { name: 'Transpose', exact: true }).click()
     const popover = page.getByRole('dialog', { name: 'Transpose' })
-    await popover.getByRole('button', { name: 'Advanced options' }).click()
+    await popover.getByRole('button', { name: 'More options' }).click()
 
     const tabs = popover.getByRole('group', { name: 'Transpose by' })
     await expect(tabs).toBeVisible()
+    // The semitone stepper is still there for those who count that way.
+    await tabs.getByRole('button', { name: 'Semitones' }).click()
+    await popover.getByRole('button', { name: 'Increase semitones' }).click()
+    await expect(popover).toContainText('1 half step higher')
     await tabs.getByRole('button', { name: 'Key' }).click()
     await popover.getByRole('button', { name: 'E♭ major' }).click()
 
@@ -212,7 +293,7 @@ test('the transpose popover expands to advanced options and transposes to a targ
     await popover.getByRole('button', { name: 'Apply' }).click()
     await patch
     await expect(popover).toHaveCount(0)
-    await expect(page.getByRole('button', { name: 'Key signature: 3♭' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Key: E♭ major' })).toBeVisible()
 })
 
 test('popovers and the export menu dismiss with Escape without touching the score', async ({ page, apiMock }) => {
@@ -304,8 +385,8 @@ test('shortcuts dialog: a binding can be removed and defaults restored', async (
     const dialog = page.getByRole('dialog', { name: 'Keyboard shortcuts' })
     await expect(dialog).toBeVisible()
 
-    // Remove the "Toggle rest" binding entirely.
-    await dialog.getByRole('button', { name: 'Remove shortcut for Toggle rest' }).click()
+    // Remove the "Rest on/off" binding entirely.
+    await dialog.getByRole('button', { name: 'Remove shortcut for Rest on/off' }).click()
     await expect(dialog.getByRole('button', { name: 'Restore defaults' })).toBeVisible()
     await page.getByRole('button', { name: 'Done' }).click()
 
@@ -353,7 +434,7 @@ test('the in-score plus and minus targets add and remove a measure', async ({ pa
 
 test('transport: stop is disabled at rest and play is disabled while nothing can sound', async ({ page }) => {
     // Idle: nothing is playing or recording, so Stop has nothing to stop.
-    await expect(page.getByRole('button', { name: 'Stop' })).toBeDisabled()
+    await expect(page.getByRole('button', { name: 'Stop', exact: true })).toBeDisabled()
     await expect(page.getByRole('button', { name: 'Play' })).toBeEnabled()
-    await expect(page.getByRole('button', { name: 'Record' })).toBeEnabled()
+    await expect(page.getByRole('button', { name: 'Record', exact: true })).toBeEnabled()
 })

@@ -1,3 +1,5 @@
+import type { Locator, Page } from '@playwright/test'
+
 import { expect, focusEditor, MOCK_SCORE_ID, SELECTION_BANDS, test, waitForAutosave } from './fixtures'
 
 /**
@@ -46,23 +48,36 @@ test('R toggles the selected note to a rest and back', async ({ page }) => {
     await expect(restToggle).toHaveAttribute('aria-pressed', 'false')
 })
 
+/**
+ * Peek at a tool in the dock's More popover: open it, run the checks against the named row,
+ * close it again — an open popover keeps keys from the editor, so the keyboard acts between peeks.
+ */
+async function inMore(page: Page, name: string, check: (tool: Locator) => Promise<void>): Promise<void> {
+    await page.getByRole('button', { name: 'More note tools' }).click()
+    const panel = page.getByRole('dialog', { name: 'More note tools' })
+    await check(panel.getByRole('button', { name, exact: true }))
+    await page.keyboard.press('Escape')
+    await expect(panel).toHaveCount(0)
+}
+
 test('T toggles a tie on the selected note', async ({ page }) => {
-    const tieToggle = page.getByRole('button', { name: 'Tie', exact: true })
     // A tie binds only into the same pitch: C5 → D5 can't tie, so lower D5 onto C5 and step back.
-    await expect(tieToggle).toBeDisabled()
+    await inMore(page, 'Tie', (tie) => expect(tie).toBeDisabled())
     await page.keyboard.press('ArrowRight')
     await page.keyboard.press('ArrowDown')
     await page.keyboard.press('ArrowLeft')
-    await expect(tieToggle).toBeEnabled()
-    await expect(tieToggle).toHaveAttribute('aria-pressed', 'false')
+    await inMore(page, 'Tie', async (tie) => {
+        await expect(tie).toBeEnabled()
+        await expect(tie).toHaveAttribute('aria-pressed', 'false')
+    })
 
     const patch = waitForAutosave(page)
     await page.keyboard.press('t')
     await patch
-    await expect(tieToggle).toHaveAttribute('aria-pressed', 'true')
+    await inMore(page, 'Tie', (tie) => expect(tie).toHaveAttribute('aria-pressed', 'true'))
 
     await page.keyboard.press('t')
-    await expect(tieToggle).toHaveAttribute('aria-pressed', 'false')
+    await inMore(page, 'Tie', (tie) => expect(tie).toHaveAttribute('aria-pressed', 'false'))
 })
 
 test('Period toggles the dot on the selected note', async ({ page }) => {
@@ -79,17 +94,29 @@ test('Period toggles the dot on the selected note', async ({ page }) => {
 })
 
 test('3 toggles a triplet on the selected note', async ({ page }) => {
-    const tripletToggle = page.getByRole('button', { name: 'Triplet' })
-    await expect(tripletToggle).toBeEnabled()
-    await expect(tripletToggle).toHaveAttribute('aria-pressed', 'false')
+    await inMore(page, 'Triplet', async (triplet) => {
+        await expect(triplet).toBeEnabled()
+        await expect(triplet).toHaveAttribute('aria-pressed', 'false')
+    })
 
     const patch = waitForAutosave(page)
     await page.keyboard.press('3')
     await patch
-    await expect(tripletToggle).toHaveAttribute('aria-pressed', 'true')
+    await inMore(page, 'Triplet', (triplet) => expect(triplet).toHaveAttribute('aria-pressed', 'true'))
 
     await page.keyboard.press('3')
-    await expect(tripletToggle).toHaveAttribute('aria-pressed', 'false')
+    await inMore(page, 'Triplet', (triplet) => expect(triplet).toHaveAttribute('aria-pressed', 'false'))
+})
+
+test('length keys decline on a run of notes instead of changing one of them', async ({ page, apiMock }) => {
+    await page.keyboard.press('Shift+ArrowRight')
+    const before = apiMock.patches.length
+    await page.keyboard.press('h')
+    await page.keyboard.press('.')
+    await expect(page.getByRole('button', { name: 'Half note' })).toHaveAttribute('aria-pressed', 'false')
+    // Both notes are still quarters: the run shows its shared length.
+    await expect(page.getByRole('button', { name: 'Quarter note' })).toHaveAttribute('aria-pressed', 'true')
+    expect(apiMock.patches.length).toBe(before)
 })
 
 test('Backspace clears the selected pitch and autosaves', async ({ page }) => {
@@ -122,7 +149,7 @@ test('M minimizes accidentals (respell + re-key across the whole score)', async 
     // (5♭, spelled D♭ E♭ F G♭), one flat lighter than the F♯-major spelling.
     await page.keyboard.press('ControlOrMeta+a')
     const sharpen = waitForAutosave(page)
-    await page.getByRole('group', { name: 'Accidental' }).getByRole('button').nth(2).click()
+    await page.getByRole('group', { name: 'Sharp or flat' }).getByRole('button', { name: 'Sharp' }).click()
     await sharpen
 
     // Collapse back to a single note: the shortcut then acts on the whole score.
@@ -130,7 +157,7 @@ test('M minimizes accidentals (respell + re-key across the whole score)', async 
     const patch = waitForAutosave(page)
     await page.keyboard.press('m')
     await patch
-    await expect(page.getByRole('button', { name: 'Key signature: 5♭' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Key: D♭ major' })).toBeVisible()
 })
 
 test('Shift+T opens the transpose popover; Escape closes it without touching the score', async ({ page, apiMock }) => {

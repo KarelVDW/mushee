@@ -2,19 +2,61 @@
 
 import { KeySignatureIcon } from '@mushee/notation/components'
 import { KeySignature } from '@mushee/notation/model'
+import { type ReactNode, useEffect, useRef } from 'react'
 
 import { Popover, PopoverOption } from '@/components/ui'
 
 // Key signatures grouped flats → C → sharps, each labelled by its major key.
 const KEY_ROWS: number[][] = [[-7, -6, -5, -4, -3, -2, -1], [0], [1, 2, 3, 4, 5, 6, 7]]
 
+/** Relative minor: three fifths above its major's signature (A minor shares C major's no sharps). */
+const RELATIVE_MINOR_FIFTHS = 3
+
+/**
+ * How a key is named for people — "D major", "A minor" — from a signature's fifths and mode.
+ * A minor key names its own tonic, the relative minor three fifths up the circle. The words
+ * the key chip, its tooltip and the transpose readout share.
+ */
+export class KeyName {
+    constructor(
+        readonly fifths: number,
+        readonly mode?: string,
+    ) {}
+
+    /** The name of a key signature (or any `{ fifths, mode }` value). */
+    static of(key: { fifths: number; mode?: string }): KeyName {
+        return new KeyName(key.fifths, key.mode)
+    }
+
+    get isMinor(): boolean {
+        return this.mode === 'minor'
+    }
+
+    /** The tonic as a reader names it: "D", "B♭", "F♯". */
+    get tonic(): string {
+        return KeySignature.majorKeyName(this.isMinor ? this.fifths + RELATIVE_MINOR_FIFTHS : this.fifths)
+    }
+
+    /** "D major", "A minor". */
+    get long(): string {
+        return `${this.tonic} ${this.isMinor ? 'minor' : 'major'}`
+    }
+
+    /** Both keys the signature can stand for: "D major · B minor". */
+    get readings(): string {
+        const major = KeySignature.majorKeyName(this.fifths)
+        const minor = KeySignature.majorKeyName(this.fifths + RELATIVE_MINOR_FIFTHS)
+        return `${major} major · ${minor} minor`
+    }
+}
+
 /**
  * Cell, glyph and label sizes per grid size: `md` is the key-signature picker's own,
- * `sm` the tighter grid inside the transpose popover's key tab.
+ * `sm` the tighter grid inside the transpose popover's key tab. Labels never go under 11px.
  */
 const GRID_SIZES = {
     md: { gap: 'gap-1.5', cell: 'w-12 h-14 px-1 py-1.5', glyph: 32, label: 'text-[11px]' },
-    sm: { gap: 'gap-1', cell: 'w-10.5 h-12 px-1 py-1', glyph: 26, label: 'text-[10px]' },
+    sm: { gap: 'gap-1', cell: 'w-10.5 h-12 px-1 py-1', glyph: 26, label: 'text-[11px]' },
 } as const
 
 interface KeySignatureGridProps {
@@ -26,11 +68,20 @@ interface KeySignatureGridProps {
     ariaLabel: string
 }
 
-/** The fifteen drawable keys as a grid of signature glyphs, each named by its major key. */
+/**
+ * The fifteen drawable keys as a grid of signature glyphs, each named by its major key (the
+ * hover title gives both readings, "D major · B minor"). The active key scrolls into view on
+ * open, so a phone sheet that clips the grid still shows where the score is.
+ */
 export function KeySignatureGrid({ active, onSelect, size, ariaLabel }: KeySignatureGridProps) {
     const sizes = GRID_SIZES[size]
+    const gridRef = useRef<HTMLDivElement>(null)
+    useEffect(() => {
+        gridRef.current?.querySelector<HTMLElement>('[aria-pressed="true"]')?.scrollIntoView?.({ block: 'nearest' })
+        // Only on open: a pick closes the picker, and scrolling under the user's finger mid-browse would jump.
+    }, [])
     return (
-        <div role="group" aria-label={ariaLabel} className="flex flex-col gap-1.5 items-center">
+        <div ref={gridRef} role="group" aria-label={ariaLabel} className="flex flex-col gap-1.5 items-center">
             {KEY_ROWS.map((row, i) => (
                 <div key={i} className={`flex flex-wrap justify-center ${sizes.gap}`}>
                     {row.map((fifths) => {
@@ -40,7 +91,7 @@ export function KeySignatureGrid({ active, onSelect, size, ariaLabel }: KeySigna
                                 key={fifths}
                                 active={fifths === active}
                                 ariaLabel={`${name} major`}
-                                title={`${name} major`}
+                                title={new KeyName(fifths).readings}
                                 onClick={() => onSelect(fifths)}
                                 className={`flex-col justify-end gap-0.5 ${sizes.cell}`}>
                                 <span className="flex flex-1 items-center">
@@ -60,20 +111,36 @@ interface KeySignaturePopoverProps {
     active: number
     onSelect: (fifths: number) => void
     onDismiss: () => void
-    /** Extra positioning/layout classes (e.g. `right-0 top-full`). */
+    /** Extra positioning/layout classes (e.g. `right-0 top-full`); ignored by a sheet, which its host positions. */
     className?: string
     /** Trigger element to exclude from outside-click dismissal, so its toggle isn't fought by the popover. */
     anchorRef?: { current: HTMLElement | null }
+    /** `sheet` on phones: the full-width sheet above the dock (see Popover). */
+    variant?: 'anchored' | 'sheet'
+    /** Rendered above the options — the More sheet's Back link. */
+    lead?: ReactNode
 }
 
-export function KeySignaturePopover({ active, onSelect, onDismiss, className, anchorRef }: KeySignaturePopoverProps) {
+export function KeySignaturePopover({
+    active,
+    onSelect,
+    onDismiss,
+    className,
+    anchorRef,
+    variant = 'anchored',
+    lead,
+}: KeySignaturePopoverProps) {
+    const sheet = variant === 'sheet'
     return (
         <Popover
             ariaLabel="Select key signature"
             title="Key signature"
+            hint="The sharps or flats used all the way through. Not sure? Leave it on C."
             onDismiss={onDismiss}
             anchorRef={anchorRef}
-            className={`w-max gap-2${className ? ` ${className}` : ''}`}>
+            variant={variant}
+            className={sheet ? 'gap-2' : `w-104 gap-2${className ? ` ${className}` : ''}`}>
+            {lead}
             <KeySignatureGrid ariaLabel="Key signature" active={active} onSelect={onSelect} size="md" />
         </Popover>
     )

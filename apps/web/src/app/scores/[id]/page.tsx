@@ -9,11 +9,12 @@
 import { type AttributeClickEvent, ScoreView, type SelectionMenuEvent } from '@mushee/notation/components'
 import type { Instrument, Note, Pitch } from '@mushee/notation/model'
 import { ScoreDeserializer } from '@mushee/notation/model/io/ScoreDeserializer'
+import { dismissToast } from '@mushee/ui'
 import { useParams, useRouter } from 'next/navigation'
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
 
 import { SelectionPopover } from '@/components/editor/SelectionPopover'
-import { ChipToggle, ErrorScreen, Icon, Wordmark } from '@/components/ui'
+import { ErrorScreen, PopoverSheetHost, showToast, Wordmark } from '@/components/ui'
 import { ApiError, NetworkError } from '@/lib/api'
 import { useScoreDocument } from '@/lib/queries'
 import { useMediaQuery } from '@/lib/useMediaQuery'
@@ -21,12 +22,11 @@ import { useMediaQuery } from '@/lib/useMediaQuery'
 import { CHANGE_PITCH, LOWER_PITCH, MOVE_NEXT, MOVE_PREVIOUS, RAISE_PITCH } from './actions'
 import { ChangeInstrumentDialog } from './ChangeInstrumentDialog'
 import { EditorHeader } from './EditorHeader'
-import { HistoryTools } from './HistoryTools'
 import { KeyboardShortcutsDialog } from './KeyboardShortcutsDialog'
 import { NoteToolDock } from './NoteToolDock'
-import { PitchTools } from './PitchTools'
+import { OneTimeHint, SELECTION_TIP_KEY } from './OneTimeHint'
 import { ConcurrentRecordingDialog, MicModeGuideDialog, RecordingLimitDialog } from './RecordingDialogs'
-import { ScoreAttributePopover } from './ScoreAttributePopover'
+import { AttributeHoverTip, ScoreAttributePopover } from './ScoreAttributePopover'
 import { ScoreManipulator } from './ScoreManipulator'
 import { MobileEditorActions, type TransportControlsProps } from './TransportControls'
 import { useAccountKeybindings } from './useAccountKeybindings'
@@ -34,6 +34,9 @@ import { usePitchHighlight } from './usePitchHighlight'
 import { usePlayback } from './usePlayback'
 import { useRecording } from './useRecording'
 import { useScoreAutosave } from './useScoreAutosave'
+
+/** How long the phone's tap-again-for-actions tip stays up (the info toast's own default). */
+const SELECTION_TIP_MS = 6000
 
 export default function ScoreEditorPage() {
     const { id } = useParams<{ id: string }>()
@@ -89,7 +92,40 @@ export default function ScoreEditorPage() {
     // header tools dispatch to the manipulator themselves, and keyboard input is bound directly
     // to manipulator.handleKeyDown.
     const handleNoteChange = useCallback((_note: Note, newPitch: Pitch) => manipulator.run(CHANGE_PITCH, newPitch), [manipulator])
-    const handleSelectionStart = useCallback((note: Note) => manipulator.select(note), [manipulator])
+
+    // Phones: the first time someone picks a note, one tip says where its actions are — gone
+    // after 6s, the next tap, or the actions opening. Once per device. While it is up, the
+    // dock's own first-run hint steps aside: one tip at a time.
+    const [selectionTip] = useState(() => new OneTimeHint(SELECTION_TIP_KEY))
+    const selectionTipToast = useRef<number | null>(null)
+    const [selectionTipUp, setSelectionTipUp] = useState(false)
+    const dismissSelectionTip = useCallback(() => {
+        if (selectionTipToast.current === null) return
+        dismissToast(selectionTipToast.current)
+        selectionTipToast.current = null
+        setSelectionTipUp(false)
+    }, [])
+    const showSelectionTip = useCallback(() => {
+        if (!selectionTip.pending) return
+        selectionTip.markSeen()
+        selectionTipToast.current = showToast('Tap the note again to copy or delete it.', 'info', { duration: SELECTION_TIP_MS })
+        setSelectionTipUp(true)
+        // The tap that selected the note is still in flight: listen from the next one on.
+        setTimeout(() => document.addEventListener('pointerdown', dismissSelectionTip, { once: true }), 0)
+    }, [selectionTip, dismissSelectionTip])
+    useEffect(() => {
+        if (!selectionTipUp) return
+        // The toast's own clock: the dock hint comes back as the tip times out.
+        const timer = setTimeout(() => setSelectionTipUp(false), SELECTION_TIP_MS)
+        return () => clearTimeout(timer)
+    }, [selectionTipUp])
+    const handleSelectionStart = useCallback(
+        (note: Note) => {
+            manipulator.select(note)
+            if (isMobile) showSelectionTip()
+        },
+        [manipulator, isMobile, showSelectionTip],
+    )
     const handleSelectionExtend = useCallback((note: Note) => manipulator.extendSelectionTo(note), [manipulator])
     const handleAddMeasure = useCallback(() => manipulator.addMeasure(), [manipulator])
     const handleRemoveMeasure = useCallback(() => manipulator.removeMeasure(), [manipulator])
@@ -104,16 +140,42 @@ export default function ScoreEditorPage() {
     }, [manipulator])
 
     // In-score attribute glyphs (tempo / clef / key / time): the ScoreView reports the click,
-    // and ScoreAttributePopover opens the matching popover and applies the change.
+    // and ScoreAttributePopover opens the matching popover and applies the change. A mouse
+    // hovering one is told what a click does ("Change key").
     const [attributePopover, setAttributePopover] = useState<AttributeClickEvent | null>(null)
     const closeAttributePopover = useCallback(() => setAttributePopover(null), [])
+    const [attributeHover, setAttributeHover] = useState<AttributeClickEvent | null>(null)
 
-    // The floating selection-actions bar (mobile): opened by the score's selection-menu
-    // gestures — long-press, double-tap, or lifting a range drag. Selection-scoped actions
-    // (copy/paste/delete/select all) live here, never as dedicated dock buttons.
-    const [selectionMenuOpen, setSelectionMenuOpen] = useState(false)
-    const closeSelectionMenu = useCallback(() => setSelectionMenuOpen(false), [])
-    const handleSelectionMenu = useCallback((_event: SelectionMenuEvent) => setSelectionMenuOpen(true), [])
+    // The floating selection-actions bar: opened by the score's selection-menu gestures
+    // (touch: long-press, double-tap, a second tap on the selected note, lifting a range drag;
+    // mouse: right-click, lifting a range drag) and from the keyboard (Shift+F10, the Menu
+    // key). Selection-scoped actions (copy/paste/delete/select all) live here, never as
+    // dedicated dock buttons. Opened from the keyboard, focus moves in and comes back after.
+    const [selectionMenu, setSelectionMenu] = useState<'pointer' | 'keyboard' | null>(null)
+    const returnFocusFromMenu = useRef(false)
+    const openSelectionMenu = useCallback(
+        (via: 'pointer' | 'keyboard') => {
+            returnFocusFromMenu.current = via === 'keyboard'
+            dismissSelectionTip()
+            setSelectionMenu(via)
+        },
+        [dismissSelectionTip],
+    )
+    const closeSelectionMenu = useCallback(() => {
+        setSelectionMenu(null)
+        if (!returnFocusFromMenu.current) return
+        returnFocusFromMenu.current = false
+        containerRef.current?.focus()
+    }, [])
+    const handleSelectionMenu = useCallback((_event: SelectionMenuEvent) => openSelectionMenu('pointer'), [openSelectionMenu])
+    useEffect(() => {
+        manipulator.onSelectionMenuRequest = () => openSelectionMenu('keyboard')
+        return () => {
+            manipulator.onSelectionMenuRequest = undefined
+        }
+    }, [manipulator, openSelectionMenu])
+    const selectionMenuOpen = selectionMenu !== null
+    const scrollAreaRef = useRef<HTMLDivElement>(null)
     // Position is derived from the live selection (not the gesture point) every render, so
     // the bar tracks a growing selection — e.g. Select all moves it over the first row.
     // The layout anchor is in layout units; the SVG renders scaled-to-fit, so scale into
@@ -191,6 +253,26 @@ export default function ScoreEditorPage() {
         return () => el.removeEventListener('keydown', manipulator.handleKeyDown)
     }, [manipulator, score, dialogOpen, instrumentsReady])
 
+    // Phone sheets live between the header and the dock (Popover's sheet frame reads
+    // --app-header-h / --dock-h): measured, and re-measured whenever either bar changes size.
+    const dockRef = useRef<HTMLDivElement>(null)
+    const editorReady = !!score && instrumentsReady
+    useEffect(() => {
+        const root = containerRef.current
+        const header = root?.querySelector('header')
+        const dock = dockRef.current
+        if (!root || !header || !dock) return
+        const measure = () => {
+            root.style.setProperty('--app-header-h', `${header.offsetHeight}px`)
+            root.style.setProperty('--dock-h', `${dock.offsetHeight}px`)
+        }
+        measure()
+        const observer = new ResizeObserver(measure)
+        observer.observe(header)
+        observer.observe(dock)
+        return () => observer.disconnect()
+    }, [editorReady])
+
     if (loadError || unreadable) {
         const serverDown = loadError instanceof NetworkError
         const notFound = loadError instanceof ApiError && loadError.status === 404
@@ -226,150 +308,149 @@ export default function ScoreEditorPage() {
     }
 
     return (
-        <div ref={containerRef} tabIndex={0} className="relative flex flex-col h-dvh bg-surface text-on-surface outline-none">
-            <EditorHeader
-                scoreId={id}
-                shareToken={scoreDocument?.meta.shareToken ?? null}
-                manipulator={manipulator}
-                title={title}
-                onTitleChange={(v) => {
-                    setTitle(v)
-                    saveToApi({ title: v })
-                }}
-                onChangeInstrument={() => setInstrumentDialogOpen(true)}
-                compact={isMobile}
-                transport={transport}
-                transposeOpen={transposeOpen}
-                onTransposeOpenChange={setTransposeOpen}
-                onTransposeAim={aimTranspose}
-                shortcutsOpen={shortcutsOpen}
-                onOpenShortcuts={() => setShortcutsOpen(true)}
-                getSvg={() => scoreAreaRef.current?.querySelector('svg') ?? null}
-            />
-            {/* flex-col + grow (not min-h-full): the canvas must fill the scroll viewport
+        <div
+            ref={containerRef}
+            tabIndex={0}
+            className="relative flex flex-col h-dvh bg-surface text-on-surface outline-none"
+            // A context menu aimed at the editor itself came from the keyboard (Shift+F10, the
+            // Menu key — the focused element is the target): ours, not the browser's.
+            onContextMenu={(e) => {
+                if (e.target !== e.currentTarget) return
+                e.preventDefault()
+                manipulator.requestSelectionMenu()
+            }}>
+            <PopoverSheetHost>
+                <EditorHeader
+                    scoreId={id}
+                    shareToken={scoreDocument?.meta.shareToken ?? null}
+                    manipulator={manipulator}
+                    title={title}
+                    onTitleChange={(v) => {
+                        setTitle(v)
+                        saveToApi({ title: v })
+                    }}
+                    onChangeInstrument={() => setInstrumentDialogOpen(true)}
+                    compact={isMobile}
+                    transport={transport}
+                    transposeOpen={transposeOpen}
+                    onTransposeOpenChange={setTransposeOpen}
+                    onTransposeAim={aimTranspose}
+                    shortcutsOpen={shortcutsOpen}
+                    onOpenShortcuts={() => setShortcutsOpen(true)}
+                    getSvg={() => scoreAreaRef.current?.querySelector('svg') ?? null}
+                />
+                {/* flex-col + grow (not min-h-full): the canvas must fill the scroll viewport
                 even when the score is short, and a percentage min-height can't resolve
                 against a flex-sized (height-less) scroll container. */}
-            <div className="flex-1 overflow-y-auto min-h-0 px-2 sm:px-8 bg-surface flex flex-col">
-                <div
-                    ref={scoreAreaRef}
-                    className="mx-auto w-full max-w-240 grow bg-surface-container-lowest p-3 pt-6 sm:p-10 tonal-layer-glow manuscript-canvas">
-                    {/* The click events carry coordinates relative to the ScoreView's own
+                <div ref={scrollAreaRef} className="flex-1 overflow-y-auto min-h-0 px-2 sm:px-8 bg-surface flex flex-col">
+                    <div
+                        ref={scoreAreaRef}
+                        className="mx-auto w-full max-w-240 grow bg-surface-container-lowest p-3 pt-6 sm:p-10 tonal-layer-glow manuscript-canvas">
+                        {/* The click events carry coordinates relative to the ScoreView's own
                         container, so the popovers anchor inside this exact wrapper. */}
-                    <div className="relative">
-                        <ScoreView
-                            score={score}
-                            layoutId={score.layout.id}
-                            selectedNote={activeNote}
-                            selectedNotes={manipulator.selectedNotes}
-                            highlight={pitchHighlight}
-                            playbackCursorRef={playbackCursorRef}
-                            waveformStore={waveformStore}
-                            onSelectionStart={handleSelectionStart}
-                            onSelectionExtend={handleSelectionExtend}
-                            onSelectionMenu={isMobile ? handleSelectionMenu : undefined}
-                            onNoteChange={handleNoteChange}
-                            onAddMeasure={handleAddMeasure}
-                            onRemoveMeasure={handleRemoveMeasure}
-                            canRemoveMeasure={score.measures.length > 1}
-                            onAttributeClick={setAttributePopover}
-                        />
-                        {selectionMenuAnchor && activeNote && (
-                            <SelectionPopover
-                                x={selectionMenuAnchor.x}
-                                y={selectionMenuAnchor.y}
-                                canPaste={manipulator.canPaste}
-                                onCopy={() => {
-                                    manipulator.copy()
-                                    closeSelectionMenu()
-                                }}
-                                onPaste={() => {
-                                    manipulator.paste()
-                                    closeSelectionMenu()
-                                }}
-                                onDelete={() => {
-                                    manipulator.deleteSelection()
-                                    closeSelectionMenu()
-                                }}
-                                // Stays open, like the OS menu: growing the selection is a step
-                                // toward copying or deleting it, not an end in itself.
-                                onSelectAll={() => manipulator.selectAll()}
-                                onDismiss={closeSelectionMenu}
+                        <div className="relative">
+                            <ScoreView
+                                score={score}
+                                layoutId={score.layout.id}
+                                selectedNote={activeNote}
+                                selectedNotes={manipulator.selectedNotes}
+                                highlight={pitchHighlight}
+                                playbackCursorRef={playbackCursorRef}
+                                waveformStore={waveformStore}
+                                onSelectionStart={handleSelectionStart}
+                                onSelectionExtend={handleSelectionExtend}
+                                onSelectionMenu={handleSelectionMenu}
+                                onNoteChange={handleNoteChange}
+                                onAddMeasure={handleAddMeasure}
+                                onRemoveMeasure={handleRemoveMeasure}
+                                canRemoveMeasure={score.measures.length > 1}
+                                onAttributeClick={setAttributePopover}
+                                onAttributeHover={setAttributeHover}
                             />
-                        )}
-                        {attributePopover && !isMobile && (
-                            <ScoreAttributePopover
-                                event={attributePopover}
-                                manipulator={manipulator}
-                                placement="anchored"
-                                onClose={closeAttributePopover}
-                            />
-                        )}
+                            <AttributeHoverTip event={attributePopover ? null : attributeHover} />
+                            {selectionMenuAnchor && activeNote && (
+                                <SelectionPopover
+                                    x={selectionMenuAnchor.x}
+                                    y={selectionMenuAnchor.y}
+                                    viewport={scrollAreaRef}
+                                    autoFocus={selectionMenu === 'keyboard'}
+                                    canPaste={manipulator.canPaste}
+                                    onCopy={() => {
+                                        manipulator.copy()
+                                        closeSelectionMenu()
+                                    }}
+                                    onPaste={() => {
+                                        manipulator.paste()
+                                        closeSelectionMenu()
+                                    }}
+                                    onDelete={() => {
+                                        manipulator.deleteSelection()
+                                        closeSelectionMenu()
+                                    }}
+                                    // Stays open, like the OS menu: growing the selection is a step
+                                    // toward copying or deleting it, not an end in itself.
+                                    onSelectAll={() => manipulator.selectAll()}
+                                    onDismiss={closeSelectionMenu}
+                                />
+                            )}
+                            {/* Desktop: anchored at the glyph. Phones: the same sheet as the dock's
+                            More pickers, portalled into the editor's one sheet host. */}
+                            {attributePopover && (
+                                <ScoreAttributePopover
+                                    event={attributePopover}
+                                    manipulator={manipulator}
+                                    placement={isMobile ? 'sheet' : 'anchored'}
+                                    onClose={closeAttributePopover}
+                                />
+                            )}
+                        </div>
                     </div>
                 </div>
-            </div>
-            {/* On mobile the in-score attribute popovers render here instead, as the same
-                full-width sheet above the dock that the dock's own chips open. */}
-            <div className="relative shrink-0">
-                {attributePopover && isMobile && (
-                    <ScoreAttributePopover
-                        event={attributePopover}
+                <div ref={dockRef} className="relative shrink-0">
+                    <NoteToolDock
                         manipulator={manipulator}
-                        placement="sheet"
-                        onClose={closeAttributePopover}
+                        compact={isMobile}
+                        metronome={metronome}
+                        onMetronomeToggle={toggleMetronome}
+                        transposeOpen={transposeOpen}
+                        onTransposeOpenChange={setTransposeOpen}
+                        onTransposeAim={aimTranspose}
+                        hint={selectionTipUp ? null : undefined}
+                        footer={
+                            isMobile ? (
+                                <MobileEditorActions
+                                    transport={transport}
+                                    onPrevious={() => manipulator.run(MOVE_PREVIOUS)}
+                                    onNext={() => manipulator.run(MOVE_NEXT)}
+                                    onPitchUp={() => manipulator.run(RAISE_PITCH)}
+                                    onPitchDown={() => manipulator.run(LOWER_PITCH)}
+                                    disabled={!activeNote}
+                                />
+                            ) : undefined
+                        }
+                    />
+                </div>
+
+                {instrumentDialogOpen && (
+                    <ChangeInstrumentDialog
+                        current={score.instrument}
+                        onCancel={() => setInstrumentDialogOpen(false)}
+                        onConfirm={handleInstrumentChange}
                     />
                 )}
-                <NoteToolDock
-                    manipulator={manipulator}
-                    compact={isMobile}
-                    settingsExtras={
-                        isMobile ? (
-                            <>
-                                <PitchTools
-                                    manipulator={manipulator}
-                                    plain
-                                    compact
-                                    requireSelection
-                                    transposeOpen={transposeOpen}
-                                    onTransposeOpenChange={setTransposeOpen}
-                                    onTransposeAim={aimTranspose}
-                                />
-                                <ChipToggle plain active={metronome} onClick={toggleMetronome} ariaLabel="Metronome">
-                                    <Icon name="audio-lines" size={14} />
-                                </ChipToggle>
-                            </>
-                        ) : undefined
-                    }
-                    trailingGroup={isMobile ? <HistoryTools manipulator={manipulator} plain /> : undefined}
-                    footer={
-                        isMobile ? (
-                            <MobileEditorActions
-                                transport={transport}
-                                onPrevious={() => manipulator.run(MOVE_PREVIOUS)}
-                                onNext={() => manipulator.run(MOVE_NEXT)}
-                                onPitchUp={() => manipulator.run(RAISE_PITCH)}
-                                onPitchDown={() => manipulator.run(LOWER_PITCH)}
-                                disabled={!activeNote}
-                            />
-                        ) : undefined
-                    }
-                />
-            </div>
 
-            {instrumentDialogOpen && (
-                <ChangeInstrumentDialog
-                    current={score.instrument}
-                    onCancel={() => setInstrumentDialogOpen(false)}
-                    onConfirm={handleInstrumentChange}
-                />
-            )}
+                {shortcutsOpen && <KeyboardShortcutsDialog keybindings={manipulator.keybindings} onClose={() => setShortcutsOpen(false)} />}
 
-            {shortcutsOpen && <KeyboardShortcutsDialog keybindings={manipulator.keybindings} onClose={() => setShortcutsOpen(false)} />}
-
-            {recordingHalt?.kind === 'limit' && (
-                <RecordingLimitDialog info={recordingHalt.info} onUpgrade={() => router.push('/settings')} onClose={dismissRecordingHalt} />
-            )}
-            {recordingHalt?.kind === 'concurrent' && <ConcurrentRecordingDialog onClose={dismissRecordingHalt} />}
-            {micModeGuideOpen && <MicModeGuideDialog onConfirm={confirmMicModeGuide} onClose={dismissMicModeGuide} />}
+                {recordingHalt?.kind === 'limit' && (
+                    <RecordingLimitDialog
+                        info={recordingHalt.info}
+                        onUpgrade={() => router.push('/settings')}
+                        onClose={dismissRecordingHalt}
+                    />
+                )}
+                {recordingHalt?.kind === 'concurrent' && <ConcurrentRecordingDialog onClose={dismissRecordingHalt} />}
+                {micModeGuideOpen && <MicModeGuideDialog onConfirm={confirmMicModeGuide} onClose={dismissMicModeGuide} />}
+            </PopoverSheetHost>
         </div>
     )
 }
