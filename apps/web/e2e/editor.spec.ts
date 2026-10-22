@@ -756,6 +756,8 @@ test.describe('an empty score', () => {
             page.getByText('Press record, wait for the count-in, then go. Solkey writes melodies, one note at a time.'),
         ).toBeVisible()
         await expect(page.getByText('Or click a beat on the staff to place notes by hand.')).toBeVisible()
+        // The card is the one instruction: the dock's how-to-move-a-note line waits for a note.
+        await expect(page.getByText('To move a note, click higher or lower on the staff, or press ↑ ↓.')).toHaveCount(0)
         // Start recording has a name of its own: the transport's Record stays the one exact 'Record'.
         await expect(page.getByRole('button', { name: 'Start recording' })).toBeVisible()
         await expect(page.getByRole('button', { name: 'Record', exact: true })).toHaveCount(1)
@@ -784,6 +786,8 @@ test.describe('an empty score', () => {
         await expect(heading).toBeVisible()
         await page.getByRole('button', { name: 'Rest', exact: true }).click() // the selected rest becomes a note
         await expect(heading).toHaveCount(0)
+        // With a note on the staff, the dock's how-to-move-a-note line has something to teach.
+        await expect(page.getByText('To move a note, click higher or lower on the staff, or press ↑ ↓.')).toBeVisible()
         await page.getByRole('button', { name: 'Rest', exact: true }).click()
         await expect(heading).toBeVisible()
     })

@@ -674,7 +674,10 @@ export default function ScoreEditorPage() {
                         transposeOpen={transposeOpen}
                         onTransposeOpenChange={setTransposeOpen}
                         onTransposeAim={aimTranspose}
-                        hint={selectionTipUp ? null : undefined}
+                        // One instruction at a time: the phone's selection tip, or on an empty score the
+                        // first-melody card, keeps the dock's how-to-move-a-note line out — the only
+                        // thing selected there is a rest. It shows on the first selection after.
+                        hint={selectionTipUp || emptyScore ? null : undefined}
                         recording={
                             recordingStatus ? (
                                 <>
