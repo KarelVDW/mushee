@@ -369,6 +369,17 @@ describe('shortcutText', () => {
         expect(shortcutText(Shortcut.parse('KeyQ', false), false)).toBe('Q')
     })
 
+    it("names the key through the browser's layout map, like the shortcuts dialog", () => {
+        const azerty = new Map([
+            ['KeyQ', 'a'],
+            ['Period', ':'],
+        ])
+        expect(shortcutText(Shortcut.parse('KeyQ', false), false, azerty)).toBe('A')
+        expect(shortcutText(Shortcut.parse('Period', false), false, azerty)).toBe(':')
+        // No map at all: the punctuation still reads as a character, not 'Period'.
+        expect(shortcutText(Shortcut.parse('Period', false), false, null)).toBe('.')
+    })
+
     it('takes resolved display tokens as they are, and nothing for an unbound command', () => {
         expect(shortcutText(['⇧', 'R'], true)).toBe('⇧R')
         expect(shortcutText(['Ctrl', 'Z'], false)).toBe('Ctrl+Z')

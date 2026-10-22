@@ -3,14 +3,10 @@
 import { Fragment, useEffect, useState, useSyncExternalStore } from 'react'
 
 import { DialogPanel, Eyebrow, IconButton, PrimaryButton, TertiaryButton } from '@/components/ui'
-import { type Keybindings, Shortcut } from '@/lib/Keybindings'
+import { useKeyboardLayout } from '@/components/ui/Tooltip'
+import { type Keybindings, KeyboardLayout, Shortcut } from '@/lib/Keybindings'
 
 import { EDITOR_COMMAND_GROUPS, type EditorCommand } from './commands'
-
-/** Minimal typing for the (Chromium-only) Keyboard Layout Map API. */
-interface KeyboardLayoutNavigator {
-    keyboard?: { getLayoutMap?: () => Promise<ReadonlyMap<string, string>> }
-}
 
 interface KeyboardShortcutsDialogProps {
     keybindings: Keybindings<EditorCommand>
@@ -20,21 +16,19 @@ interface KeyboardShortcutsDialogProps {
 /**
  * Lists every editor command with its shortcut and lets the user rebind them: click a
  * shortcut, press the new keys. Changes persist through the {@link Keybindings} store and
- * apply immediately. Keycap labels follow the user's own keyboard layout (see Keybindings).
- * Mounted only while open, so each opening starts with no recording and no notice.
+ * apply immediately. Keycap labels follow the user's own keyboard layout ({@link KeyboardLayout},
+ * the same map the tooltips and the More popover read). Mounted only while open, so each
+ * opening starts with no recording and no notice.
  */
 export function KeyboardShortcutsDialog({ keybindings, onClose }: KeyboardShortcutsDialogProps) {
     useSyncExternalStore(keybindings.subscribe, keybindings.getSnapshot, keybindings.getSnapshot)
-    const [layout, setLayout] = useState<ReadonlyMap<string, string> | null>(null)
+    const layout = useKeyboardLayout()
     const [editingId, setEditingId] = useState<string | null>(null)
     const [notice, setNotice] = useState<string | null>(null)
 
-    // Fetch the browser's live code → character map on every open (the user may have switched
-    // system layouts); where the API is missing, labels fall back inside Shortcut.displayParts.
-    useEffect(() => {
-        const { keyboard } = navigator as Navigator & KeyboardLayoutNavigator
-        keyboard?.getLayoutMap?.().then(setLayout, () => undefined)
-    }, [])
+    // Fetch the browser's live code → character map again on every open (the user may have
+    // switched system layouts); every other surface naming a key follows the refreshed map.
+    useEffect(() => KeyboardLayout.current.refresh(), [])
 
     // While recording, capture every keydown before the rest of the app sees it — DialogPanel's
     // own Escape included: Escape cancels the recording (the dialog stays open), a bare modifier

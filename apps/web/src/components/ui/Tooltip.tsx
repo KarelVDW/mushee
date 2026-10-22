@@ -17,7 +17,7 @@ import {
 } from 'react'
 import { createPortal } from 'react-dom'
 
-import type { Shortcut } from '@/lib/Keybindings'
+import { KeyboardLayout, type Shortcut } from '@/lib/Keybindings'
 
 /** Mouse hover this long before a tooltip opens. */
 export const TOOLTIP_HOVER_DELAY_MS = 400
@@ -44,6 +44,17 @@ const noSubscription = () => () => {}
  */
 function useIsApple(): boolean {
     return useSyncExternalStore(noSubscription, isApplePlatform, () => false)
+}
+
+/**
+ * The browser's live keyboard layout map ({@link KeyboardLayout.current}) for rendering a key —
+ * null on the server, through hydration, and where the browser has no layout map. Every surface
+ * that prints a shortcut reads it, so a tooltip, the More popover and the shortcuts dialog all
+ * name the key the way the user's own keycaps do.
+ */
+export function useKeyboardLayout(): ReadonlyMap<string, string> | null {
+    const layout = KeyboardLayout.current
+    return useSyncExternalStore(layout.subscribe, layout.getSnapshot, () => null)
 }
 
 /**
@@ -85,10 +96,18 @@ export function focusWithoutTooltip(el: HTMLElement | null | undefined): void {
     }
 }
 
-/** The shortcut as the text a tooltip shows: ⇧⌘Z on Apple platforms, Ctrl+Shift+Z elsewhere. */
-export function shortcutText(shortcut: TooltipShortcut | undefined, isApple: boolean = isApplePlatform()): string | null {
+/**
+ * The shortcut as the text a tooltip shows: ⇧⌘Z on Apple platforms, Ctrl+Shift+Z elsewhere, the
+ * key named through the browser's layout map (see {@link useKeyboardLayout}; outside React it
+ * reads the map fetched so far).
+ */
+export function shortcutText(
+    shortcut: TooltipShortcut | undefined,
+    isApple: boolean = isApplePlatform(),
+    layout: ReadonlyMap<string, string> | null = KeyboardLayout.current.getSnapshot(),
+): string | null {
     if (!shortcut) return null
-    const parts = isShortcutParts(shortcut) ? shortcut : shortcut.displayParts(null, isApple)
+    const parts = isShortcutParts(shortcut) ? shortcut : shortcut.displayParts(layout, isApple)
     if (parts.length === 0) return null
     return parts.join(isApple ? '' : '+')
 }
@@ -129,7 +148,8 @@ export function Tooltip({ label, hint, shortcut, reason, side = 'top', children 
     const cancelNextClick = useRef(false)
 
     const isApple = useIsApple()
-    const keys = reason ? null : shortcutText(shortcut, isApple)
+    const layout = useKeyboardLayout()
+    const keys = reason ? null : shortcutText(shortcut, isApple, layout)
     const description = reason ?? ([hint, keys].filter(Boolean).join(', ') || null)
     const empty = !label && !hint && !keys && !reason
 
