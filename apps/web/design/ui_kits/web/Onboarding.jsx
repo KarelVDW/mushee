@@ -765,11 +765,11 @@ function Onboarding({ onComplete, onSkip }) {
                             ))}
                         </div>
                         {data.source && (
+                            // One question per source, asked by the label alone (production: onboarding-data.ts).
                             <TextField
-                                label="Anything else? (optional)"
+                                label={data.source === 'friend' ? 'Who told you? (optional)' : 'Where? (optional)'}
                                 value={data.sourceDetail}
                                 onChange={(v) => setField('sourceDetail', v)}
-                                placeholder={data.source === 'friend' ? "Who, if you don't mind sharing?" : 'A name, channel, or link'}
                             />
                         )}
                     </div>

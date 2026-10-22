@@ -330,11 +330,20 @@ describe('AboutStep', () => {
         expect(radios(background).find((r) => r.getAttribute('aria-checked') === 'true')?.textContent).toBe('Student')
     })
 
-    it('asks for more about the source only once one is picked', () => {
+    it('asks for more about the source only once one is picked, one question per source in its label', () => {
         const host = renderAbout()
         expect(host.querySelector('input')).toBeNull()
-        click(radios(group(host, 'How did you find Solkey?'))[0])
-        expect(host.querySelector('input')).not.toBeNull()
+        const sources = radios(group(host, 'How did you find Solkey?'))
+        const labelOf = (input: HTMLInputElement | null) => host.querySelector(`label[for="${CSS.escape(input?.id ?? '')}"]`)?.textContent
+
+        click(sources.find((r) => r.textContent === 'A friend told me'))
+        const input = host.querySelector('input')
+        expect(labelOf(input)).toBe('Who told you? (optional)')
+        // The label asks; no placeholder poses a second question that vanishes on typing.
+        expect(input?.placeholder ?? '').toBe('')
+
+        click(sources.find((r) => r.textContent === 'Somewhere else'))
+        expect(labelOf(host.querySelector('input'))).toBe('Where? (optional)')
     })
 })
 

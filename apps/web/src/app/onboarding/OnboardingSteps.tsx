@@ -556,6 +556,8 @@ export function AboutStep({
     sourceDetail: string
     onSourceDetailChange: (v: string) => void
 }) {
+    // One follow-up per source, asked by the field's label alone: no placeholder posing a second question.
+    const detailQuestion = REFERRAL_SOURCES.find((s) => s.key === source)?.detailQuestion
     return (
         <StepShell titleRef={titleRef} title="A bit about you." subtitle="Optional. It helps us build the right things.">
             <div className="flex flex-col gap-6">
@@ -563,13 +565,8 @@ export function AboutStep({
                 <ChoiceRow label="What do you want to do first?" options={GOALS} value={goal} onChange={onGoalChange} />
                 <div className="flex flex-col gap-3">
                     <ChoiceRow label="How did you find Solkey?" options={REFERRAL_SOURCES} value={source} onChange={onSourceChange} />
-                    {source && (
-                        <TextField
-                            label="Anything else? (optional)"
-                            value={sourceDetail}
-                            onChange={onSourceDetailChange}
-                            placeholder={source === 'friend' ? "Who, if you don't mind sharing?" : 'A name, channel, or link'}
-                        />
+                    {detailQuestion && (
+                        <TextField label={`${detailQuestion} (optional)`} value={sourceDetail} onChange={onSourceDetailChange} />
                     )}
                 </div>
             </div>
