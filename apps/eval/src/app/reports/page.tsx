@@ -51,7 +51,7 @@ export default function ReportsPage() {
             )}
 
             {reports.data && (
-                <Card className="p-0 overflow-hidden">
+                <Card flush className="overflow-hidden">
                     <table className="w-full border-collapse">
                         <thead>
                             <tr className="text-left">

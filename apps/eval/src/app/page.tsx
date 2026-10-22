@@ -46,7 +46,7 @@ export default function CorporaPage() {
             )}
 
             {corpora.data && corpora.data.length > 0 && (
-                <Card className="p-0 overflow-hidden">
+                <Card flush className="overflow-hidden">
                     <table className="w-full border-collapse">
                         <thead>
                             <tr className="text-left">
