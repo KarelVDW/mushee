@@ -30,7 +30,7 @@ function Hero() {
             <div className="absolute -top-[10%] -right-[5%] w-120 h-120 bg-primary-container/[0.18] rounded-full blur-[120px] pointer-events-none" />
             <div className="max-w-320 mx-auto px-5 sm:px-8 relative z-2 grid grid-cols-1 lg:grid-cols-[1.05fr_1fr] gap-10 lg:gap-12 items-center">
                 <div className="flex flex-col gap-6">
-                    <Eyebrow className="text-primary">{BETA_MODE ? 'Now in closed beta' : 'Live audio-to-notation'}</Eyebrow>
+                    <Eyebrow className="text-primary">{BETA_MODE ? 'Now in closed beta' : 'Melody to sheet music'}</Eyebrow>
                     <h1 className="font-display font-bold text-[40px] sm:text-[56px] lg:text-[72px] leading-[0.95] tracking-[-0.04em] text-on-surface m-0">
                         The fastest way to get a melody
                         <br />
@@ -59,35 +59,36 @@ const HOW_STEPS: readonly { readonly num: string; readonly title: string; readon
     {
         num: '01',
         title: 'Press record',
-        body: 'Open a score, set your tempo, and hit record. Solkey counts you in and starts listening — only while you record.',
+        body: 'Open a new score and press record. Solkey counts you in, then listens — only while you record.',
     },
     {
         num: '02',
-        title: 'Play or sing',
-        body: 'Any instrument, or just your voice. The melody lands on the staff as notation while you play it, measure by measure.',
+        title: 'Sing or play the tune',
+        // The one place the landing says how Solkey hears; the FAQ below goes into more detail.
+        body: 'Your voice or any instrument, one note at a time. Solkey writes the melody onto the staff, bar by bar, while you play.',
     },
     {
         num: '03',
-        title: 'Polish & keep',
-        body: "Fix a note with a keystroke, tweak rhythm and key, and hear it back with real instrument sounds. It's saved as you go.",
+        title: 'Fix it and keep it',
+        body: 'Tap a wrong note to fix it, change the key if you like, and hear it played back. Everything saves as you go.',
     },
 ]
 
 const FEATURES: readonly { readonly icon: IconName; readonly title: string; readonly body: string }[] = [
     {
         icon: 'mic',
-        title: 'Live transcription',
-        body: 'Sing, whistle, or play — pitch and rhythm are detected in real time and written as proper notation.',
+        title: 'Watch it write itself',
+        body: 'Sing, hum, whistle or play a melody. Solkey hears pitch and rhythm and writes real sheet music as you go.',
     },
     {
         icon: 'music',
-        title: 'Real engraving',
-        body: 'Spacing, beaming, accidentals, and ties follow real engraving rules, so the page always looks like sheet music should.',
+        title: 'Looks like real sheet music',
+        body: 'Notes are spaced, grouped and spelled the way printed music is, so you can hand it to a teacher or a bandmate.',
     },
     {
-        icon: 'keyboard',
-        title: 'Keyboard-first editing',
-        body: 'Every correction is a keystroke away: durations, accidentals, octaves. Customize the shortcuts to fit your hands.',
+        icon: 'pencil',
+        title: 'Fix it in a tap',
+        body: 'Nudge a note up or down, change its length, or use your keyboard if you have one. Every change can be undone.',
     },
     {
         icon: 'audio-lines',
@@ -113,7 +114,7 @@ function HowItWorks() {
                 <div className="mb-12">
                     <Eyebrow className="text-primary">How it works</Eyebrow>
                     <h2 className="font-display font-bold text-[32px] sm:text-[48px] leading-none tracking-[-0.03em] text-on-surface mt-3 mb-0 max-w-160">
-                        From melody to sheet music in one take.
+                        From melody to sheet music in one go.
                     </h2>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -123,7 +124,7 @@ function HowItWorks() {
                             <h3 className="font-headline font-semibold text-[22px] leading-tight tracking-[-0.01em] text-on-surface m-0">
                                 {title}
                             </h3>
-                            <p className="font-body font-normal text-[15px] leading-[1.55] text-on-surface-variant m-0">{body}</p>
+                            <p className="font-body font-normal text-[16px] leading-[1.55] text-on-surface-variant m-0">{body}</p>
                         </div>
                     ))}
                 </div>
@@ -142,16 +143,21 @@ function FeatureGrid() {
                 <p className="font-body font-normal text-[16px] leading-normal text-on-surface-variant max-w-140 m-0 mb-12">
                     Everything you need to catch an idea before it evaporates.
                 </p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {/* Phones: icon-left rows, so the six features stay a short scroll; from sm up, stacked cards. */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                     {FEATURES.map(({ icon, title, body }) => (
-                        <div key={title} className="bg-surface rounded-lg p-6 flex flex-col gap-3">
-                            <div className="w-11 h-11 rounded-full bg-primary-soft text-on-primary-soft inline-flex items-center justify-center">
+                        <div key={title} className="bg-surface rounded-lg p-5 sm:p-6 flex flex-row sm:flex-col items-start gap-4 sm:gap-3">
+                            <div className="w-10 h-10 sm:w-11 sm:h-11 shrink-0 rounded-full bg-primary-soft text-on-primary-soft inline-flex items-center justify-center">
                                 <Icon name={icon} size={22} />
                             </div>
-                            <h3 className="font-headline font-semibold text-[18px] leading-[1.3] tracking-[-0.005em] text-on-surface m-0">
-                                {title}
-                            </h3>
-                            <p className="font-body font-normal text-[14px] leading-[1.55] text-on-surface-variant m-0">{body}</p>
+                            <div className="flex flex-col gap-1.5 sm:gap-3 min-w-0">
+                                <h3 className="font-headline font-semibold text-[17px] sm:text-[18px] leading-[1.3] tracking-[-0.005em] text-on-surface m-0">
+                                    {title}
+                                </h3>
+                                <p className="font-body font-normal text-[15px] sm:text-[16px] leading-[1.55] text-on-surface-variant m-0">
+                                    {body}
+                                </p>
+                            </div>
                         </div>
                     ))}
                 </div>
@@ -168,7 +174,7 @@ function FinalCTA() {
                 <h2 className="font-display font-bold text-[32px] sm:text-[48px] leading-none tracking-[-0.03em] text-on-surface m-0">
                     That melody in your head?
                     <br />
-                    <em className="font-serif font-normal">It takes one take.</em>
+                    <em className="font-serif font-normal">One recording is all it takes.</em>
                 </h2>
                 <p className="font-body font-normal text-[17px] leading-normal text-on-surface-variant m-0 max-w-130">
                     Sign up now and get it on paper before it slips away.
