@@ -113,6 +113,31 @@ export class Score {
         return score
     }
 
+    /**
+     * A detached one-measure copy of `measure` — its leading clef, key (fifths and mode) and
+     * meter, with cloned notes — for previewing an edit without touching the live score.
+     * `notes` are the copies of the given `notes` that belong to `measure`, mirrored by
+     * position (every copied note when none are given), ready to hand to the excerpt's
+     * own mutators.
+     */
+    static excerpt(measure: Measure, notes?: Note[]): { score: Score; notes: Note[] } {
+        const score = new Score()
+        const key = measure.keySignature
+        // Explicit leading clef and key: the excerpt's only measure must keep them through carry-forward.
+        const copy = new Measure(score, measure.clef.type, measure.timeSignature, {
+            keyFifths: key.fifths,
+            keyMode: key.mode,
+            leadingClefExplicit: true,
+            leadingKeyExplicit: true,
+        })
+        copy.addNotes(measure.notes.map((note) => note.clone({})))
+        score.appendMeasure(copy)
+        const mirrored = notes
+            ? notes.filter((note) => note.measure === measure).map((note) => copy.notes[measure.notes.indexOf(note)])
+            : copy.notes
+        return { score, notes: mirrored }
+    }
+
     /** Version of the whole score's semantic content; any mutation moves it. */
     get version(): number {
         return this._version

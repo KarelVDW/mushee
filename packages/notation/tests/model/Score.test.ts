@@ -1261,6 +1261,54 @@ describe('Score', () => {
         })
     })
 
+    describe('excerpt', () => {
+        /** A two-bar score in D minor, bass clef, 3/4, with a G4 and A4 opening bar two. */
+        const source = () => {
+            const score = makeScore(2)
+            score.setTimeSignature(score.measures[0], new TimeSignature(3, 4))
+            score.setClef(score.measures[0].firstNote, 'bass')
+            score.setKeySignature(score.measures[0].firstNote, -1, 'minor')
+            fill(score, 1, [q(p('G', 4)), q(p('A', 4)), q()])
+            return score
+        }
+
+        it('copies a measure’s leading clef, key and meter, even where they were only inherited', () => {
+            const score = source()
+            const m = score.measures[1]
+            expect(m.leadingKeyExplicit).toBe(false)
+            const { score: excerpt } = Score.excerpt(m)
+            expect(excerpt.measures).toHaveLength(1)
+            const [copy] = excerpt.measures
+            expect(copy.clef.type).toBe('bass')
+            expect(copy.keySignature.fifths).toBe(-1)
+            expect(copy.keySignature.mode).toBe('minor')
+            expect(copy.timeSignature.equals(new TimeSignature(3, 4))).toBe(true)
+        })
+
+        it('clones the notes into a score of its own, leaving the source untouched', () => {
+            const score = source()
+            const m = score.measures[1]
+            const version = score.version
+            const { score: excerpt, notes } = Score.excerpt(m)
+            expect(notes).toEqual(excerpt.measures[0].notes) // every copy, without a selection
+            expect(notes.map((n) => n.pitch?.name ?? 'rest')).toEqual(['G', 'A', 'rest'])
+            expect(notes.some((n) => m.notes.includes(n))).toBe(false)
+            excerpt.transpose(Interval.fromParts(2, 'major'))
+            expect(excerpt.measures[0].keySignature.fifths).toBe(1) // D minor → E minor
+            expect(score.version).toBe(version)
+            expect(m.notes[0].pitch?.name).toBe('G')
+        })
+
+        it('mirrors the given notes of that measure by position, dropping the rest', () => {
+            const score = source()
+            const [m0, m1] = score.measures
+            const { notes } = Score.excerpt(m1, [m0.notes[0], m1.notes[1]])
+            expect(notes).toHaveLength(1)
+            expect(notes[0].pitch?.name).toBe('A')
+            expect(notes[0].measure.score).not.toBe(score)
+        })
+    })
+
     describe('addMeasure at an interior index', () => {
         it('inserting before an existing measure gives the new measure a single end barline', () => {
             const score = makeScore(1)
