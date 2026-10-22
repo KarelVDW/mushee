@@ -37,6 +37,24 @@ test('editor shows a full-page error while the server is down', async ({ page, a
     await expect(page.getByRole('button', { name: 'Back to library' })).toBeVisible()
 })
 
+test('a score that does not exist says so, on the page and in the tab', async ({ page, apiMock }) => {
+    void apiMock
+    // Registered after the fixture mock, so it wins: this score is gone (the API's 404).
+    await page.route(/localhost:4999\/scores\/e2e-missing(\/load)?$/, (route) => {
+        if (route.request().method() !== 'GET') return route.fallback()
+        return route.fulfill({
+            status: 404,
+            contentType: 'application/json',
+            headers: { 'access-control-allow-origin': route.request().headers()['origin'] ?? '*', 'access-control-allow-credentials': 'true' },
+            body: JSON.stringify({ message: 'Score not found' }),
+        })
+    })
+    await page.goto('/scores/e2e-missing')
+    await expect(page.getByRole('heading', { name: 'Score not found' })).toBeVisible({ timeout: 15_000 })
+    await expect(page).toHaveTitle('Score not found — Solkey')
+    await expect(page.getByRole('button', { name: 'Back to library' })).toBeVisible()
+})
+
 test('a mistyped public address sends a signed-out visitor home, not to a library', async ({ page }) => {
     await stayLocal(page)
     await page.goto('/pricing/does-not-exist')

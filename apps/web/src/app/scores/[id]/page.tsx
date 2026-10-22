@@ -17,6 +17,7 @@ import { dismissToast, ErrorScreen, LoadingScreen, PopoverSheetHost, showToast, 
 import { ApiError, NetworkError } from '@/lib/api'
 import { withPlan } from '@/lib/plans'
 import { useScoreDocument } from '@/lib/queries'
+import { useDocumentTitle } from '@/lib/useDocumentTitle'
 import { useMediaQuery } from '@/lib/useMediaQuery'
 
 import { settingsTabPath } from '../../settings/settingsTabs'
@@ -328,25 +329,12 @@ export default function ScoreEditorPage() {
         })
     }, [autosave.status, manipulator])
 
-    // The tab carries the score's name, live as it is renamed; the tab's title goes back as it was on the way out.
-    useEffect(() => {
-        const before = document.title
-        return () => {
-            document.title = before
-        }
-    }, [])
-    useEffect(() => {
-        if (!scoreDocument) return
-        const wanted = `${title.trim() || UNTITLED_SCORE} — Solkey`
-        const apply = () => {
-            if (document.title !== wanted) document.title = wanted
-        }
-        apply()
-        // The route's own metadata title can land after this (streamed in late): keep ours on top.
-        const observer = new MutationObserver(apply)
-        observer.observe(document.head, { childList: true, subtree: true, characterData: true })
-        return () => observer.disconnect()
-    }, [title, scoreDocument])
+    // The tab carries the score's name, live as it is renamed ('Untitled score' when empty, which
+    // is also the route's own title until the score loads — see layout.tsx); a missing score says so.
+    const scoreMissing = loadError instanceof ApiError && loadError.status === 404
+    useDocumentTitle(
+        scoreDocument ? `${title.trim() || UNTITLED_SCORE} — Solkey` : scoreMissing ? 'Score not found — Solkey' : null,
+    )
 
     // One transport prop bag for the header (desktop) and the dock's action row (mobile), so
     // the two can't drift. Record never waits for a selection: with nothing selected a take
@@ -492,7 +480,7 @@ export default function ScoreEditorPage() {
         )
     }
     if (loadError || unreadable) {
-        const notFound = loadError instanceof ApiError && loadError.status === 404
+        const notFound = scoreMissing
         return (
             <ErrorScreen
                 title={notFound ? 'Score not found' : "This score couldn't be loaded"}
