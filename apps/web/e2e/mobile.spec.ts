@@ -438,24 +438,74 @@ test('header chips are icon-only on phones and the header fits the viewport', as
     await expectHeaderFitsViewport(page)
 })
 
-test('share chip: turn the read-only link on and off from the phone header', async ({ page, apiMock }) => {
+test('share chip: create and copy the read-only link, and turn it off after a confirm, from the phone header', async ({
+    page,
+    context,
+    apiMock,
+}) => {
+    await context.grantPermissions(['clipboard-read', 'clipboard-write'])
     await page.getByRole('button', { name: 'Share score', exact: true }).tap()
     const panel = page.getByRole('dialog', { name: 'Share score' })
     await expect(panel).toBeVisible()
-    await panel.getByRole('button', { name: 'Turn on link' }).tap()
+    await panel.getByRole('button', { name: 'Create link and copy' }).tap()
 
     const link = panel.getByRole('textbox', { name: 'Share link' })
     await expect(link).toHaveValue(new RegExp(`/s/${MOCK_SHARE_TOKEN}$`))
     expect(apiMock.shareToken).toBe(MOCK_SHARE_TOKEN)
+    await expect(panel.getByRole('button', { name: 'Copied' })).toBeVisible()
 
     await panel.getByRole('button', { name: 'Turn off link' }).tap()
-    await expect(panel.getByRole('button', { name: 'Turn on link' })).toBeVisible()
+    await panel.getByRole('button', { name: 'Turn off', exact: true }).tap()
+    await expect(panel.getByRole('button', { name: 'Create link and copy' })).toBeVisible()
     expect(apiMock.shareToken).toBeNull()
 
-    // The header did not grow to fit the open sheet. (The sheet's own horizontal
-    // placement is not asserted here: as of 2026-09-05 it spills ~28px past the left
-    // edge of the phone viewport — a ShareMenu layout follow-up, not a header one.)
+    // The panel stays on screen, and the header did not grow to fit it.
+    const box = await panel.boundingBox()
+    const viewport = page.viewportSize()
+    expect(box?.x ?? -1).toBeGreaterThanOrEqual(0)
+    expect((box?.x ?? 0) + (box?.width ?? Infinity)).toBeLessThanOrEqual((viewport?.width ?? 0) + 1)
     await expectHeaderFitsViewport(page)
+})
+
+test('editing the title takes the header row up to a Done button; Done hands back the chips', async ({ page }) => {
+    const title = page.getByRole('textbox', { name: 'Score title' })
+    const instrument = page.getByRole('button', { name: /^Change instrument/ })
+    // Every header target meets the 40px floor.
+    for (const control of [page.getByRole('button', { name: 'Back to library' }), instrument]) {
+        expect((await control.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(40)
+    }
+    const restWidth = (await title.boundingBox())?.width ?? 0
+
+    await title.tap()
+    const done = page.getByRole('button', { name: 'Done', exact: true })
+    await expect(done).toBeVisible()
+    expect((await done.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(40)
+    expect((await title.boundingBox())?.width ?? 0).toBeGreaterThan(restWidth + 100)
+    // The chips step out of the way: the instrument chip's slot and the three header chips fade, out of reach.
+    const faded = page.locator('header div[inert]')
+    await expect(faded).toHaveCount(2)
+    await expect(faded.filter({ has: instrument })).toHaveCSS('opacity', '0')
+    await expect(faded.filter({ has: page.getByRole('button', { name: 'Share score', exact: true }) })).toHaveCSS('opacity', '0')
+
+    await title.fill('A longer name for the tune')
+    await done.tap()
+    await expect(done).toHaveCount(0)
+    await expect(title).toHaveValue('A longer name for the tune')
+    await expect(faded).toHaveCount(0)
+    await expect(page.locator('div[tabindex="0"]').first()).toBeFocused()
+    await expectHeaderFitsViewport(page)
+})
+
+test('Add bar and Remove last bar are 40px touch targets that stay apart', async ({ page }) => {
+    const add = page.getByRole('button', { name: 'Add bar' })
+    const remove = page.getByRole('button', { name: 'Remove last bar' })
+    const [addBox, removeBox] = await Promise.all([add.boundingBox(), remove.boundingBox()])
+    expect(addBox?.height ?? 0).toBeGreaterThanOrEqual(40)
+    expect(removeBox?.height ?? 0).toBeGreaterThanOrEqual(40)
+    expect((removeBox?.x ?? 0) - ((addBox?.x ?? 0) + (addBox?.width ?? 0))).toBeGreaterThanOrEqual(16)
+    const patch = waitForAutosave(page)
+    await add.tap()
+    await patch
 })
 
 test('recordings chip: lists the score’s recordings and deletes one after confirmation', async ({ page, apiMock }) => {
