@@ -28,12 +28,6 @@ const entry = (over: Partial<TimelineEntry>): TimelineEntry => ({
 })
 
 describe('CursorManager', () => {
-    it('reset() is a no-op (no throw)', () => {
-        const { player } = fakePlayer()
-        const cm = new CursorManager(player, fakeScheduler([]))
-        expect(() => cm.reset()).not.toThrow()
-    })
-
     it('does nothing when no entries and not bound', () => {
         const { player } = fakePlayer(0.5)
         const cm = new CursorManager(player, fakeScheduler([]))

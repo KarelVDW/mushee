@@ -35,8 +35,6 @@ class Stopper implements Tickable {
         private readonly endSec: number,
     ) {}
 
-    reset(): void {}
-
     tick(): boolean {
         return this.midiPlayer.currentTime >= this.endSec
     }

@@ -166,7 +166,8 @@ export interface RecordingOptions {
 
 /**
  * Drives the metronome click schedule and the cursor indicator during a recording session.
- * Mic capture + WebSocket streaming is owned here but not driven by the tick loop.
+ * Mic capture + WebSocket streaming is owned here but not driven by the tick loop; the
+ * lifecycle is driven by start()/stop(), so the engine has no ticker reset.
  */
 export class RecordingEngine implements Tickable {
     private _state: RecordingState = 'idle'
@@ -420,10 +421,6 @@ export class RecordingEngine implements Tickable {
         const callback = this.options?.onStateChange
         this.options = null
         callback?.(this._state)
-    }
-
-    reset(): void {
-        // Lifecycle is driven explicitly by start()/stop(); ignore ticker resets.
     }
 
     tick(): boolean {

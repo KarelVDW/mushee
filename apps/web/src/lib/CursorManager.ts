@@ -23,10 +23,6 @@ export class CursorManager implements Tickable {
         this.resolvePosition = resolvePosition
     }
 
-    reset() {
-        // no internal state to reset — reads from scheduler.entries
-    }
-
     hideCursor() {
         if (this.cursorEl) this.cursorEl.setAttribute('display', 'none')
     }

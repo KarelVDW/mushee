@@ -1,6 +1,6 @@
 export interface Tickable {
-    /** Reset internal state for a new playback pass. */
-    reset(): void
+    /** Reset state for a new pass; omit when the unit's lifecycle is driven elsewhere. */
+    reset?(): void
     /**
      * Called each animation frame: schedule the audio due before
      * `currentTime + Ticker.LOOK_AHEAD`. Return true when done.
@@ -34,7 +34,7 @@ export class Ticker {
         this.onFinish = onFinish
         this.tickables = new Set(tickables)
 
-        for (const t of this.tickables) t.reset()
+        for (const t of this.tickables) t.reset?.()
 
         this.startLoop()
     }
@@ -82,8 +82,8 @@ export class Ticker {
         this.tickables.add(tickable)
     }
 
+    /** Drop `tickable` from the pass in flight. It is not reset: whoever re-adds it aligns it first. */
     removeTickable(tickable: Tickable) {
         this.tickables.delete(tickable)
-        tickable.reset()
     }
 }

@@ -788,12 +788,6 @@ describe('RecordingEngine', () => {
         expect(engine.state).toBe('idle')
     })
 
-    it('reset() is a no-op (ticker resets are ignored)', () => {
-        const { player } = fakePlayer()
-        const engine = new RecordingEngine(player)
-        expect(() => engine.reset()).not.toThrow()
-    })
-
     it('anchors a sample to a later recording measure once the take crosses into it', async () => {
         const { player, raw } = fakePlayer()
         const engine = new RecordingEngine(player)

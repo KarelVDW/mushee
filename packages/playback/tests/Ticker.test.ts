@@ -189,19 +189,31 @@ describe('Ticker', () => {
         expect(late.resetCount).toBe(0)
     })
 
-    it('removeTickable() removes the tickable and resets it', () => {
+    it('removeTickable() removes the tickable without resetting it', () => {
         const ticker = new Ticker()
         const a = makeTickable(false)
         const b = makeTickable(false)
 
         ticker.play([a, b], () => {})
         ticker.removeTickable(a)
-        expect(a.resetCount).toBe(2) // once by play, once by removal
+        expect(a.resetCount).toBe(1) // by play only; re-enabling resets explicitly
 
         fireFrame()
         // a was removed, so it never ticks.
         expect(a.tickCount).toBe(0)
         expect(b.tickCount).toBe(1)
+    })
+
+    it('play() runs tickables that have no reset', () => {
+        const ticker = new Ticker()
+        const lifecycleDrivenElsewhere: Tickable = { tick: vi.fn(() => true) }
+        const onFinish = vi.fn()
+
+        ticker.play([lifecycleDrivenElsewhere], onFinish)
+        fireFrame()
+
+        expect(lifecycleDrivenElsewhere.tick).toHaveBeenCalledTimes(1)
+        expect(onFinish).toHaveBeenCalledTimes(1)
     })
 
     it('an empty ticker finishes immediately on the first frame', () => {
