@@ -30,8 +30,9 @@ const SIGNED_URL_TTL_SECONDS = 15 * 60
 
 /**
  * A user's takes after the fact: list them, replay their archived audio,
- * delete one, and purge them all with the account. Live recording is
- * RecordingSessionsService's.
+ * delete one, and purge them all with the account. The admin console replays
+ * through here too, so there is one reader of a take folder's layout. Live
+ * recording is RecordingSessionsService's.
  */
 @Injectable()
 export class RecordingsService {
