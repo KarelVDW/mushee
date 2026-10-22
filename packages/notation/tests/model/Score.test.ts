@@ -1305,6 +1305,42 @@ describe('Score', () => {
             expect(notes[0].pitch?.name).toBe('A')
             expect(notes[0].measure.score).not.toBe(score)
         })
+
+        it('carries mid-measure clef and key changes, so a transposed excerpt matches the live result', () => {
+            const spelled = (notes: Note[]) => notes.map((n) => (n.pitch ? `${n.pitch.name}${n.pitch.octave}:${n.pitch.alter}` : 'rest'))
+            const build = () => {
+                const score = makeScore(1)
+                fill(score, 0, [q(p('C', 4)), q(p('D', 4)), q(p('F', 4)), q(p('A', 4))])
+                const m = score.measures[0]
+                score.setKeySignature(m.noteAtBeat(2), 4) // E major from beat 2: F♯ is in the key there
+                score.setClef(m.noteAtBeat(3), 'bass')
+                return score
+            }
+            const step = Interval.fromSemitones(1) // a minor second: F → G♭ before respelling
+
+            // Selection scope: the key stays, so the F after the mid-bar key respells as F♯, not G♭.
+            const live = build()
+            const target = live.measures[0].noteAtBeat(2)
+            if (!target) throw new Error('expected a note at beat 2')
+            const excerpt = Score.excerpt(live.measures[0], [target])
+            const [copy] = excerpt.score.measures
+            expect(copy.midMeasureKeySignatures.map((k) => [k.beatPosition, k.fifths])).toEqual([[2, 4]])
+            expect(copy.midMeasureClefs.map((c) => [c.beatPosition, c.type])).toEqual([[3, 'bass']])
+            const previewed = excerpt.score.transpose(step, excerpt.notes)
+            const applied = live.transpose(step, [target])
+            expect(spelled(previewed)).toEqual(['F4:1'])
+            expect(spelled(previewed)).toEqual(spelled(applied))
+
+            // Score scope: the mid-bar key is re-keyed too, and every note lands the same.
+            const whole = build()
+            const wholeExcerpt = Score.excerpt(whole.measures[0])
+            wholeExcerpt.score.transpose(step)
+            whole.transpose(step)
+            const [previewBar] = wholeExcerpt.score.measures
+            const [liveBar] = whole.measures
+            expect(previewBar.midMeasureKeySignatures.map((k) => k.fifths)).toEqual(liveBar.midMeasureKeySignatures.map((k) => k.fifths))
+            expect(spelled(previewBar.notes)).toEqual(spelled(liveBar.notes))
+        })
     })
 
     describe('addMeasure at an interior index', () => {
