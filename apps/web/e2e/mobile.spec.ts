@@ -466,6 +466,19 @@ test('dock popovers open as sheets that stay on screen', async ({ page }) => {
     await expect(dialog).toHaveCount(0)
 })
 
+test('a picker opened from More puts Back at the top, level with Close, above its title', async ({ page }) => {
+    const sheet = await openMore(page)
+    await sheet.getByRole('button', { name: /^Clef:/ }).tap()
+    const clef = page.getByRole('dialog', { name: 'Select clef' })
+    const back = await clef.getByRole('button', { name: 'Back' }).boundingBox()
+    const close = await clef.getByRole('button', { name: 'Close' }).boundingBox()
+    const title = await clef.getByRole('heading', { name: 'Clef' }).boundingBox()
+    expect((back?.y ?? Infinity) + (back?.height ?? 0)).toBeLessThanOrEqual((title?.y ?? 0) + 1)
+    expect(Math.abs((back?.y ?? 0) - (close?.y ?? Infinity))).toBeLessThan(4)
+    // The expander reads as one: a chevron rides with its label.
+    await expect(clef.getByRole('button', { name: 'More clefs' }).locator('svg')).toHaveCount(1)
+})
+
 test('the key sheet reads flats → C → sharps in three rows, none wrapping a key onto a row of its own', async ({ page }) => {
     // The narrowest phone we design for: seven fixed 48px cells would wrap here.
     await page.setViewportSize({ width: 360, height: 780 })

@@ -21,7 +21,7 @@ interface TempoPopoverProps {
     anchorRef?: { current: HTMLElement | null }
     /** `sheet` on phones: the full-width sheet above the dock (see Popover). */
     variant?: 'anchored' | 'sheet'
-    /** Rendered above the controls — the More sheet's Back link. */
+    /** The way back — the More sheet's Back link, which a sheet shows above its title (Popover `lead`). */
     lead?: ReactNode
 }
 
@@ -119,8 +119,8 @@ export function TempoPopover({
             className={sheet ? 'gap-3' : `w-90 gap-3${className ? ` ${className}` : ''}`}
             // A sheet's heading row is narrow on a phone: there the readout sits in the tap pad's
             // corner instead — laid over it, outside the button, so the pad's name stays put.
-            headerRight={sheet ? undefined : readout}>
-            {lead}
+            headerRight={sheet ? undefined : readout}
+            lead={lead}>
             <div className="relative">
                 <button
                     type="button"

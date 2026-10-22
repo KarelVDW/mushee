@@ -95,7 +95,7 @@ interface KeySignaturePopoverProps {
     anchorRef?: { current: HTMLElement | null }
     /** `sheet` on phones: the full-width sheet above the dock (see Popover). */
     variant?: 'anchored' | 'sheet'
-    /** Rendered above the options — the More sheet's Back link. */
+    /** The way back — the More sheet's Back link, which a sheet shows above its title (Popover `lead`). */
     lead?: ReactNode
 }
 
@@ -117,8 +117,8 @@ export function KeySignaturePopover({
             onDismiss={onDismiss}
             anchorRef={anchorRef}
             variant={variant}
+            lead={lead}
             className={sheet ? 'gap-2' : `w-104 gap-2${className ? ` ${className}` : ''}`}>
-            {lead}
             <KeySignatureGrid ariaLabel="Key signature" active={active} onSelect={onSelect} size="md" fluid={sheet} />
         </Popover>
     )

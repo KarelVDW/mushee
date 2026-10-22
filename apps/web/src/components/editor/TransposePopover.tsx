@@ -7,7 +7,7 @@ import { type ReactNode, useCallback, useEffect, useMemo, useState } from 'react
 import { KeySignatureGrid } from '@/components/editor/KeySignaturePopover'
 import type { PitchScope } from '@/components/editor/pitchScope'
 import { UnitNumberField } from '@/components/editor/UnitNumberField'
-import { Eyebrow, Icon, Popover, PopoverOption, PrimaryButton, Segmented, TertiaryButton } from '@/components/ui'
+import { Eyebrow, Icon, Popover, PopoverExpander, PopoverOption, PrimaryButton, Segmented } from '@/components/ui'
 
 type TransposeTab = 'interval' | 'key' | 'semitones'
 
@@ -85,7 +85,7 @@ interface TransposePopoverProps {
     anchorRef?: { current: HTMLElement | null }
     /** `sheet` on phones: the full-width sheet above the dock (see Popover). */
     variant?: 'anchored' | 'sheet'
-    /** Rendered above the controls — the More sheet's Back link. */
+    /** The way back — the More sheet's Back link, which a sheet shows above its title (Popover `lead`). */
     lead?: ReactNode
 }
 
@@ -209,20 +209,20 @@ export function TransposePopover({
             onKeyDown={handleKey}
             anchorRef={anchorRef}
             variant={variant}
+            lead={lead}
             className={sheet ? 'gap-3' : `w-90 gap-3${className ? ` ${className}` : ''}`}
             // On a phone sheet this row stays pinned under the scrolling controls: however far
             // "More options" grows them, Apply is in view.
             footer={
                 <div className="flex items-center justify-between gap-3">
-                    <TertiaryButton onClick={() => (advanced ? setAdvanced(false) : openAdvanced())}>
+                    <PopoverExpander expanded={advanced} onClick={() => (advanced ? setAdvanced(false) : openAdvanced())}>
                         {advanced ? 'Fewer options' : 'More options'}
-                    </TertiaryButton>
+                    </PopoverExpander>
                     <PrimaryButton onClick={apply} disabled={interval.isUnison}>
                         Apply
                     </PrimaryButton>
                 </div>
             }>
-            {lead}
             <p aria-live="polite" className="m-0 font-label font-semibold text-[15px] leading-tight text-on-surface">
                 {transposeReadout(interval.chromatic, keyAfter)}
             </p>

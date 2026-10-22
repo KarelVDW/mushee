@@ -4,7 +4,7 @@ import { ClefIcon } from '@mushee/notation/components'
 import { CLEF_DEFS, type ClefType, type Instrument } from '@mushee/notation/model'
 import { type ReactNode, useState } from 'react'
 
-import { Popover, PopoverOption, TertiaryButton } from '@/components/ui'
+import { Popover, PopoverExpander, PopoverOption } from '@/components/ui'
 
 /** The two clefs almost everyone wants, each with a plain line on what it is for. */
 const MAIN_CLEFS: { type: ClefType; hint?: string }[] = [
@@ -43,7 +43,7 @@ interface ClefPopoverProps {
     anchorRef?: { current: HTMLElement | null }
     /** `sheet` on phones: the full-width sheet above the dock (see Popover). */
     variant?: 'anchored' | 'sheet'
-    /** Rendered above the options — the More sheet's Back link. */
+    /** The way back — the More sheet's Back link, which a sheet shows above its title (Popover `lead`). */
     lead?: ReactNode
 }
 
@@ -80,8 +80,8 @@ export function ClefPopover({
             onDismiss={onDismiss}
             anchorRef={anchorRef}
             variant={variant}
+            lead={lead}
             className={sheet ? 'gap-2' : `w-80 gap-2${className ? ` ${className}` : ''}`}>
-            {lead}
             <div role="group" aria-label="Clef" className="flex flex-col gap-1.5">
                 {leading.map(({ type, hint }) => (
                     <PopoverOption
@@ -119,7 +119,7 @@ export function ClefPopover({
             </div>
             {!expanded && (
                 <div>
-                    <TertiaryButton onClick={() => setExpanded(true)}>More clefs</TertiaryButton>
+                    <PopoverExpander onClick={() => setExpanded(true)}>More clefs</PopoverExpander>
                 </div>
             )}
         </Popover>

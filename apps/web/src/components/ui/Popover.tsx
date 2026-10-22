@@ -1,6 +1,6 @@
 'use client'
 
-import { Eyebrow, Icon } from '@mushee/ui'
+import { Eyebrow, Icon, TertiaryButton } from '@mushee/ui'
 import {
     createContext,
     type CSSProperties,
@@ -96,6 +96,11 @@ interface PopoverProps {
     /** Rendered on the far side of the heading, e.g. a live readout. */
     headerRight?: ReactNode
     /**
+     * A way back (the More sheet's "‹ Back"): a sheet puts it at the very top, above its title
+     * and level with Close, where people look for it; an anchored popover leads its content with it.
+     */
+    lead?: ReactNode
+    /**
      * Move focus to the panel's first control on open, and back to the trigger (the first
      * control in `anchorRef`) on close when focus was still inside — for menus opened from a
      * chip (HeaderMenu). Off for the editor's attribute popovers, which leave focus on the score.
@@ -133,6 +138,7 @@ export function Popover({
     className,
     anchorRef,
     headerRight,
+    lead,
     manageFocus = false,
     variant = 'anchored',
     viewportGutter,
@@ -212,7 +218,8 @@ export function Popover({
                 className="popover-sheet-enter pointer-events-auto flex flex-col min-h-0 max-h-full rounded-xl bg-surface-container-lowest editorial-shadow"
                 onMouseDown={(e) => e.stopPropagation()}>
                 <div className="shrink-0 flex items-start gap-3 pl-4 pr-1.5 pt-1.5 pb-2">
-                    <div className="flex-1 min-w-0 flex flex-col gap-1 pt-2.5">
+                    <div className={`flex-1 min-w-0 flex flex-col gap-1 ${lead ? '' : 'pt-2.5'}`}>
+                        {lead}
                         <h2 className="m-0 font-label font-semibold text-[15px] leading-tight text-on-surface">{title}</h2>
                         {hint && <PopoverHint>{hint}</PopoverHint>}
                     </div>
@@ -253,6 +260,7 @@ export function Popover({
                 <Eyebrow>{title}</Eyebrow>
             )}
             {hint && <PopoverHint>{hint}</PopoverHint>}
+            {lead}
             {children}
             {footer}
         </div>
@@ -350,6 +358,22 @@ function useViewportClamp(ref: { current: HTMLElement | null }, gutter: number |
         return () => window.removeEventListener('resize', measure)
     }, [ref, gutter])
     return dx ? { transform: `translateX(${dx}px)` } : undefined
+}
+
+/**
+ * A popover's labelled More ("More clefs", "More time signatures", Transpose's "More options"):
+ * a tertiary button whose 12px chevron says it opens more — pointing up once it has, for a
+ * toggle that reads "Fewer options" then.
+ */
+export function PopoverExpander({ expanded = false, onClick, children }: { expanded?: boolean; onClick: () => void; children: ReactNode }) {
+    return (
+        <TertiaryButton onClick={onClick}>
+            <span className="inline-flex items-center gap-1">
+                {children}
+                <Icon name={expanded ? 'chevron-up' : 'chevron-down'} size={12} />
+            </span>
+        </TertiaryButton>
+    )
 }
 
 /** Whether a key's default action edits text in `target` (an input, textarea or contenteditable). */
