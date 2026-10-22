@@ -9,8 +9,9 @@ export default defineConfig({
         },
     },
     test: {
-        // Pure logic only (session tokens, piano-roll geometry) — pages are
-        // exercised through the running app, not unit tests.
+        // Pure logic only (session tokens, piano-roll geometry, audience query
+        // mapping, next-path guard) — pages are exercised through the running
+        // app, not unit tests.
         environment: 'node',
         include: ['tests/**/*.test.ts'],
         globals: false,

@@ -18,8 +18,8 @@ pnpm --filter @mushee/admin dev     # http://localhost:3500
 Production sets `ADMIN_SECRET`, `API_URL` and optionally `ADMIN_SESSION_HOURS`.
 
 Tests are pure logic only (`pnpm --filter @mushee/admin test`: session tokens,
-piano-roll geometry, audience query mapping); pages are exercised against the
-running stack.
+piano-roll geometry, audience query mapping, next-path guard); pages are
+exercised against the running stack.
 
 ## Pages
 
