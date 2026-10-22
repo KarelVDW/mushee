@@ -97,6 +97,37 @@ describe('Instrument', () => {
         expect(Instrument.VoiceLead.playsChords).toBe(false)
     })
 
+    it('writes the viola in alto clef, the low strings, bassoons and low brass in bass, the rest in treble', () => {
+        const byClef = (clef: string) =>
+            Instrument.selectable()
+                .filter((i) => i.defaultClef === clef)
+                .map((i) => i.id)
+                .sort()
+        expect(byClef('alto')).toEqual(['viola'])
+        expect(byClef('bass')).toEqual(
+            [
+                'baritone-horn',
+                'bass-guitar',
+                'bassoon',
+                'cello',
+                'contrabass',
+                'contrabassoon',
+                'euphonium',
+                'trombone',
+                'tuba',
+                'violoncello',
+            ].sort(),
+        )
+        const others = Instrument.selectable().filter((i) => i.defaultClef !== 'alto' && i.defaultClef !== 'bass')
+        expect(others.every((i) => i.defaultClef === 'treble')).toBe(true)
+        // Low instruments written an octave or more above where they sound still read treble.
+        for (const i of [Instrument.BassClarinet, Instrument.BaritoneSaxophone, Instrument.TenorSaxophone, Instrument.Guitar]) {
+            expect(i.defaultClef).toBe('treble')
+        }
+        expect(Instrument.BaritoneHornTreble.defaultClef).toBe('treble')
+        expect(Instrument.Woodblock.defaultClef).toBe('treble')
+    })
+
     it('soundingMidi adds the instrument’s chromatic transposition to the written pitch', () => {
         const c5 = new Pitch({ name: 'C', octave: 5 })
         expect(Instrument.Piano.soundingMidi(c5)).toBe(72)
