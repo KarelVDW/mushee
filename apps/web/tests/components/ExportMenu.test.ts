@@ -62,6 +62,8 @@ describe('ExportMenu', () => {
         expect(pdfRow).toBe('PDF.pdfPrint it or send it as sheet music')
         expect(midi).toBe('MIDI.midOpen it in GarageBand or other music apps')
         expect(musicxml).toBe('MusicXML.musicxmlKeep editing in MuseScore or other notation apps')
+        // The extension is a visual cue only: kept out of the row's accessible name, which would otherwise repeat the format.
+        expect(formats().map((b) => b.querySelector('[aria-hidden="true"]')?.textContent)).toEqual(['.pdf', '.mid', '.musicxml'])
         // No jargon: "DAW" is gone.
         expect(host.textContent).not.toMatch(/DAW/)
         // Coarse pointers get a 44px row, keyboards the shared ring.

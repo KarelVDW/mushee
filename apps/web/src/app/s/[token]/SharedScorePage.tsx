@@ -5,7 +5,7 @@ import type { Score } from '@mushee/notation/model'
 import { ScoreDeserializer } from '@mushee/notation/model/io/ScoreDeserializer'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { settingsTabPath } from '@/app/settings/settingsTabs'
 import { ExportMenu } from '@/components/ExportMenu'
@@ -16,7 +16,7 @@ import { track } from '@/lib/analytics'
 import { ApiError } from '@/lib/api'
 import { useSession } from '@/lib/auth-client'
 import { LIBRARY_PATH, withNext } from '@/lib/nextPath'
-import { BETA_MODE, type PlanTier, withPlan } from '@/lib/plans'
+import { BETA_MODE } from '@/lib/plans'
 import { useCreateScore, useSharedScore } from '@/lib/queries'
 import { useTransport } from '@/lib/useTransport'
 
@@ -85,6 +85,19 @@ export function SharedScorePage({ token }: { token: string }) {
     const playing = playback.state === 'playing'
     const backHere = `/s/${token}`
 
+    // Stop leaves the bar the moment playback stops, and the focus it held would fall to <body>. A keyboard
+    // or screen-reader user lands back on Play instead, whose name says playback is over: Stop hands focus
+    // over itself, and when the score plays out with Stop focused, the effect does (only if focus did fall
+    // to <body>, so a user who has moved on stays put). PrimaryButton takes no ref, so its group is the handle.
+    const transportGroupRef = useRef<HTMLDivElement>(null)
+    const stopHasFocus = useRef(false)
+    const focusPlay = useCallback(() => transportGroupRef.current?.querySelector('button')?.focus(), [])
+    useEffect(() => {
+        if (playback.state !== 'stopped' || !stopHasFocus.current) return
+        stopHasFocus.current = false
+        if (!document.activeElement || document.activeElement === document.body) focusPlay()
+    }, [playback.state, focusPlay])
+
     return (
         <div className="bg-surface min-h-dvh flex flex-col">
             <header className="sticky top-0 z-(--z-sticky) bg-surface-container-low/85 backdrop-blur-xl">
@@ -123,7 +136,7 @@ export function SharedScorePage({ token }: { token: string }) {
                     <>
                         {/* The recipient's main actions, labelled, above the score; on phones the bar wraps and keeps every label. */}
                         <div className="w-full max-w-240 mx-auto flex flex-wrap items-center gap-3">
-                            <div className="flex items-center gap-2">
+                            <div ref={transportGroupRef} className="flex items-center gap-2">
                                 <PrimaryButton
                                     size="lg"
                                     onClick={() => {
@@ -136,7 +149,17 @@ export function SharedScorePage({ token }: { token: string }) {
                                         {playing ? 'Pause' : 'Play'}
                                     </span>
                                 </PrimaryButton>
-                                {playback.state !== 'stopped' && <SecondaryButton onClick={playback.stop}>Stop</SecondaryButton>}
+                                {playback.state !== 'stopped' && (
+                                    <span className="contents" onFocus={() => (stopHasFocus.current = true)}>
+                                        <SecondaryButton
+                                            onClick={() => {
+                                                playback.stop()
+                                                focusPlay()
+                                            }}>
+                                            Stop
+                                        </SecondaryButton>
+                                    </span>
+                                )}
                             </div>
                             <span className="flex-1" />
                             <div className="flex items-center gap-2">
@@ -180,8 +203,8 @@ export function SharedScorePage({ token }: { token: string }) {
             <Footer width="marketing" />
             {limitDialogOpen && (
                 <ScoreLimitDialog
-                    // The plan tab, with the next tier's change-plan dialog open when the dialog names one.
-                    onUpgrade={(planId?: PlanTier['id']) => router.push(withPlan(settingsTabPath('plan'), planId))}
+                    // Every upgrade CTA lands on the plan tab (C9). The dialog's button passes no tier id.
+                    onUpgrade={() => router.push(settingsTabPath('plan'))}
                     onClose={() => setLimitDialogOpen(false)}
                 />
             )}

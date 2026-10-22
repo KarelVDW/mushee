@@ -110,7 +110,10 @@ export function ExportMenu({
                                 <span className="font-label font-semibold text-[13px] leading-none text-on-surface">
                                     {busy === format ? `Preparing ${formatLabel}…` : formatLabel}
                                 </span>
-                                <span className="font-mono text-[11px] leading-none text-on-surface-variant">{extension}</span>
+                                {/* Visual only: read aloud it would repeat the format's name ("PDF .pdf"). */}
+                                <span aria-hidden className="font-mono text-[11px] leading-none text-on-surface-variant">
+                                    {extension}
+                                </span>
                             </span>
                             <span className="font-body font-normal text-[11px] leading-[1.35] text-on-surface-variant">{description}</span>
                         </button>

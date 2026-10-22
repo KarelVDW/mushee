@@ -38,9 +38,12 @@ test('a valid share link renders the score read-only with its title, export and 
     await expect(play).toBeEnabled({ timeout: 15000 })
     await play.click()
     await expect(page.getByRole('button', { name: 'Pause' })).toBeVisible()
-    await page.getByRole('button', { name: 'Stop' }).click()
-    await expect(page.getByRole('button', { name: 'Play' })).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Stop' })).toHaveCount(0)
+    // Stop leaves the bar once pressed; a keyboard user keeps their place on Play rather than dropping to <body>.
+    const stop = page.getByRole('button', { name: 'Stop', exact: true })
+    await stop.focus()
+    await page.keyboard.press('Enter')
+    await expect(page.getByRole('button', { name: 'Play' })).toBeFocused()
+    await expect(stop).toHaveCount(0)
     // The header's one CTA: signed in, a link back to the library.
     await expect(page.getByRole('banner').getByRole('link', { name: /Open library|Start free/ })).toBeVisible()
     await expect(page.getByText('Want to change it? Save a copy to your library.')).toBeVisible()
@@ -49,6 +52,34 @@ test('a valid share link renders the score read-only with its title, export and 
     await page.getByRole('button', { name: 'Save a copy' }).click()
     await expect(page).toHaveURL(/\/scores\/e2e-created-1$/)
     expect(apiMock.creates.map((body) => body.title)).toEqual([MOCK_TITLE])
+})
+
+test('a copy refused by the score cap offers the upgrade, which opens the plan tab', async ({ page, apiMock }) => {
+    void apiMock
+    await page.goto(`/s/${MOCK_SHARE_TOKEN}`)
+    await expect(page.getByTestId('shared-score').locator('svg').first()).toBeVisible()
+
+    // Registered after the fixture mock, so it wins: the server refuses the copy with the structured score-limit error.
+    await page.route(
+        (url) => url.pathname.endsWith('/scores'),
+        (route) => {
+            if (route.request().method() !== 'POST') return route.fallback()
+            const origin = route.request().headers()['origin'] ?? '*'
+            return route.fulfill({
+                status: 403,
+                contentType: 'application/json',
+                headers: { 'access-control-allow-origin': origin, 'access-control-allow-credentials': 'true' },
+                body: JSON.stringify({ code: 'score-limit', message: 'Your Sketch plan holds up to 5 scores. Upgrade to add more.' }),
+            })
+        },
+    )
+    await page.getByRole('button', { name: 'Save a copy' }).click()
+    const dialog = page.getByRole('dialog', { name: 'Your Sketch plan holds up to 5 scores.' })
+    await expect(dialog).toBeVisible()
+
+    // The plan tab and nothing else in the query: the button's click event must never reach the URL as a plan id.
+    await dialog.getByRole('button', { name: 'Upgrade to Songwriter' }).click()
+    await expect(page).toHaveURL(/\/settings\?tab=plan$/)
 })
 
 test('an unknown or revoked token explains itself instead of erroring', async ({ page, apiMock }) => {

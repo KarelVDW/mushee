@@ -162,7 +162,9 @@ function CookiePreferencesDialog({ analytics, onAnalyticsChange, onDecide, onClo
                     Counts pages and features used, without cookies and without knowing who you are (PostHog, in the EU).
                 </ConsentCategory>
                 {/* Replay records whole sessions (inputs masked: lib/analytics.ts maskAllInputs) and links them and
-                    the usage events to the account — the label and text say both, for an informed choice. */}
+                    the usage events to the account — the label and text say both, for an informed choice. The body
+                    says "how you use Solkey" deliberately, not the plan's "what went wrong": consent copy must not
+                    suggest replay only captures errors. */}
                 <ConsentCategory
                     header={<Switch checked={analytics} onChange={onAnalyticsChange} label="Screen replays to help us fix bugs" />}>
                     Lets us replay how you use Solkey on your screen (what you type stays hidden) and link it to your account, so we can fix
