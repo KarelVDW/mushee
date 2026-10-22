@@ -31,41 +31,35 @@ export type EditorCommandGroup = (typeof EDITOR_COMMAND_GROUPS)[number]
 export interface EditorCommand extends BindableCommand {
     label: string
     group: EditorCommandGroup
-    /** One-line dialog copy explaining what the command does when the label alone is terse. */
-    description?: string
     /** Perform the command. Return `false` when it didn't apply, leaving the keystroke to the browser. */
     run: (manipulator: ScoreManipulator) => boolean | void
 }
 
-const fromAction = (action: ScoreAction, group: EditorCommandGroup, defaultShortcut: string | null): EditorCommand => ({
-    id: action.id,
-    label: action.label,
-    group,
-    defaultShortcut,
-    run: (manipulator) => manipulator.run(action),
-})
-
 /**
- * A parameterised action pinned to one argument, so a single keystroke can stand in for one
- * choice of a dock picker (a duration, an accidental). The id is suffixed with the choice so
- * every keystroke stays its own rebindable command.
+ * How {@link fromAction} wraps an action. A parameterised action is pinned to one `arg`, so a
+ * single keystroke can stand in for one choice of a dock picker (a duration, an accidental);
+ * its `suffix` keeps every such keystroke its own rebindable command, and its `label` names
+ * the choice. `arg` is required exactly when the action takes one.
  */
-const fromActionWith = <A>(
-    action: ScoreAction<A>,
-    suffix: string,
-    arg: A,
-    label: string,
-    description: string,
-    group: EditorCommandGroup,
-    defaultShortcut: string | null,
-): EditorCommand => ({
-    id: `${action.id}:${suffix}`,
-    label,
-    description,
-    group,
-    defaultShortcut,
-    run: (manipulator) => manipulator.run(action, ...([arg] as ActionArgs<A>)),
-})
+type FromActionOptions<A> = {
+    group: EditorCommandGroup
+    shortcut: string | null
+    suffix?: string
+    label?: string
+} & ([A] extends [void] ? { arg?: never } : { arg: A })
+
+const fromAction = <A>(action: ScoreAction<A>, options: FromActionOptions<NoInfer<A>>): EditorCommand => {
+    const { group, shortcut, suffix, label } = options
+    // The options type already tied `arg`'s presence to the action's parameter.
+    const args = ('arg' in options ? [options.arg] : []) as ActionArgs<A>
+    return {
+        id: suffix ? `${action.id}:${suffix}` : action.id,
+        label: label ?? action.label,
+        group,
+        defaultShortcut: shortcut,
+        run: (manipulator) => manipulator.run(action, ...args),
+    }
+}
 
 /** The dock's duration picker, one key per value: mnemonic letters (Digit3 is the triplet toggle). */
 const DURATION_COMMANDS: readonly EditorCommand[] = (
@@ -76,9 +70,7 @@ const DURATION_COMMANDS: readonly EditorCommand[] = (
         ['8', 'Eighth note', 'KeyE'],
         ['16', 'Sixteenth note', 'KeyS'],
     ] as const
-).map(([type, label, key]) =>
-    fromActionWith(SET_DURATION, type, type, label, `Set the selected note to a ${label.toLowerCase()}.`, 'Durations', key),
-)
+).map(([type, label, shortcut]) => fromAction(SET_DURATION, { group: 'Durations', shortcut, arg: type, suffix: type, label }))
 
 /**
  * The dock's accidental picker. Mnemonics assume a US layout (♭ on B, ♮ on N, ♯ where # is typed);
@@ -86,17 +78,9 @@ const DURATION_COMMANDS: readonly EditorCommand[] = (
  * and everything is rebindable.
  */
 const ACCIDENTAL_COMMANDS: readonly EditorCommand[] = [
-    fromActionWith(SET_ACCIDENTAL, 'flat', 'b', 'Flat', 'Mark the selected notes flat (♭).', 'Accidentals', 'KeyB'),
-    fromActionWith(
-        SET_ACCIDENTAL,
-        'natural',
-        undefined,
-        'Natural',
-        'Clear the accidental on the selected notes (♮).',
-        'Accidentals',
-        'KeyN',
-    ),
-    fromActionWith(SET_ACCIDENTAL, 'sharp', '#', 'Sharp', 'Mark the selected notes sharp (♯).', 'Accidentals', 'Shift+Digit3'),
+    fromAction(SET_ACCIDENTAL, { group: 'Accidentals', shortcut: 'KeyB', arg: 'b', suffix: 'flat', label: 'Flat' }),
+    fromAction(SET_ACCIDENTAL, { group: 'Accidentals', shortcut: 'KeyN', arg: undefined, suffix: 'natural', label: 'Natural' }),
+    fromAction(SET_ACCIDENTAL, { group: 'Accidentals', shortcut: 'Shift+Digit3', arg: '#', suffix: 'sharp', label: 'Sharp' }),
 ]
 
 /**
@@ -104,8 +88,8 @@ const ACCIDENTAL_COMMANDS: readonly EditorCommand[] = [
  * ({@link KeyboardEvent.code}), so they sit on the same key position on every keyboard layout.
  */
 export const EDITOR_COMMANDS: readonly EditorCommand[] = [
-    fromAction(MOVE_PREVIOUS, 'Navigate', 'ArrowLeft'),
-    fromAction(MOVE_NEXT, 'Navigate', 'ArrowRight'),
+    fromAction(MOVE_PREVIOUS, { group: 'Navigate', shortcut: 'ArrowLeft' }),
+    fromAction(MOVE_NEXT, { group: 'Navigate', shortcut: 'ArrowRight' }),
     {
         id: 'extend-selection-previous',
         label: 'Extend selection left',
@@ -139,8 +123,8 @@ export const EDITOR_COMMANDS: readonly EditorCommand[] = [
             manipulator.collapseSelection()
         },
     },
-    fromAction(RAISE_PITCH, 'Edit notes', 'ArrowUp'),
-    fromAction(LOWER_PITCH, 'Edit notes', 'ArrowDown'),
+    fromAction(RAISE_PITCH, { group: 'Edit notes', shortcut: 'ArrowUp' }),
+    fromAction(LOWER_PITCH, { group: 'Edit notes', shortcut: 'ArrowDown' }),
     {
         id: REMOVE_NOTE.id,
         label: REMOVE_NOTE.label,
@@ -149,10 +133,10 @@ export const EDITOR_COMMANDS: readonly EditorCommand[] = [
         // Through the manipulator method (not fromAction): an all-rest selection deletes measures.
         run: (manipulator) => manipulator.deleteSelection(),
     },
-    fromAction(TOGGLE_REST, 'Edit notes', 'KeyR'),
-    fromAction(TOGGLE_TIE, 'Edit notes', 'KeyT'),
-    fromAction(TOGGLE_DOT, 'Edit notes', 'Period'),
-    fromAction(TOGGLE_TUPLET, 'Edit notes', 'Digit3'),
+    fromAction(TOGGLE_REST, { group: 'Edit notes', shortcut: 'KeyR' }),
+    fromAction(TOGGLE_TIE, { group: 'Edit notes', shortcut: 'KeyT' }),
+    fromAction(TOGGLE_DOT, { group: 'Edit notes', shortcut: 'Period' }),
+    fromAction(TOGGLE_TUPLET, { group: 'Edit notes', shortcut: 'Digit3' }),
     {
         id: MINIMIZE_ACCIDENTALS.id,
         label: MINIMIZE_ACCIDENTALS.label,
