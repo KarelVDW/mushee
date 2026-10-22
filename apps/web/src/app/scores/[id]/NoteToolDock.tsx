@@ -7,7 +7,7 @@ import { type Accidental, CLEF_DEFS, type ClefType, Duration, type DurationType,
 import { type ReactNode, type RefObject, useRef, useState, useSyncExternalStore } from 'react'
 
 import { ClefPopover } from '@/components/editor/ClefPopover'
-import { keySignatureLabel, KeySignaturePopover } from '@/components/editor/KeySignaturePopover'
+import { KeySignaturePopover } from '@/components/editor/KeySignaturePopover'
 import { TempoPopover } from '@/components/editor/TempoPopover'
 import { TimeSignaturePopover } from '@/components/editor/TimeSignaturePopover'
 import { ChipToggle, Segmented, ToolGroup } from '@/components/ui'
@@ -81,6 +81,12 @@ function TupletIcon() {
 }
 
 // --- Note tool-dock (docked along the editor's bottom edge) ---
+
+/** The key chip's compact label, e.g. "♮", "2♯", "3♭" (its accessible name). */
+function keySignatureLabel(fifths: number): string {
+    if (fifths === 0) return '♮'
+    return fifths > 0 ? `${fifths}♯` : `${-fifths}♭`
+}
 
 /** The meter the (then disabled) time and tempo chips show while nothing is selected. */
 const COMMON_TIME = new TimeSignature(4, 4)

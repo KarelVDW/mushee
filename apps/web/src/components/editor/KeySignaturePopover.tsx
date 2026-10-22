@@ -1,34 +1,59 @@
 'use client'
 
 import { KeySignatureIcon } from '@mushee/notation/components'
+import { KeySignature } from '@mushee/notation/model'
 
 import { Popover, PopoverOption } from '@/components/ui'
 
 // Key signatures grouped flats → C → sharps, each labelled by its major key.
 const KEY_ROWS: number[][] = [[-7, -6, -5, -4, -3, -2, -1], [0], [1, 2, 3, 4, 5, 6, 7]]
 
-export const KEY_NAMES: Record<number, string> = {
-    [-7]: 'C♭',
-    [-6]: 'G♭',
-    [-5]: 'D♭',
-    [-4]: 'A♭',
-    [-3]: 'E♭',
-    [-2]: 'B♭',
-    [-1]: 'F',
-    0: 'C',
-    1: 'G',
-    2: 'D',
-    3: 'A',
-    4: 'E',
-    5: 'B',
-    6: 'F♯',
-    7: 'C♯',
+/**
+ * Cell, glyph and label sizes per grid size: `md` is the key-signature picker's own,
+ * `sm` the tighter grid inside the transpose popover's key tab.
+ */
+const GRID_SIZES = {
+    md: { gap: 'gap-1.5', cell: 'w-12 h-14 px-1 py-1.5', glyph: 32, label: 'text-[11px]' },
+    sm: { gap: 'gap-1', cell: 'w-10.5 h-12 px-1 py-1', glyph: 26, label: 'text-[10px]' },
+} as const
+
+interface KeySignatureGridProps {
+    /** The highlighted key's fifths, or null for none. */
+    active: number | null
+    onSelect: (fifths: number) => void
+    size: keyof typeof GRID_SIZES
+    /** The group's accessible name. */
+    ariaLabel: string
 }
 
-/** Compact label for a key signature, e.g. "♮", "2♯", "3♭". */
-export function keySignatureLabel(fifths: number): string {
-    if (fifths === 0) return '♮'
-    return fifths > 0 ? `${fifths}♯` : `${-fifths}♭`
+/** The fifteen drawable keys as a grid of signature glyphs, each named by its major key. */
+export function KeySignatureGrid({ active, onSelect, size, ariaLabel }: KeySignatureGridProps) {
+    const sizes = GRID_SIZES[size]
+    return (
+        <div role="group" aria-label={ariaLabel} className="flex flex-col gap-1.5 items-center">
+            {KEY_ROWS.map((row, i) => (
+                <div key={i} className={`flex flex-wrap justify-center ${sizes.gap}`}>
+                    {row.map((fifths) => {
+                        const name = KeySignature.majorKeyName(fifths)
+                        return (
+                            <PopoverOption
+                                key={fifths}
+                                active={fifths === active}
+                                ariaLabel={`${name} major`}
+                                title={`${name} major`}
+                                onClick={() => onSelect(fifths)}
+                                className={`flex-col justify-end gap-0.5 ${sizes.cell}`}>
+                                <span className="flex flex-1 items-center">
+                                    <KeySignatureIcon fifths={fifths} size={sizes.glyph} />
+                                </span>
+                                <span className={`${sizes.label} leading-none font-medium`}>{name}</span>
+                            </PopoverOption>
+                        )
+                    })}
+                </div>
+            ))}
+        </div>
+    )
 }
 
 interface KeySignaturePopoverProps {
@@ -49,26 +74,7 @@ export function KeySignaturePopover({ active, onSelect, onDismiss, className, an
             onDismiss={onDismiss}
             anchorRef={anchorRef}
             className={`w-max gap-2${className ? ` ${className}` : ''}`}>
-            <div role="group" aria-label="Key signature" className="flex flex-col gap-1.5 items-center">
-                {KEY_ROWS.map((row, i) => (
-                    <div key={i} className="flex flex-wrap justify-center gap-1.5">
-                        {row.map((fifths) => (
-                            <PopoverOption
-                                key={fifths}
-                                active={fifths === active}
-                                ariaLabel={`${KEY_NAMES[fifths]} major`}
-                                title={`${KEY_NAMES[fifths]} major`}
-                                onClick={() => onSelect(fifths)}
-                                className="flex-col justify-end gap-0.5 w-12 h-14 px-1 py-1.5">
-                                <span className="flex flex-1 items-center">
-                                    <KeySignatureIcon fifths={fifths} size={32} />
-                                </span>
-                                <span className="text-[11px] leading-none font-medium">{KEY_NAMES[fifths]}</span>
-                            </PopoverOption>
-                        ))}
-                    </div>
-                ))}
-            </div>
+            <KeySignatureGrid ariaLabel="Key signature" active={active} onSelect={onSelect} size="md" />
         </Popover>
     )
 }

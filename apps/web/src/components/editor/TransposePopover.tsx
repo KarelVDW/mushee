@@ -1,11 +1,11 @@
 'use client'
 
-import { KeySignatureIcon, ScoreView } from '@mushee/notation/components'
-import { Interval, type IntervalQuality, type Note, Score } from '@mushee/notation/model'
+import { ScoreView } from '@mushee/notation/components'
+import { Interval, type IntervalQuality, KeySignature, type Note, Score } from '@mushee/notation/model'
 import { type ReactNode, useCallback, useEffect, useMemo, useState } from 'react'
 
 import type { PitchScope } from '@/app/scores/[id]/ScoreManipulator'
-import { KEY_NAMES } from '@/components/editor/KeySignaturePopover'
+import { KeySignatureGrid } from '@/components/editor/KeySignaturePopover'
 import { Icon, Popover, PopoverOption, PrimaryButton, Segmented, TertiaryButton } from '@/components/ui'
 
 type TransposeTab = 'interval' | 'key' | 'semitones'
@@ -46,9 +46,6 @@ const PREVIEW_MAX_ZOOM = 1.2
  * ledger lines while dropping the mostly-empty tail.
  */
 const PREVIEW_CROP_HEIGHT = 128
-
-// Key options mirror the key-signature picker: flats → C → sharps.
-const KEY_ROWS: number[][] = [[-7, -6, -5, -4, -3, -2, -1], [0], [1, 2, 3, 4, 5, 6, 7]]
 
 interface TransposePopoverProps {
     score: Score
@@ -250,30 +247,11 @@ export function TransposePopover({
                 <>
                     <div className="flex items-center justify-between gap-3">
                         <span className="font-body font-normal text-[13px] leading-none text-on-surface-variant">
-                            From <span className="font-medium text-on-surface">{KEY_NAMES[currentFifths]} major</span> to:
+                            From <span className="font-medium text-on-surface">{KeySignature.majorKeyName(currentFifths)} major</span> to:
                         </span>
                         <DirectionControl direction={direction} onChange={setDirection} />
                     </div>
-                    <div role="group" aria-label="Target key" className="flex flex-col gap-1.5 items-center">
-                        {KEY_ROWS.map((row, i) => (
-                            <div key={i} className="flex flex-wrap justify-center gap-1">
-                                {row.map((fifths) => (
-                                    <PopoverOption
-                                        key={fifths}
-                                        active={fifths === targetFifths}
-                                        ariaLabel={`${KEY_NAMES[fifths]} major`}
-                                        title={`${KEY_NAMES[fifths]} major`}
-                                        onClick={() => setTargetFifths(fifths)}
-                                        className="flex-col justify-end gap-0.5 w-10.5 h-12 px-1 py-1">
-                                        <span className="flex flex-1 items-center">
-                                            <KeySignatureIcon fifths={fifths} size={26} />
-                                        </span>
-                                        <span className="text-[10px] leading-none font-medium">{KEY_NAMES[fifths]}</span>
-                                    </PopoverOption>
-                                ))}
-                            </div>
-                        ))}
-                    </div>
+                    <KeySignatureGrid ariaLabel="Target key" active={targetFifths} onSelect={setTargetFifths} size="sm" />
                 </>
             )}
 
