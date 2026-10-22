@@ -22,6 +22,8 @@ export interface RecordingStatus {
     micModeReminder: boolean
     /** Recording left today when the take started, packs included; null on an uncapped plan. */
     secondsLeftAtStart: number | null
+    /** The bar the take's first note lands in, 1-based (as the user counts them). */
+    startBar: number
 }
 
 /** The strip's one hint line: what it says, and how it is drawn. */
@@ -39,7 +41,11 @@ export type StripHint =
 export class RecordingStripCopy {
     /** The time left today shows once this little is left (seconds). */
     static readonly TIME_LEFT_FROM = 60
-    static readonly WARNING = "Solkey can't write notes right now. Your audio is still being saved, and this time won't count."
+    /**
+     * Two lines at most in a 360px phone's strip. It says what the time doesn't count against —
+     * in a flow with a count-in, "this time won't count" didn't.
+     */
+    static readonly WARNING = "Solkey can't write notes right now. Your audio is saved — these minutes are free."
     static readonly RECOVERED = 'Notes are back.'
     static readonly MIC_MODE = 'iPhone: keep Mic Mode on Wide Spectrum.'
 
@@ -57,8 +63,22 @@ export class RecordingStripCopy {
     }
 
     /**
+     * Where the recording goes, beside 'Get ready' through the count-in ('from bar 3') — the
+     * selection highlight may sit elsewhere (a score just opened has its first note selected),
+     * so the strip says it. Null once recording.
+     */
+    get startsFrom(): string | null {
+        return this.status.phase === 'countoff' ? `from bar ${this.status.startBar}` : null
+    }
+
+    /** What the editor's announcer says as the count-in starts — the strip's own words, with where it records. */
+    static countInAnnouncement(startBar: number): string {
+        return `Get ready, from bar ${startBar}.`
+    }
+
+    /**
      * The strip's live-region text: the transcription warning or recovery while one is up, else
-     * nothing. The state words ('Count-in', 'Recording') reach screen readers through the
+     * nothing. The state words ('Get ready', 'Recording') reach screen readers through the
      * editor's announcer (contract C11) alone, so no state is ever spoken twice.
      */
     get news(): string | null {
@@ -177,9 +197,10 @@ export class RecordingLimitCopy {
         return `That's your ${formatAllowance(limitSeconds ?? usedSeconds)} of recording for today.`
     }
 
+    /** What still works, when recording is back, and that nothing is ever charged — the body then only offers more. */
     get subtitle(): string {
         const when = formatResetWhen(this.init.resetsAt, this.init.now)
-        return `Everything you recorded is in your score. Playing, editing and exporting still work — recording is back ${when}.`
+        return `Everything you recorded is in your score. Playing, editing and exporting still work — recording is back ${when}. ${RecordingLimitCopy.NO_SURPRISES}`
     }
 
     /** What the next plan gives, from the catalogue — never "unlimited"; null at the top of the ladder. */

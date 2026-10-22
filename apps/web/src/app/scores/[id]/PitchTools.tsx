@@ -6,6 +6,7 @@ import type { PitchScope } from '@/components/editor/pitchScope'
 import { TransposePopover } from '@/components/editor/TransposePopover'
 import { Icon } from '@/components/ui'
 
+import { STOP_RECORDING_FIRST } from './NoteToolParts'
 import { PopoverChip } from './PopoverChip'
 import type { ScoreManipulator } from './ScoreManipulator'
 
@@ -28,7 +29,8 @@ interface PitchToolsProps {
  * The header's pitch tool: a labelled Transpose chip. It acts on the whole score by default
  * (a multi-note selection narrows it), so it sits with the document-level chrome on desktop.
  * Simplify sharps and flats lives in the dock's More (desktop popover, phone sheet), and
- * phones reach Transpose there too.
+ * phones reach Transpose there too. While a recording writes into the score the chip stays in
+ * place but off, saying why — like the dock's clef / key / time / tempo chips.
  */
 export function PitchTools({ manipulator, transposeOpen, onTransposeOpenChange, onTransposeAim }: PitchToolsProps) {
     useSyncExternalStore(manipulator.subscribe, manipulator.getSnapshot, manipulator.getSnapshot)
@@ -40,6 +42,8 @@ export function PitchTools({ manipulator, transposeOpen, onTransposeOpenChange, 
     return (
         <PopoverChip
             ariaLabel="Transpose"
+            disabled={manipulator.historyLocked}
+            disabledReason={STOP_RECORDING_FIRST}
             tooltip="Move the whole song higher or lower"
             shortcut={keybindings.shortcutFor('transpose')}
             tooltipSide="bottom"

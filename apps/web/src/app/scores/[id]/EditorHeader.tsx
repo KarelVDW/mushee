@@ -9,6 +9,7 @@ import { ChipToggle, Icon, Tooltip, Wordmark } from '@/components/ui'
 
 import { SHOW_SHORTCUTS_KEY } from './commands'
 import { HistoryTools } from './HistoryTools'
+import { STOP_RECORDING_FIRST } from './NoteToolParts'
 import { PitchTools } from './PitchTools'
 import { RecordingsMenu } from './RecordingsMenu'
 import type { ScoreManipulator } from './ScoreManipulator'
@@ -122,6 +123,7 @@ export function EditorHeader({
                     <InstrumentSlot
                         instrumentName={score.instrument.displayName}
                         onChangeInstrument={onChangeInstrument}
+                        locked={manipulator.historyLocked}
                         autosave={autosave}
                         compact={compact}
                     />
@@ -296,6 +298,8 @@ function TitleField({ value, onChange, onDone, compact, onEditingChange }: Title
 interface InstrumentSlotProps {
     instrumentName: string
     onChangeInstrument: () => void
+    /** A recording is writing into the score: the chip stays, off, and says why. */
+    locked: boolean
     autosave: EditorHeaderProps['autosave']
     compact: boolean
 }
@@ -306,7 +310,7 @@ interface InstrumentSlotProps {
  * status only when it needs attention, and then in the chip's place: the header has no
  * room for both.
  */
-function InstrumentSlot({ instrumentName, onChangeInstrument, autosave, compact }: InstrumentSlotProps) {
+function InstrumentSlot({ instrumentName, onChangeInstrument, locked, autosave, compact }: InstrumentSlotProps) {
     const { status, retryNow } = autosave
     const { state, landed } = useSyncExternalStore(status.subscribe, status.getSnapshot, status.getSnapshot)
 
@@ -329,7 +333,7 @@ function InstrumentSlot({ instrumentName, onChangeInstrument, autosave, compact 
             retry
         ) : (
             <>
-                <InstrumentChip name={instrumentName} onClick={onChangeInstrument} />
+                <InstrumentChip name={instrumentName} onClick={onChangeInstrument} locked={locked} />
                 <Tooltip hint="Try again now" side="bottom">
                     {retry}
                 </Tooltip>
@@ -338,7 +342,7 @@ function InstrumentSlot({ instrumentName, onChangeInstrument, autosave, compact 
     }
     return (
         <>
-            <InstrumentChip name={instrumentName} onClick={onChangeInstrument} />
+            <InstrumentChip name={instrumentName} onClick={onChangeInstrument} locked={locked} />
             {!compact &&
                 (state === 'saving' ? (
                     <span className="shrink-0 font-body font-normal text-[12px] leading-none text-on-surface-variant whitespace-nowrap">
@@ -378,19 +382,26 @@ function SavedMark({ justLanded }: { justLanded: boolean }) {
     )
 }
 
-/** The instrument pill: its identity tone, a 13px name and a chevron that says it opens something. */
-function InstrumentChip({ name, onClick }: { name: string; onClick: () => void }) {
+/**
+ * The instrument pill: its identity tone, a 13px name and a chevron that says it opens something.
+ * While a recording runs it stays in place but off — still focusable, its tooltip saying why —
+ * since a new instrument would rewrite the bars the recording is filling.
+ */
+function InstrumentChip({ name, onClick, locked }: { name: string; onClick: () => void; locked: boolean }) {
     return (
-        <Tooltip label="Change instrument" side="bottom">
+        <Tooltip label="Change instrument" reason={locked ? STOP_RECORDING_FIRST : undefined} side="bottom">
             <button
                 type="button"
-                onClick={onClick}
+                onClick={locked ? undefined : onClick}
+                aria-disabled={locked || undefined}
                 aria-label={`Change instrument (current: ${name})`}
                 className={[
-                    'shrink-0 inline-flex items-center gap-1 border-0 rounded-full px-3 min-h-8 pointer-coarse:min-h-10 cursor-pointer',
+                    'shrink-0 inline-flex items-center gap-1 border-0 rounded-full px-3 min-h-8 pointer-coarse:min-h-10',
                     'font-label font-semibold text-[13px] leading-none whitespace-nowrap',
                     'max-md:max-w-28 min-w-0',
-                    'bg-secondary-soft/70 text-on-secondary-soft hover:bg-secondary-soft',
+                    locked
+                        ? 'cursor-not-allowed opacity-40 bg-secondary-soft/70 text-on-secondary-soft'
+                        : 'cursor-pointer bg-secondary-soft/70 text-on-secondary-soft hover:bg-secondary-soft',
                     'transition-colors duration-150 ease-solkey',
                     'focus-ring',
                 ].join(' ')}>

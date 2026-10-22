@@ -140,13 +140,15 @@ test('a take folds the dock into the recording strip beside record-as-stop; toas
     await expect(stop).toBeFocused()
     await expect(strip).toContainText('Recording', { timeout: 6000 })
     await expect(strip).toContainText('Tap')
+    // The header's instrument chip waits for the recording too: a switch would end it.
+    await expect(page.getByRole('button', { name: /^Change instrument/ })).toHaveAttribute('aria-disabled', 'true')
     await stop.tap()
     // …and back onto the footer's Record once the strip folds away.
     await expect(
         page.getByRole('group', { name: 'Note navigation and transport' }).getByRole('button', { name: 'Record', exact: true }),
     ).toBeFocused()
 
-    const summary = page.getByRole('status').filter({ hasText: /Added bars? 1(–2)?\. Tap any note to fix it\./ })
+    const summary = page.getByRole('status').filter({ hasText: /Added bar 2\. Tap any note to fix it\./ })
     await expect(summary).toBeVisible()
     // The dock is back, with a note selected so the nudges and Record work at once.
     const tools = page.getByRole('group', { name: 'Note tools' })
@@ -157,6 +159,48 @@ test('a take folds the dock into the recording strip beside record-as-stop; toas
         const toast = await summary.boundingBox()
         const dock = await page.getByRole('group', { name: 'Note navigation and transport' }).boundingBox()
         expect((toast?.y ?? Infinity) + (toast?.height ?? 0)).toBeLessThanOrEqual(dock?.y ?? 0)
+    }).toPass({ timeout: 5000 })
+})
+
+test('after a recording at the foot of a long score, the selected bar sits above the summary, not under it', async ({ page }) => {
+    // Twelve bars of the fixture's tune and an empty last bar: the recording goes in at the
+    // foot of a score taller than the phone, where the summary toast would cover it.
+    const stored = JSON.parse(readFileSync(resolve(process.cwd(), 'e2e/fixtures/score.partwise.json'), 'utf8')) as {
+        parts: { measures: { number: string; entries: Array<Record<string, unknown>> }[] }[]
+    }
+    const [tune, empty] = stored.parts[0].measures
+    const notes = tune.entries.filter((entry) => entry._type === 'note')
+    const copies = Array.from({ length: 11 }, (_, i) => ({ number: String(i + 2), entries: notes }))
+    stored.parts[0].measures = [tune, ...copies, { ...empty, number: '13' }]
+    await page.route(/\/scores\/[^/]+\/load$/, (route) =>
+        route.fulfill({
+            json: stored,
+            headers: {
+                'access-control-allow-origin': route.request().headers()['origin'] ?? '*',
+                'access-control-allow-credentials': 'true',
+            },
+        }),
+    )
+    await mockRecording(page)
+    const scroller = page.locator('.max-w-240').locator('..')
+    expect(await scroller.evaluate((el) => el.scrollHeight > el.clientHeight)).toBe(true)
+
+    await page.getByRole('group', { name: 'Note navigation and transport' }).getByRole('button', { name: 'Record', exact: true }).tap()
+    const strip = page.getByRole('group', { name: 'Recording status' })
+    await expect(strip).toContainText('from bar 13')
+    await expect(strip).toContainText('Recording', { timeout: 6000 })
+    await page.getByRole('button', { name: 'Stop recording', exact: true }).tap()
+
+    // Two rows on a phone, kept as they are — and the bar after the recording is scrolled
+    // clear of them, with the recording's own row just above.
+    const summary = page.getByRole('status').filter({ hasText: /Added bar 13\. Tap any note to fix it\./ })
+    await expect(summary).toBeVisible()
+    const band = page.locator(`.max-w-240 svg ${SELECTION_BANDS}`).first()
+    await expect(async () => {
+        const toast = await summary.boundingBox()
+        const selected = await band.boundingBox()
+        expect(toast && selected).toBeTruthy()
+        expect((selected?.y ?? Infinity) + (selected?.height ?? 0)).toBeLessThanOrEqual(toast?.y ?? 0)
     }).toPass({ timeout: 5000 })
 })
 

@@ -162,6 +162,20 @@ describe('TakesList score names', () => {
         expect(container.querySelectorAll('li')[1]?.querySelector('a')).toBeNull()
     })
 
+    it('leads each cross-score row with its number within its score, so two from the same minute differ', () => {
+        const later = (id: string, scoreId: string, second: number): RecordingSummary => ({
+            ...take(id),
+            scoreId,
+            startedAt: new Date(2026, 9, 22, 14, 3, second).toISOString(),
+        })
+        // Newest first, as the API lists them: two in score-1 made in the same minute, one elsewhere.
+        const takes = [later('c', 'score-1', 40), later('b', 'score-2', 30), later('a', 'score-1', 10), take('z')]
+        act(() => root.render(createElement(TakesList, { takes, scoreTitleFor: () => 'Shots scratch' })))
+        const firstLines = [...container.querySelectorAll('li')].map((row) => row.querySelector('.truncate')?.textContent ?? '')
+        expect(firstLines.map((line) => line.split(' · ')[0])).toEqual(['Recording 3', 'Recording 1', 'Recording 2', 'Recording 1'])
+        expect(firstLines[0]).not.toBe(firstLines[2])
+    })
+
     it('keeps the score link out of the truncating date line, so its focus ring is never clipped', () => {
         act(() => root.render(createElement(TakesList, { takes: [take('a')], scoreTitleFor: () => 'Scale Study' })))
         const link = container.querySelector('a')

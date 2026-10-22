@@ -16,6 +16,7 @@ import { EDITOR_COMMANDS } from '@/app/scores/[id]/commands'
 import { EditorSpeech, KeyboardHelpText } from '@/app/scores/[id]/EditorAnnouncer'
 import { ScoreManipulator, UNDO_CHANGE_LABEL, UNDO_DELETE_LABEL, type UndoOffer } from '@/app/scores/[id]/ScoreManipulator'
 import { Keybindings, Shortcut } from '@/lib/Keybindings'
+import { RecordingTake } from '@/lib/RecordingTake'
 
 import { allNotes, setupPitched } from './editorFixtures'
 
@@ -114,6 +115,54 @@ describe('ScoreManipulator quiet selection, edit count and announcements', () =>
         // Clearing quietly is just clearing.
         manipulator.select(null, { quiet: true })
         expect(manipulator.selectionIsQuiet).toBe(false)
+    })
+
+    it('the opening selection is the editor’s, not the user’s: Record carries on after the music', () => {
+        // A score with music in bar 1 and empty bars 2–3, just opened: the first note is selected.
+        const score = makeScore(3)
+        const first = score.firstMeasure
+        if (!first) throw new Error('expected a measure')
+        const notes = score.replace(first.notes, [pitched('C', 5), pitched('D', 5), pitched('E', 5), pitched('F', 5)])
+        const manipulator = new ScoreManipulator()
+        manipulator.attach(score, () => undefined)
+        expect(manipulator.selectedNote).toBe(notes[0])
+        expect(manipulator.selectionIsInitial).toBe(true)
+        // Pressing Record now starts after the written bar, never in front of it.
+        expect(manipulator.recordingStartNote).toBeNull()
+        expect(RecordingTake.startIndexFor(score, manipulator.recordingStartNote)).toBe(1)
+        expect(RecordingTake.startingAt(score, manipulator.recordingStartNote)?.startIndex).toBe(1)
+
+        // The user's own select — even of the same note — means "record here".
+        manipulator.select(notes[0])
+        expect(manipulator.selectionIsInitial).toBe(false)
+        expect(manipulator.recordingStartNote).toBe(notes[0])
+        expect(RecordingTake.startIndexFor(score, manipulator.recordingStartNote)).toBe(0)
+
+        // Put back as it was (a take that never got going), it is the editor's again.
+        manipulator.select(notes[0], { quiet: true, initial: true })
+        expect(manipulator.selectionIsInitial).toBe(true)
+        expect(manipulator.selectionIsQuiet).toBe(true)
+        // A move clears it, and so does an edit.
+        manipulator.run(MOVE_NEXT)
+        expect(manipulator.selectionIsInitial).toBe(false)
+        manipulator.attach(score, () => undefined)
+        manipulator.setTempoAt(0, 0, 90)
+        expect(manipulator.selectionIsInitial).toBe(false)
+        // An empty score's opening selection still records into bar 1.
+        const empty = new ScoreManipulator()
+        empty.attach(makeScore(2), () => undefined)
+        expect(empty.selectionIsInitial).toBe(true)
+        expect(RecordingTake.startIndexFor(makeScore(2), empty.recordingStartNote)).toBe(0)
+    })
+
+    it('a history step that carried no selection lands on the first note as the editor’s own selection', () => {
+        const { manipulator } = setupPitched()
+        manipulator.select(null)
+        manipulator.addMeasure()
+        expect(manipulator.undo()).toBe(true)
+        expect(manipulator.selectedNote).not.toBeNull()
+        expect(manipulator.selectionIsInitial).toBe(true)
+        expect(manipulator.recordingStartNote).toBeNull()
     })
 
     it('counts edits that change the score and history travel, not navigation', () => {

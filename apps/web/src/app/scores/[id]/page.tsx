@@ -153,9 +153,12 @@ export default function ScoreEditorPage() {
     const [measureButtonsRect, setMeasureButtonsRect] = useState<MeasureButtonsRect | null>(null)
 
     // The transpose shortcut opens the transpose popover — view state the manipulator can't
-    // own, so the command reaches back through this registration.
+    // own, so the command reaches back through this registration. Never while a recording
+    // writes into the score (the header's chip is off then too).
     useEffect(() => {
-        manipulator.onTransposeRequest = () => setTransposeOpen(true)
+        manipulator.onTransposeRequest = () => {
+            if (!manipulator.historyLocked) setTransposeOpen(true)
+        }
         return () => {
             manipulator.onTransposeRequest = undefined
         }
@@ -237,11 +240,14 @@ export default function ScoreEditorPage() {
         manipulator,
     })
 
+    // A new instrument stops playback — but never a recording: the header's chip is off while
+    // one writes into the score, and a change that slipped through is declined here too.
     const handleInstrumentChange = useCallback(
         (instrument: Instrument) => {
+            setInstrumentDialogOpen(false)
+            if (manipulator.historyLocked) return
             stopAll()
             manipulator.setInstrument(instrument)
-            setInstrumentDialogOpen(false)
         },
         [manipulator, stopAll],
     )
@@ -253,6 +259,7 @@ export default function ScoreEditorPage() {
         recordingHalt,
         dismissRecordingHalt,
         toggleRecording,
+        recordFromBar,
         retryRecording,
         micModeGuideOpen,
         confirmMicModeGuide,
@@ -265,6 +272,7 @@ export default function ScoreEditorPage() {
         activeNote,
         transportRef,
         playbackCursorRef,
+        scrollAreaRef,
         stopAll,
         saveToApi,
         playFrom,
@@ -345,6 +353,7 @@ export default function ScoreEditorPage() {
         onStop: stopAll,
         recordingState,
         onRecordToggle: toggleRecording,
+        recordFromBar,
         metronome,
         onMetronomeToggle: toggleMetronome,
         shortcuts: { playPause: keybindings.shortcutFor(PLAY_PAUSE_COMMAND), record: keybindings.shortcutFor(RECORD_COMMAND) },
@@ -537,7 +546,9 @@ export default function ScoreEditorPage() {
                         saveToApi({ title: v })
                     }}
                     onTitleDone={focusCanvas}
-                    onChangeInstrument={() => setInstrumentDialogOpen(true)}
+                    onChangeInstrument={() => {
+                        if (!manipulator.historyLocked) setInstrumentDialogOpen(true)
+                    }}
                     autosave={autosave}
                     compact={isMobile}
                     transport={transport}
@@ -550,11 +561,16 @@ export default function ScoreEditorPage() {
                 />
                 {/* flex-col + grow (not min-h-full): the canvas must fill the scroll viewport
                 even when the score is short, and a percentage min-height can't resolve
-                against a flex-sized (height-less) scroll container. */}
-                <div ref={scrollAreaRef} className="flex-1 overflow-y-auto min-h-0 px-2 sm:px-8 bg-surface flex flex-col">
+                against a flex-sized (height-less) scroll container. While the after-recording
+                summary is up, --toast-clearance (ToastClearance) is the room it takes over the
+                score's foot: the follow-scroll keeps its row above it, and the canvas grows by
+                as much underneath, so even the last row can rise clear of the toast. */}
+                <div
+                    ref={scrollAreaRef}
+                    className="flex-1 overflow-y-auto min-h-0 px-2 sm:px-8 bg-surface flex flex-col scroll-pb-(--toast-clearance)">
                     <div
                         ref={scoreAreaRef}
-                        className="mx-auto w-full max-w-240 grow bg-surface-container-lowest p-3 pt-6 sm:p-10 tonal-layer-glow manuscript-canvas">
+                        className="mx-auto w-full max-w-240 grow bg-surface-container-lowest p-3 pt-6 sm:p-10 pb-[calc(0.75rem+var(--toast-clearance,0px))] sm:pb-[calc(2.5rem+var(--toast-clearance,0px))] tonal-layer-glow manuscript-canvas">
                         {/* The click events carry coordinates relative to the ScoreView's own
                         container, so the popovers anchor inside this exact wrapper. */}
                         <div className="relative">
@@ -664,7 +680,10 @@ export default function ScoreEditorPage() {
                         transposeOpen={transposeOpen}
                         onTransposeOpenChange={setTransposeOpen}
                         onTransposeAim={aimTranspose}
-                        hint={selectionTipUp ? null : undefined}
+                        // One instruction at a time: the phone's selection tip, or on an empty score the
+                        // first-melody card, keeps the dock's how-to-move-a-note line out — the only
+                        // thing selected there is a rest. It shows on the first selection after.
+                        hint={selectionTipUp || emptyScore ? null : undefined}
                         recording={
                             recordingStatus ? (
                                 <>

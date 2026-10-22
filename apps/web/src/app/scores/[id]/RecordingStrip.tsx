@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react'
 
-import { Icon } from '@/components/ui'
 import { formatRecordingTime } from '@/lib/recordingTime'
 
 import { type RecordingStatus, RecordingStripCopy, type StripHint } from './RecordingCopy'
@@ -41,16 +40,20 @@ function CountoffDots({ countoff }: { countoff: RecordingStatus['countoff'] }) {
 function HintLine({ hint }: { hint: StripHint }) {
     const quiet = 'font-body font-normal text-[13px] leading-tight text-on-surface-variant'
     if (hint.kind === 'stop') {
-        // The stop square on the record button, drawn inline so the line points at it.
+        // The record-as-stop button in miniature — a white rounded square on a red disc, as the
+        // live button draws it (RecordGlyph) — so the line points at that button, never at an
+        // outlined playback Stop.
         const glyph = (
-            <span className="inline-flex align-[-1px]">
-                <Icon name="square" size={12} />
+            <span className="inline-flex align-[-2px]">
+                <span aria-hidden className="inline-flex size-3.5 items-center justify-center rounded-full bg-error">
+                    <span className="size-1.25 rounded-[1.5px] bg-on-error" />
+                </span>
                 <span className="sr-only">the stop button</span>
             </span>
         )
         return <p className={`m-0 truncate ${quiet}`}>{hint.touch ? <>Tap {glyph} to stop</> : <>Press Space or {glyph} to stop</>}</p>
     }
-    // A transcription warning may run to two lines on a phone; everything else is one.
+    // A transcription warning may run to two lines on a phone (never more: RecordingStripCopy.WARNING); everything else is one.
     if (hint.kind === 'warning') {
         return <p className="m-0 font-body font-medium text-[13px] leading-snug text-on-surface text-center">{hint.text}</p>
     }
@@ -60,7 +63,7 @@ function HintLine({ hint }: { hint: StripHint }) {
 /**
  * The one recording status surface (contract C10): for the length of a take it stands in for
  * the dock's tool wells — a white capsule well on the dock's chrome. The count-in reads 'Get
- * ready' over one dot per click (the engine's own clock fills them), then 'Recording' with a
+ * ready · from bar 3' over one dot per click (the engine's own clock fills them), then 'Recording' with a
  * slowly pulsing red dot and the elapsed time; one hint line says how to stop, how much of
  * today is left, or what the server's transcription is doing. Screen readers hear the state
  * changes once, through the editor's announcer (contract C11); the strip's own polite status
@@ -83,6 +86,11 @@ export function RecordingStrip({ status, touch }: { status: RecordingStatus; tou
             <div aria-hidden className="flex items-center gap-2.5">
                 {status.phase === 'recording' && <span className="recording-dot size-2 shrink-0 rounded-full bg-error" />}
                 <span className="font-label font-medium text-[15px] leading-none text-on-surface">{copy.label}</span>
+                {copy.startsFrom && (
+                    <span className="font-body font-normal text-[13px] leading-none text-on-surface-variant whitespace-nowrap">
+                        · {copy.startsFrom}
+                    </span>
+                )}
                 {status.phase === 'countoff' ? (
                     <CountoffDots countoff={status.countoff} />
                 ) : (

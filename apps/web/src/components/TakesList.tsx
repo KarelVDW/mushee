@@ -72,7 +72,9 @@ interface TakesListProps {
     /**
      * Cross-score lists (Settings → Recordings): the title of each row's score, shown as a link
      * to it, or null once the score is gone — then the row says "Deleted score" in plain text.
-     * Leave it out on a per-score list, where every row shares one score.
+     * Each row then leads with its number within its score ("Recording 2 · Today, 10:54 PM"), the
+     * name the editor's panel gives it, so two from the same minute differ. Leave it out on a
+     * per-score list, where every row shares one score.
      */
     scoreTitleFor?: (take: RecordingSummary) => string | null
     /** Constrain the list's height and scroll inside (panels); pages let it grow. */
@@ -85,10 +87,17 @@ interface TakesListProps {
     numbered?: boolean
 }
 
-/** Each recording's number in a per-score list: 1 for the oldest, by when it started. */
+/** Each recording's number within its score: 1 for the oldest, by when it started. */
 function numbering(takes: readonly RecordingSummary[]): Map<string, number> {
     const byAge = [...takes].sort((a, b) => a.startedAt.localeCompare(b.startedAt))
-    return new Map(byAge.map((take, index) => [take.id, index + 1]))
+    const counts = new Map<string, number>()
+    return new Map(
+        byAge.map((take) => {
+            const number = (counts.get(take.scoreId) ?? 0) + 1
+            counts.set(take.scoreId, number)
+            return [take.id, number]
+        }),
+    )
 }
 
 /**
@@ -102,7 +111,7 @@ export function TakesList({ takes, scoreTitleFor, scroll = true, numbered = fals
     const player = useTakePlayer()
     const [confirming, setConfirming] = useState<string | null>(null)
     const { playing } = player
-    const numbers = numbered ? numbering(takes) : null
+    const numbers = numbered || scoreTitleFor ? numbering(takes) : null
 
     // Focus follows the confirm: onto Keep when it opens, back onto the bin when Keep closes it.
     const listRef = useRef<HTMLUListElement>(null)
@@ -175,7 +184,7 @@ export function TakesList({ takes, scoreTitleFor, scroll = true, numbered = fals
                         ) : (
                             <>
                                 <div className="flex flex-col gap-0.5 flex-1 min-w-0">
-                                    {number !== undefined ? (
+                                    {numbered && number !== undefined ? (
                                         <>
                                             <span className="font-body font-medium text-[13px] leading-none text-on-surface truncate">
                                                 Recording {number}
@@ -189,6 +198,7 @@ export function TakesList({ takes, scoreTitleFor, scroll = true, numbered = fals
                                     ) : (
                                         <>
                                             <span className="font-body font-medium text-[13px] leading-none text-on-surface truncate">
+                                                {number !== undefined && `Recording ${number} · `}
                                                 {formatTakeDate(take.startedAt)}
                                             </span>
                                             {/* The score name rides the length line, outside any clipping box, so the

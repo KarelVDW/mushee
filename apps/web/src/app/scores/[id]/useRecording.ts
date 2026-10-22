@@ -4,6 +4,7 @@ import { RecordingWaveformStore } from '@mushee/notation/lib/RecordingWaveformSt
 import type { Note, Score } from '@mushee/notation/model'
 import { useRouter } from 'next/navigation'
 import { type RefObject, useCallback, useEffect, useRef, useState } from 'react'
+import { flushSync } from 'react-dom'
 
 import { dismissToast, showToast } from '@/components/ui'
 import { track } from '@/lib/analytics'
@@ -23,14 +24,17 @@ import { RecordingTake } from '@/lib/RecordingTake'
 import type { RecordingLimitInfo } from '@/lib/TranscriptionSocket'
 import type { Transport } from '@/lib/Transport'
 
-import { MicFailure, type RecordingStatus, TakeSummaryCopy } from './RecordingCopy'
+import { MicFailure, type RecordingStatus, RecordingStripCopy, TakeSummaryCopy } from './RecordingCopy'
 import type { ScoreManipulator } from './ScoreManipulator'
+import { ToastClearance } from './ToastClearance'
 
 /** Why the recording was cut short (or refused, or couldn't hear) — drives which dialog shows. */
 export type RecordingHalt = { kind: 'limit'; info: RecordingLimitInfo } | { kind: 'concurrent' } | { kind: 'mic-blocked' }
 
 /** How long the after-take summary stays (it pauses while hovered or focused). */
 const SUMMARY_MS = 10_000
+/** The summary's Undo, named for what it undoes — never the header's bare 'Undo'; it also finds the toast on screen. */
+const UNDO_RECORDING_LABEL = 'Undo this recording'
 /** How long "Notes are back." stays in the strip once transcription recovers. */
 const RECOVERED_MS = 3000
 /** Waveform samples quieter than this are silence: no bar, so a pause never draws a dotted rule through the staff. */
@@ -54,6 +58,7 @@ export function useRecording({
     activeNote,
     transportRef,
     playbackCursorRef,
+    scrollAreaRef,
     stopAll,
     saveToApi,
     playFrom,
@@ -65,6 +70,8 @@ export function useRecording({
     activeNote: Note | null
     transportRef: RefObject<Transport | null>
     playbackCursorRef: RefObject<SVGRectElement | null>
+    /** The score's scroller — kept clear of the after-take summary while it is up (ToastClearance). */
+    scrollAreaRef: RefObject<HTMLElement | null>
     stopAll: () => void
     saveToApi: (changes: { title?: string; score?: Score }) => void
     /** Play from a note — the summary's "Hear it back". */
@@ -125,7 +132,8 @@ export function useRecording({
      * a way to hear it back and to undo it (with no notes, only the undo). Undo takes the whole
      * take back in one step — the history folds a take into one. Showing it teaches what the
      * dock's first-selection hint would have; the next edit retires it, so its actions only ever
-     * mean this take.
+     * mean this take. It goes up at once (flushed), before the bar after the take is selected, so
+     * the selection's follow-scroll already keeps that bar — and the take's last rows — above it.
      */
     const summarize = useCallback(
         (take: RecordingTake) => {
@@ -143,13 +151,18 @@ export function useRecording({
             manipulator.announce(copy.announcement)
             manipulator.moveNoteHint.markSeen()
             retireSummary.current?.()
-            const undo = { label: 'Undo', ariaLabel: 'Undo this recording', onClick: () => manipulator.undo() }
+            const undo = { label: 'Undo', ariaLabel: UNDO_RECORDING_LABEL, onClick: () => manipulator.undo() }
             const actions = take.wrotePitchedNotes ? [{ label: 'Hear it back', onClick: () => playFrom(first.firstNote) }, undo] : [undo]
-            const toast = showToast(copy.toast, 'info', { duration: SUMMARY_MS, actions })
+            const toast = flushSync(() => showToast(copy.toast, 'info', { duration: SUMMARY_MS, actions }))
+            const scroller = scrollAreaRef.current
+            const marker = [...document.querySelectorAll(`[role="status"] button[aria-label="${UNDO_RECORDING_LABEL}"]`)].at(-1)
+            const clearance = scroller && marker ? new ToastClearance(scroller) : null
+            if (marker) clearance?.hold(marker)
             const edits = manipulator.editCount
             const retire = () => {
                 unsubscribe()
                 dismissToast(toast)
+                clearance?.release()
                 if (retireSummary.current === retire) retireSummary.current = null
             }
             const unsubscribe = manipulator.subscribe(() => {
@@ -157,7 +170,7 @@ export function useRecording({
             })
             retireSummary.current = retire
         },
-        [manipulator, playFrom, touch],
+        [manipulator, playFrom, touch, scrollAreaRef],
     )
 
     const handleRecordToggle = useCallback(async () => {
@@ -170,6 +183,33 @@ export function useRecording({
             return
         }
         if (!score) return
+
+        // The day's recording is already spent, packs included: say so at once — no microphone, no
+        // Mic Mode guide, no count-in and no new bar for a recording the server would refuse. Only
+        // a spent budget whose reset is still ahead counts; billing not loaded yet, or a cache that
+        // looks stale, takes the normal path, and the server's limit frame decides. The refresh
+        // corrects a stale cache for the next press.
+        const credits = billing?.credits
+        if (
+            billing &&
+            credits &&
+            credits.remainingSeconds !== null &&
+            credits.remainingSeconds + credits.packSeconds <= 0 &&
+            (!credits.resetsAt || Date.now() < Date.parse(credits.resetsAt))
+        ) {
+            setRecordingHalt({
+                kind: 'limit',
+                info: {
+                    planId: billing.tierId,
+                    planName: billing.tierName,
+                    limitSeconds: credits.limitSeconds,
+                    usedSeconds: credits.usedSeconds,
+                    resetsAt: credits.resetsAt,
+                },
+            })
+            void refreshBilling()
+            return
+        }
 
         // iPhones filter the mic for speech; the fix is a user-only Control
         // Center setting (src/lib/micMode.ts). First take on the device blocks
@@ -196,10 +236,12 @@ export function useRecording({
 
         const cursorEl = playbackCursorRef.current
         if (!cursorEl) return
-        // With a note selected the take records into its bar; with nothing selected it
-        // carries on after the music (see RecordingTake.startingAt).
+        // With a note selected the take records into its bar; with nothing selected — or only the
+        // editor's opening selection, on a score just opened — it carries on after the music
+        // (see ScoreManipulator.recordingStartNote and RecordingTake.startingAt).
         const before = activeNote
-        const take = RecordingTake.startingAt(score, before)
+        const beforeWasInitial = manipulator.selectionIsInitial
+        const take = RecordingTake.startingAt(score, manipulator.recordingStartNote)
         if (!take) return
 
         // Stop any ongoing playback before beginning a recording session.
@@ -219,13 +261,20 @@ export function useRecording({
          */
         const abandon = () => {
             if (take.discardIfEmpty()) saveToApi({ score })
-            if (!transport.isRecording) manipulator.select(before?.isAttached ? before : null, { quiet: true })
+            if (!transport.isRecording) {
+                manipulator.select(before?.isAttached ? before : null, { quiet: true, initial: beforeWasInitial })
+            }
         }
-        /** The bar after the take, quietly selected — Record, the dock and the phone's nudges work at once. */
+        /**
+         * The bar after the take, quietly selected — Record, the dock and the phone's nudges work at
+         * once. A note picked while the take drained stays picked, unless it was in one of the bars
+         * recorded after the last note, which are gone by now (RecordingTake.dropTrailingRests).
+         */
         const carryOn = () => {
             const next = take.noteAfter()
             saveToApi({ score })
-            if (next && !manipulator.selectedNote) manipulator.select(next, { quiet: true })
+            const picked = manipulator.selectedNote
+            if (next && (!picked || !score.measures.includes(picked.measure))) manipulator.select(next, { quiet: true })
         }
         /** Once nothing more can reach the score: what follows this take. */
         const finish = () => {
@@ -238,15 +287,16 @@ export function useRecording({
             // Record was pressed again before this take finished draining: the new take owns the
             // selection and the strip now, so this one only leaves its notes behind.
             if (transport.isRecording) return
-            carryOn()
+            take.dropTrailingRests()
+            // The summary first: the quiet select that follows scrolls with the toast already up.
             if (end === 'stopped') summarize(take)
+            carryOn()
         }
 
         manipulator.select(null)
         waveformStore.reset()
         take.begin()
         saveToApi({ score })
-        const credits = billing?.credits
         const reminder = skipMicModeReminder.current ? false : takeMicModeReminder()
         skipMicModeReminder.current = false
         setStatus({
@@ -256,6 +306,7 @@ export function useRecording({
             health: 'ok',
             micModeReminder: reminder,
             secondsLeftAtStart: credits && credits.remainingSeconds !== null ? credits.remainingSeconds + credits.packSeconds : null,
+            startBar: take.startIndex + 1,
         })
 
         let mic: MediaTrackSettings | null
@@ -267,7 +318,7 @@ export function useRecording({
                 wsUrl: recordingSocketUrl(id),
                 onStateChange: (state) => {
                     setRecordingState(state)
-                    if (state === 'countoff') manipulator.announce('Count-in')
+                    if (state === 'countoff') manipulator.announce(RecordingStripCopy.countInAnnouncement(take.startIndex + 1))
                     if (state === 'idle') {
                         setStatus(null)
                         // The take ended: whatever bars are still waiting for their
@@ -413,6 +464,11 @@ export function useRecording({
     /** The Record button: stop a running take, or start one (at the selected note, or after the music). */
     const toggleRecording = useCallback(() => void handleRecordToggle(), [handleRecordToggle])
 
+    // Where pressing Record now would start, 1-based — named by the Record button's tooltip, from
+    // the same note the take reads (ScoreManipulator.recordingStartNote), so the two agree.
+    const startIndex = score ? RecordingTake.startIndexFor(score, manipulator.recordingStartNote) : null
+    const recordFromBar = startIndex === null ? null : startIndex + 1
+
     /** The blocked-mic dialog's "Try again": close it and press Record again. */
     const retryRecording = useCallback(() => {
         setRecordingHalt(null)
@@ -432,6 +488,7 @@ export function useRecording({
         recordingHalt,
         dismissRecordingHalt,
         toggleRecording,
+        recordFromBar,
         retryRecording,
         micModeGuideOpen,
         confirmMicModeGuide,

@@ -24,11 +24,16 @@ export interface TransportControlsProps {
     recordingState: RecordingState
     onRecordToggle: () => void
     /**
-     * Record can't start at all (no microphone, or the day's recording is spent). Never set for
-     * a missing selection: with nothing selected a take carries on after the music. A running
-     * take always stays stoppable.
+     * Record can't start at all (no microphone). Never set for a missing selection — with nothing
+     * selected a take carries on after the music — nor for a spent day: Record stays pressable
+     * and explains itself with the limit dialog. A running take always stays stoppable.
      */
     recordDisabled?: boolean
+    /**
+     * The bar (1-based) a take started now would record into — the selected one, or the bar
+     * after the music — named in Record's tooltip ('Record a melody from bar 3').
+     */
+    recordFromBar?: number | null
     metronome: boolean
     onMetronomeToggle: () => void
     /** Thumb-sized buttons with the record button as the biggest of the set (the mobile dock). */
@@ -50,10 +55,12 @@ export function RecordButton({
     recordingState,
     onRecordToggle,
     recordDisabled = false,
+    recordFromBar = null,
     large = false,
     shortcuts,
-}: Pick<TransportControlsProps, 'recordingState' | 'onRecordToggle' | 'recordDisabled' | 'large' | 'shortcuts'>) {
+}: Pick<TransportControlsProps, 'recordingState' | 'onRecordToggle' | 'recordDisabled' | 'recordFromBar' | 'large' | 'shortcuts'>) {
     const live = recordingState !== 'idle'
+    const idleTooltip = recordFromBar === null ? 'Record a melody' : `Record a melody from bar ${recordFromBar}`
     return (
         <span data-record-button className="contents">
             <TransportBtn
@@ -62,7 +69,7 @@ export function RecordButton({
                 active={live}
                 onClick={onRecordToggle}
                 ariaLabel={live ? 'Stop recording' : 'Record'}
-                tooltip={live ? 'Stop recording' : 'Record a melody'}
+                tooltip={live ? 'Stop recording' : idleTooltip}
                 shortcut={live ? shortcuts?.playPause : shortcuts?.record}
                 tooltipSide={large ? 'top' : 'bottom'}
                 disabled={!live && recordDisabled}
@@ -78,6 +85,7 @@ export function TransportControls({
     recordingState,
     onRecordToggle,
     recordDisabled = false,
+    recordFromBar = null,
     metronome,
     onMetronomeToggle,
     large = false,
@@ -86,9 +94,11 @@ export function TransportControls({
 }: TransportControlsProps) {
     const isRecording = recordingState !== 'idle'
     const isPlaying = playbackState === 'playing'
-    // Stop keeps its slot (the centred transport never shifts) but only shows while something
-    // plays or records — at rest there is nothing to stop.
-    const canStop = playbackState !== 'stopped' || isRecording
+    // Stop keeps its slot (the centred transport never shifts) but only shows while playback
+    // runs or is paused — at rest there is nothing to stop, and during a recording the record
+    // button is the stop (with Space and Escape): a second stop square beside it would leave a
+    // newcomer guessing which one ends the recording.
+    const canStop = playbackState !== 'stopped'
     const side = large ? 'top' : 'bottom'
 
     return (
@@ -124,6 +134,7 @@ export function TransportControls({
                 recordingState={recordingState}
                 onRecordToggle={onRecordToggle}
                 recordDisabled={recordDisabled}
+                recordFromBar={recordFromBar}
                 large={large}
                 shortcuts={shortcuts}
             />

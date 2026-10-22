@@ -92,7 +92,7 @@ export class EditorSpeech {
  * deliberately without role="status", so the Toaster's status region stays the page's first.
  * Anything in the editor speaks through {@link ScoreManipulator.announce}: the selection and
  * single-note edits ({@link EditorSpeech}), playback starting and stopping, the autosave
- * failing and recovering, and the recording flow's "Count-in", "Recording" and what a finished
+ * failing and recovering, and the recording flow's "Get ready", "Recording" and what a finished
  * recording added.
  */
 export function EditorAnnouncer({ manipulator }: { manipulator: ScoreManipulator }) {

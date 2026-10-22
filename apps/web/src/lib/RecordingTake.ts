@@ -20,10 +20,21 @@ export class RecordingTake {
     static startingAt(score: Score, note: Note | null): RecordingTake | null {
         if (note) return new RecordingTake(score, note.measure.index, note.clef)
         const last = score.lastMeasure
-        if (!last) return null
-        const index = score.measures.findLastIndex((measure) => RecordingTake.holdsPitchedNotes(measure)) + 1
+        const index = RecordingTake.startIndexFor(score, null)
+        if (!last || index === null) return null
         const clef = score.measures[index]?.clefAtOrBefore(0) ?? last.lastClef
         return new RecordingTake(score, index, clef)
+    }
+
+    /**
+     * Where {@link startingAt} would put the take's first bar (0-based) — cheap, so the Record
+     * button and the count-in can name the bar ("from bar 3") and always agree with the take.
+     * Null only for a score without a single bar.
+     */
+    static startIndexFor(score: Score, note: Note | null): number | null {
+        if (note) return note.measure.index
+        if (!score.lastMeasure) return null
+        return score.measures.findLastIndex((measure) => RecordingTake.holdsPitchedNotes(measure)) + 1
     }
 
     private static holdsPitchedNotes(measure: Measure): boolean {
@@ -78,6 +89,24 @@ export class RecordingTake {
     /** Whether any of the take's measures holds a pitched note — false for a take that heard nothing. */
     get wrotePitchedNotes(): boolean {
         return this.measures.some((measure) => RecordingTake.holdsPitchedNotes(measure))
+    }
+
+    /**
+     * Take out the take's trailing bars that hold no pitched note — the second or two between the
+     * last note and the stop — so the summary counts only bars with notes in them and the next
+     * take carries on right after the music, not after a gap to delete by hand. A take that heard
+     * nothing keeps its bars (its summary offers the Undo). Like the rest of the take this is a
+     * direct write, so the take stays one undoable step. Returns whether anything was removed.
+     */
+    dropTrailingRests(): boolean {
+        const measures = this.measures
+        const lastPitched = measures.findLastIndex((measure) => RecordingTake.holdsPitchedNotes(measure))
+        const trailing = lastPitched < 0 ? [] : measures.slice(lastPitched + 1)
+        if (trailing.length === 0) return false
+        this.score.removeMeasures(trailing)
+        this.added = this.added.filter((measure) => !trailing.includes(measure))
+        this.nextMeasureIndex = measures[lastPitched].index + 1
+        return true
     }
 
     /**

@@ -8,6 +8,7 @@ import {
     MOCK_SCORE_ID,
     MOCK_SHARE_TOKEN,
     MOCK_TITLE,
+    mockBilling,
     SELECTION_BANDS,
     test,
     waitForAutosave,
@@ -78,6 +79,43 @@ test('a blocked microphone explains the fix, Record stays live, and the score is
     expect(await page.locator(SELECTION_BANDS).first().boundingBox()).toEqual(band)
 })
 
+test('with the day’s recording spent, Record explains at once — no microphone, no count-in, no new bar', async ({ page, apiMock }) => {
+    // Any microphone request would be a setup step for a recording the server refuses.
+    await page.addInitScript(() => {
+        Object.defineProperty(MediaDevices.prototype, 'getUserMedia', {
+            configurable: true,
+            value: () => {
+                ;(window as unknown as { micAsked: boolean }).micAsked = true
+                return Promise.reject(new DOMException('not in this test', 'NotAllowedError'))
+            },
+        })
+    })
+    const resetsAt = new Date(Date.now() + 3_600_000).toISOString()
+    await mockBilling(page, { credits: { limitSeconds: 180, usedSeconds: 180, remainingSeconds: 0, packSeconds: 0, resetsAt } })
+    const billing = page.waitForResponse((response) => response.url().endsWith('/billing/subscription') && response.status() === 200)
+    await page.reload()
+    await billing
+    await expect(page.getByRole('button', { name: 'Export score' })).toBeVisible()
+    const addBar = await page.getByRole('button', { name: 'Add bar' }).boundingBox()
+
+    // Record stays pressable — and says why it can't record, before anything else happens.
+    const record = page.getByRole('button', { name: 'Record', exact: true })
+    await expect(record).toBeEnabled()
+    await record.click()
+    const dialog = page.getByRole('dialog', { name: "That's your 3 minutes of recording for today." })
+    await expect(dialog).toBeVisible()
+    await expect(page.getByRole('group', { name: 'Recording status' })).toHaveCount(0)
+    expect(await page.evaluate(() => (window as unknown as { micAsked?: boolean }).micAsked ?? false)).toBe(false)
+    // Calm, and worded like the score-limit dialog: what still works, nothing charged, 'Not now'.
+    await expect(dialog).toHaveAccessibleDescription(/No surprise charges — Solkey never bills for extra minutes\.$/)
+    await expect(dialog.locator('footer').getByRole('button')).toHaveText(['Not now', 'See Songwriter'])
+    await page.keyboard.press('Escape')
+    await expect(dialog).toHaveCount(0)
+    // The score is untouched: no bar was put in for the recording, and nothing was saved.
+    expect(await page.getByRole('button', { name: 'Add bar' }).boundingBox()).toEqual(addBar)
+    expect(apiMock.patches).toHaveLength(0)
+})
+
 test('a take: the strip replaces the tools, Record becomes Stop, and the bar after the take is selected with a summary', async ({
     page,
     browserName,
@@ -93,12 +131,26 @@ test('a take: the strip replaces the tools, Record becomes Stop, and the bar aft
     await expect(page.getByRole('group', { name: 'Note tools' })).toHaveCount(0)
     const stop = page.getByRole('button', { name: 'Stop recording', exact: true })
     await expect(stop).toBeVisible()
+    // One stop while recording: the playback Stop square stays out of the way, as on phones.
+    await expect(page.getByRole('button', { name: 'Stop', exact: true })).toBeHidden()
     await expect(strip).toContainText('Recording', { timeout: 6000 })
     await expect(strip).toContainText('Press Space or')
+    await expect(page.getByRole('button', { name: 'Stop', exact: true })).toBeHidden()
+    // The header's score-wide changes wait for the recording: shown, but off — the bars it is
+    // writing would land in another key, or the switch would end it. ⇧T goes to the browser.
+    const transpose = page.getByRole('button', { name: 'Transpose', exact: true })
+    const instrument = page.getByRole('button', { name: /^Change instrument/ })
+    await expect(transpose).toHaveAttribute('aria-disabled', 'true')
+    await expect(instrument).toHaveAttribute('aria-disabled', 'true')
+    await instrument.click({ force: true })
+    await page.keyboard.press('Shift+KeyT')
+    await expect(page.getByRole('dialog')).toHaveCount(0)
+    await expect(strip).toContainText('Recording')
 
     await stop.click()
     // The summary names the bar the take added and the next step, with a way to hear it and to take it back.
-    const summary = page.getByRole('status').filter({ hasText: /Added bars? 1(–2)?\. Click any note to fix it\./ })
+    // Only the bar with notes counts: what was recorded after the last note is dropped.
+    const summary = page.getByRole('status').filter({ hasText: /Added bar 2\. Click any note to fix it\./ })
     await expect(summary).toBeVisible()
     await expect(summary.getByRole('button', { name: 'Hear it back' })).toBeVisible()
     await expect(summary.getByRole('button', { name: 'Undo this recording', exact: true })).toBeVisible()
@@ -108,7 +160,49 @@ test('a take: the strip replaces the tools, Record becomes Stop, and the bar aft
     await expect(page.locator(SELECTION_BANDS)).toHaveCount(1)
     await expect(page.getByRole('button', { name: 'Rest', exact: true })).toBeEnabled()
     // Screen readers hear it too, through the editor's live region.
-    await expect(page.locator('[aria-live="polite"]:not([role])')).toHaveText(/^Recording stopped\. Added bars? 1( to 2)?\./)
+    await expect(page.locator('[aria-live="polite"]:not([role])')).toHaveText(/^Recording stopped\. Added bar 2\./)
+    await expect(transpose).not.toHaveAttribute('aria-disabled')
+    await expect(instrument).not.toHaveAttribute('aria-disabled')
+})
+
+test('Record on a score just opened carries on after the tune, and says where before it starts', async ({ page, browserName }) => {
+    test.skip(browserName === 'webkit', 'the synthetic microphone needs Chromium’s MediaRecorder')
+    await mockRecording(page)
+    // The editor selects the first note as the score opens; that is not the user picking bar 1,
+    // so the recording goes after the written bar — and the button says so.
+    await expect(page.locator(SELECTION_BANDS)).toHaveCount(1)
+    const record = page.getByRole('button', { name: 'Record', exact: true })
+    await record.hover()
+    await expect(page.getByText('Record a melody from bar 2')).toBeVisible()
+    await record.click()
+    const strip = page.getByRole('group', { name: 'Recording status' })
+    await expect(strip).toContainText('Get ready')
+    await expect(strip).toContainText('from bar 2')
+    const live = page.locator('[aria-live="polite"]:not([role])')
+    await expect(live).toHaveText('Get ready, from bar 2.')
+    await expect(strip).toContainText('Recording', { timeout: 6000 })
+    // Past the end of the take's first bar (one 4/4 bar at 120 bpm is 2 s), so the take runs
+    // into a second bar — one that only the mock's silence fills.
+    await expect(strip).toContainText('0:03', { timeout: 8000 })
+    await page.getByRole('button', { name: 'Stop recording', exact: true }).click()
+    // The bar recorded after the last note is dropped: only bar 2 counts.
+    await expect(page.getByRole('status').filter({ hasText: /^Added bar 2\./ })).toBeVisible()
+
+    // The tune is where it was: walking back from the bar after the recording meets the
+    // recorded G in bar 2, then the tune's last note in bar 1.
+    await focusEditor(page)
+    await page.keyboard.press('ArrowLeft')
+    await expect(live).toHaveText(/^G, whole note\. Bar 2, beat 1\./)
+    await page.keyboard.press('ArrowLeft')
+    await expect(live).toHaveText('F, quarter note. Bar 1, beat 4.')
+})
+
+test('a note the user picks is where Record starts, and the button names its bar', async ({ page }) => {
+    await focusEditor(page)
+    await page.keyboard.press('ArrowRight')
+    const record = page.getByRole('button', { name: 'Record', exact: true })
+    await record.hover()
+    await expect(page.getByText('Record a melody from bar 1')).toBeVisible()
 })
 
 test('the summary’s Undo takes the whole recording back in one step', async ({ page, browserName }) => {
@@ -121,7 +215,7 @@ test('the summary’s Undo takes the whole recording back in one step', async ({
     await expect(page.getByRole('group', { name: 'Recording status' })).toContainText('Recording', { timeout: 6000 })
     await page.getByRole('button', { name: 'Stop recording', exact: true }).click()
 
-    const summary = page.getByRole('status').filter({ hasText: /Added bars? 1/ })
+    const summary = page.getByRole('status').filter({ hasText: /Added bar 2\./ })
     await expect(summary).toBeVisible()
     await expect(headerUndo).toBeEnabled()
     await summary.getByRole('button', { name: 'Undo this recording', exact: true }).click()
@@ -670,6 +764,8 @@ test.describe('an empty score', () => {
             page.getByText('Press record, wait for the count-in, then go. Solkey writes melodies, one note at a time.'),
         ).toBeVisible()
         await expect(page.getByText('Or click a beat on the staff to place notes by hand.')).toBeVisible()
+        // The card is the one instruction: the dock's how-to-move-a-note line waits for a note.
+        await expect(page.getByText('To move a note, click higher or lower on the staff, or press ↑ ↓.')).toHaveCount(0)
         // Start recording has a name of its own: the transport's Record stays the one exact 'Record'.
         await expect(page.getByRole('button', { name: 'Start recording' })).toBeVisible()
         await expect(page.getByRole('button', { name: 'Record', exact: true })).toHaveCount(1)
@@ -689,7 +785,7 @@ test.describe('an empty score', () => {
         await expect(heading).toHaveCount(0)
         await expect(strip).toContainText('Recording', { timeout: 6000 })
         await page.getByRole('button', { name: 'Stop recording', exact: true }).click()
-        await expect(page.getByRole('status').filter({ hasText: /Added bars? 1/ })).toBeVisible()
+        await expect(page.getByRole('status').filter({ hasText: /Added bar 1\./ })).toBeVisible()
         await expect(heading).toHaveCount(0)
     })
 
@@ -698,6 +794,8 @@ test.describe('an empty score', () => {
         await expect(heading).toBeVisible()
         await page.getByRole('button', { name: 'Rest', exact: true }).click() // the selected rest becomes a note
         await expect(heading).toHaveCount(0)
+        // With a note on the staff, the dock's how-to-move-a-note line has something to teach.
+        await expect(page.getByText('To move a note, click higher or lower on the staff, or press ↑ ↓.')).toBeVisible()
         await page.getByRole('button', { name: 'Rest', exact: true }).click()
         await expect(heading).toBeVisible()
     })

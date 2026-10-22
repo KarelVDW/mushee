@@ -25,7 +25,7 @@ Every decision answers to this person: what we build, what we leave out, where a
 7. **Works for every body.** Full keyboard operation, a visible focus ring, screen-reader names and live announcements for state changes, and color is never the only signal — a selected state always pairs its colour with a shape (a check, a stripe or an underline). The editor speaks through one polite live region, and its spoken contract is fixed:
     - **On select:** the note and where it is — "G, quarter note. Bar 2, beat 1." (`Note`'s spoken description plus bar and beat); a range — "5 notes selected, bars 1 to 2."
     - **On edit:** just what changed — "A." after a pitch change, "Eighth note." after a length change.
-    - **On play and record:** "Playing" / "Stopped"; "Count-in", "Recording", then "Recording stopped. Added bars 3 to 6." (or "No notes this time.").
+    - **On play and record:** "Playing" / "Stopped"; "Get ready, from bar 3.", "Recording", then "Recording stopped. Added bars 3 to 6." (or "No notes this time.").
     - The canvas itself is named ("{title} — score", role description "score editor") and described by the live arrow-key shortcuts, ending "Press ? for all shortcuts." Announcements stay quiet during a take, apart from the recording states.
 8. **Defaults that just work.** A new score is ready to record with zero setup. Instrument, key, meter and tempo start sensible and can be changed later. No settings screen stands between a new user and their first melody. Onboarding asks only what shapes the first session: survey questions are optional and share one screen, and onboarding ends in the editor, ready to record. A visitor can hear a real Solkey score before creating an account ("Hear an example" on the landing page).
 
@@ -88,34 +88,35 @@ There is **one product**: the web app. The UI kit covers Landing → Auth → On
 
 **Specific examples (canonical Solkey copy):**
 
-| Surface                    | Solkey copy                                                                                                                           |
-| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
-| Email field label          | `Email`                                                                                                                               |
-| Password field label       | `Password` · signup hint `At least 8 characters.`                                                                                     |
-| Name field label           | `Your name` (signup and Settings → Profile)                                                                                           |
-| Sign-up CTA                | `Create account` · under it `Free to start — no card needed.` (beta: `Free during the beta.`)                                         |
-| Sign-up headline           | `Notation made easy.`                                                                                                                 |
-| Sign-in headline           | `Welcome back.`                                                                                                                       |
-| Sign-in link copy          | `Already have an account?`                                                                                                            |
-| Hero eyebrow               | `Melody to sheet music` (beta: `Now in closed beta`)                                                                                  |
-| Hero headline              | `The fastest way to get a melody on the page.`                                                                                        |
-| Hero sub                   | `Hum it, sing it, or play it — Solkey listens and writes the sheet music in front of your eyes.`                                      |
-| Hero line under the CTA    | `Free to start — no card, nothing to install.`                                                                                        |
-| Pricing free tier          | `Sketch` — `Free` · tagline `For trying things out` · CTA `Start free`; paid cards `Choose {plan}`, every card shows its tagline      |
-| Library page title         | `Your scores`                                                                                                                         |
-| Library offline            | `Can't connect right now` / `Check your internet connection and try again. Your scores are safe.`                                     |
-| Tab titles                 | `Your scores — Solkey` · the editor `{score title} — Solkey` (`Untitled score — Solkey` while it has none)                            |
-| Empty library              | `No scores yet.` / `Start a score, press record, and hum, sing or play — Solkey writes your melody down.` · `New score`               |
-| Score count (capped plans) | `3 of 5 free scores` from two below the cap; at the cap `You've used all 5 free scores.` · `See plans`                                |
-| Score-limit dialog         | `Your Sketch plan holds 5 scores.` / `Everything you've written stays safe and editable.`                                             |
-| Default score title        | `My first melody` (the first score) / `Untitled score` (every other) — the title field is optional                                    |
-| Instrument picker label    | `What will you sing or play?`                                                                                                         |
-| Change instrument          | `Changes the playback sound and how the notes are written for it. Your melody stays the same.` · `Use {instrument}`                   |
-| Editor empty state         | `Sing, hum or play your tune` · the how-to line from the [monophonic copy table](#what-solkey-doesnt-do) · `Start recording`          |
-| Recording strip            | `Get ready` → `Recording` · `Press Space or ■ to stop` (phones `Tap ■ to stop`)                                                       |
-| After a recording          | `Added bars 3–6. Click any note to fix it.` (phones `Tap any note…`; one bar `Added bar 3.`) · `Hear it back` · `Undo`                |
-| Daily recording limit      | `That's your 3 minutes of recording for today.` / `Everything you recorded is in your score. … recording is back tonight at 8:00 PM.` |
-| Footer                     | `© 2026 Solkey.`                                                                                                                      |
+| Surface                    | Solkey copy                                                                                                                                                                                                                  |
+| -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Email field label          | `Email`                                                                                                                                                                                                                      |
+| Password field label       | `Password` · signup hint `At least 8 characters.`                                                                                                                                                                            |
+| Name field label           | `Your name` (signup and Settings → Profile)                                                                                                                                                                                  |
+| Sign-up CTA                | `Create account` · under it `Free to start — no card needed.` (beta: `Free during the beta.`)                                                                                                                                |
+| Sign-up headline           | `Notation made easy.`                                                                                                                                                                                                        |
+| Sign-in headline           | `Welcome back.`                                                                                                                                                                                                              |
+| Sign-in link copy          | `Already have an account?`                                                                                                                                                                                                   |
+| Hero eyebrow               | `Melody to sheet music` (beta: `Now in closed beta`)                                                                                                                                                                         |
+| Hero headline              | `The fastest way to get a melody on the page.`                                                                                                                                                                               |
+| Hero sub                   | `Hum it, sing it, or play it — Solkey listens and writes the sheet music in front of your eyes.`                                                                                                                             |
+| Hero line under the CTA    | `Free to start — no card, nothing to install.`                                                                                                                                                                               |
+| Pricing free tier          | `Sketch` — `Free` · tagline `For trying things out` · CTA `Start free`; paid cards `Choose {plan}`, every card shows its tagline                                                                                             |
+| Library page title         | `Your scores`                                                                                                                                                                                                                |
+| Library offline            | `Can't connect right now` / `Check your internet connection and try again. Your scores are safe.`                                                                                                                            |
+| Tab titles                 | `Your scores — Solkey` · the editor `{score title} — Solkey` (`Untitled score — Solkey` while it has none)                                                                                                                   |
+| Empty library              | `No scores yet.` / `Start a score, press record, and hum, sing or play — Solkey writes your melody down.` · `New score`                                                                                                      |
+| Score count (capped plans) | `3 of 5 free scores` from two below the cap; at the cap `You've used all 5 free scores.` · `See plans`                                                                                                                       |
+| Score-limit dialog         | `Your Sketch plan holds 5 scores.` / `Everything you've written stays safe and editable.` · `Not now` · `See {plan}`                                                                                                         |
+| Default score title        | `My first melody` (the first score) / `Untitled score` (every other) — the title field is optional                                                                                                                           |
+| Instrument picker label    | `What will you sing or play?`                                                                                                                                                                                                |
+| Change instrument          | `Changes the playback sound and how the notes are written for it. Your melody stays the same.` · `Use {instrument}`                                                                                                          |
+| Editor empty state         | `Sing, hum or play your tune` · the how-to line from the [monophonic copy table](#what-solkey-doesnt-do) · `Start recording`                                                                                                 |
+| Record button              | tooltip `Record a melody from bar 3` (the bar a recording started now goes into) · while recording `Stop recording`                                                                                                          |
+| Recording strip            | `Get ready · from bar 3` → `Recording` · `Press Space or ■ to stop` (phones `Tap ■ to stop`) · transcription down: `Solkey can't write notes right now. Your audio is saved — these minutes are free.`                       |
+| After a recording          | `Added bars 3–6. Click any note to fix it.` (phones `Tap any note…`; one bar `Added bar 3.`) · `Hear it back` · `Undo`                                                                                                       |
+| Daily recording limit      | `That's your 3 minutes of recording for today.` / `Everything you recorded is in your score. … recording is back tonight at 8:00 PM. No surprise charges — Solkey never bills for extra minutes.` · `Not now` · `See {plan}` |
+| Footer                     | `© 2026 Solkey.`                                                                                                                                                                                                             |
 
 **Punctuation & tics:**
 
