@@ -1,13 +1,13 @@
 'use client'
 
-import { Glyph } from '@mushee/notation/components'
+import { BeatUnitIcon, ClefIcon, Glyph, KeySignatureIcon, TimeSignatureIcon } from '@mushee/notation/components'
 import { Bravura } from '@mushee/notation/engraving/Bravura'
 import { TUPLET_NUMBER_SCALE } from '@mushee/notation/engraving/constants'
-import { GLYPH_SCALE } from '@mushee/notation/engraving/GlyphScale'
 import {
     type Accidental,
     CLEF_DEFS,
     type ClefType,
+    Duration,
     type DurationType,
     type Interval,
     type Note,
@@ -16,10 +16,10 @@ import {
 } from '@mushee/notation/model'
 import { type ReactNode, useMemo, useRef, useState } from 'react'
 
-import { ClefGlyph, ClefPopover } from '@/components/editor/ClefPopover'
-import { KeySignatureGlyph, keySignatureLabel, KeySignaturePopover } from '@/components/editor/KeySignaturePopover'
-import { BeatUnitIcon, TempoPopover } from '@/components/editor/TempoPopover'
-import { TimeSignatureGlyph, TimeSignaturePopover } from '@/components/editor/TimeSignaturePopover'
+import { ClefPopover } from '@/components/editor/ClefPopover'
+import { keySignatureLabel, KeySignaturePopover } from '@/components/editor/KeySignaturePopover'
+import { TempoPopover } from '@/components/editor/TempoPopover'
+import { TimeSignaturePopover } from '@/components/editor/TimeSignaturePopover'
 import { TransposePopover } from '@/components/editor/TransposePopover'
 import { ChipToggle, Icon, Segmented, ToolGroup, TransportBtn } from '@/components/ui'
 
@@ -36,10 +36,11 @@ const DURATIONS: DurationType[] = ['w', 'h', 'q', '8', '16']
 const ICON_STEM_HEIGHT = 22
 
 function DurationIcon({ dur }: { dur: DurationType }) {
-    const noteGlyph = dur === 'w' ? 'noteheadWhole' : dur === 'h' ? 'noteheadHalf' : 'noteheadBlack'
-    const flagName = dur === '8' ? 'flag8thUp' : dur === '16' ? 'flag16thUp' : undefined
+    const duration = new Duration({ type: dur })
+    const noteGlyph = duration.noteheadGlyph
+    const flagName = duration.flagGlyph('up')
     const hasStem = dur !== 'w'
-    const nhWidth = Bravura.width(noteGlyph, GLYPH_SCALE)
+    const nhWidth = Bravura.width(noteGlyph)
     const noteX = 1
     const noteY = 26
     const stemX = noteX + nhWidth
@@ -382,7 +383,7 @@ function ClefControl({ clef, onSet, disabled, compact }: ClefControlProps) {
                 disabled={disabled}
                 onClick={() => setOpen((o) => !o)}
                 ariaLabel={`Clef: ${CLEF_DEFS[clef].label}`}>
-                <ClefGlyph type={clef} size={26} />
+                <ClefIcon type={clef} size={26} />
             </ChipToggle>
             {open && (
                 <ClefPopover
@@ -421,7 +422,7 @@ function KeySignatureControl({ fifths, onSet, disabled, compact }: KeySignatureC
                 disabled={disabled}
                 onClick={() => setOpen((o) => !o)}
                 ariaLabel={`Key signature: ${keySignatureLabel(fifths)}`}>
-                {fifths === 0 ? <span className="text-sm">♮</span> : <KeySignatureGlyph fifths={fifths} size={24} />}
+                {fifths === 0 ? <span className="text-sm">♮</span> : <KeySignatureIcon fifths={fifths} size={24} />}
             </ChipToggle>
             {open && (
                 <KeySignaturePopover
@@ -460,7 +461,7 @@ function TimeSignatureControl({ time, onSet, disabled, compact }: TimeSignatureC
                 disabled={disabled}
                 onClick={() => setOpen((o) => !o)}
                 ariaLabel={`Time signature: ${time.beatAmount}/${time.beatType}`}>
-                <TimeSignatureGlyph beatAmount={time.beatAmount} beatType={time.beatType} size={22} />
+                <TimeSignatureIcon beatAmount={time.beatAmount} beatType={time.beatType} size={22} />
             </ChipToggle>
             {open && (
                 <TimeSignaturePopover

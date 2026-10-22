@@ -1,7 +1,7 @@
 'use client'
 
-import { BeatUnit, beatUnitWidth } from '@mushee/notation/components'
-import type { Duration, TimeSignature } from '@mushee/notation/model'
+import { BeatUnitIcon } from '@mushee/notation/components'
+import type { TimeSignature } from '@mushee/notation/model'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { Popover, PrimaryButton } from '@/components/ui'
@@ -26,19 +26,6 @@ const TAP_RESET_MS = 2000
 const TAP_WINDOW = 8
 
 const COUNT_WORDS = ['', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve']
-
-/** The note of a metronome mark (♩, ♩., 𝅗𝅥) as an inline icon, sized by its height. */
-export function BeatUnitIcon({ duration, size = 18, color = 'currentColor' }: { duration: Duration; size?: number; color?: string }) {
-    // The glyph sits with its notehead centre on y = 0: the stem reaches 14 up, the head 5 down.
-    const top = -17
-    const height = 24
-    const width = beatUnitWidth(duration) + 2
-    return (
-        <svg width={(size * width) / height} height={size} viewBox={`-1 ${top} ${width} ${height}`} aria-hidden>
-            <BeatUnit duration={duration} fill={color} />
-        </svg>
-    )
-}
 
 /** How many beats a bar holds, in words: "two per bar in 6/8". */
 function beatsPerBarLabel(timeSignature: TimeSignature): string {

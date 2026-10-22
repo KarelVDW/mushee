@@ -1,10 +1,10 @@
 'use client'
 
-import { ScoreView } from '@mushee/notation/components'
+import { KeySignatureIcon, ScoreView } from '@mushee/notation/components'
 import { Interval, type IntervalQuality, type Note, Score } from '@mushee/notation/model'
 import { type ReactNode, useCallback, useEffect, useMemo, useState } from 'react'
 
-import { KEY_NAMES, KeySignatureGlyph } from '@/components/editor/KeySignaturePopover'
+import { KEY_NAMES } from '@/components/editor/KeySignaturePopover'
 import { Icon, Popover, PopoverOption, PrimaryButton, Segmented, TertiaryButton } from '@/components/ui'
 
 type TransposeScope = 'score' | 'selection'
@@ -253,7 +253,7 @@ export function TransposePopover({ score, selectedNotes, onApply, onDismiss, onS
                                         onClick={() => setTargetFifths(fifths)}
                                         className="flex-col justify-end gap-0.5 w-10.5 h-12 px-1 py-1">
                                         <span className="flex flex-1 items-center">
-                                            <KeySignatureGlyph fifths={fifths} size={26} />
+                                            <KeySignatureIcon fifths={fifths} size={26} />
                                         </span>
                                         <span className="text-[10px] leading-none font-medium">{KEY_NAMES[fifths]}</span>
                                     </PopoverOption>
