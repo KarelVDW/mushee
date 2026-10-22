@@ -2,13 +2,14 @@
 
 import { useRouter } from 'next/navigation'
 
+import type { PitchScope } from '@/components/editor/pitchScope'
 import { ExportMenu } from '@/components/ExportMenu'
 import { ChipToggle, Icon, Wordmark } from '@/components/ui'
 
 import { HistoryTools } from './HistoryTools'
 import { PitchTools } from './PitchTools'
 import { RecordingsMenu } from './RecordingsMenu'
-import type { PitchScope, ScoreManipulator } from './ScoreManipulator'
+import type { ScoreManipulator } from './ScoreManipulator'
 import { ShareMenu } from './ShareMenu'
 import { TransportControls, type TransportControlsProps } from './TransportControls'
 

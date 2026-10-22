@@ -35,61 +35,32 @@ function CookieBanner() {
 
     if (settingsOpen) {
         return (
-            <DialogScrim onDismiss={() => setSettingsOpen(false)}>
-                <DialogPanel
-                    title="Cookie preferences"
-                    subtitle="Choose what Solkey may use. You can change this any time via 'Cookie settings' in the footer."
-                    onClose={() => setSettingsOpen(false)}
-                    width={520}
-                    footer={
-                        <>
-                            <TertiaryButton onClick={() => decide(false)}>Essential only</TertiaryButton>
-                            <PrimaryButton onClick={() => decide(analyticsChoice)}>Save preferences</PrimaryButton>
-                        </>
-                    }>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 20, paddingBottom: 8 }}>
-                        {[
-                            [
-                                'Essential',
-                                'Always on',
-                                "Keeps you signed in and remembers this cookie choice. Solkey doesn't work without these.",
-                            ],
-                            [
-                                'Anonymous statistics',
-                                'Always on · no cookies',
-                                'Counts pages and feature use without cookies or anything stored on your device — never linked to who you are (PostHog, hosted in the EU).',
-                            ],
-                        ].map(([title, badge, body]) => (
-                            <div
-                                key={title}
-                                style={{
-                                    background: 'var(--color-surface-container-low)',
-                                    borderRadius: 8,
-                                    padding: '14px 16px',
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    gap: 8,
-                                }}>
-                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-                                    <span style={{ font: '600 14px/1.3 var(--font-body)', color: 'var(--color-on-surface)' }}>
-                                        {title}
-                                    </span>
-                                    <span
-                                        style={{
-                                            font: '600 10px/1 var(--font-label)',
-                                            letterSpacing: '0.12em',
-                                            textTransform: 'uppercase',
-                                            color: 'var(--color-on-surface-variant)',
-                                        }}>
-                                        {badge}
-                                    </span>
-                                </div>
-                                <p style={{ font: '400 13px/1.5 var(--font-body)', color: 'var(--color-on-surface-variant)', margin: 0 }}>
-                                    {body}
-                                </p>
-                            </div>
-                        ))}
+            <DialogPanel
+                title="Cookie preferences"
+                subtitle="Choose what Solkey may use. You can change this any time via 'Cookie settings' in the footer."
+                onClose={() => setSettingsOpen(false)}
+                width={520}
+                footer={
+                    <>
+                        <TertiaryButton onClick={() => decide(false)}>Essential only</TertiaryButton>
+                        <PrimaryButton onClick={() => decide(analyticsChoice)}>Save preferences</PrimaryButton>
+                    </>
+                }>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 20, paddingBottom: 8 }}>
+                    {[
+                        [
+                            'Essential',
+                            'Always on',
+                            "Keeps you signed in and remembers this cookie choice. Solkey doesn't work without these.",
+                        ],
+                        [
+                            'Anonymous statistics',
+                            'Always on · no cookies',
+                            'Counts pages and feature use without cookies or anything stored on your device — never linked to who you are (PostHog, hosted in the EU).',
+                        ],
+                    ].map(([title, badge, body]) => (
                         <div
+                            key={title}
                             style={{
                                 background: 'var(--color-surface-container-low)',
                                 borderRadius: 8,
@@ -98,39 +69,66 @@ function CookieBanner() {
                                 flexDirection: 'column',
                                 gap: 8,
                             }}>
-                            <label
-                                style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'space-between',
-                                    gap: 12,
-                                    cursor: 'pointer',
-                                }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
                                 <span style={{ font: '600 14px/1.3 var(--font-body)', color: 'var(--color-on-surface)' }}>
-                                    Session replay &amp; linked analytics
+                                    {title}
                                 </span>
-                                <input
-                                    type="checkbox"
-                                    checked={analyticsChoice}
-                                    onChange={(e) => setAnalyticsChoice(e.target.checked)}
-                                    style={{ accentColor: 'var(--color-primary)' }}
-                                />
-                            </label>
+                                <span
+                                    style={{
+                                        font: '600 10px/1 var(--font-label)',
+                                        letterSpacing: '0.12em',
+                                        textTransform: 'uppercase',
+                                        color: 'var(--color-on-surface-variant)',
+                                    }}>
+                                    {badge}
+                                </span>
+                            </div>
                             <p style={{ font: '400 13px/1.5 var(--font-body)', color: 'var(--color-on-surface-variant)', margin: 0 }}>
-                                Lets us watch anonymized replays of rough edges and connect usage to your account id so we can debug your
-                                issues. Uses one PostHog cookie. Off by default.
+                                {body}
                             </p>
                         </div>
-                        <p style={{ font: '400 12px/1.5 var(--font-body)', color: 'var(--color-on-surface-variant)', margin: 0 }}>
-                            Details in our{' '}
-                            <a href="#" style={{ color: 'var(--color-primary)', textDecoration: 'underline' }}>
-                                privacy policy
-                            </a>
-                            .
+                    ))}
+                    <div
+                        style={{
+                            background: 'var(--color-surface-container-low)',
+                            borderRadius: 8,
+                            padding: '14px 16px',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: 8,
+                        }}>
+                        <label
+                            style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                gap: 12,
+                                cursor: 'pointer',
+                            }}>
+                            <span style={{ font: '600 14px/1.3 var(--font-body)', color: 'var(--color-on-surface)' }}>
+                                Session replay &amp; linked analytics
+                            </span>
+                            <input
+                                type="checkbox"
+                                checked={analyticsChoice}
+                                onChange={(e) => setAnalyticsChoice(e.target.checked)}
+                                style={{ accentColor: 'var(--color-primary)' }}
+                            />
+                        </label>
+                        <p style={{ font: '400 13px/1.5 var(--font-body)', color: 'var(--color-on-surface-variant)', margin: 0 }}>
+                            Lets us watch anonymized replays of rough edges and connect usage to your account id so we can debug your
+                            issues. Uses one PostHog cookie. Off by default.
                         </p>
                     </div>
-                </DialogPanel>
-            </DialogScrim>
+                    <p style={{ font: '400 12px/1.5 var(--font-body)', color: 'var(--color-on-surface-variant)', margin: 0 }}>
+                        Details in our{' '}
+                        <a href="#" style={{ color: 'var(--color-primary)', textDecoration: 'underline' }}>
+                            privacy policy
+                        </a>
+                        .
+                    </p>
+                </div>
+            </DialogPanel>
         )
     }
 

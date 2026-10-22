@@ -864,71 +864,69 @@ function fmtRecTime(sec) {
 // one-time escape hatch without a subscription change.
 function LimitReachedDialog({ planName, nextPlanName, limitSec, onUpgrade, onClose }) {
     return (
-        <DialogScrim onDismiss={onClose}>
-            <DialogPanel
-                title={`You've used today's ${fmtRecTime(limitSec)} of recording.`}
-                subtitle={`Your ${planName} plan resets at midnight. Until then, playback, editing, and export still work — only mic capture pauses.`}
-                onClose={onClose}
-                width={480}
-                footer={
-                    <>
-                        <TertiaryButton onClick={onClose}>OK, I'll wait</TertiaryButton>
-                        {nextPlanName && (
-                            <PrimaryButton emphasis="pop" icon="arrow-right" onClick={onUpgrade}>
-                                Upgrade to {nextPlanName}
-                            </PrimaryButton>
-                        )}
-                    </>
-                }>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 14, paddingBottom: 8 }}>
-                    <div
-                        style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 14,
-                            background: 'var(--color-surface-container-low)',
-                            borderRadius: 10,
-                            padding: 16,
-                        }}>
-                        <span
-                            style={{
-                                width: 44,
-                                height: 44,
-                                borderRadius: 9999,
-                                flexShrink: 0,
-                                background: 'var(--color-error-container)',
-                                color: 'var(--color-on-error-container)',
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                            }}>
-                            <Icon name="mic-off" size={20} />
-                        </span>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                            <span style={{ font: '600 14px/1.3 var(--font-body)', color: 'var(--color-on-surface)' }}>
-                                Recording paused until tomorrow
-                            </span>
-                            <span style={{ font: '400 12px/1.4 var(--font-body)', color: 'var(--color-on-surface-variant)' }}>
-                                We stop capture the moment your daily budget runs out — no surprise charges, ever.
-                            </span>
-                        </div>
-                    </div>
+        <DialogPanel
+            title={`You've used today's ${fmtRecTime(limitSec)} of recording.`}
+            subtitle={`Your ${planName} plan resets at midnight. Until then, playback, editing, and export still work — only mic capture pauses.`}
+            onClose={onClose}
+            width={480}
+            footer={
+                <>
+                    <TertiaryButton onClick={onClose}>OK, I'll wait</TertiaryButton>
                     {nextPlanName && (
-                        <span style={{ font: '400 13px/1.5 var(--font-body)', color: 'var(--color-on-surface-variant)' }}>
-                            Upgrading to <strong style={{ color: 'var(--color-on-surface)' }}>{nextPlanName}</strong> lifts the cap
-                            immediately.
-                        </span>
+                        <PrimaryButton emphasis="pop" icon="arrow-right" onClick={onUpgrade}>
+                            Upgrade to {nextPlanName}
+                        </PrimaryButton>
                     )}
-                    <span style={{ font: '400 12px/1.5 var(--font-body)', color: 'var(--color-on-surface-variant)' }}>
-                        Just need to finish this one?{' '}
-                        <span style={{ color: 'var(--color-primary)', textDecoration: 'underline', cursor: 'pointer' }}>
-                            One-time minute packs
-                        </span>{' '}
-                        start at $6 and never expire.
+                </>
+            }>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14, paddingBottom: 8 }}>
+                <div
+                    style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 14,
+                        background: 'var(--color-surface-container-low)',
+                        borderRadius: 10,
+                        padding: 16,
+                    }}>
+                    <span
+                        style={{
+                            width: 44,
+                            height: 44,
+                            borderRadius: 9999,
+                            flexShrink: 0,
+                            background: 'var(--color-error-container)',
+                            color: 'var(--color-on-error-container)',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                        }}>
+                        <Icon name="mic-off" size={20} />
                     </span>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                        <span style={{ font: '600 14px/1.3 var(--font-body)', color: 'var(--color-on-surface)' }}>
+                            Recording paused until tomorrow
+                        </span>
+                        <span style={{ font: '400 12px/1.4 var(--font-body)', color: 'var(--color-on-surface-variant)' }}>
+                            We stop capture the moment your daily budget runs out — no surprise charges, ever.
+                        </span>
+                    </div>
                 </div>
-            </DialogPanel>
-        </DialogScrim>
+                {nextPlanName && (
+                    <span style={{ font: '400 13px/1.5 var(--font-body)', color: 'var(--color-on-surface-variant)' }}>
+                        Upgrading to <strong style={{ color: 'var(--color-on-surface)' }}>{nextPlanName}</strong> lifts the cap
+                        immediately.
+                    </span>
+                )}
+                <span style={{ font: '400 12px/1.5 var(--font-body)', color: 'var(--color-on-surface-variant)' }}>
+                    Just need to finish this one?{' '}
+                    <span style={{ color: 'var(--color-primary)', textDecoration: 'underline', cursor: 'pointer' }}>
+                        One-time minute packs
+                    </span>{' '}
+                    start at $6 and never expire.
+                </span>
+            </div>
+        </DialogPanel>
     )
 }
 
@@ -937,49 +935,47 @@ function LimitReachedDialog({ planName, nextPlanName, limitSec, onUpgrade, onClo
 // Single acknowledgment action; nothing in the current score is touched.
 function ConcurrentRecordingDialog({ onClose }) {
     return (
-        <DialogScrim onDismiss={onClose}>
-            <DialogPanel
-                title="One recording at a time."
-                subtitle="Your account already has a recording running — maybe in another tab, or on another device."
-                onClose={onClose}
-                width={480}
-                footer={<PrimaryButton onClick={onClose}>Got it</PrimaryButton>}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 14, paddingBottom: 8 }}>
-                    <div
+        <DialogPanel
+            title="One recording at a time."
+            subtitle="Your account already has a recording running — maybe in another tab, or on another device."
+            onClose={onClose}
+            width={480}
+            footer={<PrimaryButton onClick={onClose}>Got it</PrimaryButton>}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14, paddingBottom: 8 }}>
+                <div
+                    style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 14,
+                        background: 'var(--color-surface-container-low)',
+                        borderRadius: 10,
+                        padding: 16,
+                    }}>
+                    <span
                         style={{
-                            display: 'flex',
+                            width: 44,
+                            height: 44,
+                            borderRadius: 9999,
+                            flexShrink: 0,
+                            background: 'var(--color-error-container)',
+                            color: 'var(--color-on-error-container)',
+                            display: 'inline-flex',
                             alignItems: 'center',
-                            gap: 14,
-                            background: 'var(--color-surface-container-low)',
-                            borderRadius: 10,
-                            padding: 16,
+                            justifyContent: 'center',
                         }}>
-                        <span
-                            style={{
-                                width: 44,
-                                height: 44,
-                                borderRadius: 9999,
-                                flexShrink: 0,
-                                background: 'var(--color-error-container)',
-                                color: 'var(--color-on-error-container)',
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                            }}>
-                            <Icon name="mic" size={20} />
+                        <Icon name="mic" size={20} />
+                    </span>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                        <span style={{ font: '600 14px/1.3 var(--font-body)', color: 'var(--color-on-surface)' }}>
+                            The mic is busy somewhere else
                         </span>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                            <span style={{ font: '600 14px/1.3 var(--font-body)', color: 'var(--color-on-surface)' }}>
-                                The mic is busy somewhere else
-                            </span>
-                            <span style={{ font: '400 12px/1.4 var(--font-body)', color: 'var(--color-on-surface-variant)' }}>
-                                Finish or stop that session first, then hit record here. Nothing in this score was changed.
-                            </span>
-                        </div>
+                        <span style={{ font: '400 12px/1.4 var(--font-body)', color: 'var(--color-on-surface-variant)' }}>
+                            Finish or stop that session first, then hit record here. Nothing in this score was changed.
+                        </span>
                     </div>
                 </div>
-            </DialogPanel>
-        </DialogScrim>
+            </div>
+        </DialogPanel>
     )
 }
 
@@ -1049,27 +1045,25 @@ function WideSpectrumWalkthrough() {
 // setting rather than a bare "OK".
 function MicModeGuideDialog({ onConfirm, onClose }) {
     return (
-        <DialogScrim onDismiss={onClose}>
-            <DialogPanel
-                title="iPhone user"
-                subtitle="Your iPhone filters the microphone for speech — one setting fixes it."
-                onClose={onClose}
-                width={480}
-                footer={
-                    <PrimaryButton icon="mic" onClick={onConfirm}>
-                        I've set Wide Spectrum — record
-                    </PrimaryButton>
-                }>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 14, paddingBottom: 8 }}>
-                    <WideSpectrumWalkthrough />
-                    <span style={{ font: '400 13px/1.4 var(--font-body)', color: 'var(--color-on-surface-variant)' }}>
-                        Without <strong style={{ color: 'var(--color-on-surface)' }}>Wide Spectrum</strong>, iOS removes whistling and
-                        instrument notes before Solkey can hear them. Your microphone is already on, so Mic Mode is waiting in Control
-                        Center — set it now, come back, and your iPhone remembers the choice for this browser.
-                    </span>
-                </div>
-            </DialogPanel>
-        </DialogScrim>
+        <DialogPanel
+            title="iPhone user"
+            subtitle="Your iPhone filters the microphone for speech — one setting fixes it."
+            onClose={onClose}
+            width={480}
+            footer={
+                <PrimaryButton icon="mic" onClick={onConfirm}>
+                    I've set Wide Spectrum — record
+                </PrimaryButton>
+            }>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14, paddingBottom: 8 }}>
+                <WideSpectrumWalkthrough />
+                <span style={{ font: '400 13px/1.4 var(--font-body)', color: 'var(--color-on-surface-variant)' }}>
+                    Without <strong style={{ color: 'var(--color-on-surface)' }}>Wide Spectrum</strong>, iOS removes whistling and
+                    instrument notes before Solkey can hear them. Your microphone is already on, so Mic Mode is waiting in Control
+                    Center — set it now, come back, and your iPhone remembers the choice for this browser.
+                </span>
+            </div>
+        </DialogPanel>
     )
 }
 

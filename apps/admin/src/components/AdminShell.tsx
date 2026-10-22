@@ -52,7 +52,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
                             'inline-flex items-center gap-2.5 shrink-0 rounded-md px-3 py-2.5',
                             'font-label font-semibold text-[13px] leading-none no-underline',
                             'transition-colors duration-150 ease-solkey',
-                            'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
+                            'focus-ring',
                             active
                                 ? 'bg-primary-soft text-on-primary-soft'
                                 : 'text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface',
@@ -81,7 +81,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
                             'md:mt-auto inline-flex items-center gap-2.5 shrink-0 cursor-pointer rounded-md px-3 py-2.5 border-0 bg-transparent',
                             'font-label font-semibold text-[13px] leading-none text-on-surface-variant',
                             'hover:bg-surface-container-high hover:text-on-surface transition-colors duration-150 ease-solkey',
-                            'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
+                            'focus-ring',
                         ].join(' ')}>
                         <Icon name="lock" size={16} />
                         <span className="hidden md:inline">Sign out</span>

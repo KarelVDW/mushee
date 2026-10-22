@@ -3,7 +3,9 @@
 import type { ScoreHighlight } from '@mushee/notation/components'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
-import type { PitchScope, ScoreManipulator } from './ScoreManipulator'
+import type { PitchScope } from '@/components/editor/pitchScope'
+
+import type { ScoreManipulator } from './ScoreManipulator'
 
 /** How long the flash over a just-rewritten range stays before it clears. */
 const FLASH_MS = 900

@@ -1,6 +1,7 @@
 import type { ClefType, Instrument, Interval, Measure, Note, Score } from '@mushee/notation/model'
 import { TimeSignature } from '@mushee/notation/model'
 
+import type { PitchScope } from '@/components/editor/pitchScope'
 import { Keybindings } from '@/lib/Keybindings'
 
 import { type ActionArgs, MINIMIZE_ACCIDENTALS, REMOVE_NOTE, type ScoreAction } from './actions'
@@ -9,13 +10,6 @@ import { ManipulationHistoryManager, type NoteAddress, type RestoredState, type 
 
 /** Guard so a malformed anchor/focus pair can never spin the range walk forever. */
 const MAX_RANGE = 100_000
-
-/**
- * What a pitch operation (transpose, minimize accidentals) acts on: the whole score, or only
- * the selected run. Only a multi-note selection can narrow one — see
- * {@link ScoreManipulator.selectionNarrowsPitchOps}.
- */
-export type PitchScope = 'score' | 'selection'
 
 /**
  * The editor's controller: it owns the current score and the note selection, turns mouse and

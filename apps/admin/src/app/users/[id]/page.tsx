@@ -254,7 +254,7 @@ function UserScores({ userId, scoreCount }: { userId: string; scoreCount: number
                                     'grid grid-cols-[1fr_auto_auto] items-center gap-4 text-left cursor-pointer',
                                     'border-0 bg-transparent rounded-md px-3 py-2.5 -mx-3',
                                     'hover:bg-surface-container-high transition-colors duration-150 ease-solkey',
-                                    'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
+                                    'focus-ring',
                                 ].join(' ')}>
                                 <span className="font-body font-medium text-[14px] leading-tight text-on-surface truncate">
                                     {score.title}

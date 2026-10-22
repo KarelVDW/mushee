@@ -146,7 +146,9 @@ function Footer() {
     )
 }
 
-function DialogScrim({ children, onDismiss }) {
+// The backdrop DialogPanel renders itself on (module-private, as in production's Dialog.tsx):
+// a backdrop click calls the panel's onClose, so omitting onClose makes the dialog non-dismissable.
+function Scrim({ children, onDismiss }) {
     return (
         <div
             onClick={onDismiss}
@@ -172,62 +174,64 @@ function DialogScrim({ children, onDismiss }) {
 function DialogPanel({ title, subtitle, eyebrow, children, footer, onClose, width = 560 }) {
     const sub = subtitle ?? eyebrow
     return (
-        <div
-            role="dialog"
-            aria-modal="true"
-            className="glass-panel"
-            style={{
-                borderRadius: 12,
-                boxShadow: 'var(--shadow-tonal)',
-                width,
-                maxWidth: '90vw',
-                maxHeight: '90vh',
-                display: 'flex',
-                flexDirection: 'column',
-            }}>
-            <header
+        <Scrim onDismiss={onClose}>
+            <div
+                role="dialog"
+                aria-modal="true"
+                className="glass-panel"
                 style={{
-                    padding: '24px 28px 16px',
+                    borderRadius: 12,
+                    boxShadow: 'var(--shadow-tonal)',
+                    width,
+                    maxWidth: '90vw',
+                    maxHeight: '90vh',
                     display: 'flex',
-                    alignItems: 'flex-start',
-                    justifyContent: 'space-between',
+                    flexDirection: 'column',
                 }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                    <ModalTitle>{title}</ModalTitle>
-                    {sub && (
-                        <span style={{ font: '400 13px/1.4 var(--font-body)', color: 'var(--color-on-surface-variant)' }}>{sub}</span>
-                    )}
-                </div>
-                {onClose && (
-                    <button
-                        onClick={onClose}
-                        aria-label="Close"
-                        style={{
-                            background: 'transparent',
-                            border: 0,
-                            color: 'var(--color-on-surface-variant)',
-                            cursor: 'pointer',
-                            padding: 4,
-                        }}>
-                        <Icon name="x" size={20} />
-                    </button>
-                )}
-            </header>
-            <div style={{ padding: '0 28px', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>{children}</div>
-            {footer && (
-                <footer
+                <header
                     style={{
-                        padding: '20px 28px',
+                        padding: '24px 28px 16px',
                         display: 'flex',
-                        justifyContent: 'flex-end',
-                        alignItems: 'center',
-                        gap: 12,
+                        alignItems: 'flex-start',
+                        justifyContent: 'space-between',
                     }}>
-                    {footer}
-                </footer>
-            )}
-        </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                        <ModalTitle>{title}</ModalTitle>
+                        {sub && (
+                            <span style={{ font: '400 13px/1.4 var(--font-body)', color: 'var(--color-on-surface-variant)' }}>{sub}</span>
+                        )}
+                    </div>
+                    {onClose && (
+                        <button
+                            onClick={onClose}
+                            aria-label="Close"
+                            style={{
+                                background: 'transparent',
+                                border: 0,
+                                color: 'var(--color-on-surface-variant)',
+                                cursor: 'pointer',
+                                padding: 4,
+                            }}>
+                            <Icon name="x" size={20} />
+                        </button>
+                    )}
+                </header>
+                <div style={{ padding: '0 28px', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>{children}</div>
+                {footer && (
+                    <footer
+                        style={{
+                            padding: '20px 28px',
+                            display: 'flex',
+                            justifyContent: 'flex-end',
+                            alignItems: 'center',
+                            gap: 12,
+                        }}>
+                        {footer}
+                    </footer>
+                )}
+            </div>
+        </Scrim>
     )
 }
 
-Object.assign(window, { TopNav, PageHeader, Footer, DialogScrim, DialogPanel })
+Object.assign(window, { TopNav, PageHeader, Footer, DialogPanel })

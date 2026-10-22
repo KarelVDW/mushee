@@ -13,6 +13,8 @@ type Phase = 'choose' | 'redirecting' | 'done'
 
 interface ChangePlanDialogProps {
     billing: BillingState
+    /** The tier to open on (a pricing card's request); otherwise the account's current plan. */
+    initialTier?: PlanTier['id']
     onClose: () => void
     /** Open the one-time packs dialog instead (subscriptions stay the headline). */
     onShowPacks?: () => void
@@ -24,9 +26,9 @@ interface ChangePlanDialogProps {
  * - paid → other paid tier/cadence: POST /billing/change (prorated in place).
  * - paid → free: POST /billing/cancel (keeps access until the period ends).
  */
-export function ChangePlanDialog({ billing: state, onClose, onShowPacks }: ChangePlanDialogProps) {
+export function ChangePlanDialog({ billing: state, initialTier, onClose, onShowPacks }: ChangePlanDialogProps) {
     const currentBilling: BillingInterval = state.interval ?? 'monthly'
-    const [selected, setSelected] = useState<PlanTier['id']>(state.tierId === 'beta' ? 'free' : state.tierId)
+    const [selected, setSelected] = useState<PlanTier['id']>(initialTier ?? (state.tierId === 'beta' ? 'free' : state.tierId))
     const [billing, setBilling] = useState<BillingInterval>(currentBilling)
     const [phase, setPhase] = useState<Phase>('choose')
 

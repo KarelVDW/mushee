@@ -138,12 +138,26 @@ inherited value doesn't change the serialized form, so nothing is marked dirty, 
 Score mutator owns the touch. Calling `measure.setClef(...)` directly changes only that
 measure — propagation is a Score responsibility, never a side effect of layout.
 
+Dirty tracking leaves the model through one typed payload, `ScorePatch` (`io/MusicXml.ts`):
+`Score.flushDirty()` returns the dirty measures keyed by index — or every measure after a
+structural change — plus the part list after an instrument change, then clears the dirty state
+(`null` when nothing changed). Only two calls mark dirt from outside a mutator:
+`redirty(patch)` puts a failed save's patch back, and `markInstrumentDirty()` flags the part list
+of a score rebuilt from a snapshot whose instrument differs from the saved one. Clearing is
+private to the flush.
+
 ## Navigation
 
 One traversal implementation lives on `Score` (`nextNote`, `previousNote`,
 `getNextMeasure`, `getPreviousMeasure`), built on `Measure.getNextNote/getPreviousNote` for the
 steps inside one measure. `Note.getNext()/getPrevious()` and `Measure.getNext()/getPrevious()`
 are thin delegates kept for ergonomics — do not add a second traversal path.
+
+Time has one implementation on `Score` too: `bpmAtBeat` (the marking at or before a position;
+`bpmAt(note)` delegates), `secondsAt` (the one clock — seconds from the top of the score, every
+marking applied at its exact beat) and `positionAfter` (a beat count from a measure back to a
+measure and beat). Playback, the metronome and recording read these rather than walking tempo
+markings or measure lengths themselves.
 
 ## Row packing (layout layer)
 

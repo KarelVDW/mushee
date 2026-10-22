@@ -11,7 +11,7 @@ High-fidelity React/JSX recreation of the Solkey web app. Cosmetic / interactive
 | `Icon.jsx`              | `<Icon>` — the custom Solkey glyph set; kept in sync with `packages/ui/src/Icon.tsx`.                   |
 | `Buttons.jsx`           | `<PrimaryButton>`, `<SecondaryButton>`, `<TertiaryButton>`, `<IconButton>`, `<ToggleButton>`.           |
 | `Inputs.jsx`            | `<TextField>` with the cyan underline + `<TextArea>`.                                                   |
-| `Chrome.jsx`            | `<TopNav>`, `<PageHeader>`, `<Footer>`, `<DialogScrim>` + `<DialogPanel>`.                              |
+| `Chrome.jsx`            | `<TopNav>`, `<PageHeader>`, `<Footer>`, `<DialogPanel>` (it renders its own scrim).                     |
 | `Landing.jsx`           | The public marketing landing page.                                                                      |
 | `Auth.jsx`              | The split-panel login / signup card with the brand-side gradient panel.                                 |
 | `Onboarding.jsx`        | The post-signup onboarding flow.                                                                        |

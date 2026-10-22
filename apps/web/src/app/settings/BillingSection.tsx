@@ -16,7 +16,7 @@ import { SettingsSection } from './SettingsSection'
 /**
  * Live Polar-backed subscription state: plan, renewal, credits, actions.
  * `requestedPlan` — a tier a pricing card sent the visitor here for: the plan
- * dialog opens on arrival, wherever plans can be bought.
+ * dialog opens on arrival with that tier selected, wherever plans can be bought.
  */
 export function BillingSection({ requestedPlan }: { requestedPlan?: PlanTier['id'] | null }) {
     const { data: billing, isPending, isError, refetch } = useBillingState()
@@ -111,6 +111,7 @@ export function BillingSection({ requestedPlan }: { requestedPlan?: PlanTier['id
             {changePlanOpen && canPurchase && (
                 <ChangePlanDialog
                     billing={billing}
+                    initialTier={requestedPlan ?? undefined}
                     onClose={() => setChangePlanOpen(false)}
                     onShowPacks={() => {
                         setChangePlanOpen(false)
