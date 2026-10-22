@@ -35,6 +35,8 @@ export interface TransportControlsProps {
     large?: boolean
     /** The mobile dock hides the metronome here and hosts it in the More sheet instead. */
     showMetronome?: boolean
+    /** A narrow header (EditorHeader `fit`): Stop takes no room at rest instead of keeping its hidden slot. */
+    collapseStop?: boolean
     shortcuts?: TransportShortcuts
 }
 
@@ -82,12 +84,13 @@ export function TransportControls({
     onMetronomeToggle,
     large = false,
     showMetronome = true,
+    collapseStop = false,
     shortcuts,
 }: TransportControlsProps) {
     const isRecording = recordingState !== 'idle'
     const isPlaying = playbackState === 'playing'
     // Stop keeps its slot (the centred transport never shifts) but only shows while something
-    // plays or records — at rest there is nothing to stop.
+    // plays or records — at rest there is nothing to stop. A narrow header can't spare the slot.
     const canStop = playbackState !== 'stopped' || isRecording
     const side = large ? 'top' : 'bottom'
 
@@ -95,8 +98,8 @@ export function TransportControls({
         <div className={`flex items-center shrink-0 ${large ? 'gap-1.5' : 'gap-2.5'}`}>
             <span
                 className={[
-                    'inline-flex transition-[opacity,visibility] duration-150 ease-solkey motion-reduce:transition-none',
-                    canStop ? 'visible opacity-100' : 'invisible opacity-0',
+                    'transition-[opacity,visibility] duration-150 ease-solkey motion-reduce:transition-none',
+                    canStop ? 'inline-flex visible opacity-100' : collapseStop ? 'hidden' : 'inline-flex invisible opacity-0',
                 ].join(' ')}>
                 <TransportBtn
                     size={large ? 40 : 36}

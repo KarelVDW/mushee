@@ -3,7 +3,17 @@ import { resolve } from 'node:path'
 
 import type { Locator, Page } from '@playwright/test'
 
-import { denyMicrophone, expect, MOCK_SCORE_ID, MOCK_SHARE_TOKEN, MOCK_TITLE, SELECTION_BANDS, test, waitForAutosave } from './fixtures'
+import {
+    denyMicrophone,
+    expect,
+    expectHeaderFitsViewport,
+    MOCK_SCORE_ID,
+    MOCK_SHARE_TOKEN,
+    MOCK_TITLE,
+    SELECTION_BANDS,
+    test,
+    waitForAutosave,
+} from './fixtures'
 import { mockRecording } from './recording'
 
 /**
@@ -573,26 +583,6 @@ test('the first tap on a note teaches where its actions are, once', async ({ pag
 })
 
 // --- Header chips: share / takes / export collapse to icon-only on phones ---
-
-/** The header's chip row must fit the phone viewport: no chip may poke past the right edge. */
-async function expectHeaderFitsViewport(page: Page): Promise<void> {
-    const header = page.locator('header')
-    const headerBox = await header.boundingBox()
-    const viewport = page.viewportSize()
-    expect(headerBox).not.toBeNull()
-    expect(viewport).not.toBeNull()
-    expect(headerBox?.x ?? -1).toBeGreaterThanOrEqual(0)
-    expect(headerBox?.width ?? Infinity).toBeLessThanOrEqual((viewport?.width ?? 0) + 1)
-    // The chips themselves stay inside the header's box (a flex row that overflowed
-    // would keep the header at viewport width while its children spill out).
-    for (const name of ['Share score', 'Recordings', 'Export score']) {
-        const box = await page.getByRole('button', { name, exact: true }).boundingBox()
-        expect(box, name).not.toBeNull()
-        expect((box?.x ?? 0) + (box?.width ?? Infinity), name).toBeLessThanOrEqual((headerBox?.x ?? 0) + (headerBox?.width ?? 0) + 1)
-    }
-    const overflow = await page.evaluate(() => (document.scrollingElement?.scrollWidth ?? 0) - document.documentElement.clientWidth)
-    expect(overflow).toBeLessThanOrEqual(1)
-}
 
 test('header chips are icon-only on phones and the header fits the viewport', async ({ page }) => {
     for (const name of ['Share score', 'Recordings', 'Export score']) {

@@ -27,7 +27,7 @@ import { ChangeInstrumentDialog } from './ChangeInstrumentDialog'
 import { PLAY_PAUSE_COMMAND, RECORD_COMMAND } from './commands'
 import { EditorAnnouncer, KeyboardHelp } from './EditorAnnouncer'
 import { EditorEmptyState } from './EditorEmptyState'
-import { EditorHeader, UNTITLED_SCORE } from './EditorHeader'
+import { EditorHeader, HEADER_FIT_QUERIES, type HeaderFit, UNTITLED_SCORE } from './EditorHeader'
 import { KeyboardShortcutsDialog } from './KeyboardShortcutsDialog'
 import { MeasureControls } from './MeasureControls'
 import { NoteToolDock } from './NoteToolDock'
@@ -97,6 +97,10 @@ export default function ScoreEditorPage() {
     // Phone-sized chrome: transport moves into the dock (thumb reach), the keyboard
     // shortcuts entry point disappears, and header/dock controls tighten up.
     const isMobile = useMediaQuery('(max-width: 767px)')
+    // Between the phone and the full desktop header, two compaction steps (HeaderFit).
+    const headerMedium = useMediaQuery(HEADER_FIT_QUERIES.medium)
+    const headerNarrow = useMediaQuery(HEADER_FIT_QUERIES.narrow)
+    const headerFit: HeaderFit = headerNarrow ? 'narrow' : headerMedium ? 'medium' : 'full'
 
     const { data: scoreDocument, error: loadError, refetch, isFetching } = useScoreDocument(id)
 
@@ -573,6 +577,7 @@ export default function ScoreEditorPage() {
                     onChangeInstrument={() => setInstrumentDialogOpen(true)}
                     autosave={autosave}
                     compact={isMobile}
+                    fit={headerFit}
                     transport={transport}
                     transposeOpen={transposeOpen}
                     onTransposeOpenChange={setTransposeOpen}

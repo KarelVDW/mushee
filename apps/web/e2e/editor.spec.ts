@@ -4,6 +4,7 @@ import { resolve } from 'node:path'
 import {
     denyMicrophone,
     expect,
+    expectHeaderFitsViewport,
     focusEditor,
     MOCK_SCORE_ID,
     MOCK_SHARE_TOKEN,
@@ -389,6 +390,53 @@ test('pointing at the tempo mark over the selected note draws no ghost note thro
     await page.mouse.move(mark.x + mark.width / 2, mark.y + mark.height / 2, { steps: 4 })
     await expect(page.getByText('Change tempo', { exact: true })).toBeVisible()
     await expect(ghost).toHaveCount(0)
+})
+
+// --- The header between phone and full desktop: it compacts rather than overflowing or overlapping ---
+
+for (const { width, step } of [
+    { width: 1024, step: 'icon-only score chips' },
+    { width: 820, step: 'icon-only Transpose, and one chip for undo, redo and shortcuts' },
+] as const) {
+    test(`at ${width}px the header fits with ${step}, the transport clear of the title and instrument`, async ({ page }) => {
+        await page.setViewportSize({ width, height: 800 })
+        await expectHeaderFitsViewport(page)
+        // Share, Recordings and Export drop their labels; the names stay.
+        await expect(page.getByRole('button', { name: 'Share score', exact: true })).toHaveText('')
+        const play = await page.getByRole('button', { name: 'Play', exact: true }).boundingBox()
+        for (const control of [
+            page.getByRole('button', { name: /^Change instrument/ }),
+            page.getByRole('textbox', { name: 'Score title' }),
+        ]) {
+            const box = await control.boundingBox()
+            const apart = (box?.x ?? 0) + (box?.width ?? 0) <= (play?.x ?? 0) || (play?.x ?? 0) + (play?.width ?? 0) <= (box?.x ?? 0)
+            expect(apart, 'Play overlaps the title or the instrument chip').toBe(true)
+        }
+        if (width < 1024) {
+            await expect(page.getByRole('button', { name: 'Transpose', exact: true })).toHaveText('')
+            await expect(page.getByRole('button', { name: 'Undo', exact: true })).toHaveCount(0)
+            await page.getByRole('button', { name: 'Undo, redo and shortcuts' }).click()
+            const menu = page.getByRole('dialog', { name: 'Undo, redo and shortcuts' })
+            await expect(menu.getByRole('button', { name: 'Undo' })).toHaveAttribute('aria-disabled', 'true')
+            await menu.getByRole('button', { name: 'Keyboard shortcuts' }).click()
+            await expect(page.getByRole('dialog', { name: 'Keyboard shortcuts' })).toBeVisible()
+        } else {
+            await expect(page.getByRole('button', { name: 'Transpose', exact: true })).toHaveText('Transpose')
+            await expect(page.getByRole('button', { name: 'Undo', exact: true })).toBeVisible()
+        }
+    })
+}
+
+test('the narrow header’s history chip undoes in place and stays open for the next one', async ({ page }) => {
+    await page.setViewportSize({ width: 820, height: 800 })
+    await page.getByRole('button', { name: 'Higher', exact: true }).click()
+    await page.getByRole('button', { name: 'Higher', exact: true }).click()
+    await page.getByRole('button', { name: 'Undo, redo and shortcuts' }).click()
+    const menu = page.getByRole('dialog', { name: 'Undo, redo and shortcuts' })
+    await menu.getByRole('button', { name: 'Undo' }).click()
+    await menu.getByRole('button', { name: 'Undo' }).click()
+    await expect(menu.getByRole('button', { name: 'Undo' })).toHaveAttribute('aria-disabled', 'true')
+    await expect(menu.getByRole('button', { name: 'Redo' })).not.toHaveAttribute('aria-disabled', 'true')
 })
 
 test('hovering a dock control names it, with its hint and live shortcut', async ({ page }) => {
