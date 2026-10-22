@@ -1,5 +1,6 @@
 import { Instrument } from '@mushee/notation/model/Instrument'
 import type { Note } from '@mushee/notation/model/Note'
+import type { Pitch } from '@mushee/notation/model/Pitch'
 import type { Score } from '@mushee/notation/model/Score'
 import { AccidentalMinimizer } from '@mushee/notation/model/util/AccidentalMinimizer'
 import { fill, makeScore, p, q } from '@mushee/notation/testing'
@@ -173,9 +174,9 @@ describe('AccidentalMinimizer', () => {
 
     describe('bestFifths', () => {
         /** One bar holding `pitches` as quarters, in order. */
-        const bar = (pitches: ReturnType<typeof p>[]) => {
-            const score = makeScore(1)
-            return fill(score, 0, pitches.map((pitch) => q(pitch))).notes
+        const bar = (pitches: Pitch[]) => {
+            const quarters = pitches.map((pitch) => q(pitch))
+            return fill(makeScore(1), 0, quarters).notes
         }
         // C, D, E, G, A: no F or B, so C, G and F major all spell them with no accidental.
         const undecided = () => bar([p('C', 4), p('D', 4), p('E', 4), p('G', 4), p('A', 4)])

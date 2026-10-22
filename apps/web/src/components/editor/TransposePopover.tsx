@@ -401,4 +401,3 @@ function NumberStepper({ value, min, max, onChange, ariaLabel, suffix, grow }: N
         </div>
     )
 }
-
