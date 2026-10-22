@@ -81,7 +81,8 @@ describe('NewScoreDialog', () => {
         const onCreate = vi.fn()
         mount(newScore({ titlePlaceholder: 'My first melody', onCreate }))
         expect(titleField().placeholder).toBe('My first melody')
-        expect(document.body.textContent).toContain('Optional — you can rename it any time.')
+        expect(document.body.textContent).toContain('Optional')
+        expect(document.body.textContent).not.toContain('rename it any time')
         const create = required(button('Create score'), 'Create score')
         expect(create.disabled).toBe(false)
 

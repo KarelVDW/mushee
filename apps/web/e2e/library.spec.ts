@@ -303,7 +303,7 @@ test('the create dialog takes an optional title, submits on Enter, and can be ca
     const create = page.getByRole('button', { name: 'Create score' })
     await expect(create).toBeEnabled()
     await expect(page.getByLabel('Title', { exact: true })).toHaveAttribute('placeholder', 'Untitled score')
-    await expect(dialog.getByText('Optional — you can rename it any time.')).toBeVisible()
+    await expect(dialog.getByText('Optional', { exact: true })).toBeVisible()
 
     // Cancel closes without creating.
     await page.getByRole('button', { name: 'Cancel' }).click()
@@ -341,6 +341,8 @@ test('the picker leads with popular tiles, the voice picked, and keeps the rest 
 
     await expect(dialog.getByText('What will you sing or play?')).toBeVisible()
     await expect(dialog.getByText('Sets the playback sound and helps Solkey listen.', { exact: true })).toBeVisible()
+    // The picked tile is the readout: no 'Instrument · Voice' eyebrow repeats it.
+    await expect(dialog.getByText(/^Instrument · /)).toHaveCount(0)
     // No onboarding answer: a new score starts on the voice.
     await expect(dialog.getByRole('button', { name: 'Pick Voice', exact: true })).toHaveAttribute('aria-pressed', 'true')
     for (const name of ['Piano', 'Guitar', 'Violin', 'Flute', 'Recorder', 'Alto Saxophone', 'Trumpet']) {

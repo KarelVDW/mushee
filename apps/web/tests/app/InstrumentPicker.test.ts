@@ -78,7 +78,8 @@ describe('InstrumentPicker', () => {
         expect(document.getElementById(group?.getAttribute('aria-labelledby') ?? '')?.textContent).toBe('What will you sing or play?')
         expect(host.textContent).toContain('Sets the playback sound and helps Solkey listen.')
         expect(host.textContent).not.toContain('change it later')
-        expect(host.textContent).toContain('Instrument · Voice')
+        // The picked tile is the readout: no 'Instrument · Voice' eyebrow repeats it.
+        expect(host.textContent).not.toContain('Instrument ·')
         // The search field has a real name, not just a placeholder.
         expect(search(host).placeholder).toBe('Filter instruments…')
     })
@@ -171,11 +172,10 @@ describe('InstrumentPicker', () => {
         expect(host.textContent).not.toContain(CHORD_LINE)
     })
 
-    it('leaves the chord line out where the caller turns it off (imports), and the eyebrow on request', () => {
-        const host = renderPicker(Instrument.Piano, { chordHint: false, showCurrentEyebrow: false })
+    it('leaves the chord line out where the caller turns it off (imports)', () => {
+        const host = renderPicker(Instrument.Piano, { chordHint: false })
         expect(host.textContent).not.toContain(CHORD_LINE)
         expect(host.querySelector('[aria-live]')).toBeNull()
-        expect(host.textContent).not.toContain('Instrument · Piano')
     })
 
     it('can focus its search field on mount', () => {

@@ -91,8 +91,6 @@ interface InstrumentPickerProps {
     onChange: (instrument: Instrument) => void
     /** The one-line melody note under the label while a chordal instrument is picked (contract C13). Off for imports. */
     chordHint?: boolean
-    /** The 'Instrument · Piano' readout beside the label; off where the dialog already names the current instrument. */
-    showCurrentEyebrow?: boolean
     /** Focus the search field on mount — when the picker opens on request (the import dialog's 'Change'). */
     autoFocusSearch?: boolean
 }
@@ -103,9 +101,10 @@ interface InstrumentPickerProps {
  * (grouped by family, the popular ones left out so each 'Pick X' name exists once), and a
  * search field that searches them all. The list opens by itself while searching or when
  * the current instrument isn't a popular one; a hidden duplicate a score already uses
- * (an imported Horn in C) still shows, selected, in its family.
+ * (an imported Horn in C) still shows, selected, in its family. The picked tile or chip is
+ * the only readout of the choice — no 'Instrument · Piano' line repeats it.
  */
-export function InstrumentPicker({ value, onChange, chordHint = true, showCurrentEyebrow = true, autoFocusSearch }: InstrumentPickerProps) {
+export function InstrumentPicker({ value, onChange, chordHint = true, autoFocusSearch }: InstrumentPickerProps) {
     const labelId = useId()
     const [search, setSearch] = useState('')
     const [initial] = useState(value)
@@ -130,12 +129,9 @@ export function InstrumentPicker({ value, onChange, chordHint = true, showCurren
     return (
         <div role="group" aria-labelledby={labelId} className="flex flex-col gap-3 flex-1 min-h-0">
             <div className="flex flex-col">
-                <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-                    <span id={labelId} className="font-label font-semibold text-[14px] leading-tight text-on-surface">
-                        What will you sing or play?
-                    </span>
-                    {showCurrentEyebrow && <Eyebrow>Instrument · {value.displayName}</Eyebrow>}
-                </div>
+                <span id={labelId} className="font-label font-semibold text-[14px] leading-tight text-on-surface">
+                    What will you sing or play?
+                </span>
                 <span className="mt-1 font-body font-normal text-[12px] leading-[1.4] text-on-surface-variant">
                     Sets the playback sound and helps Solkey listen.
                 </span>
