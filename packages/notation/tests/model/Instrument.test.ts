@@ -65,6 +65,38 @@ describe('Instrument', () => {
         expect(Instrument.findByDisplayName('Theremin')).toBeUndefined()
     })
 
+    it('shows the singer and the double bass under plain names, keeping their ids', () => {
+        expect(Instrument.VoiceLead.displayName).toBe('Voice')
+        expect(Instrument.VoiceLead.id).toBe('voice-lead')
+        expect(Instrument.Contrabass.displayName).toBe('Double Bass')
+        expect(Instrument.Contrabass.id).toBe('contrabass')
+    })
+
+    it('findByDisplayName still resolves a renamed instrument by its old name', () => {
+        expect(Instrument.findByDisplayName('Voice Lead')).toBe(Instrument.VoiceLead)
+        expect(Instrument.findByDisplayName(' voice lead ')).toBe(Instrument.VoiceLead)
+        expect(Instrument.findByDisplayName('Voice')).toBe(Instrument.VoiceLead)
+        expect(Instrument.findByDisplayName('Contrabass')).toBe(Instrument.Contrabass)
+        expect(Instrument.findByDisplayName('double bass')).toBe(Instrument.Contrabass)
+        expect(Instrument.VoiceLead.legacyNames).toEqual(['Voice Lead'])
+        expect(Instrument.Piano.legacyNames).toEqual([])
+    })
+
+    it('gives every current and legacy name to exactly one instrument', () => {
+        const names = [...Instrument.selectable(), Instrument.Woodblock]
+            .flatMap((i) => [i.displayName, ...i.legacyNames])
+            .map((n) => n.toLowerCase())
+        expect(new Set(names).size).toBe(names.length)
+    })
+
+    it('marks the instruments usually played in chords', () => {
+        const chordal = Instrument.selectable().filter((i) => i.playsChords)
+        expect(chordal).toEqual(expect.arrayContaining([Instrument.Piano, Instrument.Guitar, Instrument.Harmonica]))
+        expect(chordal).toHaveLength(3)
+        expect(Instrument.BassGuitar.playsChords).toBe(false)
+        expect(Instrument.VoiceLead.playsChords).toBe(false)
+    })
+
     it('soundingMidi adds the instrument’s chromatic transposition to the written pitch', () => {
         const c5 = new Pitch({ name: 'C', octave: 5 })
         expect(Instrument.Piano.soundingMidi(c5)).toBe(72)
@@ -77,6 +109,82 @@ describe('Instrument', () => {
         expect(Instrument.Guitar.diatonicTranspose).toBe(-7)
         expect(Instrument.BassGuitar.chromaticTranspose).toBe(-12)
         expect(Instrument.BassGuitar.diatonicTranspose).toBe(-7)
+    })
+})
+
+describe('Instrument.pickable', () => {
+    const hidden = [
+        Instrument.ViolinLead,
+        Instrument.Violoncello,
+        Instrument.OrchestralFlute,
+        Instrument.ConcertClarinet,
+        Instrument.ClarinetEnsemble,
+        Instrument.Brass,
+        Instrument.HornInC,
+        Instrument.HornInD,
+        Instrument.BaritoneHornTreble,
+    ]
+
+    it('leaves the duplicates and section patches out, and keeps them registered', () => {
+        const pickable = Instrument.pickable()
+        for (const instrument of hidden) {
+            expect(pickable).not.toContain(instrument)
+            expect(instrument.isPickable).toBe(false)
+            expect(Instrument.selectable()).toContain(instrument)
+            expect(Instrument.byId(instrument.id)).toBe(instrument)
+            expect(Instrument.findByDisplayName(instrument.displayName)).toBe(instrument)
+        }
+        expect(pickable).toHaveLength(Instrument.selectable().length - hidden.length)
+    })
+
+    it('leaves the metronome Woodblock out', () => {
+        expect(Instrument.Woodblock.isPickable).toBe(false)
+        expect(Instrument.pickable()).not.toContain(Instrument.Woodblock)
+    })
+
+    it('keeps the plainly named instruments, Cello and Violin among them', () => {
+        for (const instrument of [Instrument.Cello, Instrument.Violin, Instrument.Flute, Instrument.Clarinet, Instrument.FrenchHorn]) {
+            expect(instrument.isPickable).toBe(true)
+            expect(Instrument.pickable()).toContain(instrument)
+        }
+    })
+})
+
+describe('Instrument.popular', () => {
+    it('leads with the voice, then the most played instruments', () => {
+        expect(Instrument.popular().map((i) => i.displayName)).toEqual([
+            'Voice',
+            'Piano',
+            'Guitar',
+            'Violin',
+            'Flute',
+            'Recorder',
+            'Alto Saxophone',
+            'Trumpet',
+        ])
+    })
+
+    it('lists only pickable instruments, each once', () => {
+        const popular = Instrument.popular()
+        expect(new Set(popular).size).toBe(popular.length)
+        for (const instrument of popular) expect(instrument.isPickable).toBe(true)
+    })
+})
+
+describe('Instrument.byCategory', () => {
+    it('groups the pickable instruments by default', () => {
+        const grouped = Instrument.byCategory().flatMap((g) => g.instruments)
+        expect(grouped).toHaveLength(Instrument.pickable().length)
+        expect(grouped).not.toContain(Instrument.ViolinLead)
+    })
+
+    it('groups any list in family order and drops empty families', () => {
+        const grouped = Instrument.byCategory([Instrument.Trumpet, Instrument.Guitar, Instrument.VoiceLead, Instrument.Cello])
+        expect(grouped).toEqual([
+            { category: 'Voice', instruments: [Instrument.VoiceLead] },
+            { category: 'Strings', instruments: [Instrument.Cello, Instrument.Guitar] },
+            { category: 'Brass', instruments: [Instrument.Trumpet] },
+        ])
     })
 })
 
@@ -95,7 +203,7 @@ describe('Instrument.selectableByCategory', () => {
 
     it('lists families in fixed display order without the percussion-only group', () => {
         const categories = Instrument.selectableByCategory().map((g) => g.category)
-        expect(categories).toEqual(['Keyboard', 'Brass', 'Woodwinds', 'Voice', 'Strings', 'Folk & World'])
+        expect(categories).toEqual(['Voice', 'Keyboard', 'Strings', 'Woodwinds', 'Brass', 'Folk & World'])
     })
 
     it('sorts instruments alphabetically within each family', () => {

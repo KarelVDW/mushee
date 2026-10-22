@@ -404,6 +404,32 @@ describe('instrument serialization round-trip', () => {
         const restored = new ScoreDeserializer(input).toScore()
         expect(restored.instrument).toBe(Instrument.Cello)
     })
+
+    it('reloads a score saved under a renamed instrument as the same instrument', () => {
+        // Scores saved before the rename carry 'Voice Lead' / 'Contrabass' as part and instrument
+        // name. Even without a midi program to fall back on, the old name finds the same instrument.
+        for (const [legacy, instrument, current] of [
+            ['Voice Lead', Instrument.VoiceLead, 'Voice'],
+            ['Contrabass', Instrument.Contrabass, 'Double Bass'],
+        ] as const) {
+            const score = makeScore(1)
+            score.setInstrument(instrument)
+            const input = toInput(score)
+            delete input.partList.scoreParts[0].midiInstrument
+            input.partList.scoreParts[0].partName = legacy
+            input.partList.scoreParts[0].scoreInstrument = { id: 'P1-I1', instrumentName: legacy }
+            const restored = new ScoreDeserializer(input).toScore()
+            expect(restored.instrument).toBe(instrument)
+            expect(restored.instrument.displayName).toBe(current)
+        }
+    })
+
+    it('saves a renamed instrument under its new name and reloads it', () => {
+        const score = makeScore(1)
+        score.setInstrument(Instrument.VoiceLead)
+        expect(toInput(score).partList.scoreParts[0].scoreInstrument?.instrumentName).toBe('Voice')
+        expect(roundTrip(score).instrument).toBe(Instrument.VoiceLead)
+    })
 })
 
 describe('multi-measure round-trip', () => {
