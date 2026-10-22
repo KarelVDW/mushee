@@ -6,7 +6,7 @@ import type { PitchScope } from '@/components/editor/pitchScope'
 import { TransposePopover } from '@/components/editor/TransposePopover'
 import { ChipToggle, Icon } from '@/components/ui'
 
-import { PopoverChip } from './NoteToolDock'
+import { PopoverChip } from './PopoverChip'
 import type { ScoreManipulator } from './ScoreManipulator'
 
 /** Where the header's transpose popover opens: below its chip, right-aligned to it. */
