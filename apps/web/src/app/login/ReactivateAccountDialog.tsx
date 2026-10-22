@@ -12,7 +12,7 @@ interface ReactivateAccountDialogProps {
     purgeAfter?: string
     /** The user reactivated — continue into the app. */
     onReactivated: () => void
-    /** The user let the deletion stand — they're signed out again. */
+    /** The user let the deletion stand — they're signed out again, and the sign-in card says until when it can be undone. */
     onDecline: () => void
 }
 
@@ -42,10 +42,10 @@ export function ReactivateAccountDialog({ purgeAfter, onReactivated, onDecline }
             footer={
                 <>
                     <TertiaryButton danger onClick={() => void decline()}>
-                        {declining ? 'Signing out…' : 'Continue deletion'}
+                        {declining ? 'Signing out…' : 'Keep it deleted'}
                     </TertiaryButton>
+                    {/* A dialog confirm stays flat: the magenta pop is for one hero CTA per page. */}
                     <PrimaryButton
-                        emphasis="pop"
                         disabled={declining || reactivation.isPending}
                         onClick={() => reactivation.mutate(undefined, { onSuccess: onReactivated })}>
                         {reactivation.isPending ? 'Reactivating…' : 'Reactivate my account'}
