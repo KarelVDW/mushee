@@ -23,6 +23,7 @@ import {
 } from '@/components/ui'
 import { ApiError, NetworkError, type ScoreMeta } from '@/lib/api'
 import { useSession } from '@/lib/auth-client'
+import { formatRelativeTime, formatShortDate } from '@/lib/dates'
 import { useCreateScore, useDeleteScore, useDuplicateScore, useScores } from '@/lib/queries'
 import { type ImportedScoreFile, ScoreFileImporter } from '@/lib/ScoreFileImporter'
 import { useDebouncedValue } from '@/lib/useDebouncedValue'
@@ -30,23 +31,6 @@ import { useDebouncedValue } from '@/lib/useDebouncedValue'
 import { DeleteScoreDialog } from './DeleteScoreDialog'
 import { ImportScoreDialog } from './ImportScoreDialog'
 import { NewScoreDialog } from './NewScoreDialog'
-
-function formatDate(iso: string): string {
-    return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
-}
-
-function relativeTime(iso: string): string {
-    const diff = Date.now() - new Date(iso).getTime()
-    const minutes = Math.floor(diff / 60_000)
-    const hours = Math.floor(minutes / 60)
-    const days = Math.floor(hours / 24)
-    if (days > 7) return formatDate(iso)
-    if (days > 1) return `${days} days ago`
-    if (days === 1) return 'Yesterday'
-    if (hours >= 1) return `${hours}h ago`
-    if (minutes >= 1) return `${minutes}m ago`
-    return 'Just now'
-}
 
 export default function ScoresPage() {
     const router = useRouter()
@@ -384,14 +368,14 @@ function ScoreRow({
                     )}
                 </button>
                 <span className="md:hidden font-body font-normal text-[12px] leading-none text-on-surface-variant">
-                    {relativeTime(score.updatedAt)}
+                    {formatRelativeTime(score.updatedAt)}
                 </span>
             </div>
             <span role="cell" className="max-md:hidden font-body font-normal text-[13px] leading-none text-on-surface-variant">
-                {formatDate(score.createdAt)}
+                {formatShortDate(score.createdAt)}
             </span>
             <span role="cell" className="max-md:hidden font-body font-normal text-[13px] leading-none text-on-surface-variant">
-                {relativeTime(score.updatedAt)}
+                {formatRelativeTime(score.updatedAt)}
             </span>
             <div role="cell" className="flex gap-2 justify-end">
                 <IconButton

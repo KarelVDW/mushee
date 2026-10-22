@@ -12,7 +12,7 @@ export function nextPathFrom(search: string, fallback = LIBRARY_PATH): string {
     return safeNextPath(new URLSearchParams(search).get('next'), fallback)
 }
 
-/** `?next=<path>` for a link, or an empty string when the destination is just the fallback. */
+/** `path` with `?next=<next>` appended, or `path` unchanged when there is no destination or it is just the library. */
 export function withNext(path: string, next: string | null | undefined): string {
     return next && next !== LIBRARY_PATH ? `${path}?next=${encodeURIComponent(next)}` : path
 }

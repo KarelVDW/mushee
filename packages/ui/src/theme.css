@@ -73,8 +73,10 @@
 
     /* Motion */
     --ease-solkey: cubic-bezier(0.2, 0.8, 0.2, 1);
-    /* animate-solkey-spin — the busy spinner (BusyNotice); keyframes below. */
+    /* animate-solkey-spin — the busy ring (BusyNotice); animate-solkey-spin-glyph — the
+     loader-glyph Spinner, which turns at a slower 1s. One keyframes rule below. */
     --animate-solkey-spin: solkey-spin 700ms linear infinite;
+    --animate-solkey-spin-glyph: solkey-spin 1s linear infinite;
 
     /* Type families — exposed as Tailwind utilities (font-display, font-body, …).
      Values reference the next/font CSS variables that each app's layout.tsx sets

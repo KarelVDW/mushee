@@ -27,6 +27,7 @@ export function DeleteAccountDialog({ email, onCancel, onConfirm }: DeleteAccoun
     const [ack, setAck] = useState(false)
     const deletion = useRequestAccountDeletion()
     const done = deletion.isSuccess
+    const purgeDate = formatPurgeDate(deletion.data?.purgeAfter)
 
     const phraseMatch = typed.trim().toLowerCase() === PHRASE
     const canSubmit = phraseMatch && pw.length > 0 && ack && !deletion.isPending
@@ -81,9 +82,8 @@ export function DeleteAccountDialog({ email, onCancel, onConfirm }: DeleteAccoun
                     </span>
                     <span className="font-body font-normal text-[14px] leading-normal text-on-surface-variant">
                         Thanks for being here. Changed your mind? Sign back in with{' '}
-                        <strong className="text-on-surface">{email ?? 'your email'}</strong> before{' '}
-                        <strong className="text-on-surface">{formatPurgeDate(deletion.data?.purgeAfter, 'in 7 days')}</strong> and
-                        everything will be right where you left it.
+                        <strong className="text-on-surface">{email ?? 'your email'}</strong> {purgeDate ? 'before' : 'within'}{' '}
+                        <strong className="text-on-surface">{purgeDate ?? '7 days'}</strong> and everything will be right where you left it.
                     </span>
                 </div>
             ) : (

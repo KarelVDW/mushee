@@ -240,30 +240,22 @@ export function useSaveKeyboardShortcuts() {
     })
 }
 
-const accountKeys = {
-    deletion: ['account', 'deletion'] as const,
-}
-
 /**
- * Asks whether the signed-in account is soft-deleted (the sign-in flow's check). Always a
- * fresh request and never retried: a cached answer could belong to the previous sign-in or
- * account in this tab, and a retry backoff would hold sign-in up — the caller treats a
- * failure as "not pending" and carries on.
+ * Asks whether the signed-in account is soft-deleted (the sign-in flow's check). A plain
+ * request, deliberately kept out of the query cache: a cached answer could belong to the
+ * previous sign-in or account in this tab, and when one account signs in over another,
+ * SessionCacheScope clears the cache mid-check — which cancels an in-flight cached fetch,
+ * and the caller would read that as "not pending". Never retried either: a backoff would
+ * hold sign-in up — the caller treats a failure as "not pending" and carries on.
  */
 export function useCheckPendingDeletion() {
-    const queryClient = useQueryClient()
-    return useCallback(
-        () => queryClient.fetchQuery({ queryKey: accountKeys.deletion, queryFn: getAccountDeletionStatus, staleTime: 0, retry: false }),
-        [queryClient],
-    )
+    return getAccountDeletionStatus
 }
 
 /** Soft-deletes the account (7-day grace period) after password re-auth. */
 export function useRequestAccountDeletion() {
-    const queryClient = useQueryClient()
     return useMutation({
         mutationFn: (password: string) => requestAccountDeletion(password),
-        onSuccess: () => queryClient.removeQueries({ queryKey: accountKeys.deletion }),
         // The dialog shows wrong-password feedback inline; a toast would double up.
         meta: { silentError: true },
     })
@@ -306,10 +298,8 @@ export function useSignOut() {
 }
 
 export function useReactivateAccount() {
-    const queryClient = useQueryClient()
     return useMutation({
         mutationFn: () => reactivateAccount(),
-        onSuccess: () => queryClient.removeQueries({ queryKey: accountKeys.deletion }),
         meta: { errorMessage: "Couldn't reactivate your account. Please try again." },
     })
 }
@@ -343,7 +333,7 @@ export function usePlanCatalogue(): PlanCatalogue {
 
 // ── Billing (Polar) ─────────────────────────────────────────────────────────
 
-export const billingKeys = {
+const billingKeys = {
     subscription: ['billing', 'subscription'] as const,
 }
 
@@ -352,6 +342,16 @@ export function useBillingState() {
         queryKey: billingKeys.subscription,
         queryFn: getBillingState,
     })
+}
+
+/**
+ * Refetches the subscription state, for a change that lands server-side rather than
+ * through one of the billing mutations below (a pack's minutes arriving via the Polar
+ * webhook after checkout).
+ */
+export function useRefreshBillingState() {
+    const queryClient = useQueryClient()
+    return useCallback(() => queryClient.invalidateQueries({ queryKey: billingKeys.subscription }), [queryClient])
 }
 
 /** Creates a Polar checkout and sends the browser there. */

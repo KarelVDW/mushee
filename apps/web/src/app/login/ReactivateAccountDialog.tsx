@@ -25,7 +25,7 @@ export function ReactivateAccountDialog({ purgeAfter, onReactivated, onDecline }
     const reactivation = useReactivateAccount()
     const [declining, setDeclining] = useState(false)
 
-    const purgeDate = formatPurgeDate(purgeAfter, 'soon')
+    const purgeDate = formatPurgeDate(purgeAfter)
 
     const decline = async () => {
         if (declining || reactivation.isPending) return
@@ -37,7 +37,7 @@ export function ReactivateAccountDialog({ purgeAfter, onReactivated, onDecline }
     return (
         <DialogPanel
             title="Your account is set to be deleted."
-            subtitle={`Everything will be permanently deleted on ${purgeDate}.`}
+            subtitle={`Everything will be permanently deleted ${purgeDate ? `on ${purgeDate}` : 'at the end of the 7-day grace period'}.`}
             width={520}
             footer={
                 <>

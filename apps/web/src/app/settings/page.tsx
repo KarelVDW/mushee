@@ -1,6 +1,5 @@
 'use client'
 
-import { useQueryClient } from '@tanstack/react-query'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
@@ -25,7 +24,7 @@ import { track } from '@/lib/analytics'
 import { useSession } from '@/lib/auth-client'
 import { downloadBlob } from '@/lib/FileDownload'
 import { type PlanTier, requestedPlanFrom } from '@/lib/plans'
-import { billingKeys, useAllRecordings, useExportAccountData, useScores, useSignOut, useUpdateProfile } from '@/lib/queries'
+import { useAllRecordings, useExportAccountData, useRefreshBillingState, useScores, useSignOut, useUpdateProfile } from '@/lib/queries'
 
 import { BillingSection } from './BillingSection'
 import { ChangePasswordDialog } from './ChangePasswordDialog'
@@ -37,7 +36,7 @@ type Tab = 'profile' | 'account'
 export default function SettingsPage() {
     const router = useRouter()
     const { data: session } = useSession()
-    const queryClient = useQueryClient()
+    const refreshBillingState = useRefreshBillingState()
     const signOut = useSignOut()
     const [tab, setTab] = useState<Tab>('profile')
 
@@ -82,10 +81,10 @@ export default function SettingsPage() {
             // refresh the balance once it has had a moment to arrive.
             showToast('Payment confirmed — your minutes are on their way!', 'info')
             window.history.replaceState(null, '', '/settings')
-            const timer = setTimeout(() => void queryClient.invalidateQueries({ queryKey: billingKeys.subscription }), 4000)
+            const timer = setTimeout(() => void refreshBillingState(), 4000)
             return () => clearTimeout(timer)
         }
-    }, [queryClient])
+    }, [refreshBillingState])
 
     const exportData = useExportAccountData()
     /** GDPR portability: every score (MusicXML + JSON), profile and settings, zipped in the browser. */
