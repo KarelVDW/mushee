@@ -18,38 +18,6 @@ const MORE_METERS: TimeSignature[] = [
     new TimeSignature(12, 8),
 ]
 
-/**
- * A meter in plain words, counted in the beat the metronome and the count-in click
- * (TimeSignature.pulse): "4 beats", "2 swaying beats" (6/8), "2 long beats" (2/2),
- * "3 quick beats" (3/8). Deriving the words from the pulse keeps them from ever
- * contradicting what the user hears.
- */
-export class MeterWords {
-    constructor(readonly timeSignature: TimeSignature) {}
-
-    /** How each beat feels: swaying (compound), long (a half-note pulse), quick (an eighth), or plain. */
-    get feel(): string | null {
-        const { timeSignature } = this
-        if (timeSignature.isCompound) return 'swaying'
-        const beats = timeSignature.pulse.beats
-        if (beats > 1) return 'long'
-        if (beats < 1) return 'quick'
-        return null
-    }
-
-    /** "4 beats", "2 swaying beats". */
-    get beats(): string {
-        const count = this.timeSignature.pulsesPerMeasure
-        const noun = count === 1 ? 'beat' : 'beats'
-        return [count, this.feel, noun].filter(Boolean).join(' ')
-    }
-
-    /** "4 beats in a bar". */
-    get perBar(): string {
-        return `${this.beats} in a bar`
-    }
-}
-
 interface TimeSignaturePopoverProps {
     active: { beatAmount: number; beatType: number }
     onSelect: (beatAmount: number, beatType: number) => void
@@ -90,7 +58,7 @@ export function TimeSignaturePopover({
             onClick={() => onSelect(meter.beatAmount, meter.beatType)}
             className="flex-col justify-center gap-1 w-18 h-18 px-1">
             <TimeSignatureIcon beatAmount={meter.beatAmount} beatType={meter.beatType} size={30} />
-            <span className="font-label font-medium text-[11px] leading-tight text-center">{new MeterWords(meter).beats}</span>
+            <span className="font-label font-medium text-[11px] leading-tight text-center">{meter.plainName}</span>
         </PopoverOption>
     )
 

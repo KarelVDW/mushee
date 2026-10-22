@@ -5,8 +5,6 @@ import { Bravura } from '@mushee/notation/engraving/Bravura'
 import { TUPLET_NUMBER_SCALE } from '@mushee/notation/engraving/constants'
 import { type Accidental, CLEF_DEFS, Duration, type DurationType } from '@mushee/notation/model'
 
-import { KeyName } from '@/components/editor/KeySignaturePopover'
-
 import { LENGTH_NEEDS_ONE_NOTE } from './commands'
 import type { ScoreManipulator, ScoreSettings } from './ScoreManipulator'
 
@@ -136,7 +134,7 @@ export class ScoreSettingsWords {
 
     /** "D major", "A minor". */
     get key(): string {
-        return KeyName.of(this.settings.key).long
+        return this.settings.key.displayName
     }
 
     get keyLabel(): string {

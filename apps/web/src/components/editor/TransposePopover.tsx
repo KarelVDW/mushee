@@ -4,7 +4,7 @@ import { ScoreView } from '@mushee/notation/components'
 import { Interval, type IntervalQuality, type Note, Score } from '@mushee/notation/model'
 import { type ReactNode, useCallback, useEffect, useMemo, useState } from 'react'
 
-import { KeyName, KeySignatureGrid } from '@/components/editor/KeySignaturePopover'
+import { KeySignatureGrid } from '@/components/editor/KeySignaturePopover'
 import type { PitchScope } from '@/components/editor/pitchScope'
 import { UnitNumberField } from '@/components/editor/UnitNumberField'
 import { Eyebrow, Icon, Popover, PopoverOption, PrimaryButton, Segmented, TertiaryButton } from '@/components/ui'
@@ -160,7 +160,7 @@ export function TransposePopover({
     }, [preview, sheet])
     // The key the whole score lands in, read off the preview — it ran the very same transpose.
     const landingKey = preview.firstMeasure?.keySignature
-    const keyAfter = effectiveScope === 'score' && !interval.isUnison && landingKey ? KeyName.of(landingKey).long : null
+    const keyAfter = effectiveScope === 'score' && !interval.isUnison && landingKey ? landingKey.displayName : null
 
     // Aim the canvas pulse at the current scope while open; clear it on close.
     useEffect(() => {
@@ -298,8 +298,7 @@ export function TransposePopover({
                 <>
                     <div className="flex items-center justify-between gap-3">
                         <span className="font-body font-normal text-[13px] leading-none text-on-surface-variant">
-                            From <span className="font-medium text-on-surface">{currentKey ? KeyName.of(currentKey).long : 'C major'}</span>{' '}
-                            to:
+                            From <span className="font-medium text-on-surface">{currentKey ? currentKey.displayName : 'C major'}</span> to:
                         </span>
                         <DirectionControl direction={direction} onChange={setDirection} />
                     </div>

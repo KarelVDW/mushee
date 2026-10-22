@@ -8,7 +8,7 @@ import { ClefPopover } from '@/components/editor/ClefPopover'
 import { KeySignaturePopover } from '@/components/editor/KeySignaturePopover'
 import type { PitchScope } from '@/components/editor/pitchScope'
 import { TempoPopover } from '@/components/editor/TempoPopover'
-import { MeterWords, TimeSignaturePopover } from '@/components/editor/TimeSignaturePopover'
+import { TimeSignaturePopover } from '@/components/editor/TimeSignaturePopover'
 import { ChipToggle, Icon, Segmented, ToolGroup } from '@/components/ui'
 
 import { LOWER_PITCH, RAISE_PITCH, SET_ACCIDENTAL, SET_DURATION, TOGGLE_DOT, TOGGLE_REST } from './actions'
@@ -333,7 +333,7 @@ export function NoteToolDock({
                                 ariaLabel={words.timeLabel}
                                 disabled={tools.scoreSettings.disabled}
                                 disabledReason={tools.scoreSettings.reason}
-                                hint={new MeterWords(settings.timeSignature).perBar}
+                                hint={settings.timeSignature.plainNamePerBar}
                                 chip={<span className="font-mono font-medium text-[13px]">{words.time}</span>}>
                                 {({ anchorRef, className, close }) => (
                                     <TimeSignaturePopover

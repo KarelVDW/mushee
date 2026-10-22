@@ -2,7 +2,6 @@
 
 import type { Score } from '@mushee/notation/model'
 
-import { MeterWords } from '@/components/editor/TimeSignaturePopover'
 import { Icon } from '@/components/ui'
 import type { ImportedScoreFile } from '@/lib/ScoreFileImporter'
 
@@ -24,7 +23,7 @@ export class ImportSummary {
     /** "in 3/4 — 3 beats in a bar —": the meter, with the beats a listener counts in it. */
     get meter(): string | null {
         const meter = this.score.firstMeasure?.timeSignature
-        return meter ? `in ${meter.beatAmount}/${meter.beatType} — ${new MeterWords(meter).perBar} —` : null
+        return meter ? `in ${meter.beatAmount}/${meter.beatType} — ${meter.plainNamePerBar} —` : null
     }
 
     /** "We read 2 bars in 3/4 — 3 beats in a bar — from your file. Check the title, then create the score." */

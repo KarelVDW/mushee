@@ -9,47 +9,6 @@ import { Popover, PopoverOption } from '@/components/ui'
 // Key signatures grouped flats → C → sharps, each labelled by its major key.
 const KEY_ROWS: number[][] = [[-7, -6, -5, -4, -3, -2, -1], [0], [1, 2, 3, 4, 5, 6, 7]]
 
-/** Relative minor: three fifths above its major's signature (A minor shares C major's no sharps). */
-const RELATIVE_MINOR_FIFTHS = 3
-
-/**
- * How a key is named for people — "D major", "A minor" — from a signature's fifths and mode.
- * A minor key names its own tonic, the relative minor three fifths up the circle. The words
- * the key chip, its tooltip and the transpose readout share.
- */
-export class KeyName {
-    constructor(
-        readonly fifths: number,
-        readonly mode?: string,
-    ) {}
-
-    /** The name of a key signature (or any `{ fifths, mode }` value). */
-    static of(key: { fifths: number; mode?: string }): KeyName {
-        return new KeyName(key.fifths, key.mode)
-    }
-
-    get isMinor(): boolean {
-        return this.mode === 'minor'
-    }
-
-    /** The tonic as a reader names it: "D", "B♭", "F♯". */
-    get tonic(): string {
-        return KeySignature.majorKeyName(this.isMinor ? this.fifths + RELATIVE_MINOR_FIFTHS : this.fifths)
-    }
-
-    /** "D major", "A minor". */
-    get long(): string {
-        return `${this.tonic} ${this.isMinor ? 'minor' : 'major'}`
-    }
-
-    /** Both keys the signature can stand for: "D major · B minor". */
-    get readings(): string {
-        const major = KeySignature.majorKeyName(this.fifths)
-        const minor = KeySignature.majorKeyName(this.fifths + RELATIVE_MINOR_FIFTHS)
-        return `${major} major · ${minor} minor`
-    }
-}
-
 /**
  * Cell, glyph and label sizes per grid size: `md` is the key-signature picker's own,
  * `sm` the tighter grid inside the transpose popover's key tab. Labels never go under 11px.
@@ -91,7 +50,7 @@ export function KeySignatureGrid({ active, onSelect, size, ariaLabel }: KeySigna
                                 key={fifths}
                                 active={fifths === active}
                                 ariaLabel={`${name} major`}
-                                title={new KeyName(fifths).readings}
+                                title={KeySignature.readingsOf(fifths)}
                                 onClick={() => onSelect(fifths)}
                                 className={`flex-col justify-end gap-0.5 ${sizes.cell}`}>
                                 <span className="flex flex-1 items-center">

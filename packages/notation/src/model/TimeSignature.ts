@@ -61,6 +61,31 @@ export class TimeSignature {
     }
 
     /**
+     * The meter in plain words, counted in the beat the metronome and the count-in click
+     * ({@link pulse}): "4 beats", "2 swaying beats" (6/8), "2 long beats" (2/2), "3 quick
+     * beats" (3/8) — the time-signature picker's captions. Deriving the words from the pulse
+     * keeps them from ever contradicting what the user hears. User copy that may change.
+     */
+    get plainName(): string {
+        const count = this.pulsesPerMeasure
+        return [count, this.beatFeel, count === 1 ? 'beat' : 'beats'].filter(Boolean).join(' ')
+    }
+
+    /** {@link plainName} per bar, as the meter chip's hint and the import summary say it: "4 beats in a bar". */
+    get plainNamePerBar(): string {
+        return `${this.plainName} in a bar`
+    }
+
+    /** How each beat feels: swaying (compound), long (a half-note pulse), quick (an eighth), or plain (null). */
+    private get beatFeel(): string | null {
+        if (this.isCompound) return 'swaying'
+        const beats = this.pulse.beats
+        if (beats > 1) return 'long'
+        if (beats < 1) return 'quick'
+        return null
+    }
+
+    /**
      * The span (quarter-note units) beams are grouped within: the pulse — one
      * quarter in 4/4, a dotted quarter in 6/8, a half in 2/2. When the pulse is
      * the eighth itself (3/8, 5/8, 7/8) nothing could ever beam, so the whole

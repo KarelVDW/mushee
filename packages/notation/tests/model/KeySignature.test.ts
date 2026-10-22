@@ -55,6 +55,29 @@ describe('KeySignature', () => {
         expect(names).toEqual(['C♭', 'G♭', 'D♭', 'A♭', 'E♭', 'B♭', 'F', 'C', 'G', 'D', 'A', 'E', 'B', 'F♯', 'C♯'])
     })
 
+    describe('displayName (user copy)', () => {
+        it('names major keys by their tonic', () => {
+            expect(key(0).displayName).toBe('C major')
+            expect(key(2).displayName).toBe('D major')
+            expect(key(-3).displayName).toBe('E♭ major')
+            expect(key(6).displayName).toBe('F♯ major')
+            expect(key(2, 'major').displayName).toBe('D major')
+        })
+
+        it('names a minor key by its own tonic, three fifths up', () => {
+            expect(key(0, 'minor').displayName).toBe('A minor')
+            expect(key(-3, 'minor').displayName).toBe('C minor')
+            expect(key(5, 'minor').displayName).toBe('G♯ minor')
+            expect(key(-7, 'minor').displayName).toBe('A♭ minor')
+        })
+
+        it('readingsOf gives both keys a signature can stand for', () => {
+            expect(KeySignature.readingsOf(2)).toBe('D major · B minor')
+            expect(KeySignature.readingsOf(0)).toBe('C major · A minor')
+            expect(KeySignature.readingsOf(-3)).toBe('E♭ major · C minor')
+        })
+    })
+
     describe('key identity (fifths, mode)', () => {
         it('sameKeyAs compares fifths and mode — relative major and minor are different keys', () => {
             expect(key(0).sameKeyAs(0)).toBe(true)
