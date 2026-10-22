@@ -110,15 +110,20 @@ export default function ScoreEditorPage() {
 
     // The query owns fetching; this effect turns the fetched document into the live, mutable
     // Score the manipulator works on, wiring its re-render hook and (debounced) autosave.
+    // It is keyed on the document alone, never on the whole query result: a share toggle
+    // rewrites the cached meta (keeping `document`'s reference), and re-running here would
+    // re-attach the load-time document over every edit made since. The title is seeded in
+    // the same effect for the same reason — once per load, not on every meta change.
+    const loaded = scoreDocument?.document
     useEffect(() => {
-        if (!scoreDocument) return
+        if (!scoreDocument || !loaded) return
         setTitle(scoreDocument.meta.title)
-        const deserializer = new ScoreDeserializer(scoreDocument.document as unknown as ScorePartwise)
+        const deserializer = new ScoreDeserializer(loaded as unknown as ScorePartwise)
         const s = deserializer.toScore(manipulator.onScoreChange)
         // The save callback takes the score as a parameter (not a closure over `s`):
         // undo/redo swap the manipulator's Score instance, and the autosave must follow.
         manipulator.attach(s, (score) => saveToApi({ score }))
-    }, [scoreDocument, manipulator, saveToApi])
+    }, [loaded, manipulator, saveToApi])
 
     // Listeners are thin: each maps a dock callback or mouse event to a manipulator
     // dispatch. The actions themselves live in ./actions; the manipulator owns selection,

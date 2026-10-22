@@ -1,4 +1,4 @@
-import { expect, MOCK_SCORE_ID, test } from './fixtures'
+import { expect, MOCK_SCORE_ID, MOCK_SHARE_TOKEN, test } from './fixtures'
 
 /**
  * Mocked-API editor-chrome e2e: the dock controls and popovers that
@@ -24,6 +24,35 @@ test('renaming the score in the header autosaves the new title', async ({ page, 
     await title.fill('Renamed by e2e')
 
     await expect.poll(() => apiMock.patches.some((b) => b.title === 'Renamed by e2e'), { timeout: 8000 }).toBe(true)
+})
+
+test('turning the share link on after an edit keeps the edit and the incremental autosave', async ({ page }) => {
+    const editor = page.locator('div[tabindex="0"]').first()
+    const scoreSvg = page.locator('.max-w-240 svg').first()
+
+    // A freshly loaded score is fully structure-dirty, so the first save sends every measure.
+    await editor.focus()
+    const firstPatch = waitForAutosave(page)
+    await page.keyboard.press('ArrowUp')
+    expect(((await firstPatch).postDataJSON() as Record<string, unknown>).allMeasures).toBeTruthy()
+    const edited = await scoreSvg.innerHTML()
+
+    // The share toggle rewrites the cached score meta; it must not re-attach the load-time document.
+    await page.getByRole('button', { name: 'Share score' }).click()
+    const panel = page.getByRole('dialog', { name: 'Share score' })
+    await panel.getByRole('button', { name: 'Turn on link' }).click()
+    await expect(panel.getByRole('textbox', { name: 'Share link' })).toHaveValue(new RegExp(`/s/${MOCK_SHARE_TOKEN}$`))
+    await page.keyboard.press('Escape')
+    await expect(panel).toHaveCount(0)
+    expect(await scoreSvg.innerHTML()).toBe(edited)
+
+    // A re-attached score would be structure-dirty again; the live one saves just the changed measure.
+    await editor.focus()
+    const secondPatch = waitForAutosave(page)
+    await page.keyboard.press('ArrowUp')
+    const body = (await secondPatch).postDataJSON() as Record<string, unknown>
+    expect(body.measures).toBeTruthy()
+    expect(body.allMeasures).toBeUndefined()
 })
 
 test('dotted, triplet, and tie dock toggles edit the selected note', async ({ page }) => {
