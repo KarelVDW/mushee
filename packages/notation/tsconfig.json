@@ -9,8 +9,10 @@
         "module": "esnext",
         "moduleResolution": "bundler",
         "jsx": "react-jsx",
-        "incremental": true
+        "incremental": true,
+        // scripts/ run on Node's type stripping, which needs explicit `.ts` import paths.
+        "allowImportingTsExtensions": true
     },
-    "include": ["src/**/*.ts", "src/**/*.tsx", "tests/**/*.ts", "vitest.config.ts"],
+    "include": ["src/**/*.ts", "src/**/*.tsx", "tests/**/*.ts", "scripts/**/*.ts", "vitest.config.ts"],
     "exclude": ["node_modules"]
 }
