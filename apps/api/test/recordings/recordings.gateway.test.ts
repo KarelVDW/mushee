@@ -3,7 +3,7 @@ import 'reflect-metadata'
 import { EventEmitter } from 'node:events'
 import type { IncomingMessage } from 'node:http'
 
-import { ForbiddenException, NotFoundException } from '@nestjs/common'
+import { ForbiddenException, Logger, NotFoundException } from '@nestjs/common'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { WebSocket } from 'ws'
 
@@ -38,6 +38,33 @@ vi.mock('../../src/recordings/recording-sessions.service', () => ({
  */
 
 const SCORE_ID = '3f2b8c1e-9a4d-4e6f-8b2a-1c5d7e9f0a3b'
+
+/**
+ * The web client's side of the meta contract — `TranscriptionMeta` in
+ * apps/web/src/lib/TranscriptionSocket.ts, which `sendMeta` spreads into a
+ * `{ type: 'meta', ... }` frame — with the values RecordingEngine.start fills
+ * in: the tempo at the take's start, its bar's meter and key, the instrument's
+ * written→sounding transposition, and the negotiated MediaRecorder container.
+ * Keep the two in step: a field the DTO rejects is dropped server-side.
+ */
+interface WebMetaFrame {
+    type: 'meta'
+    bpm: number
+    timeSignature: { beats: number; beatType: number }
+    chromaticTranspose: number
+    instrumentId: string
+    keyFifths: number
+    mimeType: string | null
+}
+const webMetaFrame: WebMetaFrame = {
+    type: 'meta',
+    bpm: 92.5,
+    timeSignature: { beats: 6, beatType: 8 },
+    chromaticTranspose: -2,
+    instrumentId: 'trumpet',
+    keyFifths: -3,
+    mimeType: 'audio/webm;codecs=opus',
+}
 
 class FakeSocket extends EventEmitter {
     readonly OPEN = 1
@@ -117,15 +144,47 @@ describe('RecordingsGateway text frames', () => {
         expect(client.close).not.toHaveBeenCalled()
     })
 
-    it('drops a meta frame whose fields are mistyped', async () => {
+    it('never forwards a mistyped meta field', async () => {
         const { client, session, text } = connect()
         await flush()
         expect(() => text('{"type":"meta","bpm":"fast"}')).not.toThrow()
         text('{"type":"meta","timeSignature":{"beats":0,"beatType":4}}')
+        text('{"type":"meta","timeSignature":5}')
         text('{"type":"meta","sourceKind":"kazoo"}')
         text(`{"type":"meta","mimeType":"${'x'.repeat(500)}"}`)
-        expect(session.setMeta).not.toHaveBeenCalled()
+        for (const [meta] of session.setMeta.mock.calls as [Record<string, unknown>][]) expect({ ...meta }).toEqual({})
         expect(client.close).not.toHaveBeenCalled()
+    })
+
+    it('drops only the invalid fields of a meta frame, and logs their names but not their values', async () => {
+        const { session, text } = connect()
+        await flush()
+        const warn = vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined)
+        // e.g. a future additive meter the DTO does not accept yet: the rest of the take's meta must survive it.
+        text(JSON.stringify({ ...webMetaFrame, bpm: -1, timeSignature: { beats: 2.5, beatType: 8 } }))
+        expect(session.setMeta).toHaveBeenCalledTimes(1)
+        const meta = (session.setMeta.mock.calls[0] as unknown[])[0] as Record<string, unknown>
+        expect({ ...meta }).toEqual({
+            chromaticTranspose: webMetaFrame.chromaticTranspose,
+            instrumentId: webMetaFrame.instrumentId,
+            keyFifths: webMetaFrame.keyFifths,
+            mimeType: webMetaFrame.mimeType,
+        })
+        expect(warn).toHaveBeenCalledWith('Dropped invalid recording meta fields: bpm, timeSignature.beats')
+        warn.mockRestore()
+    })
+
+    it('forwards every field of the meta frame the web client sends', async () => {
+        const { session, text } = connect()
+        await flush()
+        for (const mimeType of ['audio/webm;codecs=opus', 'audio/mp4', null]) {
+            session.setMeta.mockClear()
+            text(JSON.stringify({ ...webMetaFrame, mimeType }))
+            expect(session.setMeta).toHaveBeenCalledTimes(1)
+            const meta = (session.setMeta.mock.calls[0] as unknown[])[0] as Record<string, unknown>
+            const { type: _type, ...fields } = { ...webMetaFrame, mimeType }
+            expect(JSON.parse(JSON.stringify(meta))).toEqual(fields)
+        }
     })
 
     it('forwards a valid meta frame, minus unknown keys', async () => {

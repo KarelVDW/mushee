@@ -2,7 +2,7 @@ import { ForbiddenException, Logger, NotFoundException, OnApplicationShutdown } 
 import { OnGatewayConnection, OnGatewayDisconnect, WebSocketGateway } from '@nestjs/websockets'
 import { fromNodeHeaders } from 'better-auth/node'
 import { plainToInstance } from 'class-transformer'
-import { isUUID, validateSync } from 'class-validator'
+import { isUUID, type ValidationError, validateSync } from 'class-validator'
 import type { IncomingMessage } from 'http'
 import type { RawData, WebSocket } from 'ws'
 
@@ -343,8 +343,11 @@ export class RecordingsGateway implements OnGatewayConnection<WebSocket>, OnGate
 
     /**
      * A text frame as a control message, or null when it is none: anything but
-     * a JSON object typed 'meta' or 'end', and meta whose fields fail
-     * RecordingMetaDto. Unknown meta keys are dropped (whitelist).
+     * a JSON object typed 'meta' or 'end'. Unknown meta keys are dropped
+     * (whitelist), and so is each field that fails RecordingMetaDto — only that
+     * field: the client sends meta once per take, so dropping the whole frame
+     * for one bad value would put the take on every pipeline default (120 bpm,
+     * 4/4, no key, no container hint) instead of just that field's.
      */
     private parseControl(data: RawData): RecordingControlMessage | null {
         let parsed: unknown
@@ -358,8 +361,22 @@ export class RecordingsGateway implements OnGatewayConnection<WebSocket>, OnGate
         if (type === 'end') return { type: 'end' }
         if (type !== 'meta') return null
         const meta = plainToInstance(RecordingMetaDto, fields)
-        if (validateSync(meta, { whitelist: true }).length > 0) return null
+        const invalid = validateSync(meta, { whitelist: true })
+        if (invalid.length > 0) {
+            // A nested failure (timeSignature.beats) drops its top-level field.
+            for (const error of invalid) delete (meta as unknown as Record<string, unknown>)[error.property]
+            // Names only: the values are client input and stay out of the logs.
+            this.logger.warn(`Dropped invalid recording meta fields: ${this.fieldPaths(invalid).join(', ')}`)
+        }
         return { type: 'meta', meta }
+    }
+
+    /** The dotted paths of the fields that failed validation, nested ones included. */
+    private fieldPaths(errors: ValidationError[], parent = ''): string[] {
+        return errors.flatMap((error) => {
+            const path = parent ? `${parent}.${error.property}` : error.property
+            return error.children?.length ? this.fieldPaths(error.children, path) : [path]
+        })
     }
 
     /** A frame handler threw: drop the client rather than let the error escape into ws. */
