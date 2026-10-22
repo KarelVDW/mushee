@@ -22,6 +22,10 @@ import { TempoPopover } from '@/components/editor/TempoPopover'
 import { TimeSignaturePopover } from '@/components/editor/TimeSignaturePopover'
 import { TransposePopover } from '@/components/editor/TransposePopover'
 import { ChipToggle, Icon, Segmented, ToolGroup, TransportBtn } from '@/components/ui'
+import type { RecordingState } from '@/lib/RecordingEngine'
+import type { PlaybackState } from '@/lib/Transport'
+
+import type { PitchScope } from './ScoreManipulator'
 
 const ACCIDENTALS: { label: string; value: Accidental | undefined }[] = [
     { label: '♮', value: undefined },
@@ -91,10 +95,10 @@ function TupletIcon() {
 // --- Transport (lives in the editor header) ---
 
 export interface TransportControlsProps {
-    playbackState: 'stopped' | 'playing' | 'paused'
+    playbackState: PlaybackState
     onPlayToggle: () => void
     onStop: () => void
-    recordingState: 'idle' | 'countoff' | 'recording'
+    recordingState: RecordingState
     onRecordToggle: () => void
     metronome: boolean
     onMetronomeToggle: () => void
@@ -219,9 +223,10 @@ interface NoteToolDockProps {
         onMinimize: () => void
         score: Score
         selectedNotes: Note[]
-        onTranspose: (interval: Interval, scope: 'score' | 'selection') => void
+        selectionNarrowsPitchOps: boolean
+        onTranspose: (interval: Interval, scope: PitchScope) => void
         /** Forwarded to the popover's onScopeChange (the canvas pulse over its target). */
-        onTransposeAim?: (scope: 'score' | 'selection' | null) => void
+        onTransposeAim?: (scope: PitchScope | null) => void
     }
     /** When set, a metronome toggle joins the tool strip (mobile: the action row has no room for it). */
     metronome?: { active: boolean; onToggle: () => void }
@@ -316,6 +321,7 @@ export function NoteToolDock({
                             <TransposeControl
                                 score={pitch.score}
                                 selectedNotes={pitch.selectedNotes}
+                                selectionNarrowsPitchOps={pitch.selectionNarrowsPitchOps}
                                 onApply={pitch.onTranspose}
                                 onScopeChange={pitch.onTransposeAim}
                                 disabled={selectionDisabled}
@@ -484,13 +490,14 @@ function TimeSignatureControl({ time, onSet, disabled, compact }: TimeSignatureC
 interface TransposeControlProps {
     score: Score
     selectedNotes: Note[]
-    onApply: (interval: Interval, scope: 'score' | 'selection') => void
-    onScopeChange?: (scope: 'score' | 'selection' | null) => void
+    selectionNarrowsPitchOps: boolean
+    onApply: (interval: Interval, scope: PitchScope) => void
+    onScopeChange?: (scope: PitchScope | null) => void
     disabled: boolean
     compact: boolean
 }
 
-function TransposeControl({ score, selectedNotes, onApply, onScopeChange, disabled, compact }: TransposeControlProps) {
+function TransposeControl({ score, selectedNotes, selectionNarrowsPitchOps, onApply, onScopeChange, disabled, compact }: TransposeControlProps) {
     const anchorRef = useRef<HTMLDivElement | null>(null)
     const [open, setOpen] = useState(false)
 
@@ -503,6 +510,7 @@ function TransposeControl({ score, selectedNotes, onApply, onScopeChange, disabl
                 <TransposePopover
                     score={score}
                     selectedNotes={selectedNotes}
+                    selectionNarrowsPitchOps={selectionNarrowsPitchOps}
                     anchorRef={anchorRef}
                     className={popoverPosition(compact)}
                     onApply={(interval, scope) => {

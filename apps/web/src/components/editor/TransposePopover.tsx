@@ -4,10 +4,10 @@ import { KeySignatureIcon, ScoreView } from '@mushee/notation/components'
 import { Interval, type IntervalQuality, type Note, Score } from '@mushee/notation/model'
 import { type ReactNode, useCallback, useEffect, useMemo, useState } from 'react'
 
+import type { PitchScope } from '@/app/scores/[id]/ScoreManipulator'
 import { KEY_NAMES } from '@/components/editor/KeySignaturePopover'
 import { Icon, Popover, PopoverOption, PrimaryButton, Segmented, TertiaryButton } from '@/components/ui'
 
-type TransposeScope = 'score' | 'selection'
 type TransposeTab = 'interval' | 'key' | 'semitones'
 
 const DEGREES: { degree: number; label: string; name: string }[] = [
@@ -52,16 +52,21 @@ const KEY_ROWS: number[][] = [[-7, -6, -5, -4, -3, -2, -1], [0], [1, 2, 3, 4, 5,
 
 interface TransposePopoverProps {
     score: Score
-    /** The current selection in score order — scope choice and the selection preview hang off it. */
+    /** The current selection in score order — the selection preview hangs off it. */
     selectedNotes: Note[]
-    onApply: (interval: Interval, scope: TransposeScope) => void
+    /**
+     * Whether the selection can narrow the transposition to itself
+     * (ScoreManipulator.selectionNarrowsPitchOps) — only then is the Apply-to choice offered.
+     */
+    selectionNarrowsPitchOps: boolean
+    onApply: (interval: Interval, scope: PitchScope) => void
     onDismiss: () => void
     /**
      * Reports the range the popover is currently aimed at — on open, whenever the scope
      * toggle flips, and `null` on close. The editor pulses that range on the canvas so the
      * target of the pending transposition is always visible. Keep referentially stable.
      */
-    onScopeChange?: (scope: TransposeScope | null) => void
+    onScopeChange?: (scope: PitchScope | null) => void
     /** Extra positioning/layout classes (e.g. `right-0 top-[calc(100%+0.5rem)]`). */
     className?: string
     /** Trigger element to exclude from outside-click dismissal, so its toggle isn't fought by the popover. */
@@ -75,10 +80,19 @@ interface TransposePopoverProps {
  * {@link Interval} and always respells the result minimally, so the preview
  * below is exactly what Apply produces.
  */
-export function TransposePopover({ score, selectedNotes, onApply, onDismiss, onScopeChange, className, anchorRef }: TransposePopoverProps) {
+export function TransposePopover({
+    score,
+    selectedNotes,
+    selectionNarrowsPitchOps,
+    onApply,
+    onDismiss,
+    onScopeChange,
+    className,
+    anchorRef,
+}: TransposePopoverProps) {
     const [advanced, setAdvanced] = useState(false)
     const [tab, setTab] = useState<TransposeTab>('interval')
-    const [scope, setScope] = useState<TransposeScope>('score')
+    const [scope, setScope] = useState<PitchScope>('score')
     const [semitones, setSemitones] = useState(0)
     const [degree, setDegree] = useState(2)
     const [quality, setQuality] = useState<IntervalQuality>('major')
@@ -86,8 +100,7 @@ export function TransposePopover({ score, selectedNotes, onApply, onDismiss, onS
     const [direction, setDirection] = useState<1 | -1>(1)
     const [targetFifths, setTargetFifths] = useState<number | null>(null)
 
-    const hasSelection = selectedNotes.length > 1
-    const effectiveScope = hasSelection && scope === 'selection' ? 'selection' : 'score'
+    const effectiveScope: PitchScope = selectionNarrowsPitchOps && scope === 'selection' ? 'selection' : 'score'
     const currentFifths =
         (effectiveScope === 'selection' && selectedNotes[0]
             ? selectedNotes[0].keySignature.fifths
@@ -276,7 +289,7 @@ export function TransposePopover({ score, selectedNotes, onApply, onDismiss, onS
                 />
             )}
 
-            {hasSelection && (
+            {selectionNarrowsPitchOps && (
                 <div className="flex items-center justify-between gap-3">
                     <span className="font-body font-normal text-[13px] leading-none text-on-surface-variant">Apply to</span>
                     {/* Same segmented pill as the Up/Down direction toggle. */}

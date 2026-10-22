@@ -1,5 +1,7 @@
 import { type Accidental, type DurationType, Note, type Pitch, type Score } from '@mushee/notation/model'
 
+import type { PitchScope } from './ScoreManipulator'
+
 /**
  * A single editing operation on the score, performed relative to the selection.
  *
@@ -129,17 +131,18 @@ export const SET_ACCIDENTAL: ScoreAction<Accidental | undefined> = {
 }
 
 /**
- * Respell the music with the fewest possible accidentals. A multi-note selection is
- * respelled in place (key signatures untouched); a single-note selection means "the whole
- * score": every key region is re-keyed to the cheapest signature and all notes follow.
+ * Respell the music with the fewest possible accidentals, in the given {@link PitchScope}:
+ * `'selection'` respells the selected run in place (key signatures untouched); `'score'`
+ * re-keys every key region to the cheapest signature and all notes follow. The manipulator
+ * picks the scope from the selection (ScoreManipulator.selectionNarrowsPitchOps).
  * `Score.minimizeAccidentals` returns replacements index-aligned with its input, so the
  * selection is re-anchored onto the same musical positions it covered before.
  */
-export const MINIMIZE_ACCIDENTALS: ScoreAction = {
+export const MINIMIZE_ACCIDENTALS: ScoreAction<PitchScope> = {
     id: 'minimize-accidentals',
     label: 'Minimize accidentals',
-    executeBulk: (score, notes) => {
-        if (notes.length > 1) return score.minimizeAccidentals(notes)
+    executeBulk: (score, notes, scope) => {
+        if (scope === 'selection') return score.minimizeAccidentals(notes)
         const all = score.measures.flatMap((measure) => measure.notes)
         const indexOf = new Map(all.map((note, i) => [note, i]))
         const result = score.minimizeAccidentals()

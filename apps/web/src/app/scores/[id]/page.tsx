@@ -51,7 +51,7 @@ import { COMPACT_POPOVER_SHEET, MobileEditorActions, NoteToolDock, TransportCont
 import { KeyboardShortcutsDialog } from './KeyboardShortcutsDialog'
 import { ConcurrentRecordingDialog, MicModeGuideDialog, RecordingLimitDialog } from './RecordingDialogs'
 import { RecordingsMenu } from './RecordingsMenu'
-import { ScoreManipulator } from './ScoreManipulator'
+import { type PitchScope, ScoreManipulator } from './ScoreManipulator'
 import { ShareMenu } from './ShareMenu'
 import { TitleInput } from './TitleInput'
 import { usePlayback } from './usePlayback'
@@ -175,7 +175,7 @@ export default function ScoreEditorPage() {
     const handleRedo = useCallback(() => manipulator.redo(), [manipulator])
     const handleMinimizeAccidentals = useCallback(() => manipulator.minimizeAccidentals(), [manipulator])
     const handleTransposeApply = useCallback(
-        (interval: Interval, scope: 'score' | 'selection') => {
+        (interval: Interval, scope: PitchScope) => {
             manipulator.transpose(interval, scope)
             setTransposeOpen(false)
         },
@@ -186,7 +186,7 @@ export default function ScoreEditorPage() {
     // The open transpose popover aims a gentle pulse at its target range; closing clears it
     // — but never a flash that an Apply just set (the popover closes right after applying).
     const handleTransposeAim = useCallback(
-        (scope: 'score' | 'selection' | null) => {
+        (scope: PitchScope | null) => {
             setPitchHighlight((current) => {
                 if (scope === null) return current?.kind === 'pulse' ? null : current
                 return { kind: 'pulse', notes: scope === 'selection' ? manipulator.selectedNotes : 'all', id: ++highlightSeq.current }
@@ -452,6 +452,7 @@ export default function ScoreEditorPage() {
                                     <TransposePopover
                                         score={score}
                                         selectedNotes={manipulator.selectedNotes}
+                                        selectionNarrowsPitchOps={manipulator.selectionNarrowsPitchOps}
                                         anchorRef={transposeAnchorRef}
                                         className="right-0 top-[calc(100%+0.5rem)]"
                                         onApply={handleTransposeApply}
@@ -585,6 +586,7 @@ export default function ScoreEditorPage() {
                                   onMinimize: handleMinimizeAccidentals,
                                   score,
                                   selectedNotes: manipulator.selectedNotes,
+                                  selectionNarrowsPitchOps: manipulator.selectionNarrowsPitchOps,
                                   onTranspose: handleTransposeApply,
                                   onTransposeAim: handleTransposeAim,
                               }
