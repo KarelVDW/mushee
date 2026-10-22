@@ -95,7 +95,7 @@ function NewScoreDialog({ onCancel, onCreate }) {
                 </>
             }>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16, flex: 1, minHeight: 0, paddingBottom: 12 }}>
-                <TextField label="Title" value={title} onChange={setTitle} placeholder="Untitled composition" autoFocus />
+                <TextField label="Title" value={title} onChange={setTitle} placeholder="Untitled score" autoFocus />
                 <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
                     <InstrumentPicker value={instrument} onChange={setInstrument} />
                 </div>

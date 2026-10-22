@@ -4,7 +4,7 @@ const SAMPLE_SCORES = [
     { id: 'a', title: 'Allegro in C minor', created: 'Mar 4, 2026', updated: '2 hours ago' },
     { id: 'b', title: 'Nocturne — first draft', created: 'Feb 19, 2026', updated: 'Yesterday' },
     { id: 'c', title: 'Erhu sketch no. 4', created: 'Feb 11, 2026', updated: '3 days ago' },
-    { id: 'd', title: 'Untitled composition', created: 'Jan 14, 2026', updated: 'Jan 14, 2026' },
+    { id: 'd', title: 'Untitled score', created: 'Jan 14, 2026', updated: 'Jan 14, 2026' },
 ]
 
 // The free Sketch plan is capped at 5 scores; the server refuses the

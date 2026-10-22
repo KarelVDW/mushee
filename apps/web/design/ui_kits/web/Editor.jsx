@@ -464,7 +464,7 @@ function TempoPopover({ bpm, onChange, onClose }) {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <Eyebrow>Tempo</Eyebrow>
                 <span style={{ font: '500 11px/1 var(--font-mono)', color: 'var(--color-on-surface-variant)' }}>
-                    {taps.length < 2 ? 'Tap 2+ times' : `${tappedBpm} bpm · ${taps.length} taps`}
+                    {taps.length < 2 ? 'Tap at least twice' : `${tappedBpm} bpm from ${taps.length} taps`}
                 </span>
             </div>
 
@@ -508,7 +508,7 @@ function TempoPopover({ bpm, onChange, onClose }) {
                     />
                     Tap along
                 </span>
-                <span style={{ font: '500 15px/1.3 var(--font-body)' }}>Click or tap the spacebar in tempo</span>
+                <span style={{ font: '500 15px/1.3 var(--font-body)' }}>Click here or press the spacebar on every beat</span>
             </button>
 
             {/* Manual input + submit */}
@@ -530,7 +530,7 @@ function TempoPopover({ bpm, onChange, onClose }) {
                         max={300}
                         value={draft}
                         onChange={(e) => setDraft(e.target.value)}
-                        aria-label="BPM"
+                        aria-label="Tempo (bpm)"
                         style={{
                             flex: 1,
                             background: 'transparent',
@@ -562,7 +562,7 @@ function TempoPopover({ bpm, onChange, onClose }) {
                         }}
                     />
                 </div>
-                <PrimaryButton onClick={commit}>Set</PrimaryButton>
+                <PrimaryButton onClick={commit}>Set tempo</PrimaryButton>
             </div>
         </DockPopover>
     )
@@ -1076,10 +1076,9 @@ function ConcurrentRecordingDialog({ onClose }) {
     )
 }
 
-// Storyboard of the Control Center → Mic Mode → Wide Spectrum flow. The kit shows
-// the three phases as a static row; production crossfades them on a shared ~9s loop
-// (mic-guide-* keyframes in globals.css) and falls back to this static stack under
-// prefers-reduced-motion.
+// Storyboard of the Control Center → Mic Mode → Wide Spectrum flow. Like production
+// (WideSpectrumSteps in RecordingDialogs.tsx), the three steps are all visible at once,
+// numbered, with no animation.
 function WideSpectrumWalkthrough() {
     const phases = [
         {
@@ -1291,7 +1290,7 @@ function Editor({ score, onBack, onSettings, planId = 'free', recUsedSec = 0, on
     const [recording, setRecording] = useState(false)
     const [metro, setMetro] = useState(false)
     const [bpm, setBpm] = useState(120)
-    const [title, setTitle] = useState(score?.title ?? 'Untitled composition')
+    const [title, setTitle] = useState(score?.title ?? 'Untitled score')
     const [instrument, setInstrument] = useState(score?.instrument ?? 'Piano')
     const [instrumentHover, setInstrumentHover] = useState(false)
     const [shortcutsOn, setShortcutsOn] = useState(false)
@@ -1453,6 +1452,21 @@ function Editor({ score, onBack, onSettings, planId = 'free', recUsedSec = 0, on
                         {instrument}
                         <Icon name="sliders-horizontal" size={11} />
                     </button>
+                    {/* Save status — autosave's quiet word after the instrument chip; production shrinks it
+                        to the check alone after 3s and reads "Not saved yet — retrying" while a save fails. */}
+                    <span
+                        role="status"
+                        style={{
+                            flexShrink: 0,
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 4,
+                            font: '400 12px/1 var(--font-body)',
+                            color: 'var(--color-on-surface-variant)',
+                        }}>
+                        <Icon name="check" size={12} />
+                        Saved
+                    </span>
                 </div>
 
                 {/* Transport — centred; moves into the dock on mobile */}
@@ -1470,6 +1484,7 @@ function Editor({ score, onBack, onSettings, planId = 'free', recUsedSec = 0, on
                 />
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0, flex: 1, justifyContent: 'flex-end' }}>
+                    {/* Its tooltip names "?", the key that opens the shortcuts list. */}
                     <ChipToggle active={shortcutsOn} onClick={() => setShortcutsOn((o) => !o)} ariaLabel="Keyboard shortcuts">
                         <Icon name="keyboard" size={16} />
                     </ChipToggle>

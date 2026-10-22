@@ -33,4 +33,9 @@ High-fidelity React/JSX recreation of the Solkey web app. Cosmetic / interactive
 - Bravura SMuFL notation rendering — placeholder only (the dock's note glyphs are plain-SVG approximations).
 - Real MIDI playback / recording — transport buttons are visual; the recording quota is simulated client-side.
 - Mobile breakpoints — the kit renders the desktop layout only. In production, below 768px the dock is two rows: a tool row (Undo · note lengths · a labelled More) over the action row ("Note" ◀ ▶, "Pitch" ▼ ▲, then stop 40 / play 46 / record 54 — the biggest control on screen), with everything else in the "More tools" sheet; dock popovers become opaque sheets between the header and the dock. Selection actions (copy, paste, delete, select all) are not dock buttons on any breakpoint: they live in the floating selection popover that right-click / Shift+F10 opens on desktop, and a long-press, double-tap, drag-release or a tap on the selected note opens on phones.
-- The recording strip, the editor empty state, the save status, tooltips and the dock's hint line — see `../../../DESIGN.md` §4.
+- The recording strip, the editor empty state, tooltips and the dock's hint line — see `../../../DESIGN.md` §4.
+
+## TODO (mock-ups behind production)
+
+- Editor: the recording strip in place of `MicReminderToast` (and the dock's tools during a take); the empty-score state ("Sing, hum or play your tune" · Start recording); the Share and Recordings header chips; the after-recording summary toast with its two actions ("Hear it back" · "Undo"); the save status's retrying state; the clef picker's first tier with the instrument's usual clef.
+- Settings' four tabs; library rows with one More menu and the score-count line; the four-step onboarding with popular tiles; the new-score dialog with popular tiles and an optional title; the landing FAQ and cookie sheet; the pricing cards.
