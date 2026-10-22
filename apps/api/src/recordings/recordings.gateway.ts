@@ -2,7 +2,7 @@ import { ForbiddenException, Logger, NotFoundException, OnApplicationShutdown } 
 import { OnGatewayConnection, OnGatewayDisconnect, WebSocketGateway } from '@nestjs/websockets'
 import { fromNodeHeaders } from 'better-auth/node'
 import { plainToInstance } from 'class-transformer'
-import { isUUID, type ValidationError, validateSync } from 'class-validator'
+import { isUUID, validateSync, type ValidationError } from 'class-validator'
 import type { IncomingMessage } from 'http'
 import type { RawData, WebSocket } from 'ws'
 
