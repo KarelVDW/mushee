@@ -20,7 +20,6 @@ function findRepoRoot(): string {
 
 export const REPO_ROOT = findRepoRoot()
 export const API_DIR = resolve(REPO_ROOT, 'apps/api')
-export const EVAL_SCRIPTS_DIR = join(API_DIR, 'scripts/eval')
 export const FIXTURES_DIR = join(API_DIR, 'scripts/fixtures')
 export const SYNTH_ROOT = join(FIXTURES_DIR, 'eval')
 export const REAL_ROOT = join(FIXTURES_DIR, 'eval-real')

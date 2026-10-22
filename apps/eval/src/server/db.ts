@@ -102,7 +102,7 @@ async function migrate(pool: Pool): Promise<void> {
 /** Survives Next dev-server HMR: one pool, migrated exactly once per process. */
 const globalDb = globalThis as unknown as { __evalDb?: { pool: Pool; ready: Promise<void> } }
 
-export function getDb(): { pool: Pool; ready: Promise<void> } {
+function getDb(): { pool: Pool; ready: Promise<void> } {
     if (!globalDb.__evalDb) {
         const pool = buildPool()
         globalDb.__evalDb = { pool, ready: migrate(pool) }
