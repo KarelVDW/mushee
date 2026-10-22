@@ -169,17 +169,21 @@ export function Tooltip({ label, hint, shortcut, reason, side = 'top', children 
         return () => observer.disconnect()
     }, [openedBy, trigger, close])
 
-    // Describe the trigger: its first focusable element points at the hidden tooltip text.
+    // Describe the trigger: its first focusable element points at the hidden tooltip text. The id
+    // goes in as one token after any the control sets itself (TransportBtn's `description`) and
+    // comes out on its own. It is put back whenever the control re-renders (`children`), because
+    // React may just have rewritten that attribute from the control's own props.
     useLayoutEffect(() => {
         const el = trigger()
         if (!el || !description) return
-        const previous = el.getAttribute('aria-describedby')
-        el.setAttribute('aria-describedby', previous ? `${previous} ${descriptionId}` : descriptionId)
+        const tokens = describedByTokens(el)
+        if (!tokens.includes(descriptionId)) el.setAttribute('aria-describedby', [...tokens, descriptionId].join(' '))
         return () => {
-            if (previous) el.setAttribute('aria-describedby', previous)
+            const rest = describedByTokens(el).filter((token) => token !== descriptionId)
+            if (rest.length > 0) el.setAttribute('aria-describedby', rest.join(' '))
             else el.removeAttribute('aria-describedby')
         }
-    }, [trigger, description, descriptionId])
+    }, [trigger, description, descriptionId, children])
 
     // Escape closes only the tooltip: consumed in the capture phase, before the editor's shortcuts.
     // Inside a modal dialog there are no editor shortcuts to shield, so the key goes on and the
@@ -302,6 +306,10 @@ export function Tooltip({ label, hint, shortcut, reason, side = 'top', children 
 
 /** What the tooltip describes: the control itself, not a nested decoration. */
 const TRIGGER_SELECTOR = 'button, [href], input, select, textarea, [tabindex]'
+
+function describedByTokens(el: HTMLElement): string[] {
+    return (el.getAttribute('aria-describedby') ?? '').split(/\s+/).filter(Boolean)
+}
 
 function matchesFocusVisible(el: HTMLElement): boolean {
     try {

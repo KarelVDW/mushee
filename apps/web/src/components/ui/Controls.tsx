@@ -274,7 +274,7 @@ export function TransportBtn({
                 aria-label={ariaLabel}
                 aria-pressed={pressed}
                 aria-disabled={state.aria}
-                // The tooltip appends its own hint/key/reason id after this one.
+                // The tooltip adds its own hint/key/reason id after this one, and again when this changes.
                 aria-describedby={description ? descriptionId : undefined}
                 onClick={state.off ? undefined : onClick}
                 disabled={state.native}

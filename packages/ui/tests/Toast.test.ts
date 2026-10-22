@@ -61,6 +61,34 @@ describe('Toaster regions', () => {
         // The unlabelled action carries no aria-label attribute at all.
         expect(html).toMatch(/<button type="button" class="[^"]*h-10[^"]*">Hear it back<\/button>/)
     })
+
+    // Layout is measured in a browser; these pin the rule that gives a phone's message its line.
+    const card = (html: string) => html.match(/<div class="(pointer-events-auto [^"]*)">/)?.[1] ?? ''
+    const messageRow = (html: string) => html.match(/<span class="([^"]*)"><span class="w-7 h-7/)?.[1] ?? ''
+
+    it('wraps a two-button toast below sm: the message keeps the first line, the buttons and × go under it at the end', () => {
+        showToast('Added bars 3–6. Tap any note to fix it.', 'info', {
+            actions: [
+                { label: 'Hear it back', onClick: () => {} },
+                { label: 'Undo', ariaLabel: 'Undo this recording', onClick: () => {} },
+            ],
+        })
+        const html = render()
+        expect(card(html).split(' ')).toEqual(expect.arrayContaining(['flex', 'max-sm:flex-wrap', 'sm:max-w-xl']))
+        expect(messageRow(html).split(' ')).toEqual(expect.arrayContaining(['min-w-0', 'flex-auto', 'max-sm:basis-full']))
+        // Both buttons and the × share one end-aligned group, after the message in reading order.
+        expect(html).toMatch(
+            /<span class="[^"]*ml-auto[^"]*"><span class="[^"]*"><button[^>]*>Hear it back<\/button><button[^>]*>Undo<\/button><\/span><button[^>]*aria-label="Dismiss"/,
+        )
+    })
+
+    it('keeps a one-button toast on one line, its message free to wrap between the icon and the button', () => {
+        showToast('Deleted 3 notes.', 'info', { action: { label: 'Undo', ariaLabel: 'Undo delete', onClick: () => {} } })
+        const html = render()
+        expect(card(html)).not.toContain('flex-wrap')
+        expect(messageRow(html)).not.toContain('basis-full')
+        expect(html).toMatch(/<span class="min-w-0 wrap-break-word [^"]*">Deleted 3 notes\.<\/span>/)
+    })
 })
 
 describe('ToastQueue.actionsFor', () => {

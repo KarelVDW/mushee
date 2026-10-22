@@ -273,6 +273,10 @@ function ToastCard({ toast }: { toast: ToastItem }) {
     const onBlur = (e: FocusEvent) => {
         if (!e.currentTarget.contains(e.relatedTarget as Node | null)) toasts.resume(id, 'focus')
     }
+    // Two buttons beside the message leave a phone almost no room for it (at 320px about
+    // 12px), so below `sm` such a toast wraps: the message keeps the first line and the
+    // buttons, then the ×, sit under it at the end — reading and tab order unchanged.
+    const stacked = actions.length > 1
     return (
         <div
             onPointerEnter={onPointerEnter}
@@ -284,43 +288,51 @@ function ToastCard({ toast }: { toast: ToastItem }) {
             onBlur={onBlur}
             className={[
                 'pointer-events-auto flex items-center gap-3 max-w-full sm:max-w-xl',
+                stacked ? 'max-sm:flex-wrap max-sm:gap-y-2' : '',
                 'bg-surface-container-lowest/85 backdrop-blur-[12px] rounded-lg editorial-shadow',
                 'pl-3 pr-2 py-2.5',
             ].join(' ')}>
-            <span
-                className={[
-                    'w-7 h-7 rounded-full shrink-0 inline-flex items-center justify-center',
-                    toast.tone === 'error'
-                        ? 'bg-error-container text-on-error-container'
-                        : 'bg-primary-container text-on-primary-container',
-                ].join(' ')}>
-                <Icon name={toast.icon ?? (toast.tone === 'error' ? 'error' : 'info')} size={16} />
-            </span>
-            <span className="font-body font-medium text-[13px] leading-[1.4] text-on-surface">{toast.message}</span>
-            {actions.length > 0 && (
-                // Text (tertiary) buttons in reading order; 40px tall, the negative margin keeps
-                // the toast itself at its usual height.
-                <span className="shrink-0 -my-1.5 flex items-center">
-                    {actions.map((action, i) => (
-                        <button
-                            key={i}
-                            type="button"
-                            aria-label={action.ariaLabel}
-                            onClick={() => {
-                                action.onClick()
-                                toasts.dismiss(id)
-                            }}
-                            className={[
-                                'shrink-0 h-10 px-3 rounded-full bg-transparent border-0 cursor-pointer whitespace-nowrap',
-                                'font-label font-semibold text-[13px] leading-none text-primary hover:bg-surface-container-low',
-                                'transition-colors duration-150 ease-solkey focus-ring',
-                            ].join(' ')}>
-                            {action.label}
-                        </button>
-                    ))}
+            <span className={['min-w-0 flex-auto flex items-center gap-3', stacked ? 'max-sm:basis-full' : ''].join(' ')}>
+                <span
+                    className={[
+                        'w-7 h-7 rounded-full shrink-0 inline-flex items-center justify-center',
+                        toast.tone === 'error'
+                            ? 'bg-error-container text-on-error-container'
+                            : 'bg-primary-container text-on-primary-container',
+                    ].join(' ')}>
+                    <Icon name={toast.icon ?? (toast.tone === 'error' ? 'error' : 'info')} size={16} />
                 </span>
-            )}
-            <CloseButton ariaLabel="Dismiss" onClick={() => toasts.dismiss(id)} />
+                {/* Wraps between words, and inside a word too long for its line, never past the card. */}
+                <span className="min-w-0 wrap-break-word font-body font-medium text-[13px] leading-[1.4] text-on-surface">
+                    {toast.message}
+                </span>
+            </span>
+            <span className="shrink-0 ml-auto flex items-center gap-3">
+                {actions.length > 0 && (
+                    // Text (tertiary) buttons in reading order; 40px tall, the negative margin keeps
+                    // the toast itself at its usual height.
+                    <span className="-my-1.5 flex items-center">
+                        {actions.map((action, i) => (
+                            <button
+                                key={i}
+                                type="button"
+                                aria-label={action.ariaLabel}
+                                onClick={() => {
+                                    action.onClick()
+                                    toasts.dismiss(id)
+                                }}
+                                className={[
+                                    'shrink-0 h-10 px-3 rounded-full bg-transparent border-0 cursor-pointer whitespace-nowrap',
+                                    'font-label font-semibold text-[13px] leading-none text-primary hover:bg-surface-container-low',
+                                    'transition-colors duration-150 ease-solkey focus-ring',
+                                ].join(' ')}>
+                                {action.label}
+                            </button>
+                        ))}
+                    </span>
+                )}
+                <CloseButton ariaLabel="Dismiss" onClick={() => toasts.dismiss(id)} />
+            </span>
         </div>
     )
 }

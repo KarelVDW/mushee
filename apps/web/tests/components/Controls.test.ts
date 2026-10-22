@@ -218,6 +218,22 @@ describe('TransportBtn description', () => {
         expect(describedBy(button)).toEqual(['A steady click while playing and recording.', 'click along'])
     })
 
+    it('keeps the tooltip hint while the description comes, changes and goes', () => {
+        const renderWith = (description?: string) =>
+            act(() => root.render(createElement(TransportBtn, { size: 36, ariaLabel: 'Metronome', hint: 'click along', description })))
+        renderWith()
+        const button = host.querySelector('button') as HTMLButtonElement
+        expect(describedBy(button)).toEqual(['click along'])
+        renderWith('A steady click.')
+        expect(describedBy(button)).toEqual(['A steady click.', 'click along'])
+        renderWith('A steady click while playing and recording.')
+        expect(describedBy(button)).toEqual(['A steady click while playing and recording.', 'click along'])
+        renderWith(undefined)
+        expect(describedBy(button)).toEqual(['click along'])
+        // The same button throughout, so focus would never have moved.
+        expect(host.querySelector('button')).toBe(button)
+    })
+
     it('leaves aria-describedby off without a description or tooltip', () => {
         act(() => root.render(createElement(TransportBtn, { size: 36, ariaLabel: 'Stop' })))
         expect((host.querySelector('button') as HTMLButtonElement).hasAttribute('aria-describedby')).toBe(false)
