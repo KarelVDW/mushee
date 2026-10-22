@@ -23,6 +23,13 @@ const MIN_RADIUS = 1.5
  * fade, and hand the pixels over to the notes that replaced them.
  * Positions resolve at render time from the live layout, so bars stay glued
  * to their beat when rows reflow as measures fill up.
+ *
+ * The motion is the host's CSS, not this package's: the `.waveform-bar` /
+ * `.waveform-bar-exit` classes, their keyframes and the `--waveform-burst`
+ * factor live in apps/web/src/app/globals.css (shared with the landing-page
+ * demo). The exit animation's `animationend → store.remove` is the only path
+ * that drops an exiting bar, so a host without those styles leaks bars —
+ * any new host must import them.
  */
 export function RecordingWaveform({ store, score }: { store: RecordingWaveformStore; score: ScoreModel }) {
     const bars = useSyncExternalStore(store.subscribe, store.getSnapshot, store.getSnapshot)

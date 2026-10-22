@@ -141,8 +141,11 @@ body {
     }
 }
 
-/* Live recording waveform bars (RecordingWaveform.tsx). SVG rects: transform-box
-   makes scaleY grow from each bar's own center. */
+/* Live recording waveform bars (@mushee/notation's RecordingWaveform.tsx, which ships
+   no CSS: it relies on these classes, keyframes and --waveform-burst, and only drops an
+   exiting bar on its animationend — any app hosting it must carry this block; HeroDemo
+   reuses .waveform-bar). SVG rects: transform-box makes scaleY grow from each bar's own
+   center. */
 @keyframes waveform-bar-in {
     from {
         transform: scaleY(0);
