@@ -177,7 +177,10 @@ export class Measure {
      */
     complete(options: { position?: 'start' | 'end'; onUneven?: (residue: number) => void } = {}): this {
         const position = options.position ?? 'end'
-        const onGrid = (beats: number) => Math.abs(beats * 4 - Math.round(beats * 4)) < BEAT_EPSILON
+        const onGrid = (beats: number) => {
+            const units = beats / Duration.GRID_BEATS
+            return Math.abs(units - Math.round(units)) < BEAT_EPSILON
+        }
         let uneven = false
         for (;;) {
             const gap = this.maxBeats - this.beats
