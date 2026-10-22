@@ -91,12 +91,10 @@ interface InstrumentPickerProps {
     onChange: (instrument: Instrument) => void
     /** The one-line melody note under the label while a chordal instrument is picked (contract C13). Off for imports. */
     chordHint?: boolean
-    /** The 'Instrument · Piano' readout beside the label; off where the dialog already names the current instrument. */
-    showCurrentEyebrow?: boolean
     /**
-     * The new-score intro — 'What will you sing or play?' and its line on what the choice does
-     * ('… You can change it later.'). Off inside Change instrument, whose own subtitle says
-     * that: the group is then named 'Instrument', and the chord line still shows.
+     * The new-score intro — 'What will you sing or play?' and its line on what the choice does.
+     * Off inside Change instrument, whose own subtitle says that: the group is then named
+     * 'Instrument', and the chord line still shows.
      */
     showIntro?: boolean
     /** Focus the search field on mount — when the picker opens on request (the import dialog's 'Change'). */
@@ -109,16 +107,10 @@ interface InstrumentPickerProps {
  * (grouped by family, the popular ones left out so each 'Pick X' name exists once), and a
  * search field that searches them all. The list opens by itself while searching or when
  * the current instrument isn't a popular one; a hidden duplicate a score already uses
- * (an imported Horn in C) still shows, selected, in its family.
+ * (an imported Horn in C) still shows, selected, in its family. The picked tile or chip is
+ * the only readout of the choice — no 'Instrument · Piano' line repeats it.
  */
-export function InstrumentPicker({
-    value,
-    onChange,
-    chordHint = true,
-    showCurrentEyebrow = true,
-    showIntro = true,
-    autoFocusSearch,
-}: InstrumentPickerProps) {
+export function InstrumentPicker({ value, onChange, chordHint = true, showIntro = true, autoFocusSearch }: InstrumentPickerProps) {
     const labelId = useId()
     const [search, setSearch] = useState('')
     const [initial] = useState(value)
@@ -149,14 +141,11 @@ export function InstrumentPicker({
             <div className="flex flex-col">
                 {showIntro && (
                     <>
-                        <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-                            <span id={labelId} className="font-label font-semibold text-[14px] leading-tight text-on-surface">
-                                What will you sing or play?
-                            </span>
-                            {showCurrentEyebrow && <Eyebrow>Instrument · {value.displayName}</Eyebrow>}
-                        </div>
+                        <span id={labelId} className="font-label font-semibold text-[14px] leading-tight text-on-surface">
+                            What will you sing or play?
+                        </span>
                         <span className="mt-1 font-body font-normal text-[12px] leading-[1.4] text-on-surface-variant">
-                            Sets the playback sound and helps Solkey listen. You can change it later.
+                            Sets the playback sound and helps Solkey listen.
                         </span>
                     </>
                 )}

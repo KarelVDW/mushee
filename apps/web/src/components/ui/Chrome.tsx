@@ -168,11 +168,27 @@ function AccountMenu({ user }: { user?: string }) {
     )
 }
 
-export function PageHeader({ title, subtitle, right }: { title: ReactNode; subtitle?: ReactNode; right?: ReactNode }) {
+interface PageHeaderProps {
+    title: ReactNode
+    subtitle?: ReactNode
+    /** The controls beside the heading on wide screens, and on their own row under it on a phone. */
+    right?: ReactNode
+    /** One quiet action on the title's own row, at its far end (a phone's lone 'Import a file'), so no row holds it alone. */
+    titleAction?: ReactNode
+}
+
+export function PageHeader({ title, subtitle, right, titleAction }: PageHeaderProps) {
     return (
         <div className="flex flex-col md:flex-row md:justify-between md:items-end gap-4.5 pb-4.5">
             <div className="flex flex-col gap-2">
-                <PageTitle>{title}</PageTitle>
+                {titleAction ? (
+                    <div className="flex items-baseline justify-between gap-3">
+                        <PageTitle>{title}</PageTitle>
+                        {titleAction}
+                    </div>
+                ) : (
+                    <PageTitle>{title}</PageTitle>
+                )}
                 {subtitle && <SubHeadline>{subtitle}</SubHeadline>}
             </div>
             {right}

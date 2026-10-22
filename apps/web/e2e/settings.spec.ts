@@ -171,7 +171,7 @@ test('plan tab: the plan card says what Sketch gives, what is left today and whe
     await expect(card).toContainText('Free — 3 minutes of recording a day and up to 5 scores.')
     await expect(card).toContainText('3 min left of 3 min')
     await expect(card).toContainText(/Refills (tonight|today|tomorrow) at /)
-    await expect(card).toContainText('Scores: 1 of 5')
+    await expect(card).toContainText('1 of 5 free scores')
     await expect(page.getByRole('progressbar', { name: 'Recording time used today' })).toHaveAttribute(
         'aria-valuetext',
         '3 min left of 3 min',

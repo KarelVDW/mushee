@@ -134,3 +134,59 @@ describe('PlanPicker billing toggle', () => {
         expect(document.activeElement).toBe(options[1])
     })
 })
+
+describe('PlanPicker badges', () => {
+    function renderCards(currentTierId?: PlanTier['id'], billing: BillingInterval = 'monthly', paid: BillingInterval = 'monthly') {
+        const host = document.createElement('div')
+        document.body.appendChild(host)
+        const root = createRoot(host)
+        const isCurrent = currentTierId ? (p: PlanTier) => p.id === currentTierId && (p.priceMonthly === 0 || billing === paid) : undefined
+        act(() =>
+            root.render(
+                createElement(PlanPicker, {
+                    plans: PLAN_TIERS,
+                    billing,
+                    onBillingChange: () => {},
+                    selected: currentTierId ?? null,
+                    onSelect: () => {},
+                    isCurrent,
+                    currentTierId,
+                }),
+            ),
+        )
+        unmount = () => {
+            act(() => root.unmount())
+            host.remove()
+        }
+        return host
+    }
+
+    /** The badge text in a card or row ('' for none). */
+    const badgeOf = (element: Element) =>
+        [...element.querySelectorAll('span')].map((s) => s.textContent ?? '').find((t) => t === 'Your plan' || t === 'Best value') ?? ''
+    /** Each tier card's badge, by the card's plan name. */
+    const badges = (host: HTMLElement): Record<string, string> =>
+        Object.fromEntries(
+            [...host.querySelectorAll<HTMLButtonElement>('button[aria-pressed]')].map((card): [string, string] => {
+                const texts = [...card.querySelectorAll('span')].map((s) => s.textContent ?? '')
+                const name = PLAN_NAMES.find((n) => texts.some((t) => t === n || t.startsWith(`${n} — `)))
+                return [name ?? '?', badgeOf(card)]
+            }),
+        )
+
+    it('marks the account’s own tier "Your plan", as /pricing does', () => {
+        expect(badges(renderCards('free'))).toEqual({ Sketch: 'Your plan', Songwriter: 'Best value', Studio: '', Arranger: '' })
+    })
+
+    it('never shows "Best value" to someone on that tier or above it', () => {
+        expect(badges(renderCards('studio'))).toEqual({ Sketch: '', Songwriter: '', Studio: 'Your plan', Arranger: '' })
+        unmount?.()
+        // A Songwriter subscriber looking at the other cadence: not their plan as billed, still not a nudge.
+        expect(badges(renderCards('pro', 'yearly'))).toEqual({ Sketch: '', Songwriter: '', Studio: '', Arranger: '' })
+    })
+
+    it('shows "Best value" where there is no current plan (onboarding)', () => {
+        const host = renderCompact(null)
+        expect(rows(host).map(badgeOf)).toEqual(['', 'Best value', ''])
+    })
+})

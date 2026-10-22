@@ -62,7 +62,7 @@ function setPointer(fine: boolean) {
 const newScore = (props: Partial<React.ComponentProps<typeof NewScoreDialog>> = {}) =>
     createElement(NewScoreDialog, {
         title: 'New score',
-        subtitle: "Pick what you'll sing or play. You can change both later.",
+        subtitle: 'You can change both later.',
         initialInstrument: Instrument.VoiceLead,
         onCancel: () => {},
         onCreate: () => {},
@@ -81,7 +81,8 @@ describe('NewScoreDialog', () => {
         const onCreate = vi.fn()
         mount(newScore({ titlePlaceholder: 'My first melody', onCreate }))
         expect(titleField().placeholder).toBe('My first melody')
-        expect(document.body.textContent).toContain('Optional — you can rename it any time.')
+        expect(document.body.textContent).toContain('Optional')
+        expect(document.body.textContent).not.toContain('rename it any time')
         const create = required(button('Create score'), 'Create score')
         expect(create.disabled).toBe(false)
 

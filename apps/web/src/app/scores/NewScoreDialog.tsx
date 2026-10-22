@@ -93,7 +93,7 @@ export function NewScoreDialog({
                     value={title}
                     onChange={setTitle}
                     placeholder={titlePlaceholder}
-                    hint="Optional — you can rename it any time."
+                    hint="Optional"
                     inputRef={titleInputRef}
                     enterKeyHint="done"
                     onKeyDown={(e) => {

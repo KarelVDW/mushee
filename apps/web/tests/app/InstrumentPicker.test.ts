@@ -76,14 +76,16 @@ describe('InstrumentPicker', () => {
         const host = renderPicker(Instrument.VoiceLead)
         const group = host.querySelector('[role="group"][aria-labelledby]')
         expect(document.getElementById(group?.getAttribute('aria-labelledby') ?? '')?.textContent).toBe('What will you sing or play?')
-        expect(host.textContent).toContain('Sets the playback sound and helps Solkey listen. You can change it later.')
-        expect(host.textContent).toContain('Instrument · Voice')
+        expect(host.textContent).toContain('Sets the playback sound and helps Solkey listen.')
+        expect(host.textContent).not.toContain('change it later')
+        // The picked tile is the readout: no 'Instrument · Voice' eyebrow repeats it.
+        expect(host.textContent).not.toContain('Instrument ·')
         // The search field has a real name, not just a placeholder.
         expect(search(host).placeholder).toBe('Filter instruments…')
     })
 
     it('inside Change instrument drops the new-score intro but keeps the chord line', () => {
-        const host = renderPicker(Instrument.Piano, { showIntro: false, showCurrentEyebrow: false })
+        const host = renderPicker(Instrument.Piano, { showIntro: false })
         expect(host.textContent).not.toContain('What will you sing or play?')
         expect(host.textContent).not.toContain('You can change it later.')
         expect(host.querySelector('[role="group"][aria-label="Instrument"]')).not.toBeNull()
@@ -178,11 +180,10 @@ describe('InstrumentPicker', () => {
         expect(host.textContent).not.toContain(CHORD_LINE)
     })
 
-    it('leaves the chord line out where the caller turns it off (imports), and the eyebrow on request', () => {
-        const host = renderPicker(Instrument.Piano, { chordHint: false, showCurrentEyebrow: false })
+    it('leaves the chord line out where the caller turns it off (imports)', () => {
+        const host = renderPicker(Instrument.Piano, { chordHint: false })
         expect(host.textContent).not.toContain(CHORD_LINE)
         expect(host.querySelector('[aria-live]')).toBeNull()
-        expect(host.textContent).not.toContain('Instrument · Piano')
     })
 
     it('can focus its search field on mount', () => {

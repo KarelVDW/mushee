@@ -297,13 +297,13 @@ test('the create dialog takes an optional title, submits on Enter, and can be ca
     await page.getByRole('button', { name: 'New score' }).click()
     const dialog = page.getByRole('dialog', { name: 'New score' })
     await expect(dialog).toBeVisible()
-    await expect(dialog).toContainText("Pick what you'll sing or play. You can change both later.")
+    await expect(dialog).toContainText('You can change both later.')
 
     // The title is optional: Create is enabled from the start, and the field says so.
     const create = page.getByRole('button', { name: 'Create score' })
     await expect(create).toBeEnabled()
     await expect(page.getByLabel('Title', { exact: true })).toHaveAttribute('placeholder', 'Untitled score')
-    await expect(dialog.getByText('Optional — you can rename it any time.')).toBeVisible()
+    await expect(dialog.getByText('Optional', { exact: true })).toBeVisible()
 
     // Cancel closes without creating.
     await page.getByRole('button', { name: 'Cancel' }).click()
@@ -340,7 +340,9 @@ test('the picker leads with popular tiles, the voice picked, and keeps the rest 
     const dialog = page.getByRole('dialog', { name: 'New score' })
 
     await expect(dialog.getByText('What will you sing or play?')).toBeVisible()
-    await expect(dialog.getByText('Sets the playback sound and helps Solkey listen. You can change it later.')).toBeVisible()
+    await expect(dialog.getByText('Sets the playback sound and helps Solkey listen.', { exact: true })).toBeVisible()
+    // The picked tile is the readout: no 'Instrument · Voice' eyebrow repeats it.
+    await expect(dialog.getByText(/^Instrument · /)).toHaveCount(0)
     // No onboarding answer: a new score starts on the voice.
     await expect(dialog.getByRole('button', { name: 'Pick Voice', exact: true })).toHaveAttribute('aria-pressed', 'true')
     for (const name of ['Piano', 'Guitar', 'Violin', 'Flute', 'Recorder', 'Alto Saxophone', 'Trumpet']) {
@@ -509,7 +511,7 @@ test('imports a MusicXML file: confirms title and instrument, reports simplifica
     await expect(dialog.getByText('Instrument: Violin')).toBeVisible()
     const simplified = dialog.getByRole('status', { name: 'A few things were simplified' })
     await expect(simplified).toContainText('Only the first part (“Violin”) was imported; 1 other part was left out.')
-    await expect(simplified).toContainText('Some note values were rewritten with the nearest supported ones.')
+    await expect(simplified).toContainText('A few note lengths were rounded to ones Solkey can write.')
 
     // The picker waits behind 'Change', on the file's instrument, and an import carries no chord line.
     await dialog.getByRole('button', { name: 'Change' }).click()
@@ -554,6 +556,17 @@ test.describe('on a phone-sized screen', () => {
         await expect(page.getByRole('button', { name: 'Import a file' })).toBeVisible()
         await expect(page.getByRole('button', { name: 'Import file' })).toHaveCount(0)
         await expect(page.getByRole('textbox', { name: 'Search your scores' })).toHaveCount(0)
+        // The lone import link shares the title's row, so the list starts right under the heading.
+        const heading = await page.getByRole('heading', { name: 'Your scores' }).boundingBox()
+        const importLink = await page.getByRole('button', { name: 'Import a file' }).boundingBox()
+        const firstCard = await page
+            .getByRole('row')
+            .filter({ has: page.getByRole('button', { name: MOCK_TITLE, exact: true }) })
+            .boundingBox()
+        if (!heading || !importLink || !firstCard) throw new Error('library header or first card not laid out')
+        expect(importLink.y).toBeLessThan(heading.y + heading.height)
+        expect(importLink.y + importLink.height).toBeGreaterThan(heading.y)
+        expect(firstCard.y - (heading.y + heading.height)).toBeLessThan(50)
         // The column headers stay for screen readers only (a clipped 1px box) once the rows are cards.
         const headerRow = page.getByRole('row').filter({ has: page.getByRole('columnheader', { name: 'Title' }) })
         await expect(headerRow).toHaveCount(1)
@@ -564,5 +577,11 @@ test.describe('on a phone-sized screen', () => {
         await seedLibrary(page, 6)
         await page.goto('/scores')
         await expect(page.getByRole('textbox', { name: 'Search your scores' })).toBeVisible()
+        // The import link moves beside the field, and only one copy of it shows.
+        await expect(page.getByRole('button', { name: 'Import a file' })).toHaveCount(1)
+        const field = await page.getByRole('textbox', { name: 'Search your scores' }).boundingBox()
+        const importLink = await page.getByRole('button', { name: 'Import a file' }).boundingBox()
+        if (!field || !importLink) throw new Error('search row not laid out')
+        expect(importLink.x).toBeGreaterThan(field.x + field.width - 1)
     })
 })
