@@ -17,6 +17,7 @@ import { dismissToast, ErrorScreen, LoadingScreen, PopoverSheetHost, showToast, 
 import { ApiError, NetworkError } from '@/lib/api'
 import { withPlan } from '@/lib/plans'
 import { useScoreDocument } from '@/lib/queries'
+import { useDocumentTitle } from '@/lib/useDocumentTitle'
 import { useMediaQuery } from '@/lib/useMediaQuery'
 
 import { settingsTabPath } from '../../settings/settingsTabs'
@@ -159,6 +160,14 @@ export default function ScoreEditorPage() {
             manipulator.onTransposeRequest = undefined
         }
     }, [manipulator])
+    // '?' opens the shortcuts list the same way — on desktop, the only layout that offers it.
+    useEffect(() => {
+        if (isMobile) return
+        manipulator.onShortcutsRequest = () => setShortcutsOpen(true)
+        return () => {
+            manipulator.onShortcutsRequest = undefined
+        }
+    }, [manipulator, isMobile])
 
     // In-score attribute glyphs (tempo / clef / key / time): the ScoreView reports the click,
     // and ScoreAttributePopover opens the matching popover and applies the change. A mouse
@@ -320,25 +329,10 @@ export default function ScoreEditorPage() {
         })
     }, [autosave.status, manipulator])
 
-    // The tab carries the score's name, live as it is renamed; the tab's title goes back as it was on the way out.
-    useEffect(() => {
-        const before = document.title
-        return () => {
-            document.title = before
-        }
-    }, [])
-    useEffect(() => {
-        if (!scoreDocument) return
-        const wanted = `${title.trim() || UNTITLED_SCORE} — Solkey`
-        const apply = () => {
-            if (document.title !== wanted) document.title = wanted
-        }
-        apply()
-        // The route's own metadata title can land after this (streamed in late): keep ours on top.
-        const observer = new MutationObserver(apply)
-        observer.observe(document.head, { childList: true, subtree: true, characterData: true })
-        return () => observer.disconnect()
-    }, [title, scoreDocument])
+    // The tab carries the score's name, live as it is renamed ('Untitled score' when empty, which
+    // is also the route's own title until the score loads — see layout.tsx); a missing score says so.
+    const scoreMissing = loadError instanceof ApiError && loadError.status === 404
+    useDocumentTitle(scoreDocument ? `${title.trim() || UNTITLED_SCORE} — Solkey` : scoreMissing ? 'Score not found — Solkey' : null)
 
     // One transport prop bag for the header (desktop) and the dock's action row (mobile), so
     // the two can't drift. Record never waits for a selection: with nothing selected a take
@@ -484,16 +478,15 @@ export default function ScoreEditorPage() {
         )
     }
     if (loadError || unreadable) {
-        const notFound = loadError instanceof ApiError && loadError.status === 404
         return (
             <ErrorScreen
-                title={notFound ? 'Score not found' : "This score couldn't be loaded"}
+                title={scoreMissing ? 'Score not found' : "This score couldn't be loaded"}
                 message={
-                    notFound
+                    scoreMissing
                         ? 'This score doesn’t exist (anymore), or it belongs to a different account.'
                         : 'Something went wrong while loading this score. Try again, and if it keeps happening, come back in a few minutes.'
                 }
-                onRetry={notFound ? undefined : () => void refetch()}
+                onRetry={scoreMissing ? undefined : () => void refetch()}
                 onBack={() => router.push('/scores')}
                 backLabel="Back to library"
             />

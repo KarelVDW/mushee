@@ -91,10 +91,10 @@ describe('TakesList playback', () => {
 
     it('switching takes keeps the new row playing despite the old AbortError', async () => {
         await click(0)
-        expect(labels()).toEqual(['Pause take', 'Play take'])
+        expect(labels()).toEqual(['Pause recording', 'Play recording'])
 
         await click(1)
-        expect(labels()).toEqual(['Play take', 'Pause take'])
+        expect(labels()).toEqual(['Play recording', 'Pause recording'])
         expect(showToast).not.toHaveBeenCalled()
         // The replaced element is detached, so a late event can't touch the list.
         const [first] = FakeAudio.instances
@@ -105,28 +105,28 @@ describe('TakesList playback', () => {
     it('stopping the playing take is silent', async () => {
         await click(0)
         await click(0)
-        expect(labels()).toEqual(['Play take', 'Play take'])
+        expect(labels()).toEqual(['Play recording', 'Play recording'])
         expect(showToast).not.toHaveBeenCalled()
     })
 
     it('a real play failure on the current take resets the row and toasts', async () => {
         await click(0)
         await settle(() => FakeAudio.instances[0]?.failPlay('NotAllowedError'))
-        expect(labels()).toEqual(['Play take', 'Play take'])
+        expect(labels()).toEqual(['Play recording', 'Play recording'])
         expect(showToast).toHaveBeenCalledWith("This recording's audio couldn't be played.")
     })
 
     it('a load error on the current take resets the row and toasts', async () => {
         await click(1)
         await settle(() => FakeAudio.instances[0]?.onerror?.())
-        expect(labels()).toEqual(['Play take', 'Play take'])
+        expect(labels()).toEqual(['Play recording', 'Play recording'])
         expect(showToast).toHaveBeenCalledWith("This recording's audio couldn't be loaded.")
     })
 
     it('ending the current take resets its row', async () => {
         await click(0)
         await settle(() => FakeAudio.instances[0]?.onended?.())
-        expect(labels()).toEqual(['Play take', 'Play take'])
+        expect(labels()).toEqual(['Play recording', 'Play recording'])
     })
 })
 
@@ -170,11 +170,23 @@ describe('TakesList score names', () => {
         expect(link?.querySelector('.truncate')?.textContent).toBe('Scale Study')
     })
 
-    it("asks about a 'recording' even while the list keeps its older 'take' names", () => {
+    it("says 'recording' everywhere, never 'take' (the glossary), on the cross-score list too", () => {
         act(() => root.render(createElement(TakesList, { takes: [take('a')], scoreTitleFor: () => 'Scale Study' })))
-        act(() => container.querySelector<HTMLButtonElement>('[aria-label="Delete take"]')?.click())
+        expect(container.querySelector('ul')?.getAttribute('aria-label')).toBe('Recordings')
+        act(() => container.querySelector<HTMLButtonElement>('[aria-label="Delete recording"]')?.click())
         expect(rowText(0)).toContain('Delete this recording? Your notes stay.')
         expect(rowText(0)).not.toMatch(/\btake\b/i)
+        const names = [...container.querySelectorAll('[aria-label], [title]')].map(
+            (el) => `${el.getAttribute('aria-label') ?? ''} ${el.getAttribute('title') ?? ''}`,
+        )
+        expect(names.join(' ')).not.toMatch(/\btakes?\b/i)
+    })
+
+    it('titles an audio-less row in the same words', () => {
+        act(() => root.render(createElement(TakesList, { takes: [{ ...take('a'), hasAudio: false }] })))
+        const play = container.querySelector<HTMLButtonElement>('[aria-label="Play recording"]')
+        expect(play?.disabled).toBe(true)
+        expect(play?.getAttribute('title')).toBe('No audio was kept for this recording')
     })
 
     it('shows no score name on a per-score list', () => {
@@ -208,7 +220,7 @@ describe('TakesList on a per-score panel', () => {
 
     it('numbers the recordings oldest-first while listing them newest-first, length and date below', () => {
         const takes = [at('c', 43, 4), at('b', 42, 9), at('a', 10, 61)]
-        act(() => root.render(createElement(TakesList, { takes, numbered: true, noun: 'recording' })))
+        act(() => root.render(createElement(TakesList, { takes, numbered: true })))
         expect(container.querySelector('ul')?.getAttribute('aria-label')).toBe('Recordings')
         expect(rows().map((row) => row.querySelector('.truncate')?.textContent)).toEqual(['Recording 3', 'Recording 2', 'Recording 1'])
         expect(rows()[2]?.textContent).toContain('1:01 · ')
@@ -216,7 +228,7 @@ describe('TakesList on a per-score panel', () => {
     })
 
     it('asks before deleting, says the notes stay, focuses Keep, and hands focus back to the bin', () => {
-        act(() => root.render(createElement(TakesList, { takes: [at('a', 1, 4)], numbered: true, noun: 'recording' })))
+        act(() => root.render(createElement(TakesList, { takes: [at('a', 1, 4)], numbered: true })))
         const bin = () => container.querySelector<HTMLButtonElement>('[aria-label="Delete recording"]')
         act(() => bin()?.click())
         expect(rows()[0]?.textContent).toContain('Delete this recording? Your notes stay.')

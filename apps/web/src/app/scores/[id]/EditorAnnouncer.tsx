@@ -120,8 +120,8 @@ const SPOKEN_KEYS: Readonly<Record<string, string>> = { '‚Üê': 'Left arrow', '‚Ü
 /**
  * How the keyboard drives the score, in one plain paragraph built from the live keybindings
  * (a rebound key reads as its new key; an unbound one drops its sentence): 'Left and right
- * arrows move between notes. Up and down change the pitch. The Keyboard shortcuts button
- * lists them all.'
+ * arrows move between notes. Up and down change the pitch. Press ? for all shortcuts.' ('?'
+ * is fixed: the shortcuts list's own key.)
  */
 export class KeyboardHelpText {
     static of(keybindings: Keybindings<EditorCommand>): string {
@@ -148,7 +148,7 @@ export class KeyboardHelpText {
                     : `${higher} and ${lower} change the pitch.`,
             )
         }
-        sentences.push('The Keyboard shortcuts button lists them all.')
+        sentences.push('Press ? for all shortcuts.')
         return sentences.join(' ')
     }
 }

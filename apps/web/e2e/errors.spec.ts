@@ -19,7 +19,7 @@ test('library shows a full-page error while the server is down and recovers on r
 
     await page.goto('/scores')
     // React Query retries transient failures twice before surfacing the error.
-    await expect(page.getByRole('heading', { name: "Can't reach the server" })).toBeVisible({ timeout: 15_000 })
+    await expect(page.getByRole('heading', { name: "Can't connect right now" })).toBeVisible({ timeout: 15_000 })
 
     // Server comes back: the override is removed, the fixture mock answers again.
     await page.unroute(API_PATTERN, refuse)
@@ -34,6 +34,27 @@ test('editor shows a full-page error while the server is down', async ({ page, a
 
     await page.goto('/scores/e2e-score-1')
     await expect(page.getByRole('heading', { name: "Can't reach the server" })).toBeVisible({ timeout: 15_000 })
+    await expect(page.getByRole('button', { name: 'Back to library' })).toBeVisible()
+})
+
+test('a score that does not exist says so, on the page and in the tab', async ({ page, apiMock }) => {
+    void apiMock
+    // Registered after the fixture mock, so it wins: this score is gone (the API's 404).
+    await page.route(/localhost:4999\/scores\/e2e-missing(\/load)?$/, (route) => {
+        if (route.request().method() !== 'GET') return route.fallback()
+        return route.fulfill({
+            status: 404,
+            contentType: 'application/json',
+            headers: {
+                'access-control-allow-origin': route.request().headers()['origin'] ?? '*',
+                'access-control-allow-credentials': 'true',
+            },
+            body: JSON.stringify({ message: 'Score not found' }),
+        })
+    })
+    await page.goto('/scores/e2e-missing')
+    await expect(page.getByRole('heading', { name: 'Score not found' })).toBeVisible({ timeout: 15_000 })
+    await expect(page).toHaveTitle('Score not found — Solkey')
     await expect(page.getByRole('button', { name: 'Back to library' })).toBeVisible()
 })
 

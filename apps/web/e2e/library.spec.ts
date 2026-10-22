@@ -1,6 +1,6 @@
 import type { FileChooser, Page, Route } from '@playwright/test'
 
-import { expect, MOCK_SCORE_ID, MOCK_TITLE, SCORE_META, test } from './fixtures'
+import { expect, MOCK_SCORE_ID, MOCK_TITLE, mockBilling, SCORE_META, test } from './fixtures'
 
 /**
  * Mocked-API library (scores list) e2e: listing, opening a score, the create
@@ -272,6 +272,24 @@ test('at the cap, New score, Import and Duplicate open the limit dialog before a
     await expect(limit).toBeVisible()
     expect(apiMock.duplicates).toHaveLength(0)
     expect(apiMock.creates).toHaveLength(0)
+})
+
+test('Upgrade from a full library opens Change plan on the next tier, from the dialog and from See plans', async ({ page }) => {
+    // Plans can be bought here, so the plan tab opens the asked-for tier straight away.
+    await mockBilling(page, { billingConfigured: true })
+    await seedLibrary(page, 5)
+    await page.goto('/scores')
+    await page.getByRole('button', { name: 'New score' }).click()
+    await page.getByRole('dialog', { name: 'Your Sketch plan holds 5 scores.' }).getByRole('button', { name: 'See Songwriter' }).click()
+    const changePlan = page.getByRole('dialog', { name: 'Change plan' })
+    await expect(changePlan).toBeVisible()
+    await expect(changePlan.getByRole('button', { pressed: true })).toContainText('For daily writers')
+    await expect(page.getByRole('tab', { name: 'Plan' })).toHaveAttribute('aria-selected', 'true')
+
+    await page.goto('/scores')
+    await page.getByRole('link', { name: 'See plans' }).click()
+    await expect(changePlan).toBeVisible()
+    await expect(changePlan.getByRole('button', { pressed: true })).toContainText('For daily writers')
 })
 
 test('the create dialog takes an optional title, submits on Enter, and can be cancelled', async ({ page, apiMock }) => {

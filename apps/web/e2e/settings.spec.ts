@@ -1,6 +1,4 @@
-import type { Page } from '@playwright/test'
-
-import { expect, MOCK_SCORE_ID, MOCK_TITLE, test } from './fixtures'
+import { expect, MOCK_SCORE_ID, MOCK_TITLE, mockBilling, test } from './fixtures'
 
 /**
  * Mocked-API settings e2e: the four tabs and their ?tab= deep links, profile save, the
@@ -13,36 +11,6 @@ test.beforeEach(async ({ page, apiMock }) => {
     await page.goto('/settings')
     await expect(page.getByRole('button', { name: 'Save changes' })).toBeVisible()
 })
-
-/** The billing state the shared mock serves (Sketch, billing not configured), with `overrides`. */
-async function mockBilling(page: Page, overrides: Record<string, unknown>) {
-    await page.route(/localhost:4999\/billing\/subscription$/, (route) => {
-        const headers = {
-            'access-control-allow-origin': route.request().headers()['origin'] ?? '*',
-            'access-control-allow-credentials': 'true',
-            'access-control-allow-methods': 'GET,POST,PATCH,DELETE,OPTIONS',
-            'access-control-allow-headers': 'content-type',
-        }
-        if (route.request().method() === 'OPTIONS') return route.fulfill({ status: 204, headers, body: '' })
-        return route.fulfill({
-            status: 200,
-            contentType: 'application/json',
-            headers,
-            body: JSON.stringify({
-                tierId: 'free',
-                tierName: 'Sketch',
-                status: null,
-                interval: null,
-                currentPeriodEnd: null,
-                cancelAtPeriodEnd: false,
-                billingConfigured: false,
-                betaMode: false,
-                credits: { limitSeconds: 180, usedSeconds: 0, remainingSeconds: 180, packSeconds: 0 },
-                ...overrides,
-            }),
-        })
-    })
-}
 
 test('profile: saving a new name posts the update and confirms with a toast', async ({ page }) => {
     const name = page.getByLabel('Your name')
@@ -93,10 +61,10 @@ test('tabs: arrow keys move between tabs', async ({ page }) => {
 test('recordings tab: lists every recording with its score and deletes one', async ({ page, apiMock }) => {
     await page.getByRole('tab', { name: 'Recordings' }).click()
     await expect(page).toHaveURL(/\/settings\?tab=recordings$/)
-    const rows = page.getByRole('list', { name: 'Takes' }).getByRole('listitem')
+    const rows = page.getByRole('list', { name: 'Recordings' }).getByRole('listitem')
     await expect(rows).toHaveCount(4)
     await expect(rows.first()).toContainText(MOCK_TITLE)
-    await rows.first().getByRole('button', { name: 'Delete take' }).click()
+    await rows.first().getByRole('button', { name: 'Delete recording' }).click()
     await rows.first().getByRole('button', { name: 'Delete', exact: true }).click()
     await expect(rows).toHaveCount(3)
     expect(apiMock.recordingDeletes).toEqual(['take-2'])
@@ -104,7 +72,7 @@ test('recordings tab: lists every recording with its score and deletes one', asy
 
 test('recordings tab: links each score, labels orphans "Deleted score", and disables play without audio', async ({ page }) => {
     await page.goto('/settings?tab=recordings')
-    const rows = page.getByRole('list', { name: 'Takes' }).getByRole('listitem')
+    const rows = page.getByRole('list', { name: 'Recordings' }).getByRole('listitem')
     await expect(rows).toHaveCount(4)
 
     // Recordings on a live score link to it; the orphan's score is gone, so its name is plain text.
@@ -115,15 +83,15 @@ test('recordings tab: links each score, labels orphans "Deleted score", and disa
     await expect(orphan).toHaveCount(1)
     await expect(orphan).not.toContainText(MOCK_TITLE)
     await expect(orphan.getByRole('link')).toHaveCount(0)
-    await expect(orphan.getByRole('button', { name: 'Play take' })).toBeEnabled()
+    await expect(orphan.getByRole('button', { name: 'Play recording' })).toBeEnabled()
 
     // The audio-less recording (7 s) cannot be played; the others can.
     const silent = rows.filter({ hasText: '0:07' })
     await expect(silent).toHaveCount(1)
-    const silentPlay = silent.getByRole('button', { name: 'Play take' })
+    const silentPlay = silent.getByRole('button', { name: 'Play recording' })
     await expect(silentPlay).toBeDisabled()
-    await expect(silentPlay).toHaveAttribute('title', 'No audio was kept for this take')
-    await expect(rows.getByRole('button', { name: 'Play take', disabled: false })).toHaveCount(3)
+    await expect(silentPlay).toHaveAttribute('title', 'No audio was kept for this recording')
+    await expect(rows.getByRole('button', { name: 'Play recording', disabled: false })).toHaveCount(3)
 })
 
 test('account tab: "Download my data" produces a zip archive of the account', async ({ page }) => {

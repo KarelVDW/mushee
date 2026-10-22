@@ -89,8 +89,10 @@ export function useRecording({
     // dialog isn't open yet to block a re-toggle.
     const micWarmup = useRef<MediaStream | null>(null)
     const micWarmupPending = useRef(false)
-    // The after-take summary stops listening for the next edit when the next take starts (or the page goes).
-    const summaryWatch = useRef<(() => void) | null>(null)
+    // The after-take summary's retirement: it goes (and stops listening for the next edit) when
+    // the next take starts or the page goes — its Undo must never reach past its own take, nor
+    // edit a score no longer on screen (the app-wide Toaster outlives the page).
+    const retireSummary = useRef<(() => void) | null>(null)
     const recoveredTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
     const { data: billing } = useBillingState()
@@ -105,7 +107,7 @@ export function useRecording({
     useEffect(() => releaseMicWarmup, [releaseMicWarmup])
     useEffect(
         () => () => {
-            summaryWatch.current?.()
+            retireSummary.current?.()
             if (recoveredTimer.current) clearTimeout(recoveredTimer.current)
         },
         [],
@@ -120,9 +122,10 @@ export function useRecording({
 
     /**
      * The after-take summary, once the take has drained: what was added and the next step, with
-     * a way to hear it back (or, with no notes, to undo it). Showing it teaches what the dock's
-     * first-selection hint would have; the next edit retires it, so its action only ever means
-     * this take.
+     * a way to hear it back and to undo it (with no notes, only the undo). Undo takes the whole
+     * take back in one step — the history folds a take into one. Showing it teaches what the
+     * dock's first-selection hint would have; the next edit retires it, so its actions only ever
+     * mean this take.
      */
     const summarize = useCallback(
         (take: RecordingTake) => {
@@ -139,18 +142,20 @@ export function useRecording({
             })
             manipulator.announce(copy.announcement)
             manipulator.moveNoteHint.markSeen()
-            const action = take.wrotePitchedNotes
-                ? { label: 'Hear it back', onClick: () => playFrom(first.firstNote) }
-                : { label: 'Undo', ariaLabel: 'Undo this recording', onClick: () => manipulator.undo() }
-            const toast = showToast(copy.toast, 'info', { duration: SUMMARY_MS, action })
-            summaryWatch.current?.()
+            retireSummary.current?.()
+            const undo = { label: 'Undo', ariaLabel: 'Undo this recording', onClick: () => manipulator.undo() }
+            const actions = take.wrotePitchedNotes ? [{ label: 'Hear it back', onClick: () => playFrom(first.firstNote) }, undo] : [undo]
+            const toast = showToast(copy.toast, 'info', { duration: SUMMARY_MS, actions })
             const edits = manipulator.editCount
-            const unsubscribe = manipulator.subscribe(() => {
-                if (manipulator.editCount === edits) return
-                dismissToast(toast)
+            const retire = () => {
                 unsubscribe()
+                dismissToast(toast)
+                if (retireSummary.current === retire) retireSummary.current = null
+            }
+            const unsubscribe = manipulator.subscribe(() => {
+                if (manipulator.editCount !== edits) retire()
             })
-            summaryWatch.current = unsubscribe
+            retireSummary.current = retire
         },
         [manipulator, playFrom, touch],
     )
@@ -199,8 +204,7 @@ export function useRecording({
 
         // Stop any ongoing playback before beginning a recording session.
         stopAll()
-        summaryWatch.current?.()
-        summaryWatch.current = null
+        retireSummary.current?.()
 
         let end: TakeEnd = 'stopped'
         let started = false

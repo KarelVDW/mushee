@@ -83,13 +83,6 @@ interface TakesListProps {
      * length and the date on the line below — so two recordings from the same minute differ.
      */
     numbered?: boolean
-    /**
-     * What a row is called in the list's accessible names (and the no-audio title): 'recording',
-     * the glossary's word. 'take' keeps the older names ('Takes', 'Play take', 'Delete take') that
-     * the Settings list's tests assert until it moves over. Visible copy (the delete question,
-     * toasts) always says 'recording'.
-     */
-    noun?: 'recording' | 'take'
 }
 
 /** Each recording's number in a per-score list: 1 for the oldest, by when it started. */
@@ -100,15 +93,16 @@ function numbering(takes: readonly RecordingSummary[]): Map<string, number> {
 
 /**
  * Rows of recordings with replay (useTakePlayer) and a two-step inline delete whose question
- * says the notes stay. Shared by the editor's Recordings panel and Settings → Recordings.
+ * says the notes stay. Shared by the editor's Recordings panel and Settings → Recordings. Every
+ * name says 'recording', the glossary's word ('Recordings', 'Play recording', 'Delete
+ * recording') — never 'take', which stays a code-side word.
  */
-export function TakesList({ takes, scoreTitleFor, scroll = true, numbered = false, noun = 'take' }: TakesListProps) {
+export function TakesList({ takes, scoreTitleFor, scroll = true, numbered = false }: TakesListProps) {
     const remove = useDeleteRecording()
     const player = useTakePlayer()
     const [confirming, setConfirming] = useState<string | null>(null)
     const { playing } = player
     const numbers = numbered ? numbering(takes) : null
-    const Noun = noun === 'take' ? 'Take' : 'Recording'
 
     // Focus follows the confirm: onto Keep when it opens, back onto the bin when Keep closes it.
     const listRef = useRef<HTMLUListElement>(null)
@@ -145,7 +139,7 @@ export function TakesList({ takes, scoreTitleFor, scroll = true, numbered = fals
         <ul
             ref={listRef}
             role="list"
-            aria-label={`${Noun}s`}
+            aria-label="Recordings"
             className={['list-none m-0 p-0 flex flex-col gap-1.5', scroll ? 'max-h-72 overflow-y-auto' : ''].join(' ')}>
             {takes.map((take) => {
                 const scoreTitle = scoreTitleFor?.(take)
@@ -157,8 +151,8 @@ export function TakesList({ takes, scoreTitleFor, scroll = true, numbered = fals
                             size={32}
                             onClick={() => player.toggle(take)}
                             disabled={!take.hasAudio}
-                            ariaLabel={playing === take.id ? `Pause ${noun}` : `Play ${noun}`}
-                            title={take.hasAudio ? undefined : `No audio was kept for this ${noun}`}
+                            ariaLabel={playing === take.id ? 'Pause recording' : 'Play recording'}
+                            title={take.hasAudio ? undefined : 'No audio was kept for this recording'}
                             hoverTone="neutral"
                             idleClassName="bg-surface-container-lowest"
                         />
@@ -184,7 +178,7 @@ export function TakesList({ takes, scoreTitleFor, scroll = true, numbered = fals
                                     {number !== undefined ? (
                                         <>
                                             <span className="font-body font-medium text-[13px] leading-none text-on-surface truncate">
-                                                {Noun} {number}
+                                                Recording {number}
                                             </span>
                                             <span className="truncate font-body font-normal text-[11px] leading-none text-on-surface-variant">
                                                 <span className="font-mono">{formatRecordingTime(take.seconds)}</span>
@@ -230,7 +224,7 @@ export function TakesList({ takes, scoreTitleFor, scroll = true, numbered = fals
                                         icon="trash-2"
                                         size={32}
                                         onClick={() => setConfirming(take.id)}
-                                        ariaLabel={`Delete ${noun}`}
+                                        ariaLabel="Delete recording"
                                         hoverTone="magenta"
                                         idleClassName="bg-transparent text-on-surface-variant"
                                     />

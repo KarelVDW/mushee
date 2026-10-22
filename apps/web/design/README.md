@@ -26,7 +26,7 @@ Every decision answers to this person: what we build, what we leave out, where a
     - **On select:** the note and where it is — "G, quarter note. Bar 2, beat 1." (`Note`'s spoken description plus bar and beat); a range — "5 notes selected, bars 1 to 2."
     - **On edit:** just what changed — "A." after a pitch change, "Eighth note." after a length change.
     - **On play and record:** "Playing" / "Stopped"; "Count-in", "Recording", then "Recording stopped. Added bars 3 to 6." (or "No notes this time.").
-    - The canvas itself is named ("{title} — score", role description "score editor") and described by the live arrow-key shortcuts. Announcements stay quiet during a take, apart from the recording states.
+    - The canvas itself is named ("{title} — score", role description "score editor") and described by the live arrow-key shortcuts, ending "Press ? for all shortcuts." Announcements stay quiet during a take, apart from the recording states.
 8. **Defaults that just work.** A new score is ready to record with zero setup. Instrument, key, meter and tempo start sensible and can be changed later. No settings screen stands between a new user and their first melody. Onboarding asks only what shapes the first session: survey questions are optional and share one screen, and onboarding ends in the editor, ready to record. A visitor can hear a real Solkey score before creating an account ("Hear an example" on the landing page).
 
 **The dabbler test** — run it on every screen and every change: _could someone who has never used notation software do this on the first try, without reading anything?_ If not, simplify it. If it still needs explaining, explain it in the UI, in one plain line.
@@ -103,11 +103,14 @@ There is **one product**: the web app. The UI kit covers Landing → Auth → On
 | Hero line under the CTA    | `Free to start — no card, nothing to install.`                                                                                        |
 | Pricing free tier          | `Sketch` — `Free` · tagline `For trying things out` · CTA `Start free`; paid cards `Choose {plan}`, every card shows its tagline      |
 | Library page title         | `Your scores`                                                                                                                         |
+| Library offline            | `Can't connect right now` / `Check your internet connection and try again. Your scores are safe.`                                     |
+| Tab titles                 | `Your scores — Solkey` · the editor `{score title} — Solkey` (`Untitled score — Solkey` while it has none)                            |
 | Empty library              | `No scores yet.` / `Start a score, press record, and hum, sing or play — Solkey writes your melody down.` · `New score`               |
 | Score count (capped plans) | `3 of 5 free scores` from two below the cap; at the cap `You've used all 5 free scores.` · `See plans`                                |
 | Score-limit dialog         | `Your Sketch plan holds 5 scores.` / `Everything you've written stays safe and editable.`                                             |
 | Default score title        | `My first melody` (the first score) / `Untitled score` (every other) — the title field is optional                                    |
 | Instrument picker label    | `What will you sing or play?`                                                                                                         |
+| Change instrument          | `Changes the playback sound and how the notes are written for it. Your melody stays the same.` · `Use {instrument}`                   |
 | Editor empty state         | `Sing, hum or play your tune` · the how-to line from the [monophonic copy table](#what-solkey-doesnt-do) · `Start recording`          |
 | Recording strip            | `Get ready` → `Recording` · `Press Space or ■ to stop` (phones `Tap ■ to stop`)                                                       |
 | After a recording          | `Added bars 3–6. Click any note to fix it.` (phones `Tap any note…`; one bar `Added bar 3.`) · `Hear it back` · `Undo`                |
@@ -170,7 +173,7 @@ Not in: tooltips, toasts, banners, the count-in, the Recordings empty state, the
 ### Errors, limits and disabled controls
 
 - **Errors say what happened in plain words and hand over the next step** as a link or button: "That email and password don't match. Check for a typo, or reset your password." Never surface a server, library or browser string or code ("Invalid token", "User already exists", "Invalid OTP") — map it (`AuthErrorCopy.for(error)` for auth) and fall back to "Something went wrong. Try again in a moment."
-- **"Can't connect" is not a fault.** Offline and unreachable states read as reassurance ("Couldn't reach Solkey. Check your connection and try again."), retry on their own when the connection returns, and use the neutral tone.
+- **"Can't connect" is not a fault.** Offline and unreachable states read as reassurance ("Can't connect right now" · "Check your internet connection and try again. Your scores are safe."), retry on their own when the connection returns, and use the neutral tone.
 - **Limits say what still works.** "Everything you've written stays safe and editable." "Playing, editing and exporting still work." Then one calm way forward, priced.
 - **Disable only what truly can't act, and say why** — in the tooltip on desktop, in an inline hint or caption on touch ("Select a note first", "Tie needs the next note to be the same pitch."). Record is never disabled for lack of a selection.
 
@@ -290,11 +293,11 @@ Every interactive element carries the shared keyboard-focus ring, the `focus-rin
 - **Multi-step flows move focus to each step's title** (onboarding's step headings take programmatic focus, without the ring), and page-level titles are real headings — one `h1` per screen.
 - **Every page opens with a "Skip to content" link** (visible on focus) to its `main#content`.
 - **Triggers say what they are:** a chip that opens a popover or menu announces `aria-haspopup` + `aria-expanded`; a real toggle announces `aria-pressed`. **A toggle that swaps its action names the action it will do next** — Record ↔ "Stop recording", Play ↔ Pause — so the name carries the state.
-- **The editor keyboard:** Space plays, pauses and stops a take (a focused button keeps Space for itself); ⇧Space plays from the start; ⇧R records; Escape stops a take before it collapses a selection; the ContextMenu key / Shift+F10 opens the selection actions. All of it is listed, Playback first, in the shortcuts dialog.
+- **The editor keyboard:** Space plays, pauses and stops a take (a focused button keeps Space for itself); ⇧Space plays from the start; ⇧R records; Escape stops a take before it collapses a selection; the ContextMenu key / Shift+F10 opens the selection actions; "?" opens the shortcuts dialog itself (desktop), where all of it is listed, Playback first.
 
 Stacking uses the named layers in `packages/ui/src/theme.css`, lowest first: `--z-sticky` (sticky nav) = `--z-popover` (50) < `--z-banner` (cookie / browser-support banners, 60) < `--z-dialog` (the dialog scrim, 100) < `--z-toast` (110, so toasts stay readable and clickable over an open dialog). Overlay surfaces apply them as `z-(--z-dialog)` etc.; small stacking inside one component (`z-2`, the editor's header and dock) stays numeric. Phone sheets render through one host at the editor root, between the measured header and dock, above both.
 
-**Toasts:** the `Toaster` keeps two live regions mounted from the start — info in `role="status"`, errors in `role="alert"` — so the first message is announced too; at most two show at once, and their timers pause on hover, focus or touch. Toasts sit at `max(var(--toast-bottom, 1.5rem), env(safe-area-inset-bottom))`: the editor sets `--toast-bottom` to just above its dock, so in the editor — on phones above all — toasts stack above the dock and never cover the transport. During a take, status goes to the recording strip, not to toasts.
+**Toasts:** the `Toaster` keeps two live regions mounted from the start — info in `role="status"`, errors in `role="alert"` — so the first message is announced too; at most two show at once, each with up to two action buttons (the after-recording summary's "Hear it back" and "Undo"), and their timers pause on hover, focus or touch. Toasts sit at `max(var(--toast-bottom, 1.5rem), env(safe-area-inset-bottom))`: the editor sets `--toast-bottom` to just above its dock, so in the editor — on phones above all — toasts stack above the dock and never cover the transport. During a take, status goes to the recording strip, not to toasts.
 
 ### Hover & press states
 

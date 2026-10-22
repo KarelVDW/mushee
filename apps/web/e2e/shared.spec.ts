@@ -1,4 +1,4 @@
-import { expect, MOCK_SHARE_TOKEN, MOCK_TITLE, test } from './fixtures'
+import { expect, MOCK_SHARE_TOKEN, MOCK_TITLE, mockBilling, test } from './fixtures'
 
 /**
  * The public read-only score page behind a share link. Uses the apiMock routes
@@ -10,8 +10,9 @@ test('a valid share link renders the score read-only with its title, export and 
     await page.goto(`/s/${MOCK_SHARE_TOKEN}`)
 
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(MOCK_TITLE)
-    // The tab is named after the score once the token resolves (the server-rendered title is generic
-    // in this hermetic run: the mock API only exists inside the browser).
+    // The tab is named after the score once the token resolves, and that is its final title: the
+    // server's is generic in this hermetic run (the mock API only exists inside the browser), and it
+    // may stream in — into the body, rewritten again by hydration — after the score's name is set.
     await expect(page).toHaveTitle(`${MOCK_TITLE} — Solkey`)
     const score = page.getByTestId('shared-score')
     await expect(score.locator('svg').first()).toBeVisible()
@@ -54,8 +55,9 @@ test('a valid share link renders the score read-only with its title, export and 
     expect(apiMock.creates.map((body) => body.title)).toEqual([MOCK_TITLE])
 })
 
-test('a copy refused by the score cap offers the upgrade, which opens the plan tab', async ({ page, apiMock }) => {
+test('a copy refused by the score cap offers the upgrade, which opens Change plan on the next tier', async ({ page, apiMock }) => {
     void apiMock
+    await mockBilling(page, { billingConfigured: true })
     await page.goto(`/s/${MOCK_SHARE_TOKEN}`)
     await expect(page.getByTestId('shared-score').locator('svg').first()).toBeVisible()
 
@@ -77,8 +79,11 @@ test('a copy refused by the score cap offers the upgrade, which opens the plan t
     const dialog = page.getByRole('dialog', { name: 'Your Sketch plan holds 5 scores.' })
     await expect(dialog).toBeVisible()
 
-    // The plan tab and nothing else in the query: the share page lands on the plan tab without picking a tier.
+    // Like every upgrade moment, it lands on the plan tab with the next tier already picked.
     await dialog.getByRole('button', { name: 'See Songwriter' }).click()
+    const changePlan = page.getByRole('dialog', { name: 'Change plan' })
+    await expect(changePlan).toBeVisible()
+    await expect(changePlan.getByRole('button', { pressed: true })).toContainText('For daily writers')
     await expect(page).toHaveURL(/\/settings\?tab=plan$/)
 })
 

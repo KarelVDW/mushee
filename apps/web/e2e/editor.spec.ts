@@ -97,10 +97,11 @@ test('a take: the strip replaces the tools, Record becomes Stop, and the bar aft
     await expect(strip).toContainText('Press Space or')
 
     await stop.click()
-    // The summary names the bar the take added and the next step, with a way to hear it.
+    // The summary names the bar the take added and the next step, with a way to hear it and to take it back.
     const summary = page.getByRole('status').filter({ hasText: /Added bars? 1(–2)?\. Click any note to fix it\./ })
     await expect(summary).toBeVisible()
     await expect(summary.getByRole('button', { name: 'Hear it back' })).toBeVisible()
+    await expect(summary.getByRole('button', { name: 'Undo this recording', exact: true })).toBeVisible()
     // The dock is back, Record is Record again, and the bar after the take is selected.
     await expect(page.getByRole('group', { name: 'Note tools' })).toBeVisible()
     await expect(page.getByRole('button', { name: 'Record', exact: true })).toBeEnabled()
@@ -108,6 +109,26 @@ test('a take: the strip replaces the tools, Record becomes Stop, and the bar aft
     await expect(page.getByRole('button', { name: 'Rest', exact: true })).toBeEnabled()
     // Screen readers hear it too, through the editor's live region.
     await expect(page.locator('[aria-live="polite"]:not([role])')).toHaveText(/^Recording stopped\. Added bars? 1( to 2)?\./)
+})
+
+test('the summary’s Undo takes the whole recording back in one step', async ({ page, browserName }) => {
+    test.skip(browserName === 'webkit', 'the synthetic microphone needs Chromium’s MediaRecorder')
+    await mockRecording(page)
+    const headerUndo = page.getByRole('group', { name: 'History' }).getByRole('button', { name: 'Undo', exact: true })
+    const headerRedo = page.getByRole('group', { name: 'History' }).getByRole('button', { name: 'Redo', exact: true })
+    await expect(headerUndo).toBeDisabled()
+    await page.getByRole('button', { name: 'Record', exact: true }).click()
+    await expect(page.getByRole('group', { name: 'Recording status' })).toContainText('Recording', { timeout: 6000 })
+    await page.getByRole('button', { name: 'Stop recording', exact: true }).click()
+
+    const summary = page.getByRole('status').filter({ hasText: /Added bars? 1/ })
+    await expect(summary).toBeVisible()
+    await expect(headerUndo).toBeEnabled()
+    await summary.getByRole('button', { name: 'Undo this recording', exact: true }).click()
+    await expect(summary).toHaveCount(0)
+    // The take was the only step: nothing is left to undo, and the take can be redone.
+    await expect(headerUndo).toBeDisabled()
+    await expect(headerRedo).toBeEnabled()
 })
 
 test('a take that heard no notes says so and offers to undo it', async ({ page, browserName }) => {
@@ -579,7 +600,7 @@ test('the canvas is a named score editor that says the selected note and what an
     const canvas = page.getByRole('application', { name: `${MOCK_TITLE} — score` })
     await expect(canvas).toHaveAttribute('aria-roledescription', 'score editor')
     await expect(canvas).toHaveAccessibleDescription(
-        'Left and right arrows move between notes. Up and down change the pitch. The Keyboard shortcuts button lists them all.',
+        'Left and right arrows move between notes. Up and down change the pitch. Press ? for all shortcuts.',
     )
     const live = page.locator('[aria-live="polite"]:not([role])')
     await focusEditor(page)

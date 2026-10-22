@@ -547,8 +547,12 @@ export class ScoreManipulator {
             e.preventDefault()
             return
         }
-        // A key no shortcut can be recorded on (the Menu key) reaches its command by name.
-        const command = this.keybindings.resolve(e) ?? this.keybindings.commands.find((c) => c.alternateKey?.key === e.key) ?? null
+        // A key no shortcut can be recorded on (the Menu key) reaches its command by name, as does
+        // a key named by the character it types ('?') — never under ⌘ / Ctrl, which mean something
+        // else ('⌘?' is the Mac's Help menu), though AltGr (Ctrl+Alt) still types characters.
+        const commandHeld = e.metaKey || (e.ctrlKey && !e.altKey)
+        const named = commandHeld ? undefined : this.keybindings.commands.find((c) => c.alternateKey?.key === e.key)
+        const command = this.keybindings.resolve(e) ?? named ?? null
         if (!command) return
         // Space on a focused button presses the button, as the browser intends.
         if (command.yieldsToControls && target instanceof Element && target.closest(NATIVELY_ACTIVATED)) return
@@ -731,6 +735,13 @@ export class ScoreManipulator {
      * command list like any other; unset (editor not mounted), the keystroke is declined.
      */
     onTransposeRequest?: () => void
+
+    /**
+     * Opens the keyboard shortcuts list ('?') — registered by the page, which owns the dialog,
+     * like {@link onTransposeRequest}; only where the list is offered (desktop). Unset, the
+     * keystroke is declined.
+     */
+    onShortcutsRequest?: () => void
 
     /**
      * Page-registered feedback hook: a pitch operation (transpose / minimize accidentals)

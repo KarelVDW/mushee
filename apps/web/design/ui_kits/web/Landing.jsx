@@ -451,18 +451,18 @@ function FeatureGrid() {
                     {[
                         [
                             'mic',
-                            'Live transcription',
-                            'Sing, whistle, or play — pitch and rhythm are detected in real time and written as proper notation.',
+                            'Watch it write itself',
+                            'Sing, hum, whistle or play a melody. Solkey hears pitch and rhythm and writes real sheet music as you go.',
                         ],
                         [
                             'music',
-                            'Real engraving',
-                            'Spacing, beaming, accidentals, and ties follow real engraving rules, so the page always looks like sheet music should.',
+                            'Looks like real sheet music',
+                            'Notes are spaced, grouped and spelled the way printed music is, so you can hand it to a teacher or a bandmate.',
                         ],
                         [
-                            'keyboard',
-                            'Keyboard-first editing',
-                            'Every correction is a keystroke away: durations, accidentals, octaves. Customize the shortcuts to fit your hands.',
+                            'pencil',
+                            'Fix it in a tap',
+                            'Nudge a note up or down, change its length, or use your keyboard if you have one. Every change can be undone.',
                         ],
                         [
                             'audio-lines',
@@ -477,7 +477,7 @@ function FeatureGrid() {
                         [
                             'shield',
                             'Yours, privately',
-                            'Your music belongs to you. Recordings stay private to your account — never published, shared, or sold — and vanish when you delete it.',
+                            'Your music belongs to you. Recordings stay private to your account — never published or sold — and a score is only ever shared when you turn on its link.',
                         ],
                     ].map(([icon, title, body]) => (
                         <div
@@ -568,7 +568,7 @@ const LANDING_PRO_TIER = {
 
 // One-time packs — deliberately the secondary offer, one click away.
 const LANDING_PACKS = [
-    ['Single', '$6', '15 min of recording · One song, with plenty of retakes.'],
+    ['Single', '$6', '15 min of recording · One song, with room to record it again.'],
     ['EP', '$15', '45 min of recording · A weekend writing session.'],
     ['Album', '$39', '150 min of recording · A whole project, start to finish.'],
 ]

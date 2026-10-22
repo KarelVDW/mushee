@@ -59,7 +59,7 @@ const SETTINGS_CREDIT_PACKS = [
         name: 'Single',
         minutes: 15,
         price: 6,
-        blurb: 'One song, with plenty of retakes.',
+        blurb: 'One song, with room to record it again.',
         compare: 'Songwriter gives you 20 min every day for $3 more a month.',
     },
     {

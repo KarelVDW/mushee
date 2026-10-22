@@ -217,6 +217,44 @@ describe('selection menu from the keyboard', () => {
     })
 })
 
+describe('the shortcuts list from the keyboard', () => {
+    it("opens on '?' however the layout types it, and is declined until the editor registers", () => {
+        const { manipulator } = setup()
+        // US layout: Shift+Slash types '?'.
+        const unregistered = keydown({ code: 'Slash', key: '?', shiftKey: true })
+        manipulator.handleKeyDown(unregistered)
+        expect(unregistered.defaultPrevented).toBe(false)
+
+        const open = vi.fn()
+        manipulator.onShortcutsRequest = open
+        const us = keydown({ code: 'Slash', key: '?', shiftKey: true })
+        manipulator.handleKeyDown(us)
+        // AZERTY: Shift+Comma (physical KeyM) types it; an AltGr layout types it with Ctrl+Alt.
+        const azerty = keydown({ code: 'KeyM', key: '?', shiftKey: true })
+        manipulator.handleKeyDown(azerty)
+        const altGr = keydown({ code: 'Minus', key: '?', ctrlKey: true, altKey: true })
+        manipulator.handleKeyDown(altGr)
+        expect(open).toHaveBeenCalledTimes(3)
+        expect([us, azerty, altGr].every((event) => event.defaultPrevented)).toBe(true)
+    })
+
+    it("leaves '/' and ⌘ / Ctrl + '?' alone", () => {
+        const { manipulator } = setup()
+        const open = vi.fn()
+        manipulator.onShortcutsRequest = open
+        for (const init of [
+            { code: 'Slash', key: '/' },
+            { code: 'Slash', key: '?', shiftKey: true, metaKey: true },
+            { code: 'Slash', key: '?', shiftKey: true, ctrlKey: true },
+        ]) {
+            const event = keydown(init)
+            manipulator.handleKeyDown(event)
+            expect(event.defaultPrevented).toBe(false)
+        }
+        expect(open).not.toHaveBeenCalled()
+    })
+})
+
 describe('the move-a-note hint', () => {
     it('stays until the first pitch edit, then is gone for good on this device', () => {
         const { manipulator } = setup()

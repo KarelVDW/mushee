@@ -251,6 +251,7 @@ export function MoreToolsSheet({
                         variant="sheet"
                         lead={lead}
                         active={settings.clef}
+                        instrument={score.instrument}
                         anchorRef={anchorRef}
                         onSelect={(type) => {
                             manipulator.changeClef(type)
@@ -489,11 +490,13 @@ function MoreToolsMenu({ manipulator, words, anchorRef, metronome, onMetronomeTo
                             onClose()
                         }}
                     />
-                    <div className="flex flex-col gap-1 px-2 py-2.5">
-                        <Switch checked={metronome} onChange={onMetronomeToggle} label={<SheetLabel>Metronome</SheetLabel>} />
-                        <span className="font-body text-[12px] leading-tight text-on-surface-variant">
-                            A steady click while playing and recording.
-                        </span>
+                    <div className="px-2 py-2.5">
+                        <Switch
+                            checked={metronome}
+                            onChange={onMetronomeToggle}
+                            label={<SheetLabel>Metronome</SheetLabel>}
+                            hint="A steady click while playing and recording."
+                        />
                     </div>
                     <SheetRow
                         label="Redo"
