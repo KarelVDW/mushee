@@ -66,14 +66,7 @@ export default function ScoresPage() {
     const duplicateMutation = useDuplicateScore()
 
     function handleCreate(title: string, instrument: Instrument) {
-        // Build the starting score through the model so a new score opens with the
-        // same default measure as completing one in the editor (e.g. four quarter
-        // rests in 4/4, six eighth rests in 6/8).
-        const score = new Score()
-        score.seedInstrument(instrument)
-        const measure = score.addMeasure().complete()
-        score.setTempo(measure?.firstNote, 120)
-        createFromScore(title, score)
+        createFromScore(title, Score.blank(instrument))
     }
 
     /** Read a picked MusicXML/MIDI file into a score; the import dialog then confirms title and instrument. */
