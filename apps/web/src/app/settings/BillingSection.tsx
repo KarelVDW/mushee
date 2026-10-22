@@ -16,10 +16,18 @@ import { SettingsSection } from './SettingsSection'
 
 /**
  * Live Polar-backed subscription state: plan, renewal, credits, actions.
- * `requestedPlan` — a tier a pricing card sent the visitor here for: the plan
- * dialog opens on arrival with that tier selected, wherever plans can be bought.
+ * `requestedPlan` — a tier a pricing card or an upgrade button sent the visitor here for:
+ * the plan dialog opens on arrival with that tier selected, wherever plans can be bought.
+ * `requestedPacks` — the visitor followed a minute-packs link: the packs dialog opens on
+ * arrival, again only where packs can be bought (otherwise the plan card is all there is).
  */
-export function BillingSection({ requestedPlan }: { requestedPlan?: PlanTier['id'] | null }) {
+export function BillingSection({
+    requestedPlan,
+    requestedPacks = false,
+}: {
+    requestedPlan?: PlanTier['id'] | null
+    requestedPacks?: boolean
+}) {
     const { data: billing, isPending, isError, refetch } = useBillingState()
     const portal = useBillingPortal()
     const resume = useResumeSubscription()
@@ -30,6 +38,9 @@ export function BillingSection({ requestedPlan }: { requestedPlan?: PlanTier['id
     useEffect(() => {
         if (requestedPlan) setChangePlanOpen(true)
     }, [requestedPlan])
+    useEffect(() => {
+        if (requestedPacks) setPacksOpen(true)
+    }, [requestedPacks])
 
     if (isPending) {
         return (
@@ -118,7 +129,7 @@ export function BillingSection({ requestedPlan }: { requestedPlan?: PlanTier['id
                     }}
                 />
             )}
-            {packsOpen && (
+            {packsOpen && canPurchase && (
                 <PacksDialog
                     onClose={() => setPacksOpen(false)}
                     onSeePlans={() => {
