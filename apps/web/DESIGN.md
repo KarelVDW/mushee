@@ -97,4 +97,4 @@ Phones get the same design language, restructured — never a shrunken desktop:
 - No divider lines between list items — use background shifts.
 - No gradients on buttons or CTAs; the energy is the offset shadow.
 - No color in the score canvas beyond ink + `INTERACTION_BLUE` overlays.
-- No emoji, no icon fonts, no unicode glyphs as chrome icons (`♮ ♭ ♯` in the control bar are the only exception — they're notation).
+- No emoji, no icon fonts, no unicode glyphs as chrome icons (`♮ ♭ ♯` in the tool dock's accidental control are the only exception — they're notation).

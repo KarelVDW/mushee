@@ -33,12 +33,12 @@ every failing attempt (`retain-on-failure`); locally only a failed retry is trac
 
 What it covers:
 
-- `editor.spec.ts` — editor loads and engraves; keyboard pitch editing +
-  debounced autosave; duration/rest controls; range selection (shift+arrows,
-  drag, select all); copy/cut/paste; fixed clipboard shortcuts; shortcut
-  rebinding persists; clef/tempo popovers open from the tool dock; takes and
-  share menus; export to **MusicXML**, **MIDI**, and **PDF** (real downloads,
-  verified headers).
+- `editor.spec.ts` — editor loads and engraves; the header Record button's
+  selection guard; keyboard pitch editing + debounced autosave; duration/rest
+  controls; range selection (shift+arrows, drag, select all); copy/cut/paste;
+  fixed clipboard shortcuts; shortcut rebinding persists; clef/tempo popovers
+  open from the tool dock; takes and share menus; export to **MusicXML**,
+  **MIDI**, and **PDF** (real downloads, verified headers).
 - `editor-keyboard.spec.ts` — every remaining default keybinding from
   `commands.ts` (arrow navigation, R/T/./3 toggles, Backspace clear pitch, M
   minimize accidentals, Shift+T transpose) and that shortcuts stay suspended
