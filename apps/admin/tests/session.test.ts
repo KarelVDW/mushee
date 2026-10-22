@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { createSessionToken, sessionMaxAgeSeconds, verifySessionToken } from '../src/lib/session'
+import { createSessionToken, secretMatches, sessionMaxAgeSeconds, verifySessionToken } from '../src/lib/session'
 
 const SECRET = 'test-console-secret'
 
@@ -49,5 +49,14 @@ describe('admin session tokens', () => {
         expect(sessionMaxAgeSeconds()).toBe(12 * 3600)
         process.env.ADMIN_SESSION_HOURS = 'soon'
         expect(sessionMaxAgeSeconds()).toBe(12 * 3600)
+    })
+})
+
+describe('secretMatches', () => {
+    it('accepts only the exact secret', async () => {
+        await expect(secretMatches(SECRET, SECRET)).resolves.toBe(true)
+        await expect(secretMatches('test-console-secreT', SECRET)).resolves.toBe(false)
+        await expect(secretMatches('test-console', SECRET)).resolves.toBe(false)
+        await expect(secretMatches('', SECRET)).resolves.toBe(false)
     })
 })

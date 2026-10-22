@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from 'next/server'
 
-import { createSessionToken, SESSION_COOKIE, sessionMaxAgeSeconds } from '@/lib/session'
+import { createSessionToken, secretMatches, SESSION_COOKIE, sessionMaxAgeSeconds } from '@/lib/session'
 
 /**
  * Sign in: exchange the console secret for the session cookie. The secret is
@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
         provided = undefined
     }
 
-    if (typeof provided !== 'string' || !(await constantTimeEqual(provided, secret))) {
+    if (typeof provided !== 'string' || !(await secretMatches(provided, secret))) {
         const entry = failures.get(key)
         failures.set(key, { count: (entry?.count ?? 0) + 1, lastAt: Date.now() })
         return NextResponse.json({ message: "That secret didn't match." }, { status: 401 })
@@ -60,20 +60,4 @@ export function DELETE() {
     const response = NextResponse.json({ ok: true })
     response.cookies.set(SESSION_COOKIE, '', { httpOnly: true, path: '/', maxAge: 0 })
     return response
-}
-
-/** HMAC both sides with a throwaway key: equal-length digests make the final
- *  comparison timing-independent of how much of the secret was guessed. */
-async function constantTimeEqual(a: string, b: string): Promise<boolean> {
-    const key = await crypto.subtle.generateKey({ name: 'HMAC', hash: 'SHA-256' }, false, ['sign'])
-    const encoder = new TextEncoder()
-    const [macA, macB] = await Promise.all([
-        crypto.subtle.sign('HMAC', key, encoder.encode(a)),
-        crypto.subtle.sign('HMAC', key, encoder.encode(b)),
-    ])
-    const bytesA = new Uint8Array(macA)
-    const bytesB = new Uint8Array(macB)
-    let diff = 0
-    for (let i = 0; i < bytesA.length; i++) diff |= bytesA[i] ^ bytesB[i]
-    return diff === 0
 }
