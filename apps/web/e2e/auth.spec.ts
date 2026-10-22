@@ -321,11 +321,14 @@ test.describe('onboarding', () => {
         await expect(page.getByRole('button', { name: 'Continue' })).toHaveCount(0)
         await page.getByRole('button', { name: 'Not now' }).click()
 
-        // The optional survey: single-choice rows, nothing chosen up front, Continue always on.
+        // The optional survey: single-choice rows, nothing chosen up front, the way on always there —
+        // 'Skip' until something is picked, then 'Continue'.
         await expect(page.getByRole('heading', { name: 'A bit about you.' })).toBeFocused()
         const background = page.getByRole('radiogroup', { name: 'Where are you with music?' })
         await expect(background.getByRole('radio', { checked: true })).toHaveCount(0)
+        await expect(page.getByRole('button', { name: 'Skip', exact: true })).toBeVisible()
         await background.getByRole('radio', { name: 'Hobbyist' }).click()
+        await expect(page.getByRole('button', { name: 'Skip', exact: true })).toHaveCount(0)
         await expect(background.getByRole('radio', { name: 'Hobbyist' })).toHaveAttribute('aria-checked', 'true')
         await page.getByRole('button', { name: 'Continue' }).click()
 
@@ -348,7 +351,8 @@ test.describe('onboarding', () => {
         await expect(page.getByRole('progressbar')).toHaveAttribute('aria-valuetext', 'Step 2 of 5')
         await page.getByRole('button', { name: 'Continue' }).click()
         await page.getByRole('button', { name: 'Not now' }).click()
-        await page.getByRole('button', { name: 'Continue' }).click()
+        // Nothing picked in the survey: its button skips it.
+        await page.getByRole('button', { name: 'Skip', exact: true }).click()
 
         await expect(page.getByRole('heading', { name: 'Start free, or pick a plan.' })).toBeVisible()
         await expect(
@@ -388,6 +392,60 @@ test.describe('onboarding', () => {
         expect(await page.evaluate(() => window.localStorage.getItem('solkey:mic-mode-guide'))).not.toBeNull()
     })
 
+    test('each step opens at the top of the page, not where the last one was scrolled to', async ({ page }) => {
+        await page.setViewportSize({ width: 390, height: 600 })
+        await page.goto('/onboarding')
+        await expect(page.getByRole('heading', { name: 'What will you record?' })).toBeFocused()
+        await page.getByRole('button', { name: 'All instruments' }).click()
+        // Continue sits below the fold on a phone: reaching it scrolls the page down.
+        await page.getByRole('button', { name: 'Continue' }).scrollIntoViewIfNeeded()
+        expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(0)
+        await page.getByRole('button', { name: 'Continue' }).click()
+
+        await expect(page.getByRole('heading', { name: 'Allow microphone access.' })).toBeFocused()
+        expect(await page.evaluate(() => window.scrollY)).toBe(0)
+    })
+
+    test('a granted mic off an iPhone moves on by itself, Back still there for the beat it shows', async ({ page }) => {
+        await page.addInitScript(() => {
+            Object.defineProperty(MediaDevices.prototype, 'getUserMedia', {
+                configurable: true,
+                value: () => Promise.resolve(new MediaStream()),
+            })
+        })
+        await page.goto('/onboarding')
+        await page.getByRole('button', { name: 'Continue' }).click()
+        await expect(page.getByText('Your browser will ask for permission next.')).toBeVisible()
+        await page.getByRole('button', { name: 'Allow microphone' }).click()
+
+        await expect(page.getByText("You're ready to record.")).toBeVisible()
+        await expect(page.getByRole('button', { name: 'Continue' })).toHaveCount(0)
+        await expect(page.getByRole('button', { name: 'Back' })).toBeVisible()
+        await expect(page.getByRole('heading', { name: 'A bit about you.' })).toBeFocused()
+    })
+
+    test('a blocked mic leaves one next step: Continue, with Try again a quiet text button', async ({ page }) => {
+        await page.addInitScript(() => {
+            Object.defineProperty(MediaDevices.prototype, 'getUserMedia', {
+                configurable: true,
+                value: () => Promise.reject(new DOMException('Permission denied', 'NotAllowedError')),
+            })
+        })
+        await page.goto('/onboarding')
+        await page.getByRole('button', { name: 'Continue' }).click()
+        await page.getByRole('button', { name: 'Allow microphone' }).click()
+
+        await expect(page.getByText('Microphone blocked.')).toBeVisible()
+        await expect(
+            page.getByText('No problem — the editor works without a mic, and recording will ask again when you need it.'),
+        ).toBeVisible()
+        await expect(page.getByText(/^To allow it now: .+ Then Try again\.$/)).toBeVisible()
+        await expect(page.getByText("You can change this any time in your browser's site settings.")).toHaveCount(0)
+        await expect(page.getByRole('button', { name: 'Try again' })).toBeVisible()
+        await page.getByRole('button', { name: 'Continue' }).click()
+        await expect(page.getByRole('heading', { name: 'A bit about you.' })).toBeFocused()
+    })
+
     test('verify: the code submits itself on the sixth digit, and a wrong one is said in plain words', async ({ page }) => {
         let verified = false
         let attempts = 0
@@ -413,6 +471,38 @@ test.describe('onboarding', () => {
         await code.fill('654321')
         await expect(page.getByText('Email verified.')).toBeVisible()
         await expect(page.getByRole('heading', { name: 'What will you record?' })).toBeVisible()
+    })
+
+    test('approved off the waitlist, an empty library goes straight into a first melody on the onboarding pick', async ({
+        page,
+        apiMock,
+    }) => {
+        await answer(page, '/onboarding', () => ({ status: 200, body: { instruments: ['Violin'] } }))
+        // An empty library; creating a score still falls through to the fixture mock.
+        await page.route(
+            (url) => url.port === '4999' && url.pathname === '/scores',
+            (route) =>
+                route.request().method() === 'GET'
+                    ? route.fulfill({ status: 200, contentType: 'application/json', headers: corsHeaders(route), body: '[]' })
+                    : route.fallback(),
+        )
+        await page.goto('/beta')
+
+        await expect(page.getByRole('heading', { name: "You're in." })).toBeVisible()
+        await expect(page.getByRole('link', { name: 'Go to my library' })).toHaveAttribute('href', '/scores')
+        await page.getByRole('button', { name: 'Record my first melody' }).click()
+        await expect(page).toHaveURL(/\/scores\/e2e-created-1\?first=1$/)
+        expect(apiMock.creates[0]).toMatchObject({ title: 'My first melody' })
+        expect(JSON.stringify(apiMock.creates[0])).toContain('Violin')
+    })
+
+    test('approved off the waitlist with scores already, the welcome just opens the library', async ({ page, apiMock }) => {
+        await page.goto('/beta')
+
+        await expect(page.getByRole('heading', { name: "You're in." })).toBeVisible()
+        await expect(page.getByRole('link', { name: 'Open my library' })).toHaveAttribute('href', '/scores')
+        await expect(page.getByRole('button', { name: 'Record my first melody' })).toHaveCount(0)
+        expect(apiMock.creates).toHaveLength(0)
     })
 
     test('verify: a mistyped email starts over at signup with the name filled in, the destination and plan kept', async ({ page }) => {

@@ -27,14 +27,19 @@ export const GOALS: readonly OnboardingOption[] = [
     { key: 'learn', label: 'Learn notation' },
 ]
 
-export const REFERRAL_SOURCES: readonly OnboardingOption[] = [
-    { key: 'friend', label: 'A friend told me' },
-    { key: 'search', label: 'Found it on a search engine' },
-    { key: 'social', label: 'Saw it on social media' },
-    { key: 'youtube', label: 'Saw it on YouTube' },
-    { key: 'teacher', label: 'My teacher recommended it' },
-    { key: 'blog', label: 'Read about it in an article' },
-    { key: 'other', label: 'Somewhere else' },
+/** A source chip, and the one follow-up question its optional detail field asks (the field's label). */
+interface ReferralSource extends OnboardingOption {
+    readonly detailQuestion: string
+}
+
+export const REFERRAL_SOURCES: readonly ReferralSource[] = [
+    { key: 'friend', label: 'A friend told me', detailQuestion: 'Who told you?' },
+    { key: 'search', label: 'Found it on a search engine', detailQuestion: 'What did you search for?' },
+    { key: 'social', label: 'Saw it on social media', detailQuestion: 'Where?' },
+    { key: 'youtube', label: 'Saw it on YouTube', detailQuestion: 'Which channel?' },
+    { key: 'teacher', label: 'My teacher recommended it', detailQuestion: 'Who told you?' },
+    { key: 'blog', label: 'Read about it in an article', detailQuestion: 'Where?' },
+    { key: 'other', label: 'Somewhere else', detailQuestion: 'Where?' },
 ]
 
 /**

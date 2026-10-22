@@ -7,7 +7,7 @@ import { BetaPlanCard } from '@/components/BetaPlanCard'
 import { FunnelShell } from '@/components/FunnelShell'
 import { Eyebrow, Icon, ModalTitle, PrimaryButton, SubHeadline, TertiaryButton } from '@/components/ui'
 import { useSession } from '@/lib/auth-client'
-import { useBetaGate, usePlanCatalogue, useSignOut } from '@/lib/queries'
+import { useBetaGate, usePlanCatalogue, useScores, useSignOut, useStartFirstMelody } from '@/lib/queries'
 
 /**
  * Closed-beta waiting room. Pending users land here after signup; the page
@@ -32,20 +32,7 @@ export default function BetaWaitingPage() {
     return (
         <FunnelShell gap={6} action={<TertiaryButton onClick={() => void signOut('/')}>Sign out</TertiaryButton>}>
             {approved ? (
-                <>
-                    <div className="w-14 h-14 rounded-full bg-primary-soft text-on-primary-soft inline-flex items-center justify-center">
-                        <Icon name="check" size={28} />
-                    </div>
-                    <ModalTitle>You&apos;re in.</ModalTitle>
-                    <SubHeadline>Your beta access has been approved. Have fun — and tell us everything that feels rough.</SubHeadline>
-                    {/* The real first step is a score to record into, not an empty library. */}
-                    <div className="flex items-center gap-5 flex-wrap">
-                        <PrimaryButton emphasis="pop" icon="arrow-right" href="/scores?new=1">
-                            Make your first score
-                        </PrimaryButton>
-                        <TertiaryButton href="/scores">Open my library</TertiaryButton>
-                    </div>
-                </>
+                <ApprovedWelcome />
             ) : (
                 <>
                     <Eyebrow className="text-secondary">Closed beta</Eyebrow>
@@ -87,5 +74,46 @@ export default function BetaWaitingPage() {
                 </>
             )}
         </FunnelShell>
+    )
+}
+
+/**
+ * Approved: the same hand-off as onboarding's done screen. An empty library goes straight into a
+ * first score on the onboarding pick, ready to record; one that already holds scores (an account
+ * let in again) just opens the library, so nothing is made unasked.
+ */
+function ApprovedWelcome() {
+    const library = useScores()
+    const firstMelody = useStartFirstMelody()
+    const count = library.data?.length
+    return (
+        <>
+            <div className="w-14 h-14 rounded-full bg-primary-soft text-on-primary-soft inline-flex items-center justify-center">
+                <Icon name="check" size={28} />
+            </div>
+            <ModalTitle>You&apos;re in.</ModalTitle>
+            <SubHeadline>Your beta access has been approved. Have fun — and tell us everything that feels rough.</SubHeadline>
+            {/* Its height held until the library is counted, so no button swaps in under a tap. */}
+            <div className="flex items-center gap-x-5 gap-y-2 flex-wrap min-h-8.5 pointer-coarse:min-h-11">
+                {count === 0 ? (
+                    <>
+                        <PrimaryButton
+                            emphasis="pop"
+                            icon="arrow-right"
+                            onClick={() => firstMelody.start()}
+                            disabled={firstMelody.creating}>
+                            {firstMelody.creating ? 'Getting it ready…' : 'Record my first melody'}
+                        </PrimaryButton>
+                        <TertiaryButton href="/scores">Go to my library</TertiaryButton>
+                    </>
+                ) : (
+                    (count !== undefined || library.isError) && (
+                        <PrimaryButton emphasis="pop" icon="arrow-right" href="/scores">
+                            Open my library
+                        </PrimaryButton>
+                    )
+                )}
+            </div>
+        </>
     )
 }

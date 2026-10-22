@@ -137,7 +137,11 @@ function TierCard({ plan, active, billing, current, onSelect }) {
                 boxShadow: active ? 'none' : '0 0 24px 0 rgba(45,47,47,0.06)',
                 transition: 'background 150ms var(--ease), transform 150ms var(--ease)',
             }}>
-            {current ? <CardBadge tone="neutral">Current</CardBadge> : plan.popular ? <CardBadge tone="secondary">Best value</CardBadge> : null}
+            {current ? (
+                <CardBadge tone="neutral">Current</CardBadge>
+            ) : plan.popular ? (
+                <CardBadge tone="secondary">Best value</CardBadge>
+            ) : null}
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <span
                     style={{
@@ -624,27 +628,21 @@ function Onboarding({ onComplete, onSkip }) {
                                     {data.micState === 'idle' && 'Microphone access needed'}
                                 </span>
                                 <span style={{ font: '400 13px/1.5 var(--font-body)', color: 'var(--color-on-surface-variant)' }}>
-                                    {data.micState === 'granted' && "You're ready to record. Tap Continue."}
+                                    {data.micState === 'granted' && "You're ready to record."}
                                     {data.micState === 'denied' &&
-                                        'No problem — the editor works without a mic, and recording will ask again when you need it. To enable it now, update site permissions in your browser and try again, or just Continue.'}
+                                        'No problem — the editor works without a mic, and recording will ask again when you need it.'}
                                     {data.micState === 'requesting' && 'Your browser will ask you to confirm in a moment.'}
-                                    {data.micState === 'idle' && 'When you tap Allow, your browser will ask for permission.'}
+                                    {data.micState === 'idle' && 'Your browser will ask for permission next.'}
                                 </span>
                             </div>
                         </div>
 
                         <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
-                            {data.micState !== 'granted' && (
-                                <PrimaryButton
-                                    emphasis="pop"
-                                    onClick={requestMic}
-                                    disabled={data.micState === 'requesting'}
-                                    icon={data.micState === 'denied' ? 'refresh-cw' : 'mic'}>
-                                    {data.micState === 'denied'
-                                        ? 'Try again'
-                                        : data.micState === 'requesting'
-                                          ? 'Asking…'
-                                          : 'Allow microphone'}
+                            {/* Blocked: the footer's Continue leads; Try again is a quiet text button (browsers remember a block). */}
+                            {data.micState === 'denied' && <TertiaryButton onClick={requestMic}>Try again</TertiaryButton>}
+                            {(data.micState === 'idle' || data.micState === 'requesting') && (
+                                <PrimaryButton emphasis="pop" onClick={requestMic} disabled={data.micState === 'requesting'} icon="mic">
+                                    {data.micState === 'requesting' ? 'Asking…' : 'Allow microphone'}
                                 </PrimaryButton>
                             )}
                             <span style={{ font: '400 12px/1.4 var(--font-body)', color: 'var(--color-on-surface-variant)' }}>
@@ -701,18 +699,28 @@ function Onboarding({ onComplete, onSkip }) {
                 {step === 5 && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
                         <ModalTitle>Which instruments do you play?</ModalTitle>
-                        <SubHeadline>
-                            Pick any that apply — or none, if you're more of a listener.
-                        </SubHeadline>
+                        <SubHeadline>Pick any that apply — or none, if you're more of a listener.</SubHeadline>
                         {/* Full model catalogue, grouped by family in a scrollable column, with the
                             survey-only "None of the above" options appended after the real families. */}
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 14, maxHeight: '45dvh', overflowY: 'auto', paddingRight: 4 }}>
+                        <div
+                            style={{
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: 14,
+                                maxHeight: '45dvh',
+                                overflowY: 'auto',
+                                paddingRight: 4,
+                            }}>
                             {INSTRUMENTS_BY_CATEGORY.map(([category, names]) => (
                                 <div key={category} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                                     <Eyebrow>{category}</Eyebrow>
                                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                                         {names.map((i) => (
-                                            <Chip key={i} size="md" active={data.instruments.includes(i)} onClick={() => toggleInstrument(i)}>
+                                            <Chip
+                                                key={i}
+                                                size="md"
+                                                active={data.instruments.includes(i)}
+                                                onClick={() => toggleInstrument(i)}>
                                                 {i}
                                             </Chip>
                                         ))}
@@ -757,11 +765,11 @@ function Onboarding({ onComplete, onSkip }) {
                             ))}
                         </div>
                         {data.source && (
+                            // One question per source, asked by the label alone (production: onboarding-data.ts).
                             <TextField
-                                label="Anything else? (optional)"
+                                label={data.source === 'friend' ? 'Who told you? (optional)' : 'Where? (optional)'}
                                 value={data.sourceDetail}
                                 onChange={(v) => setField('sourceDetail', v)}
-                                placeholder={data.source === 'friend' ? "Who, if you don't mind sharing?" : 'A name, channel, or link'}
                             />
                         )}
                     </div>
@@ -853,13 +861,14 @@ function Onboarding({ onComplete, onSkip }) {
                         </div>
                         <ModalTitle>You're all set, {data.name.split(' ')[0] || 'there'}.</ModalTitle>
                         <SubHeadline>
-                            Your library is ready on <strong>{PLAN_TIERS.find((p) => p.id === data.tier)?.name}</strong>. Start a fresh
-                            score, or take the editor for a spin.
+                            Let's get your first melody down. Press record, then sing, hum or play, and Solkey writes the notes.
                         </SubHeadline>
-                        <div style={{ display: 'flex', gap: 12, marginTop: 8 }}>
+                        {/* Production (and the closed beta's "You're in." once approved) opens "My first melody", ready to record. */}
+                        <div style={{ display: 'flex', gap: 20, marginTop: 8, alignItems: 'center', flexWrap: 'wrap' }}>
                             <PrimaryButton emphasis="pop" icon="arrow-right" onClick={() => onComplete(data)}>
-                                Open my library
+                                Record my first melody
                             </PrimaryButton>
+                            <TertiaryButton onClick={() => onComplete(data)}>Go to my library</TertiaryButton>
                         </div>
                     </div>
                 )}

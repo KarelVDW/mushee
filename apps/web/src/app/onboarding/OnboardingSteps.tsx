@@ -3,6 +3,7 @@
 import { Instrument } from '@mushee/notation/model'
 import { type KeyboardEvent, type ReactNode, type Ref, useEffect, useEffectEvent, useId, useRef, useState } from 'react'
 
+import { MicFailure } from '@/app/scores/[id]/RecordingCopy'
 import { InstrumentChordHint, PopularInstrumentTiles } from '@/app/scores/InstrumentPicker'
 import { PlanPicker } from '@/components/PlanPicker'
 import { Chip, Eyebrow, Icon, ModalTitle, PrimaryButton, SubHeadline, TertiaryButton, TextField } from '@/components/ui'
@@ -27,6 +28,9 @@ interface StepProps {
 
 /** How long the "Email verified" row shows before the flow moves on by itself (no animation, so reduced motion keeps it). */
 export const VERIFIED_ADVANCE_MS = 600
+
+/** The same beat for "Microphone connected." after a fresh grant off an iPhone. */
+export const MIC_GRANTED_ADVANCE_MS = VERIFIED_ADVANCE_MS
 
 /** better-auth's code for a verification code past its 10 minutes; a fresh one is sent at once. */
 const OTP_EXPIRED = 'OTP_EXPIRED'
@@ -281,15 +285,18 @@ const MIC_MODE_STEPS = [
 export function MicStep({
     micState,
     setMicState,
-    onGuideOpenChange,
+    onContinueHeldChange,
     onAdvance,
     titleRef,
 }: StepProps & {
     micState: MicState
     setMicState: (s: MicState) => void
-    /** Whether the iPhone walkthrough is showing, with its own buttons in place of the footer's Continue. */
-    onGuideOpenChange: (open: boolean) => void
-    /** 'Not now' and 'Done — Wide Spectrum is on' move on to the next step. */
+    /**
+     * Whether the step leads by itself for now, the footer's Continue held back: while the iPhone
+     * walkthrough shows its own buttons, and for the beat before a fresh grant moves on.
+     */
+    onContinueHeldChange: (held: boolean) => void
+    /** 'Not now', 'Done — Wide Spectrum is on' and a fresh grant off an iPhone move on to the next step. */
     onAdvance: () => void
 }) {
     // On iPhones the granted stream stays open while the walkthrough shows: Control Center only
@@ -304,11 +311,26 @@ export function MicStep({
         stream.getTracks().forEach((t) => t.stop())
         Microphone.endSession()
         setGuideOpen(false)
-        onGuideOpenChange(false)
+        onContinueHeldChange(false)
     }
     // Back, 'Skip setup' or any other way off the step.
     const releaseOnLeave = useEffectEvent(release)
     useEffect(() => () => releaseOnLeave(), [])
+
+    // A fresh grant off an iPhone leaves nothing to ask: "Microphone connected." shows for a beat,
+    // then the flow moves on by itself, as "Email verified" does (Back stays). Only a fresh one —
+    // back on this step later, the granted row waits for the footer's Continue.
+    const [justGranted, setJustGranted] = useState(false)
+    const advance = useEffectEvent(onAdvance)
+    const releaseHold = useEffectEvent(() => onContinueHeldChange(false))
+    useEffect(() => {
+        if (!justGranted) return
+        const timer = window.setTimeout(() => advance(), MIC_GRANTED_ADVANCE_MS)
+        return () => {
+            window.clearTimeout(timer)
+            releaseHold()
+        }
+    }, [justGranted])
 
     const requestMic = async () => {
         setMicState('requesting')
@@ -317,12 +339,14 @@ export function MicStep({
             if (isIPhone()) {
                 guideStream.current = stream
                 setGuideOpen(true)
-                onGuideOpenChange(true)
             } else {
                 // Only the permission grant was needed.
                 stream.getTracks().forEach((t) => t.stop())
                 Microphone.endSession()
+                setJustGranted(true)
             }
+            // Either way the step leads now: the walkthrough's buttons, or the move on by itself.
+            onContinueHeldChange(true)
             setMicState('granted')
         } catch {
             setMicState('denied')
@@ -334,6 +358,10 @@ export function MicStep({
         release()
         onAdvance()
     }
+
+    // Where this browser keeps the microphone permission, in one line; null where there is no
+    // reliable path to name. It only shows once blocked, so the server render (no navigator) matches.
+    const permissionStep = typeof navigator === 'undefined' ? null : MicFailure.permissionStep(navigator.userAgent)
 
     return (
         <StepShell
@@ -363,11 +391,11 @@ export function MicStep({
                         {micState === 'granted' &&
                             (guideOpen
                                 ? 'One iPhone setting first. Your iPhone tunes its mic for phone calls, which hides whistling and instruments. Switch it once and it stays that way.'
-                                : "You're ready to record. Tap Continue.")}
+                                : "You're ready to record.")}
                         {micState === 'denied' &&
-                            'No problem — the editor works without a mic, and recording will ask again when you need it. To enable it now, update site permissions in your browser and try again, or just Continue.'}
+                            'No problem — the editor works without a mic, and recording will ask again when you need it.'}
                         {micState === 'requesting' && 'Your browser will ask you to confirm in a moment.'}
-                        {micState === 'idle' && 'When you tap Allow, your browser will ask for permission.'}
+                        {micState === 'idle' && 'Your browser will ask for permission next.'}
                     </span>
                 </div>
             </div>
@@ -400,19 +428,39 @@ export function MicStep({
 
             {micState !== 'granted' && (
                 <div className="flex flex-col gap-3">
-                    <div className="flex gap-x-5 gap-y-2 items-center flex-wrap">
-                        <PrimaryButton
-                            onClick={() => void requestMic()}
-                            disabled={micState === 'requesting'}
-                            icon={micState === 'denied' ? 'refresh-cw' : 'mic'}>
-                            {micState === 'denied' ? 'Try again' : micState === 'requesting' ? 'Asking…' : 'Allow microphone'}
-                        </PrimaryButton>
-                        {/* Skipping the mic skips only the mic; the footer's Continue takes over once the browser has answered. */}
-                        {micState !== 'denied' && <TertiaryButton onClick={onAdvance}>Not now</TertiaryButton>}
-                    </div>
-                    <span className="font-body font-normal text-[12px] leading-[1.4] text-on-surface-variant">
-                        You can change this any time in your browser&apos;s site settings.
-                    </span>
+                    {micState === 'denied' ? (
+                        // Blocked: the footer's Continue is the one next step. Browsers remember a block,
+                        // so Try again stays quiet, after the line saying where this browser keeps it.
+                        <>
+                            {permissionStep && (
+                                <p className="m-0 font-body font-normal text-[13px] leading-normal text-on-surface">
+                                    To allow it now: {permissionStep} Then Try again.
+                                </p>
+                            )}
+                            <div>
+                                <TertiaryButton onClick={() => void requestMic()}>
+                                    <span className="inline-flex items-center gap-1.5">
+                                        <Icon name="refresh-cw" size={13} />
+                                        Try again
+                                    </span>
+                                </TertiaryButton>
+                            </div>
+                        </>
+                    ) : (
+                        <div className="flex gap-x-5 gap-y-2 items-center flex-wrap">
+                            <PrimaryButton onClick={() => void requestMic()} disabled={micState === 'requesting'} icon="mic">
+                                {micState === 'requesting' ? 'Asking…' : 'Allow microphone'}
+                            </PrimaryButton>
+                            {/* Skipping the mic skips only the mic. A yes moves on by itself; after a no, the footer's Continue leads. */}
+                            <TertiaryButton onClick={onAdvance}>Not now</TertiaryButton>
+                        </div>
+                    )}
+                    {/* Said once: where this browser keeps the setting (above, when blocked), else this. */}
+                    {!(micState === 'denied' && permissionStep) && (
+                        <span className="font-body font-normal text-[12px] leading-[1.4] text-on-surface-variant">
+                            You can change this any time in your browser&apos;s site settings.
+                        </span>
+                    )}
                 </div>
             )}
         </StepShell>
@@ -508,6 +556,8 @@ export function AboutStep({
     sourceDetail: string
     onSourceDetailChange: (v: string) => void
 }) {
+    // One follow-up per source, asked by the field's label alone: no placeholder posing a second question.
+    const detailQuestion = REFERRAL_SOURCES.find((s) => s.key === source)?.detailQuestion
     return (
         <StepShell titleRef={titleRef} title="A bit about you." subtitle="Optional. It helps us build the right things.">
             <div className="flex flex-col gap-6">
@@ -515,13 +565,8 @@ export function AboutStep({
                 <ChoiceRow label="What do you want to do first?" options={GOALS} value={goal} onChange={onGoalChange} />
                 <div className="flex flex-col gap-3">
                     <ChoiceRow label="How did you find Solkey?" options={REFERRAL_SOURCES} value={source} onChange={onSourceChange} />
-                    {source && (
-                        <TextField
-                            label="Anything else? (optional)"
-                            value={sourceDetail}
-                            onChange={onSourceDetailChange}
-                            placeholder={source === 'friend' ? "Who, if you don't mind sharing?" : 'A name, channel, or link'}
-                        />
+                    {detailQuestion && (
+                        <TextField label={`${detailQuestion} (optional)`} value={sourceDetail} onChange={onSourceDetailChange} />
                     )}
                 </div>
             </div>

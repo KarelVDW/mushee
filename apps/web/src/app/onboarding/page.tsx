@@ -1,21 +1,19 @@
 'use client'
 
-import { Instrument, Score } from '@mushee/notation/model'
-import { ScoreSerializer } from '@mushee/notation/model/io/ScoreSerializer'
+import { Instrument } from '@mushee/notation/model'
 import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 
-import { defaultScoreTitle } from '@/app/scores/NewScoreDialog'
 import { FunnelShell } from '@/components/FunnelShell'
-import { Icon, PrimaryButton, showToast, StepProgress, TertiaryButton } from '@/components/ui'
+import { Icon, PrimaryButton, StepProgress, TertiaryButton } from '@/components/ui'
 import { AuthPrefill } from '@/components/ui/AuthCard'
 import { setUserProperties, track } from '@/lib/analytics'
-import { ApiError, type BillingInterval, type OnboardingPatch } from '@/lib/api'
+import type { BillingInterval, OnboardingPatch } from '@/lib/api'
 import { useSession } from '@/lib/auth-client'
 import { formatMoney } from '@/lib/currency'
 import { LIBRARY_PATH, nextPathFrom, withNext } from '@/lib/nextPath'
 import { BETA_MODE, isPaidTier, type PlanCatalogue, type PlanTier, requestedPlanFrom, withPlan } from '@/lib/plans'
-import { useBetaGate, useCreateScore, usePatchOnboarding, usePlanCatalogue, useSignOut, useStartCheckout } from '@/lib/queries'
+import { useBetaGate, usePatchOnboarding, usePlanCatalogue, useSignOut, useStartCheckout, useStartFirstMelody } from '@/lib/queries'
 import { formatAllowance } from '@/lib/recordingTime'
 import { useDisplayCurrency } from '@/lib/useDisplayCurrency'
 
@@ -35,7 +33,7 @@ export default function OnboardingPage() {
     const router = useRouter()
     const patchMutation = usePatchOnboarding()
     const startCheckout = useStartCheckout()
-    const createScore = useCreateScore()
+    const firstMelody = useStartFirstMelody()
     const signOut = useSignOut()
     const plans = usePlanCatalogue()
     const currency = useDisplayCurrency()
@@ -61,7 +59,8 @@ export default function OnboardingPage() {
     // Mic permission state lives here (not in MicStep): the footer reads it, and it
     // must survive navigating away from the step and back.
     const [micState, setMicState] = useState<MicState>('idle')
-    const [micGuideOpen, setMicGuideOpen] = useState(false)
+    // The step leads by itself for now (the iPhone walkthrough, or the beat before a grant moves on).
+    const [micHoldsContinue, setMicHoldsContinue] = useState(false)
 
     // The answers. Every one is optional.
     const [instruments, setInstruments] = useState<Instrument[]>([])
@@ -84,15 +83,17 @@ export default function OnboardingPage() {
         setNextPath(nextPathFrom(search))
     }, [])
 
-    // Each step (and the done screen) opens with focus on its heading, so a screen reader
-    // reads the new question first. Not on arrival: the code field takes focus then.
+    // Each step (and the done screen) opens at the top — the wordmark and 'Skip setup' in view,
+    // not wherever a long step's Continue left the page on a phone — with focus on its heading,
+    // so a screen reader reads the new question first. Not on arrival: the code field takes focus then.
     const titleRef = useRef<HTMLHeadingElement>(null)
     const screen = done ? 'done' : stepName
     const focusedScreen = useRef(screen)
     useEffect(() => {
         if (focusedScreen.current === screen) return
         focusedScreen.current = screen
-        titleRef.current?.focus()
+        window.scrollTo({ top: 0 })
+        titleRef.current?.focus({ preventScroll: true })
     }, [screen])
 
     const patchFor = (name: typeof stepName): OnboardingPatch | null => {
@@ -177,32 +178,26 @@ export default function OnboardingPage() {
 
     // The usual end: a new score on the first instrument picked, open and ready to record.
     const destination: DoneDestination = awaitingApproval ? 'beta' : nextPath !== LIBRARY_PATH ? 'next' : 'first-melody'
-    const recordFirstMelody = () => {
-        const score = Score.blank(instruments[0] ?? Instrument.VoiceLead)
-        createScore.mutate(
-            { title: defaultScoreTitle(true), score: new ScoreSerializer(score).toInput() },
-            {
-                onSuccess: (created) => router.push(`/scores/${created.id}?first=1`),
-                onError: (err) => {
-                    // A full library (an older account onboarding again): the library's limit dialog explains.
-                    if (err instanceof ApiError && err.isScoreLimit) router.push('/scores?new=1')
-                    else showToast("Couldn't create your score. Please try again.")
-                },
-            },
-        )
-    }
+    // The picks made on this visit are fresher than the saved answers the hook falls back to.
+    const recordFirstMelody = () => firstMelody.start(instruments[0] ?? Instrument.VoiceLead)
 
-    // The plan step's button says what happens next, the price in it for a paid plan.
+    // The button says what happens next: the optional survey is skipped until something in it
+    // is picked, and the plan step names the price for a paid plan.
     const chosenPlan = plans.byId(tier)
     const paidChoice = stepName === 'plan' && !!chosenPlan && isPaidTier(tier)
+    const surveyAnswered = background !== null || goal !== null || source !== null
     const ctaLabel =
-        stepName !== 'plan' || !chosenPlan
-            ? 'Continue'
-            : paidChoice
-              ? `Continue to payment · ${formatMoney(billing === 'yearly' ? chosenPlan.priceYearly : chosenPlan.priceMonthly, currency)}/${billing === 'yearly' ? 'year' : 'month'}`
-              : 'Start free'
-    // The verify step moves on by itself; the mic step's own buttons lead until the browser has answered.
-    const showContinue = stepName !== 'verify' && (stepName !== 'mic' || (micState === 'granted' && !micGuideOpen) || micState === 'denied')
+        stepName === 'about' && !surveyAnswered
+            ? 'Skip'
+            : stepName !== 'plan' || !chosenPlan
+              ? 'Continue'
+              : paidChoice
+                ? `Continue to payment · ${formatMoney(billing === 'yearly' ? chosenPlan.priceYearly : chosenPlan.priceMonthly, currency)}/${billing === 'yearly' ? 'year' : 'month'}`
+                : 'Start free'
+    // The verify step moves on by itself; the mic step's own buttons lead until the browser has
+    // answered, and a fresh yes moves on by itself too (Back stays meanwhile).
+    const showContinue =
+        stepName !== 'verify' && (stepName !== 'mic' || (micState === 'granted' && !micHoldsContinue) || micState === 'denied')
     // Nothing to go back to on the step after verify: a verified email has nothing to redo.
     const showBack = step >= 2
 
@@ -229,7 +224,7 @@ export default function OnboardingPage() {
                     titleRef={titleRef}
                     micState={micState}
                     setMicState={setMicState}
-                    onGuideOpenChange={setMicGuideOpen}
+                    onContinueHeldChange={setMicHoldsContinue}
                     onAdvance={next}
                 />
             )}
@@ -267,33 +262,38 @@ export default function OnboardingPage() {
                     destination={destination}
                     betaPlanName={plans.beta.name}
                     planLine={destination === 'beta' ? null : planLineFor(plans)}
-                    creating={createScore.isPending || createScore.isSuccess}
+                    creating={firstMelody.creating}
                     onRecordFirstMelody={recordFirstMelody}
                     onFinish={leave}
                 />
             )}
 
+            {/*
+             * Phones stack the footer: the primary full width on top (its price-bearing label wraps
+             * rather than run past the card), the payment note under it, Back last. From sm up,
+             * Back sits left and the primary right, the note under the primary.
+             */}
             {!done && (showBack || showContinue) && (
-                <div className="flex flex-col gap-2 pt-3">
-                    <div className="flex justify-between items-center gap-4">
-                        {showBack ? (
+                <div className="grid grid-cols-1 gap-2 pt-3 sm:grid-cols-[auto_1fr] sm:items-center sm:gap-x-4">
+                    {showBack && (
+                        <div className="order-last flex justify-center sm:order-0 sm:col-start-1 sm:row-start-1 sm:justify-start">
                             <TertiaryButton onClick={back}>
                                 <span className="inline-flex items-center gap-1.5">
                                     <Icon name="arrow-left" size={13} />
                                     Back
                                 </span>
                             </TertiaryButton>
-                        ) : (
-                            <span />
-                        )}
-                        {showContinue && (
+                        </div>
+                    )}
+                    {showContinue && (
+                        <div className="flex flex-col sm:col-start-2 sm:row-start-1 sm:items-end">
                             <PrimaryButton icon="arrow-right" emphasis="pop" onClick={next} disabled={startCheckout.isPending}>
-                                {ctaLabel}
+                                <span className="whitespace-normal text-center leading-tight">{ctaLabel}</span>
                             </PrimaryButton>
-                        )}
-                    </div>
+                        </div>
+                    )}
                     {paidChoice && (
-                        <p className="m-0 self-end text-right font-body font-normal text-[12px] leading-[1.4] text-on-surface-variant">
+                        <p className="m-0 text-center font-body font-normal text-[12px] leading-[1.4] text-on-surface-variant sm:col-start-2 sm:text-right">
                             You&apos;ll confirm on the next page. Cancel any time.
                         </p>
                     )}
