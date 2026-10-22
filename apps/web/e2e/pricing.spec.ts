@@ -1,4 +1,4 @@
-import { expect, test } from './fixtures'
+import { expect, stayLocal, test } from './fixtures'
 
 /**
  * The dedicated /pricing route. Runs unauthenticated and hermetic (app origin
@@ -6,13 +6,6 @@ import { expect, test } from './fixtures'
  * ladder, so the assertions cover what both modes share: the heading, the FAQ,
  * and the CTA leading to signup.
  */
-async function stayLocal(page: import('@playwright/test').Page) {
-    await page.route(/^https?:\/\//, (route) => {
-        const url = new URL(route.request().url())
-        return url.hostname === 'localhost' ? route.continue() : route.abort()
-    })
-}
-
 test('pricing page: heading, FAQ and structured data are present; CTA routes to signup', async ({ page }) => {
     await stayLocal(page)
     await page.goto('/pricing')

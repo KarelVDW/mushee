@@ -1,6 +1,6 @@
 import type { Page } from '@playwright/test'
 
-import { expect, MOCK_SCORE_ID, MOCK_SHARE_TOKEN, MOCK_TITLE, test } from './fixtures'
+import { expect, MOCK_SCORE_ID, MOCK_SHARE_TOKEN, MOCK_TITLE, SELECTION_BANDS, test, waitForAutosave } from './fixtures'
 
 /**
  * Mobile editor e2e (mocked API), run by the `mobile-chromium` project at a
@@ -54,8 +54,6 @@ async function touchDrag(page: Page, fromX: number, fromY: number, toX: number, 
     await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] })
     await cdp.detach()
 }
-
-const SELECTION_BANDS = 'rect[fill="rgba(30, 144, 255, 0.14)"]'
 
 /** Center of the active selection band — the selected note, a reliable touch target. */
 async function selectedNoteCenter(page: Page): Promise<{ x: number; y: number }> {
@@ -151,9 +149,7 @@ test('note navigator and pitch nudges edit the score and autosave', async ({ pag
     // Move the selection right, then nudge the pitch up — both via the dock.
     await page.getByRole('button', { name: 'Select next note' }).tap()
 
-    const patch = page.waitForRequest((r) => r.method() === 'PATCH' && new RegExp(`/scores/${MOCK_SCORE_ID}$`).test(r.url()), {
-        timeout: 8000,
-    })
+    const patch = waitForAutosave(page)
     await page.getByRole('button', { name: 'Raise pitch' }).tap()
     const body = (await patch).postDataJSON() as Record<string, unknown>
     expect(body.measures ?? body.allMeasures).toBeTruthy()
@@ -170,9 +166,7 @@ test('long-press opens the selection popover; Delete clears the note and autosav
     // Nothing on the clipboard yet — Paste is hidden, like the OS text-selection menu.
     await expect(toolbar.getByRole('button', { name: 'Paste' })).toHaveCount(0)
 
-    const patch = page.waitForRequest((r) => r.method() === 'PATCH' && new RegExp(`/scores/${MOCK_SCORE_ID}$`).test(r.url()), {
-        timeout: 8000,
-    })
+    const patch = waitForAutosave(page)
     await toolbar.getByRole('button', { name: 'Delete' }).tap()
     const body = (await patch).postDataJSON() as Record<string, unknown>
     expect(body.measures ?? body.allMeasures).toBeTruthy()
@@ -206,9 +200,7 @@ test('copy on one note, paste on another — via the selection popover', async (
     await longPress(page, (box?.x ?? 0) + (box?.width ?? 0) * 0.7, (box?.y ?? 0) + 65)
     await expect(toolbar).toBeVisible()
 
-    const patch = page.waitForRequest((r) => r.method() === 'PATCH' && new RegExp(`/scores/${MOCK_SCORE_ID}$`).test(r.url()), {
-        timeout: 8000,
-    })
+    const patch = waitForAutosave(page)
     await toolbar.getByRole('button', { name: 'Paste' }).tap()
     const body = (await patch).postDataJSON() as Record<string, unknown>
     expect(body.measures ?? body.allMeasures).toBeTruthy()
@@ -262,7 +254,7 @@ test('tapping a note on the staff moves the selection', async ({ page }) => {
     const svg = page.locator('.max-w-240 svg').first()
     await expect(svg).toBeVisible()
     // The first note is auto-selected on load; its highlight band is already painted.
-    const band = svg.locator('rect[fill="rgba(30, 144, 255, 0.14)"]').first()
+    const band = svg.locator(SELECTION_BANDS).first()
     await expect(band).toBeVisible()
     const before = await band.boundingBox()
     expect(before).not.toBeNull()
@@ -273,7 +265,7 @@ test('tapping a note on the staff moves the selection', async ({ page }) => {
     await page.touchscreen.tap((box?.x ?? 0) + (box?.width ?? 0) * 0.7, (box?.y ?? 0) + 65)
 
     await expect(async () => {
-        const after = await svg.locator('rect[fill="rgba(30, 144, 255, 0.14)"]').first().boundingBox()
+        const after = await svg.locator(SELECTION_BANDS).first().boundingBox()
         expect(Math.abs((after?.x ?? 0) - (before?.x ?? 0))).toBeGreaterThan(10)
     }).toPass({ timeout: 5000 })
 })

@@ -7,26 +7,11 @@ import { EDITOR_COMMANDS } from '@/app/scores/[id]/commands'
 import { ScoreManipulator } from '@/app/scores/[id]/ScoreManipulator'
 import { Keybindings, Shortcut } from '@/lib/Keybindings'
 
+import { allNotes, setupPitched } from './editorFixtures'
+
 beforeEach(() => {
     localStorage.clear()
 })
-
-/** A one-measure score of four pitched quarter notes (C5 D5 E5 F5), attached to a manipulator. */
-function setupPitched(): { manipulator: ScoreManipulator; notes: Note[] } {
-    const score = makeScore(1)
-    const measure = score.firstMeasure
-    if (!measure) throw new Error('expected a measure')
-    const notes = score.replace(measure.notes, [pitched('C', 5), pitched('D', 5), pitched('E', 5), pitched('F', 5)])
-    // A platform-pinned keymap so Mod means Ctrl regardless of the machine running the tests.
-    const manipulator = new ScoreManipulator(new Keybindings(EDITOR_COMMANDS, { storageKey: 'test:editor-shortcuts', isMac: false }))
-    manipulator.attach(score, () => undefined)
-    return { manipulator, notes }
-}
-
-/** Every note in the score, in score order. */
-function allNotes(manipulator: ScoreManipulator): Note[] {
-    return manipulator.score?.measures.flatMap((m) => m.notes) ?? []
-}
 
 const ids = (notes: Note[]): string[] => notes.map((n) => n.id)
 

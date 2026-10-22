@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 
-import { expect, type Page, type Route, test as base } from '@playwright/test'
+import { expect, type Locator, type Page, type Request, type Route, test as base } from '@playwright/test'
 
 import { CONSENT_VERSION } from '../src/lib/consent'
 
@@ -244,6 +244,34 @@ async function installApiMocks(page: Page, mock: ApiMock): Promise<void> {
         }
 
         return json({})
+    })
+}
+
+/** The score renderer marks each selected note's highlight band with this attribute. */
+export const SELECTION_BANDS = 'rect[data-selection-band]'
+
+/**
+ * The next autosave of the mock score: a PATCH to that score's own URL — filtered, so an
+ * unrelated PATCH elsewhere can't satisfy the wait.
+ */
+export function waitForAutosave(page: Page): Promise<Request> {
+    return page.waitForRequest((r) => r.method() === 'PATCH' && new RegExp(`/scores/${MOCK_SCORE_ID}$`).test(r.url()), {
+        timeout: 8000,
+    })
+}
+
+/** Focus the editor container (where the editor's keydown listener sits) and return it. */
+export async function focusEditor(page: Page): Promise<Locator> {
+    const editor = page.locator('div[tabindex="0"]').first()
+    await editor.focus()
+    return editor
+}
+
+/** Keep an unauthed page (no apiMock) hermetic: the app origin passes, everything else is cut. */
+export async function stayLocal(page: Page): Promise<void> {
+    await page.route(/^https?:\/\//, (route) => {
+        const url = new URL(route.request().url())
+        return url.hostname === 'localhost' ? route.continue() : route.abort()
     })
 }
 
