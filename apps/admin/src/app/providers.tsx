@@ -1,6 +1,7 @@
 'use client'
 
-import { createQueryClient, Toaster } from '@mushee/ui'
+import { Toaster } from '@mushee/ui'
+import { createQueryClient } from '@mushee/ui/queryClient'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { type ReactNode, useState } from 'react'
 

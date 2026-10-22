@@ -8,6 +8,7 @@
         ".": "./src/index.ts",
         "./http": "./src/http.ts",
         "./nextPath": "./src/nextPath.ts",
+        "./queryClient": "./src/queryClient.ts",
         "./theme.css": "./src/theme.css"
     },
     "scripts": {

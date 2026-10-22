@@ -1,6 +1,6 @@
 'use client'
 
-import { createQueryClient } from '@mushee/ui'
+import { createQueryClient } from '@mushee/ui/queryClient'
 import { QueryClientProvider, useQueryClient } from '@tanstack/react-query'
 import { type ReactNode, useEffect, useRef, useState } from 'react'
 
