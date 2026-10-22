@@ -35,6 +35,21 @@ describe('capsule buttons', () => {
     })
 })
 
+describe('TertiaryButton disabled', () => {
+    it('sets the native attribute, dims like the capsules and freezes the hover colour', () => {
+        const markup = html(createElement(TertiaryButton, { children: 'Check my status', disabled: true }))
+        expect(markup).toMatch(/^<button type="button" disabled=""/)
+        expect(markup).toContain('disabled:opacity-40 disabled:cursor-not-allowed')
+        expect(markup).toContain('hover:text-primary disabled:hover:text-on-surface-variant')
+        const danger = html(createElement(TertiaryButton, { children: 'Delete', danger: true, disabled: true }))
+        expect(danger).toContain('hover:text-secondary-container disabled:hover:text-secondary')
+    })
+
+    it('stays enabled by default', () => {
+        expect(html(createElement(TertiaryButton, { children: 'Keep' }))).not.toContain('disabled=""')
+    })
+})
+
 describe('CloseButton', () => {
     it('is a labelled, non-submitting × with the shared focus ring', () => {
         const markup = html(createElement(CloseButton, { onClick: () => {} }))
