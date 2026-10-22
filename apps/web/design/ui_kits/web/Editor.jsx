@@ -271,10 +271,11 @@ function TransportBtn({ size, tone = 'neutral', active, onClick, ariaLabel, disa
 
 // Transport cluster — lives centred in the header on desktop. Record is the largest
 // control here too (48px vs 40px play; 54px in the mobile dock). Stop keeps its slot
-// but shows only while something plays or records; while a take runs, Record is the
-// stop. The metronome wears its own glyph (audio-lines means recorded audio).
+// but shows only while playback runs; while a recording runs, Record is the one stop
+// (with Space and Escape) — never a second stop square beside it. The metronome wears
+// its own glyph (audio-lines means recorded audio).
 function TransportControls({ playing, onPlay, onStop, recording, onRec, metro, onMetro }) {
-    const canStop = playing || recording
+    const canStop = playing
     return (
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
             <span style={{ display: 'inline-flex', visibility: canStop ? 'visible' : 'hidden' }}>
@@ -946,79 +947,57 @@ function MoreNoteTools({ tuplet, onTuplet, tied, onTie }) {
     )
 }
 
-// Format seconds: S"s" under a minute, M:SS under an hour, then H"h".
-function fmtRecTime(sec) {
+// An allowance in words, as production's formatAllowance (src/lib/recordingTime.ts)
+// writes it: 180 → "3 minutes", 10800 → "3 hours". A clock readout ("0:42") is only
+// ever the length of a recording, never an allowance.
+function fmtAllowance(sec) {
     const s = Math.max(0, Math.floor(sec))
-    if (s < 60) return `${s}s`
-    const m = Math.floor(s / 60)
-    if (m < 60) return `${m}:${String(s % 60).padStart(2, '0')}`
-    const h = Math.floor(m / 60)
-    return m % 60 ? `${h}h ${m % 60}m` : `${h}h`
+    const plural = (n, unit) => `${n} ${unit}${n === 1 ? '' : 's'}`
+    if (s < 60) return plural(s, 'second')
+    if (s < 3600 && s % 60 === 0) return plural(s / 60, 'minute')
+    if (s % 3600 === 0) return plural(s / 3600, 'hour')
+    const h = Math.floor(s / 3600)
+    const m = Math.floor((s % 3600) / 60)
+    return h ? `${h} h${m ? ` ${m} min` : ''}` : `${m} min${s % 60 ? ` ${s % 60} sec` : ''}`
 }
 
-// Limit-reached dialog. Tier-aware: every capped tier sees an upgrade CTA; the
-// secondary action acknowledges the cap ("OK, I'll wait"). Minute packs offer a
-// one-time escape hatch without a subscription change.
-function LimitReachedDialog({ planName, nextPlanName, limitSec, onUpgrade, onClose }) {
+// Production's RecordingLimitCopy.NO_SURPRISES — it rides the subtitle, so the body
+// only offers more.
+const NO_SURPRISES = 'No surprise charges — Solkey never bills for extra minutes.'
+
+// Daily-limit dialog. A normal moment, not an error: neutral, no callout, one flat
+// button. It says what the allowance was (in words), that everything recorded is in
+// the score, when recording is back (the viewer's own time, never "midnight") and
+// that nothing is ever charged; then — only where there is a next tier — what that
+// tier gives. It ends like the score-limit dialog: "Not now" · "See {plan}". Minute
+// packs offer a one-time way to finish without a subscription change.
+function LimitReachedDialog({ nextPlanName, nextLimitSec, limitSec, onUpgrade, onClose }) {
     return (
         <DialogPanel
-            title={`You've used today's ${fmtRecTime(limitSec)} of recording.`}
-            subtitle={`Your ${planName} plan resets at midnight. Until then, playback, editing, and export still work — only mic capture pauses.`}
+            title={`That's your ${fmtAllowance(limitSec)} of recording for today.`}
+            subtitle={`Everything you recorded is in your score. Playing, editing and exporting still work — recording is back tonight at 8:00 PM. ${NO_SURPRISES}`}
             onClose={onClose}
             width={480}
             footer={
                 <>
-                    <TertiaryButton onClick={onClose}>OK, I'll wait</TertiaryButton>
+                    <TertiaryButton onClick={onClose}>Not now</TertiaryButton>
                     {nextPlanName && (
-                        <PrimaryButton emphasis="pop" icon="arrow-right" onClick={onUpgrade}>
-                            Upgrade to {nextPlanName}
+                        <PrimaryButton icon="arrow-right" onClick={onUpgrade}>
+                            See {nextPlanName}
                         </PrimaryButton>
                     )}
                 </>
             }>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 14, paddingBottom: 8 }}>
-                <div
-                    style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 14,
-                        background: 'var(--color-surface-container-low)',
-                        borderRadius: 10,
-                        padding: 16,
-                    }}>
-                    <span
-                        style={{
-                            width: 44,
-                            height: 44,
-                            borderRadius: 9999,
-                            flexShrink: 0,
-                            background: 'var(--color-error-container)',
-                            color: 'var(--color-on-error-container)',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                        }}>
-                        <Icon name="mic-off" size={20} />
-                    </span>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                        <span style={{ font: '600 14px/1.3 var(--font-body)', color: 'var(--color-on-surface)' }}>
-                            Recording paused until tomorrow
-                        </span>
-                        <span style={{ font: '400 12px/1.4 var(--font-body)', color: 'var(--color-on-surface-variant)' }}>
-                            We stop capture the moment your daily budget runs out — no surprise charges, ever.
-                        </span>
-                    </div>
-                </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, paddingBottom: 8 }}>
                 {nextPlanName && (
-                    <span style={{ font: '400 13px/1.5 var(--font-body)', color: 'var(--color-on-surface-variant)' }}>
-                        Upgrading to <strong style={{ color: 'var(--color-on-surface)' }}>{nextPlanName}</strong> lifts the cap
-                        immediately.
+                    <span style={{ font: '400 13px/1.5 var(--font-body)', color: 'var(--color-on-surface)' }}>
+                        {nextPlanName} gives you {fmtAllowance(nextLimitSec)} every day, starting right away.
                     </span>
                 )}
                 <span style={{ font: '400 12px/1.5 var(--font-body)', color: 'var(--color-on-surface-variant)' }}>
                     Just need to finish this one?{' '}
                     <span style={{ color: 'var(--color-primary)', textDecoration: 'underline', cursor: 'pointer' }}>
-                        One-time minute packs
+                        Minute packs
                     </span>{' '}
                     start at $6 and never expire.
                 </span>
@@ -1029,12 +1008,15 @@ function LimitReachedDialog({ planName, nextPlanName, limitSec, onUpgrade, onClo
 
 // Concurrent-recording dialog. Shown when the account already has a recording
 // in flight (another tab or device) — one recording at a time is a hard rule.
-// Single acknowledgment action; nothing in the current score is touched.
+// Single acknowledgment action; nothing in the current score is touched. The
+// callout is neutral (never red — this is not an error) and has no title of its
+// own: the subtitle already says what is in the way (the account's one recording,
+// not this device's mic), so the callout says only what to do about it.
 function ConcurrentRecordingDialog({ onClose }) {
     return (
         <DialogPanel
             title="One recording at a time."
-            subtitle="Your account already has a recording running — maybe in another tab, or on another device."
+            subtitle="You're already recording somewhere else — another tab, or another device."
             onClose={onClose}
             width={480}
             footer={<PrimaryButton onClick={onClose}>Got it</PrimaryButton>}>
@@ -1054,22 +1036,18 @@ function ConcurrentRecordingDialog({ onClose }) {
                             height: 44,
                             borderRadius: 9999,
                             flexShrink: 0,
-                            background: 'var(--color-error-container)',
-                            color: 'var(--color-on-error-container)',
+                            background: 'var(--color-surface-container)',
+                            color: 'var(--color-on-surface-variant)',
                             display: 'inline-flex',
                             alignItems: 'center',
                             justifyContent: 'center',
                         }}>
                         <Icon name="mic" size={20} />
                     </span>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                        <span style={{ font: '600 14px/1.3 var(--font-body)', color: 'var(--color-on-surface)' }}>
-                            The mic is busy somewhere else
-                        </span>
-                        <span style={{ font: '400 12px/1.4 var(--font-body)', color: 'var(--color-on-surface-variant)' }}>
-                            Finish or stop that session first, then hit record here. Nothing in this score was changed.
-                        </span>
-                    </div>
+                    <span style={{ font: '400 13px/1.5 var(--font-body)', color: 'var(--color-on-surface)' }}>
+                        Stop that recording, then press record here. Just closed it? Give it about 20 seconds and try again.
+                        Nothing in this score changed.
+                    </span>
                 </div>
             </div>
         </DialogPanel>
@@ -1157,7 +1135,7 @@ function MicModeGuideDialog({ onConfirm, onClose, onSkip = onClose }) {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14, paddingBottom: 8 }}>
                 <WideSpectrumWalkthrough />
                 <span style={{ font: '400 13px/1.4 var(--font-body)', color: 'var(--color-on-surface-variant)' }}>
-                    Your mic is on, so Mic Mode is in Control Center right now. Set it, come back here, and your iPhone remembers.
+                    Your mic is on, so Mic Mode is in Control Center right now. Your iPhone remembers it.
                 </span>
             </div>
         </DialogPanel>
@@ -1494,8 +1472,8 @@ function Editor({ score, onBack, onSettings, planId = 'free', recUsedSec = 0, on
 
             {limitDialogOpen && (
                 <LimitReachedDialog
-                    planName={tier.name}
                     nextPlanName={tier.next}
+                    nextLimitSec={Object.values(EDITOR_TIERS).find((t) => t.name === tier.next)?.dailyLimitSec}
                     limitSec={limitSec}
                     onClose={() => setLimitDialogOpen(false)}
                     onUpgrade={() => {
