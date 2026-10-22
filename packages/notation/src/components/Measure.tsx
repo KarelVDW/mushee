@@ -115,7 +115,6 @@ export const Measure = memo(function Measure({ measure, layout, selectedNoteIds,
                 const isSelected = selectedNoteIds?.has(note.id) ?? false
                 const isHovered = !isSelected && note.id === hoveredNoteId
                 const noteLayout = layout.noteLayoutFor(note)
-                const beam = layout.beamFor(note)
                 const noteX = layout.getXForElement(note)
                 // Span the band across the note's full allotted slot so a run of selected notes
                 // reads as one continuous strip, with the last note reaching the end barline.
@@ -136,8 +135,8 @@ export const Measure = memo(function Measure({ measure, layout, selectedNoteIds,
                         )}
                         <NoteGroup
                             layout={noteLayout}
-                            stem={beam?.getStem(note) ?? noteLayout.stem}
-                            beamed={!!beam}
+                            stem={layout.stemFor(note)}
+                            beamed={!!layout.beamFor(note)}
                             color={isSelected || isHovered ? INTERACTION_BLUE : undefined}
                         />
                     </g>
