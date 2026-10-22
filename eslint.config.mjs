@@ -18,7 +18,7 @@ export default tseslint.config(
             '**/.next-verify/**',
             '**/out/**',
             '**/coverage/**',
-            // Local Python venvs (fetch-crepe-model.sh / basic-pitch tooling, synthetic-corpus) ship their own JS assets
+            // Local Python venvs (apps/api's CREPE and pitch-bench tooling, synthetic-corpus) ship their own JS assets
             '**/.venv/**',
             '**/.venv-*/**',
             // Claude Code scratch worktrees are throwaway repo copies, not source

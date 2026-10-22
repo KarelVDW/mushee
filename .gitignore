@@ -2,10 +2,11 @@ node_modules/
 .pnpm-store/
 dist/
 build/
-.next/
-.next-e2e/
-# Side-port verification builds (NEXT_DIST_DIR=.next-verify, see .claude/skills/verify)
-.next-verify/
+# Next dist dirs: .next plus the NEXT_DIST_DIR side builds, .next-e2e (Playwright)
+# and .next-verify (side-port verification, see .claude/skills/verify)
+**/.next*/
+# Rewritten by Next on every dev/build/typegen with the active dist dir
+next-env.d.ts
 out/
 .eslintcache
 *.tsbuildinfo
@@ -34,8 +35,8 @@ apps/api/test/**/*.d.ts
 apps/api/test/**/*.d.ts.map
 # Local blob-storage backend (STORAGE_DRIVER=local dev default)
 apps/api/storage/
-apps/api/.venv-crepe/
-apps/api/.venv-basicpitch/
+# Local Python venvs (apps/api's .venv-crepe and .venv-pitchbench, synthetic-corpus/.venv)
+**/.venv*/
 # Recording-pipeline eval harness: large soundfont + generated audio corpus
 apps/api/scripts/eval/assets/
 apps/api/scripts/eval/.tmp/
@@ -52,7 +53,7 @@ apps/api/scripts/fixtures/eval-synth/
 # scripts/eval/lib/variantCache.ts).
 apps/api/scripts/fixtures/eval-cache/
 apps/api/scripts/fixtures/eval-cache-variant/
-# Python gRPC stubs are generated, not committed: at image build (Dockerfiles'
+# Python gRPC stubs are generated, not committed: at image build (the Dockerfile's
 # proto stage) or on the host via packages/inference-proto/generate-python.sh
 apps/inference-*/inference_pb2.py
 apps/inference-*/inference_pb2_grpc.py

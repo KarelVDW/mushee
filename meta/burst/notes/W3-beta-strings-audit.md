@@ -93,3 +93,5 @@ unconditional.
 5. `deploy/runbooks/end-of-beta-launch.md` — add items 1–4 to §1/§3 and the three extra smoke checks (onboarding step 7, recording-limit upsell, JSON-LD offers) to §4.3.
 
 Everything else flips with `BETA_MODE` (API, runtime) + `NEXT_PUBLIC_BETA_MODE` (web, rebuild), exactly as runbook §4 describes.
+
+Folded into `deploy/runbooks/end-of-beta-launch.md` (§1 pre-flight, §3 beta users' fate, §4 step 3 smoke) on 2026-10-22; that runbook is the live checklist.

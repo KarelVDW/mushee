@@ -1,18 +1,17 @@
 # NestJS API. Multi-stage pnpm-workspace build; build context is the repo root.
-# In production the API runs in remote-inference mode (CREPE_INFERENCE_URL /
-# BASIC_PITCH_INFERENCE_URL set), so it ships NO model files — inference lives in
-# the per-model services.
+# In production the API runs in remote-inference mode (CREPE_INFERENCE_URL set):
+# the CREPE forward pass runs in the CREPE inference service, not in this image.
 FROM node:22-bookworm-slim AS build
 ENV CI=1
 RUN corepack enable
 WORKDIR /repo
 
-# Manifests first for layer caching. Every workspace package.json must be present
-# for --frozen-lockfile, even ones we don't build. The root tsconfigs are needed
-# because apps/api/tsconfig.json extends ../../tsconfig.base.json (skipLibCheck etc.).
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.base.json tsconfig.json ./
+# Manifests first for layer caching. The filtered --frozen-lockfile install needs
+# only the manifests of the API's own workspace subtree (api + inference-proto),
+# not the other apps'. tsconfig.base.json is needed because
+# apps/api/tsconfig.json extends it (strict, skipLibCheck etc.).
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.base.json ./
 COPY apps/api/package.json apps/api/
-COPY apps/web/package.json apps/web/
 COPY packages/inference-proto/package.json packages/inference-proto/
 # Install only the API's subtree (its deps incl. the linked @mushee/inference-proto).
 RUN pnpm install --frozen-lockfile --filter @mushee/api...

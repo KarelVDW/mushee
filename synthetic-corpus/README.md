@@ -26,8 +26,8 @@ every asset has a fetcher under `synthcorpus/fetch/` (or `assets/apple/packs.txt
 ## Why it sounds real: the method
 
 **No oscillators.** Every sounding grain is a real recording of the named
-instrument or a real singer; what we synthesise is the *performance* and the
-*recording*, the two things a sample player or a toy synth gets wrong.
+instrument or a real singer; what we synthesise is the _performance_ and the
+_recording_, the two things a sample player or a toy synth gets wrong.
 
 1. **Real melodies** (`melody.py`) — 21k phrases cut from public-domain scores in
    the music21 corpus (Ryan's Mammoth 1883, O'Neill's 1850, Aird's airs, Bach
@@ -79,32 +79,32 @@ instrument or a real singer; what we synthesise is the *performance* and the
 
 A clip enters the corpus only if it passes all gates (`qa.py`, applied in `build.py`):
 
-| gate | rule |
-| --- | --- |
-| provenance | every note rendered from a real recording of that instrument/voice (by construction) |
-| label fidelity | an independent tracker (SwiftF0, with pYIN as second opinion — neither is the app's CREPE) confirms ≥ 95 % of verifiable notes within ±50 cents, **0** octave errors |
-| no phantom notes | < 0.5 s of confident pitched sound outside the labelled notes (a release tail at the previous note's pitch is allowed) |
-| verifiability | ≤ 10 % of notes shorter than 100 ms that the tracker cannot judge |
-| artefacts | no clipping (clicks and DC are logged) |
+| gate             | rule                                                                                                                                                                 |
+| ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| provenance       | every note rendered from a real recording of that instrument/voice (by construction)                                                                                 |
+| label fidelity   | an independent tracker (SwiftF0, with pYIN as second opinion — neither is the app's CREPE) confirms ≥ 95 % of verifiable notes within ±50 cents, **0** octave errors |
+| no phantom notes | < 0.5 s of confident pitched sound outside the labelled notes (a release tail at the previous note's pitch is allowed)                                               |
+| verifiability    | ≤ 10 % of notes shorter than 100 ms that the tracker cannot judge                                                                                                    |
+| artefacts        | no clipping (clicks and DC are logged)                                                                                                                               |
 
 Rejected clips are logged in `out/rejects.jsonl` (audio in `out/_rejects/`) and
 replaced by a different phrase. Perceptual realism, which no gate can prove
-without listeners, is **measured** against real recordings — see *Results*.
+without listeners, is **measured** against real recordings — see _Results_.
 
 ## Sources
 
-| source | licence | used for |
-| --- | --- | --- |
-| Apple GarageBand content packs | licensed on this Mac; royalty-free use in created audio; samples never redistributed | erhu, dizi/bansuri, shakuhachi, tin whistle, pan flute, recorder, orchestral winds/brass, Steinway, basses |
-| University of Iowa MIS | free for any use | strings, winds, brass, guitar (anechoic) |
-| VSCO-2 CE, VCSL, Karoryfer, sfzinstruments | CC0 (MTG SoloSax CC-BY-4.0) | orchestra, recorders, harmonica, ocarina, saxes, bass guitar, cello, bagpipe, erhu |
-| Philharmonia Orchestra samples | free; not for resale as samples | orchestra incl. contrabassoon, bass clarinet, cor anglais |
-| Sonatina Symphonic Orchestra | CC Sampling+ 1.0 | brass/clarinet sections, alto flute, piccolo |
-| FreePats | CC0 | bagpipe (with drones), ocarina, recorder, classical guitar |
-| Salamander Grand Piano | CC-BY-3.0 | piano |
-| VocalSet | CC-BY-4.0 | all voices, breaths |
-| music21 corpus (PD works) | PD / as distributed | melodies |
-| POLIPHONE, Aachen AIR, dEchorate, Motus, DEMAND, … | CC-BY-4.0 / MIT | rooms, devices, noise |
+| source                                             | licence                                                                              | used for                                                                                                   |
+| -------------------------------------------------- | ------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------- |
+| Apple GarageBand content packs                     | licensed on this Mac; royalty-free use in created audio; samples never redistributed | erhu, dizi/bansuri, shakuhachi, tin whistle, pan flute, recorder, orchestral winds/brass, Steinway, basses |
+| University of Iowa MIS                             | free for any use                                                                     | strings, winds, brass, guitar (anechoic)                                                                   |
+| VSCO-2 CE, VCSL, Karoryfer, sfzinstruments         | CC0 (MTG SoloSax CC-BY-4.0)                                                          | orchestra, recorders, harmonica, ocarina, saxes, bass guitar, cello, bagpipe, erhu                         |
+| Philharmonia Orchestra samples                     | free; not for resale as samples                                                      | orchestra incl. contrabassoon, bass clarinet, cor anglais                                                  |
+| Sonatina Symphonic Orchestra                       | CC Sampling+ 1.0                                                                     | brass/clarinet sections, alto flute, piccolo                                                               |
+| FreePats                                           | CC0                                                                                  | bagpipe (with drones), ocarina, recorder, classical guitar                                                 |
+| Salamander Grand Piano                             | CC-BY-3.0                                                                            | piano                                                                                                      |
+| VocalSet                                           | CC-BY-4.0                                                                            | all voices, breaths                                                                                        |
+| music21 corpus (PD works)                          | PD / as distributed                                                                  | melodies                                                                                                   |
+| POLIPHONE, Aachen AIR, dEchorate, Motus, DEMAND, … | CC-BY-4.0 / MIT                                                                      | rooms, devices, noise                                                                                      |
 
 Nothing here is redistributed or ships in the product; everything is internal evaluation data.
 
@@ -125,32 +125,33 @@ bass, countertenor, child*) from 20 real singers; each clip = a `dry` render +
 `synthcorpus/realism.py`: PANNs Cnn14 (AudioSet, CC-BY-4.0) on 4-s windows, the
 new corpus's `room` takes vs REAL recordings of the same instrument (URMP,
 TinySOL, GuitarSet; vocadito/N20EMv2/CSD/HUST for voice) vs the OLD toy corpus
-(`room-mic`). *P(class)* = the tagger's probability for the instrument's own
-AudioSet class; *KAD* = kernel distance to the real set (lower = closer;
+(`room-mic`). _P(class)_ = the tagger's probability for the instrument's own
+AudioSet class; _KAD_ = kernel distance to the real set (lower = closer;
 real↔real split = the noise floor). Measured on corpus v1.1.
 
 #### new `room` vs old `room-mic`
 
-| timbre | P(class) real | P(class) new | P(class) old | KAD new | KAD old | real↔real floor | windows real/new/old |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| violin | 0.70 | **0.79** | 0.86 | **16.69** | 29.03 | -1.28 | 36/67/6 |
-| viola | 0.60 | **0.58** | — | **13.01** | — | -0.67 | 36/51/0 |
-| cello | 0.61 | **0.28** | 0.61 | **74.45** | 55.53 | 8.38 | 24/69/6 |
-| contrabass | 0.63 | **0.49** | — | **64.44** | — | 9.74 | 18/53/0 |
-| flute | 0.60 | **0.72** | 0.35 | **9.61** | 27.17 | -0.78 | 36/61/6 |
-| oboe | 0.18 | **0.25** | 0.10 | **14.55** | 30.98 | 2.05 | 34/68/6 |
-| clarinet | 0.67 | **0.78** | 0.03 | **7.34** | 76.31 | -2.46 | 30/47/5 |
-| alto-sax | 0.25 | **0.17** | — | **19.70** | — | 1.09 | 23/63/0 |
-| tenor-sax | 0.25 | **0.35** | — | **16.02** | — | 1.09 | 23/80/0 |
-| bassoon | 0.32 | **0.19** | 0.20 | **36.80** | 23.48 | 3.59 | 11/89/6 |
-| trumpet | 0.79 | **0.58** | 0.90 | **46.98** | 48.86 | 0.84 | 24/72/6 |
-| french-horn | 0.70 | **0.36** | — | **50.31** | — | -1.14 | 24/69/0 |
-| trombone | 0.62 | **0.12** | 0.55 | **36.45** | 41.56 | 1.41 | 24/81/6 |
-| tuba | 0.32 | **0.70** | 0.61 | **39.34** | 15.18 | -1.82 | 18/80/6 |
-| guitar | 0.85 | **0.53** | — | **65.48** | — | -0.36 | 180/57/0 |
-| voice | 0.19 | **0.21** | 0.01 | **31.31** | 59.27 | -0.26 | 315/186/30 |
+| timbre      | P(class) real | P(class) new | P(class) old | KAD new   | KAD old | real↔real floor | windows real/new/old |
+| ----------- | ------------- | ------------ | ------------ | --------- | ------- | --------------- | -------------------- |
+| violin      | 0.70          | **0.79**     | 0.86         | **16.69** | 29.03   | -1.28           | 36/67/6              |
+| viola       | 0.60          | **0.58**     | —            | **13.01** | —       | -0.67           | 36/51/0              |
+| cello       | 0.61          | **0.28**     | 0.61         | **74.45** | 55.53   | 8.38            | 24/69/6              |
+| contrabass  | 0.63          | **0.49**     | —            | **64.44** | —       | 9.74            | 18/53/0              |
+| flute       | 0.60          | **0.72**     | 0.35         | **9.61**  | 27.17   | -0.78           | 36/61/6              |
+| oboe        | 0.18          | **0.25**     | 0.10         | **14.55** | 30.98   | 2.05            | 34/68/6              |
+| clarinet    | 0.67          | **0.78**     | 0.03         | **7.34**  | 76.31   | -2.46           | 30/47/5              |
+| alto-sax    | 0.25          | **0.17**     | —            | **19.70** | —       | 1.09            | 23/63/0              |
+| tenor-sax   | 0.25          | **0.35**     | —            | **16.02** | —       | 1.09            | 23/80/0              |
+| bassoon     | 0.32          | **0.19**     | 0.20         | **36.80** | 23.48   | 3.59            | 11/89/6              |
+| trumpet     | 0.79          | **0.58**     | 0.90         | **46.98** | 48.86   | 0.84            | 24/72/6              |
+| french-horn | 0.70          | **0.36**     | —            | **50.31** | —       | -1.14           | 24/69/0              |
+| trombone    | 0.62          | **0.12**     | 0.55         | **36.45** | 41.56   | 1.41            | 24/81/6              |
+| tuba        | 0.32          | **0.70**     | 0.61         | **39.34** | 15.18   | -1.82           | 18/80/6              |
+| guitar      | 0.85          | **0.53**     | —            | **65.48** | —       | -0.36           | 180/57/0             |
+| voice       | 0.19          | **0.21**     | 0.01         | **31.31** | 59.27   | -0.26           | 315/186/30           |
 
 Reading it honestly:
+
 - **Clearly better than the old corpus and on par with real recordings** for the
   woodwinds (flute, oboe, clarinet — clarinet KAD 8 vs 76), violin/viola, and the
   **voice** (tagged "singing" exactly as often as real singing corpora, 0.19 vs 0.19;
@@ -165,17 +166,16 @@ Reading it honestly:
   reported but not used as a gate.
 - Listen: `out/_showcase/` (20 clips, AAC) — the realism bar is ultimately yours.
 
-
 ### How the app scores on it (baseline, before any app change)
 
 `benchmark.ts run --synth` (production path, adaptive), COnP @ ±100 ms:
 
-| condition | COnP | COnPOff |
-| --- | --- | --- |
-| studio | 0.860 | 0.589 |
-| room | 0.819 | 0.526 |
-| home-phone | 0.798 | 0.500 |
-| noisy-phone | 0.717 | 0.428 |
+| condition   | COnP  | COnPOff |
+| ----------- | ----- | ------- |
+| studio      | 0.860 | 0.589   |
+| room        | 0.819 | 0.526   |
+| home-phone  | 0.798 | 0.500   |
+| noisy-phone | 0.717 | 0.428   |
 
 Weakest datasets: alto flute and piccolo (0.65–0.66), the voices (0.68–0.77, and
 they drop hardest from studio to room), bagpipe, brass section, violin.
@@ -183,26 +183,26 @@ they drop hardest from studio to room), bagpipe, brass section, violin.
 **Error-profile realism** — the same pipeline on the synthetic `room` takes vs on
 the matching REAL corpus (from the committed real benchmark): scores land within
 ~±0.1 of real for almost every instrument, i.e. the corpus is realistic in
-*difficulty*, not only in sound. The outlier is splitting on vibrato instruments
+_difficulty_, not only in sound. The outlier is splitting on vibrato instruments
 (violin 27.5 vs 7.8 splits/100 notes, flute 20.5 vs 5.4): URMP is a near-anechoic
 studio recording, and the corpus found why that matters (next section).
 
-| instrument | real COnP | real split / merged per 100 | synthetic v1.1 `room` COnP | synthetic split / merged |
-| --- | --- | --- | --- | --- |
-| violin | 0.88 | 7.8 / 3.2 | 0.78 | 27.5 / 3.0 |
-| viola | 0.81 | 7.6 / 0.0 | 0.72 | 11.0 / 9.2 |
-| cello | 0.56 | 24.5 / 0.0 | 0.78 | 11.5 / 8.6 |
-| contrabass | 0.70 | 25.5 / 0.0 | 0.80 | 5.5 / 7.2 |
-| flute | 0.78 | 5.4 / 3.0 | 0.73 | 20.5 / 3.6 |
-| oboe | 0.85 | 4.8 / 0.0 | 0.80 | 12.0 / 7.3 |
-| clarinet | 0.88 | 2.7 / 0.0 | 0.84 | 4.7 / 8.7 |
-| alto sax | 0.85 | 2.9 / 0.7 | 0.91 | 6.2 / 5.2 |
-| bassoon | 0.86 | 3.1 / 0.0 | 0.84 | 12.7 / 7.6 |
-| trumpet | 0.93 | 2.8 / 0.0 | 0.86 | 6.2 / 5.9 |
-| french horn | 0.95 | 1.2 / 0.0 | 0.88 | 7.8 / 7.4 |
-| trombone | 0.90 | 1.7 / 0.9 | 0.82 | 17.7 / 6.6 |
-| tuba | 0.83 | 5.6 / 1.4 | 0.93 | 4.7 / 6.0 |
-| guitar | 0.82 | 1.7 / 6.3 | 0.93 | 1.6 / 2.1 |
+| instrument  | real COnP | real split / merged per 100 | synthetic v1.1 `room` COnP | synthetic split / merged |
+| ----------- | --------- | --------------------------- | -------------------------- | ------------------------ |
+| violin      | 0.88      | 7.8 / 3.2                   | 0.78                       | 27.5 / 3.0               |
+| viola       | 0.81      | 7.6 / 0.0                   | 0.72                       | 11.0 / 9.2               |
+| cello       | 0.56      | 24.5 / 0.0                  | 0.78                       | 11.5 / 8.6               |
+| contrabass  | 0.70      | 25.5 / 0.0                  | 0.80                       | 5.5 / 7.2                |
+| flute       | 0.78      | 5.4 / 3.0                   | 0.73                       | 20.5 / 3.6               |
+| oboe        | 0.85      | 4.8 / 0.0                   | 0.80                       | 12.0 / 7.3               |
+| clarinet    | 0.88      | 2.7 / 0.0                   | 0.84                       | 4.7 / 8.7                |
+| alto sax    | 0.85      | 2.9 / 0.7                   | 0.91                       | 6.2 / 5.2                |
+| bassoon     | 0.86      | 3.1 / 0.0                   | 0.84                       | 12.7 / 7.6               |
+| trumpet     | 0.93      | 2.8 / 0.0                   | 0.86                       | 6.2 / 5.9                |
+| french horn | 0.95      | 1.2 / 0.0                   | 0.88                       | 7.8 / 7.4                |
+| trombone    | 0.90      | 1.7 / 0.9                   | 0.82                       | 17.7 / 6.6               |
+| tuba        | 0.83      | 5.6 / 1.4                   | 0.93                       | 4.7 / 6.0                |
+| guitar      | 0.82      | 1.7 / 6.3                   | 0.93                       | 1.6 / 2.1                |
 
 ### What the corpus changed in the app
 
@@ -225,11 +225,11 @@ Result on this corpus, `benchmark.ts compare` v1.1 baseline → after (COnP,
 paired over the 463 clips, all CIs exclude zero; dev and test agree, room dev
 +0.028*, test +0.035*):
 
-| condition | all | singing | instruments |
-| --- | --- | --- | --- |
-| studio | 0.860 → **0.877** (+0.017) | 0.813 → 0.860 (+0.046) | 0.870 → 0.881 (+0.011) |
-| room | 0.820 → **0.852** (+0.031) | 0.721 → 0.820 (+0.099) | 0.841 → 0.858 (+0.017) |
-| home-phone | 0.799 → **0.834** (+0.034) | 0.690 → 0.787 (+0.097) | 0.822 → 0.843 (+0.021) |
+| condition   | all                        | singing                | instruments            |
+| ----------- | -------------------------- | ---------------------- | ---------------------- |
+| studio      | 0.860 → **0.877** (+0.017) | 0.813 → 0.860 (+0.046) | 0.870 → 0.881 (+0.011) |
+| room        | 0.820 → **0.852** (+0.031) | 0.721 → 0.820 (+0.099) | 0.841 → 0.858 (+0.017) |
+| home-phone  | 0.799 → **0.834** (+0.034) | 0.690 → 0.787 (+0.097) | 0.822 → 0.843 (+0.021) |
 | noisy-phone | 0.720 → **0.743** (+0.024) | 0.663 → 0.738 (+0.075) | 0.732 → 0.745 (+0.013) |
 
 Of the 180 dataset × condition cells, one declines significantly (harmonica on

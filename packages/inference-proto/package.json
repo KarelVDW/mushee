@@ -2,7 +2,7 @@
     "name": "@mushee/inference-proto",
     "version": "0.0.0",
     "private": true,
-    "description": "Shared gRPC contract for the pitch-model inference services.",
+    "description": "Shared gRPC contract for the pitch-model inference service.",
     "types": "./index.d.ts",
     "exports": {
         "./inference.proto": "./inference.proto",

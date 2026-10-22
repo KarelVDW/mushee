@@ -3,9 +3,13 @@
     "compilerOptions": {
         "module": "commonjs",
         "moduleResolution": "node",
+        // Explicit: TypeScript's default lib would add the DOM types.
+        "lib": ["ES2022"],
         "experimentalDecorators": true,
         "emitDecoratorMetadata": true,
         "declaration": true,
+        "declarationMap": true,
+        "sourceMap": true,
         "removeComments": true,
         "incremental": true,
         "strictPropertyInitialization": false

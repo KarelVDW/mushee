@@ -7,11 +7,21 @@ build
 apps/api/data
 
 # Vendored / generated / machine-written — not hand-edited source
-**/.venv-*
+**/.venv*
+# Ignored by synthetic-corpus's own .gitignore, but prettier reads only the root one:
+# without these a local `pnpm format` rewrites thousands of corpus JSON files.
+synthetic-corpus/assets
+synthetic-corpus/work
+synthetic-corpus/out*
+synthetic-corpus/bin
+synthetic-corpus/engines
 .claude
 **/next-env.d.ts
 apps/api/model-*
 apps/api/scripts/eval/annotations
+# Benchmark outputs, rewritten by scripts/eval/benchmark.ts
 apps/api/scripts/eval/benchmarks/results
+apps/api/scripts/eval/benchmarks/results-synth
+apps/api/scripts/eval/benchmarks/RESULTS*.md
 apps/web/design/preview
 apps/web/design/ui_kits

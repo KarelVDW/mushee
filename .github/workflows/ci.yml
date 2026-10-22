@@ -1,7 +1,8 @@
 # Gates every PR (and pushes to master) on the same checks that pass locally:
-# scoped lint, type-check, unit tests (incl. the 100% model coverage gate),
-# and both app builds. The API tests spawn real ffmpeg via ffmpeg-static —
-# no system packages needed.
+# format check, whole-repo lint, type-check, the unit tests of every workspace
+# (api, admin, playback, notation incl. its 100% model coverage gate, web) and
+# the build. The API tests spawn real ffmpeg via ffmpeg-static — no system
+# packages needed.
 name: CI
 
 on:
@@ -32,20 +33,24 @@ jobs:
 
             # Whole repo: .prettierignore excludes vendored, generated and machine-written files.
             - name: Format check
-              run: pnpm exec prettier --check .
+              run: pnpm format:check
 
-            # Scoped to src: apps/api/scripts + generated proto files carry a large
-            # pre-existing lint baseline that is tracked separately.
+            # Whole repo, non-mutating (`eslint .`); `pnpm lint:fix` is the local autofix.
             - name: Lint
-              run: pnpm exec eslint apps/api/src apps/web/src
+              run: pnpm lint
 
             - name: Type-check
               run: pnpm type-check
 
-            - name: Test (api)
-              run: pnpm --filter @mushee/api test
+            # Every workspace's `test` except the two that run under coverage below,
+            # so no suite runs twice.
+            - name: Test (api, admin, playback, ui)
+              run: pnpm -r --filter '!@mushee/notation' --filter '!@mushee/web' --if-present test
 
-            - name: Test (web, with coverage gate)
+            - name: Test (notation, with the 100% model coverage gate)
+              run: pnpm --filter @mushee/notation test:coverage
+
+            - name: Test (web, with coverage)
               run: pnpm --filter @mushee/web test:coverage
 
             - name: Build

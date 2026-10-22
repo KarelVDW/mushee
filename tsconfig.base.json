@@ -1,18 +1,15 @@
 {
+    // Strictness and interop shared by every TypeScript workspace. Module and
+    // runtime settings live in tsconfig.bundler.json (the browser-bundled
+    // workspaces) and apps/api/tsconfig.json (Node, CommonJS).
     "compilerOptions": {
         "target": "ES2022",
-        "module": "ES2022",
-        "lib": ["ES2022"],
-        "moduleResolution": "node",
         "strict": true,
         "esModuleInterop": true,
         "allowSyntheticDefaultImports": true,
         "skipLibCheck": true,
         "forceConsistentCasingInFileNames": true,
         "resolveJsonModule": true,
-        "declaration": true,
-        "declarationMap": true,
-        "sourceMap": true,
         "isolatedModules": true
     }
 }

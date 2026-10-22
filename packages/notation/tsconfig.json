@@ -1,15 +1,8 @@
 {
-    "extends": "../../tsconfig.base.json",
+    // The consuming Next apps' settings: this package never compiles on its
+    // own (no build script) — apps transpile the source, tsc only checks.
+    "extends": "../../tsconfig.bundler.json",
     "compilerOptions": {
-        // Mirrors the consuming Next apps: this package never compiles on its
-        // own (no build script) — apps transpile the source, tsc only checks.
-        "target": "ES2017",
-        "lib": ["dom", "dom.iterable", "esnext"],
-        "noEmit": true,
-        "module": "esnext",
-        "moduleResolution": "bundler",
-        "jsx": "react-jsx",
-        "incremental": true,
         // scripts/ run on Node's type stripping, which needs explicit `.ts` import paths.
         "allowImportingTsExtensions": true
     },

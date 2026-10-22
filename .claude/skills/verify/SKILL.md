@@ -8,11 +8,11 @@ description: Build, launch, and drive the Mushee stack to verify web/api changes
 ## Boot the real dev stack
 
 ```sh
-pnpm run setup   # NOT `pnpm setup` — that hits pnpm's built-in and silently no-ops
+pnpm bootstrap   # dev Postgres + fresh schema + demo data
 pnpm dev         # web :3200, api :4200 (background it; readiness: curl :3200 and :4200/plans)
 ```
 
-`pnpm run setup` needs `apps/api/.env.development` — copy it from
+`pnpm bootstrap` needs `apps/api/.env.development` — copy it from
 `apps/api/.env.example` if `db:clean` fails with "not found". Postgres runs in
 Docker on :5632. Re-seed between destructive runs with `pnpm run db:seed`
 (idempotent) or `pnpm run db:reset` (full wipe).

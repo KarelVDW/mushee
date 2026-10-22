@@ -23,7 +23,5 @@ apps/api/coverage
 **/scripts/eval/.cache
 **/*.sf2
 **/*.log
-# Exclude the web app's source, but keep its package.json so pnpm can resolve the
-# workspace for --frozen-lockfile (the API image never builds web).
+# The web app (source, design assets, build output) is never part of an image.
 apps/web
-!apps/web/package.json
