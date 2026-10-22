@@ -62,7 +62,7 @@ const PRICING_FAQ: readonly FaqItem[] = [
     },
     {
         question: 'What counts as recording time?',
-        answer: "Only the time you're recording: from the moment you press record until you stop. Editing, playback, importing and exporting are free on every plan, without limits. Your minutes refill once a day, at midnight UTC.",
+        answer: "Only the time you're recording: from the moment you press record until you stop. Editing, playback, importing and exporting are free on every plan, without limits. Your minutes refill once a day, at midnight UTC — Settings shows you when that is where you live.",
     },
     {
         question: 'What happens when I reach my daily limit?',

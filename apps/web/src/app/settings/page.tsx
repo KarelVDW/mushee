@@ -197,7 +197,7 @@ export default function SettingsPage() {
                             <>
                                 <SettingsSection
                                     title="Your data"
-                                    subtitle="Download everything Solkey holds for you: your profile, settings, and every score as MusicXML and JSON.">
+                                    subtitle="Download everything Solkey holds for you: your profile, your settings and every score, in files other music apps can open.">
                                     <div>
                                         <SecondaryButton onClick={handleExport} disabled={exportData.isPending}>
                                             {exportData.isPending ? 'Preparing your download…' : 'Download my data'}
