@@ -125,6 +125,7 @@ export const Measure = memo(function Measure({ measure, layout, selectedNoteIds,
                         {isSelected && (
                             <rect
                                 data-export-exclude
+                                data-selection-band
                                 x={0}
                                 y={SELECTION_BAND_Y}
                                 width={bandWidth}

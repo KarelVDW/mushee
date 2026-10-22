@@ -4,6 +4,7 @@ import { BeatUnitIcon } from '@mushee/notation/components'
 import type { TimeSignature } from '@mushee/notation/model'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
+import { UnitNumberField } from '@/components/editor/UnitNumberField'
 import { Popover, PrimaryButton } from '@/components/ui'
 
 interface TempoPopoverProps {
@@ -117,26 +118,23 @@ export function TempoPopover({ initialBpm, timeSignature, onSubmit, onDismiss, c
             </button>
 
             <div className="flex items-stretch gap-2">
-                <div className="relative flex-1 flex items-center gap-2 px-3 rounded-sm bg-surface-container-low">
-                    <span className="flex items-center gap-1.5 text-on-surface" aria-hidden>
-                        <BeatUnitIcon duration={beat} size={20} />
-                        <span className="font-body font-medium text-[16px] leading-none">=</span>
-                    </span>
-                    <input
-                        ref={inputRef}
-                        type="number"
-                        min={MIN_BPM}
-                        max={MAX_BPM}
-                        value={draft}
-                        onChange={(e) => setDraft(e.target.value)}
-                        aria-label="BPM"
-                        className="flex-1 min-w-0 py-3 bg-transparent border-0 outline-0 font-body font-medium text-[16px] leading-none text-on-surface [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                    />
-                    <span className="font-label font-medium text-[11px] leading-none uppercase tracking-[0.12em] text-on-surface-variant">
-                        bpm
-                    </span>
-                    <div className="absolute left-0 right-0 bottom-0 h-0.5 bg-primary-container" />
-                </div>
+                <UnitNumberField
+                    inputRef={inputRef}
+                    value={draft}
+                    onChange={setDraft}
+                    ariaLabel="BPM"
+                    unit="bpm"
+                    min={MIN_BPM}
+                    max={MAX_BPM}
+                    size="md"
+                    className="flex-1"
+                    leading={
+                        <>
+                            <BeatUnitIcon duration={beat} size={20} />
+                            <span className="font-body font-medium text-[16px] leading-none">=</span>
+                        </>
+                    }
+                />
                 <PrimaryButton onClick={commit}>Set</PrimaryButton>
             </div>
         </Popover>

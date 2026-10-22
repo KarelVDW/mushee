@@ -10,6 +10,9 @@ import { RecordingEngine, type RecordingOptions } from './RecordingEngine'
 
 export type TransportMode = 'stopped' | 'playing' | 'paused' | 'recording'
 
+/** The transport as the play button sees it: a recording take reads as 'stopped' — recording has its own control. */
+export type PlaybackState = Exclude<TransportMode, 'recording'>
+
 /** How long a selected note's preview sounds, in seconds. */
 const PREVIEW_SECONDS = 0.75
 

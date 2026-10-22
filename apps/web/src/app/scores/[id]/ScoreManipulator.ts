@@ -11,6 +11,13 @@ import { ManipulationHistoryManager, type NoteAddress, type RestoredState, type 
 const MAX_RANGE = 100_000
 
 /**
+ * What a pitch operation (transpose, minimize accidentals) acts on: the whole score, or only
+ * the selected run. Only a multi-note selection can narrow one — see
+ * {@link ScoreManipulator.selectionNarrowsPitchOps}.
+ */
+export type PitchScope = 'score' | 'selection'
+
+/**
  * The editor's controller: it owns the current score and the note selection, turns mouse and
  * keyboard events into {@link ScoreAction}s, and runs them. After every operation it autosaves
  * (debounced, supplied by the page) and notifies subscribers so React re-renders.
@@ -85,6 +92,16 @@ export class ScoreManipulator {
     /** Every selected note in score order (one entry for a single selection). Stable per selection. */
     get selectedNotes(): Note[] {
         return this._selectedNotes
+    }
+
+    /**
+     * Whether the selection narrows a pitch operation to itself. Only a multi-note run does: a
+     * single selected note is just the cursor, so a pitch operation then means the whole score.
+     * The one threshold minimize-accidentals, transpose and the transpose popover's scope
+     * choice share.
+     */
+    get selectionNarrowsPitchOps(): boolean {
+        return this._selectedNotes.length > 1
     }
 
     /**
@@ -397,28 +414,31 @@ export class ScoreManipulator {
     onPitchHighlight?: (notes: Note[] | 'all') => void
 
     /**
-     * Run minimize-accidentals with its scope rule (a multi-note selection respells in
-     * place; otherwise the whole score is re-keyed), then flash the affected range. The
-     * single entry point shared by the header/dock buttons and the keyboard shortcut.
+     * Run minimize-accidentals with its scope rule (a selection that
+     * {@link selectionNarrowsPitchOps narrows pitch operations} respells in place; otherwise the
+     * whole score is re-keyed), then flash the affected range. The single entry point shared by
+     * the header/dock buttons and the keyboard shortcut.
      */
     minimizeAccidentals(): void {
         if (!this._score || !this._selectedNote) return
-        const wholeScore = this._selectedNotes.length <= 1
-        this.run(MINIMIZE_ACCIDENTALS)
-        this.onPitchHighlight?.(wholeScore ? 'all' : [...this._selectedNotes])
+        const scope: PitchScope = this.selectionNarrowsPitchOps ? 'selection' : 'score'
+        this.run(MINIMIZE_ACCIDENTALS, scope)
+        this.onPitchHighlight?.(scope === 'score' ? 'all' : [...this._selectedNotes])
     }
 
     /**
      * Transpose by `interval` — the transpose popover's Apply.
      * `scope: 'score'` moves everything including key signatures; `'selection'` moves only
-     * the selected run. `Score.transpose` rewrites the affected notes (identities change),
-     * so the selection is re-anchored: onto the returned replacements for a selection, or
-     * re-resolved at the same (measure, index) for the whole score — like setInstrument.
+     * the selected run, and is ignored unless the selection
+     * {@link selectionNarrowsPitchOps narrows pitch operations} (a single note means the whole
+     * score). `Score.transpose` rewrites the affected notes (identities change), so the
+     * selection is re-anchored: onto the returned replacements for a selection, or re-resolved
+     * at the same (measure, index) for the whole score — like setInstrument.
      */
-    transpose(interval: Interval, scope: 'score' | 'selection'): void {
+    transpose(interval: Interval, scope: PitchScope): void {
         const score = this._score
         if (!score) return
-        const selectionScope = scope === 'selection' && this._selectedNotes.length > 0
+        const selectionScope = scope === 'selection' && this.selectionNarrowsPitchOps
         this.commit(() => {
             if (selectionScope) {
                 const result = score.transpose(interval, this._selectedNotes)

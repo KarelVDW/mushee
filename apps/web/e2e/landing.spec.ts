@@ -1,4 +1,4 @@
-import { expect, test } from './fixtures'
+import { expect, stayLocal, test } from './fixtures'
 
 /**
  * Landing-page + cookie-consent e2e. The CTA tests run unauthenticated (no
@@ -7,14 +7,6 @@ import { expect, test } from './fixtures'
  * apiMock fixture normally pre-answers — they run without it too, aborting
  * external traffic to stay hermetic.
  */
-
-// Keep unauthed pages hermetic: the app origin passes, everything else is cut.
-async function stayLocal(page: import('@playwright/test').Page) {
-    await page.route(/^https?:\/\//, (route) => {
-        const url = new URL(route.request().url())
-        return url.hostname === 'localhost' ? route.continue() : route.abort()
-    })
-}
 
 test('unauthed landing: sign-in and the hero CTA route to the auth pages', async ({ page }) => {
     await stayLocal(page)

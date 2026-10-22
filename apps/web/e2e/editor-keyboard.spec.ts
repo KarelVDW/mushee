@@ -1,4 +1,4 @@
-import { expect, MOCK_SCORE_ID, test } from './fixtures'
+import { expect, focusEditor, MOCK_SCORE_ID, SELECTION_BANDS, test, waitForAutosave } from './fixtures'
 
 /**
  * Mocked-API keyboard e2e: every default editor keybinding from
@@ -8,20 +8,12 @@ import { expect, MOCK_SCORE_ID, test } from './fixtures'
  * the oracle for the toggle commands.
  */
 
-const SELECTION_BANDS = 'svg rect[fill="rgba(30, 144, 255, 0.14)"]'
-
 test.beforeEach(async ({ page, apiMock }) => {
     void apiMock
     await page.goto(`/scores/${MOCK_SCORE_ID}`)
     await expect(page.getByRole('button', { name: 'Export score' })).toBeVisible()
-    await page.locator('div[tabindex="0"]').first().focus()
+    await focusEditor(page)
 })
-
-function waitForAutosave(page: import('@playwright/test').Page) {
-    return page.waitForRequest((r) => r.method() === 'PATCH' && new RegExp(`/scores/${MOCK_SCORE_ID}$`).test(r.url()), {
-        timeout: 8000,
-    })
-}
 
 test('ArrowRight and ArrowLeft move the selection between notes', async ({ page }) => {
     const band = page.locator(SELECTION_BANDS).first()
@@ -56,6 +48,12 @@ test('R toggles the selected note to a rest and back', async ({ page }) => {
 
 test('T toggles a tie on the selected note', async ({ page }) => {
     const tieToggle = page.getByRole('button', { name: 'Tie', exact: true })
+    // A tie binds only into the same pitch: C5 → D5 can't tie, so lower D5 onto C5 and step back.
+    await expect(tieToggle).toBeDisabled()
+    await page.keyboard.press('ArrowRight')
+    await page.keyboard.press('ArrowDown')
+    await page.keyboard.press('ArrowLeft')
+    await expect(tieToggle).toBeEnabled()
     await expect(tieToggle).toHaveAttribute('aria-pressed', 'false')
 
     const patch = waitForAutosave(page)

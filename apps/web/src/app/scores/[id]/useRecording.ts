@@ -82,14 +82,17 @@ export function useRecording({
     useEffect(() => releaseMicWarmup, [releaseMicWarmup])
 
     const handleRecordToggle = useCallback(async () => {
-        if (!score || !activeNote) return
         const transport = transportRef.current
         if (!transport) return
 
+        // Stopping comes first: a take clears the selection as it starts, so a selection
+        // guard ahead of this would leave a running take unstoppable from its own button.
         if (transport.isRecording) {
             stopAll()
             return
         }
+        // Starting needs a note to record into (the button is disabled without one).
+        if (!score || !activeNote) return
 
         // iPhones filter the mic for speech; the fix is a user-only Control
         // Center setting (src/lib/micMode.ts). First take on the device blocks
@@ -238,6 +241,9 @@ export function useRecording({
         void handleRecordToggle()
     }, [handleRecordToggle, releaseMicWarmup])
 
+    /** The Record button: stop a running take, or start one at the selected note. */
+    const toggleRecording = useCallback(() => void handleRecordToggle(), [handleRecordToggle])
+
     /** Backing out (Escape / scrim / ✕): no take, and the guide returns next time. */
     const dismissMicModeGuide = useCallback(() => {
         releaseMicWarmup()
@@ -249,7 +255,7 @@ export function useRecording({
         recordingState,
         recordingHalt,
         dismissRecordingHalt,
-        handleRecordToggle,
+        toggleRecording,
         micModeGuideOpen,
         confirmMicModeGuide,
         dismissMicModeGuide,

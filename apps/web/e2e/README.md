@@ -35,16 +35,23 @@ What it covers:
 
 - `editor.spec.ts` — editor loads and engraves; keyboard pitch editing +
   debounced autosave; duration/rest controls; range selection (shift+arrows,
-  drag); copy/paste; shortcut rebinding persists; clef/tempo popovers open;
-  export to **MusicXML**, **MIDI**, and **PDF** (real downloads, verified headers).
+  drag, select all); copy/cut/paste; fixed clipboard shortcuts; shortcut
+  rebinding persists; clef/tempo popovers open from the tool dock; takes and
+  share menus; export to **MusicXML**, **MIDI**, and **PDF** (real downloads,
+  verified headers).
 - `editor-keyboard.spec.ts` — every remaining default keybinding from
-  `commands.ts` (arrow navigation, R/T/./3 toggles, Backspace clear pitch) and
-  that shortcuts stay suspended while a dialog is open.
-- `editor-tools.spec.ts` — title rename autosave; dotted/triplet/tie toggles;
-  accidental segmented control; clef/key-signature/tempo selection through the
-  popovers; Escape dismissal; change-instrument dialog (apply + cancel);
-  shortcuts dialog remove/restore-defaults; in-score add/remove measure;
-  transport idle states.
+  `commands.ts` (arrow navigation, R/T/./3 toggles, Backspace clear pitch, M
+  minimize accidentals, Shift+T transpose) and that shortcuts stay suspended
+  while a dialog is open.
+- `editor-tools.spec.ts` — title rename autosave (and a rename surviving a
+  following edit); share toggle keeping the live score; dotted/triplet/tie
+  toggles; accidental segmented control; clef/key-signature/time-signature/tempo
+  selection through the popovers; the transpose popover (semitones, advanced
+  target key); Escape dismissal and keys kept out of the score behind open
+  popovers; change-instrument dialog (apply + cancel); shortcuts dialog
+  remove/restore-defaults; in-score add/remove measure; transport idle states.
+- `errors.spec.ts` — full-page errors while the API is unreachable (library,
+  editor) and recovery on retry.
 - `library.spec.ts` — list, open (title + pencil), create (validation, Enter
   submit, cancel/Escape, instrument choice), delete (confirm, decline, Escape,
   ×, failure toast on a 500), search filter + no-match state, empty state,
@@ -56,11 +63,20 @@ What it covers:
   cookie-settings dialog.
 - `landing.spec.ts` — unauthed CTAs, cookie banner (accept/essential/customize,
   persistence across reload).
-- `mobile.spec.ts` — phone chrome, reflow, touch note editing, dock sheets.
+- `pricing.spec.ts` — the /pricing route (heading, FAQ, structured data, signup
+  CTA) and the landing links to it.
+- `shared.spec.ts` — the public read-only share page: a valid link, an unknown
+  or revoked token, and the signup path for visitors without an account.
+- `mobile.spec.ts` — phone chrome, reflow, touch note editing, the record
+  button's enabled state, the selection popover, dock sheets, icon-only header
+  chips.
 
-Auth/score responses live in `e2e/fixtures.ts`; the score DTO is in
-`e2e/fixtures/score.partwise.json` (regenerate with the throwaway generator
-described in that file if the serializer format changes).
+Auth/score responses live in `e2e/fixtures.ts`, along with the shared helpers
+(`waitForAutosave`, `focusEditor`, `stayLocal`, `SELECTION_BANDS`). The score
+DTO in `e2e/fixtures/score.partwise.json` is maintained by hand: it is the
+@mushee/notation `ScoreSerializer` output for the score described next to its
+import in `fixtures.ts` — re-serialize that score the same way if the stored
+format changes.
 
 ### Override the web port
 

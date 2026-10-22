@@ -1,11 +1,13 @@
 import { readFileSync } from 'node:fs'
 
-import { expect, MOCK_SCORE_ID, MOCK_SHARE_TOKEN, MOCK_TITLE, test } from './fixtures'
+import { expect, focusEditor, MOCK_SCORE_ID, MOCK_SHARE_TOKEN, MOCK_TITLE, SELECTION_BANDS, test, waitForAutosave } from './fixtures'
 
 /**
  * Mocked-API editor e2e. Drives the real editor in a real browser; the scores
  * API and auth session are intercepted (see fixtures.ts). Exercises rendering,
- * keyboard pitch editing + debounced autosave, the control bar, and exporting.
+ * keyboard pitch editing + debounced autosave, range selection and the
+ * clipboard, shortcut rebinding, the tool dock's popovers, the header's takes /
+ * share menus, and exporting.
  */
 
 test.beforeEach(async ({ page, apiMock }) => {
@@ -38,12 +40,10 @@ test('no mic-source chip: the server classifies voice vs instrument itself', asy
 })
 
 test('editing a note pitch with the keyboard triggers a debounced autosave', async ({ page }) => {
-    const patch = page.waitForRequest((r) => r.method() === 'PATCH' && new RegExp(`/scores/${MOCK_SCORE_ID}$`).test(r.url()), {
-        timeout: 8000,
-    })
+    const patch = waitForAutosave(page)
 
     // The first note (C5) is auto-selected on load; the editor container is focused.
-    await page.locator('div[tabindex="0"]').first().focus()
+    await focusEditor(page)
     await page.keyboard.press('ArrowUp')
 
     const body = (await patch).postDataJSON() as Record<string, unknown>
@@ -54,20 +54,17 @@ test('editing a note pitch with the keyboard triggers a debounced autosave', asy
 test('changing duration and toggling rest autosave the change', async ({ page }) => {
     // Switch the selected note to a 16th (last of w,h,q,8,16).
     const durations = page.getByRole('group', { name: 'Note duration' }).getByRole('button')
-    const patchDuration = page.waitForRequest((r) => r.method() === 'PATCH', { timeout: 8000 })
+    const patchDuration = waitForAutosave(page)
     await durations.nth(4).click()
     await patchDuration
 
     // Toggle the active note to a rest.
     const restToggle = page.getByRole('button', { name: 'Rest' })
-    const patchRest = page.waitForRequest((r) => r.method() === 'PATCH', { timeout: 8000 })
+    const patchRest = waitForAutosave(page)
     await restToggle.click()
     await patchRest
     await expect(restToggle).toHaveAttribute('aria-pressed', 'true')
 })
-
-// Selection-highlight bands are the only translucent-blue rects on the score.
-const SELECTION_BANDS = 'svg rect[fill="rgba(30, 144, 255, 0.14)"]'
 
 test('shift+arrows range-select notes and a bulk edit applies to all of them', async ({ page }) => {
     const bands = page.locator(SELECTION_BANDS)
@@ -75,13 +72,13 @@ test('shift+arrows range-select notes and a bulk edit applies to all of them', a
     await expect(bands).toHaveCount(1)
 
     // Extend the selection across the first three pitched notes (C5 D5 E5).
-    await page.locator('div[tabindex="0"]').first().focus()
+    await focusEditor(page)
     await page.keyboard.press('Shift+ArrowRight')
     await page.keyboard.press('Shift+ArrowRight')
     await expect(bands).toHaveCount(3)
 
     // A bulk action (raise pitch) edits every selected note and autosaves; the range stays selected.
-    const patch = page.waitForRequest((r) => r.method() === 'PATCH', { timeout: 8000 })
+    const patch = waitForAutosave(page)
     await page.keyboard.press('ArrowUp')
     await patch
     await expect(bands).toHaveCount(3)
@@ -112,7 +109,7 @@ test('copies a range and pastes it with the keyboard', async ({ page }) => {
     await expect(bands).toHaveCount(1)
 
     // Select the first two notes and copy them.
-    await page.locator('div[tabindex="0"]').first().focus()
+    await focusEditor(page)
     await page.keyboard.press('Shift+ArrowRight')
     await expect(bands).toHaveCount(2)
     await page.keyboard.press('ControlOrMeta+c')
@@ -121,7 +118,7 @@ test('copies a range and pastes it with the keyboard', async ({ page }) => {
     await page.keyboard.press('Escape')
     await page.keyboard.press('ArrowRight')
     await page.keyboard.press('ArrowRight')
-    const patch = page.waitForRequest((r) => r.method() === 'PATCH', { timeout: 8000 })
+    const patch = waitForAutosave(page)
     await page.keyboard.press('ControlOrMeta+v')
     await patch
     await expect(bands).toHaveCount(2)
@@ -132,12 +129,12 @@ test('select-all spans every note and a bulk edit hits them all', async ({ page 
     await expect(bands).toHaveCount(1)
 
     // ⌘A selects the whole score — the fixture holds 8 notes (4 pitched + 4 rests).
-    await page.locator('div[tabindex="0"]').first().focus()
+    await focusEditor(page)
     await page.keyboard.press('ControlOrMeta+a')
     await expect(bands).toHaveCount(8)
 
     // A bulk action applies across the full selection and autosaves; the range stays selected.
-    const patch = page.waitForRequest((r) => r.method() === 'PATCH', { timeout: 8000 })
+    const patch = waitForAutosave(page)
     await page.keyboard.press('ArrowUp')
     await patch
     await expect(bands).toHaveCount(8)
@@ -149,8 +146,7 @@ test('select-all matches the typed character on non-QWERTY layouts (AZERTY ⌘A 
 
     // Playwright's keyboard is US-layout only, so synthesize the AZERTY keystroke: the key
     // labeled A reports physical code KeyQ while typing the character 'a'.
-    const container = page.locator('div[tabindex="0"]').first()
-    await container.focus()
+    const container = await focusEditor(page)
     const isMac = await page.evaluate(() => /Mac|iPhone|iPad|iPod/.test(navigator.platform))
     await container.dispatchEvent('keydown', { code: 'KeyQ', key: 'a', metaKey: isMac, ctrlKey: !isMac, bubbles: true })
     await expect(bands).toHaveCount(8)
@@ -161,18 +157,18 @@ test('cuts a range with the keyboard and pastes it back elsewhere', async ({ pag
     await expect(bands).toHaveCount(1)
 
     // Select the first two notes (C5 D5) and cut them: copied, then removed from the score.
-    await page.locator('div[tabindex="0"]').first().focus()
+    await focusEditor(page)
     await page.keyboard.press('Shift+ArrowRight')
     await expect(bands).toHaveCount(2)
     const restToggle = page.getByRole('button', { name: 'Rest' })
-    const patchCut = page.waitForRequest((r) => r.method() === 'PATCH', { timeout: 8000 })
+    const patchCut = waitForAutosave(page)
     await page.keyboard.press('ControlOrMeta+x')
     await patchCut
     await expect(restToggle).toHaveAttribute('aria-pressed', 'true')
 
     // Step onto the next pitched note and paste the cut run over it.
     await page.keyboard.press('ArrowRight')
-    const patchPaste = page.waitForRequest((r) => r.method() === 'PATCH', { timeout: 8000 })
+    const patchPaste = waitForAutosave(page)
     await page.keyboard.press('ControlOrMeta+v')
     await patchPaste
     await expect(bands).toHaveCount(2)
@@ -214,7 +210,7 @@ test('keyboard shortcuts dialog lists bindings and rebinding persists across a r
 
     // The editor regains focus; the new key toggles the selected note to a rest and autosaves.
     const restToggle = page.getByRole('button', { name: 'Rest' })
-    const patch = page.waitForRequest((r) => r.method() === 'PATCH', { timeout: 8000 })
+    const patch = waitForAutosave(page)
     await page.keyboard.press('j')
     await patch
     await expect(restToggle).toHaveAttribute('aria-pressed', 'true')
@@ -222,16 +218,16 @@ test('keyboard shortcuts dialog lists bindings and rebinding persists across a r
     // The customization is stored in localStorage, so it survives a reload; the old key is dead.
     await page.reload()
     await expect(page.getByRole('button', { name: 'Export score' })).toBeVisible()
-    await page.locator('div[tabindex="0"]').first().focus()
+    await focusEditor(page)
     await page.keyboard.press('r')
     await expect(restToggle).toHaveAttribute('aria-pressed', 'false')
-    const patchAfterReload = page.waitForRequest((r) => r.method() === 'PATCH', { timeout: 8000 })
+    const patchAfterReload = waitForAutosave(page)
     await page.keyboard.press('j')
     await patchAfterReload
     await expect(restToggle).toHaveAttribute('aria-pressed', 'true')
 })
 
-test('clef and tempo popovers open from the control bar', async ({ page }) => {
+test('clef and tempo popovers open from the tool dock', async ({ page }) => {
     const clef = page.getByRole('button', { name: /^Clef:/ })
     await expect(clef).toHaveAttribute('aria-pressed', 'false')
     await clef.click()

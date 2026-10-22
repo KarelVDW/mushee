@@ -6,54 +6,31 @@
  * components/ holds what two or more routes use (ExportMenu also serves the share page).
  */
 
-import { type AttributeClickEvent, type ScoreHighlight, ScoreView, type SelectionMenuEvent } from '@mushee/notation/components'
-import {
-    type Accidental,
-    type ClefType,
-    type DurationType,
-    Instrument,
-    type Interval,
-    type Note,
-    type Pitch,
-    TimeSignature,
-} from '@mushee/notation/model'
+import { type AttributeClickEvent, ScoreView, type SelectionMenuEvent } from '@mushee/notation/components'
+import type { Instrument, Note, Pitch } from '@mushee/notation/model'
 import { ScoreDeserializer } from '@mushee/notation/model/io/ScoreDeserializer'
 import { useParams, useRouter } from 'next/navigation'
-import { type ReactNode, useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react'
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
 
-import { ClefPopover } from '@/components/editor/ClefPopover'
-import { KeySignaturePopover } from '@/components/editor/KeySignaturePopover'
 import { SelectionPopover } from '@/components/editor/SelectionPopover'
-import { TempoPopover } from '@/components/editor/TempoPopover'
-import { TimeSignaturePopover } from '@/components/editor/TimeSignaturePopover'
-import { TransposePopover } from '@/components/editor/TransposePopover'
-import { ExportMenu } from '@/components/ExportMenu'
 import { ChipToggle, ErrorScreen, Icon, Wordmark } from '@/components/ui'
 import { ApiError, NetworkError } from '@/lib/api'
-import { useSaveKeyboardShortcuts, useScoreDocument, useSettings } from '@/lib/queries'
+import { useScoreDocument } from '@/lib/queries'
 import { useMediaQuery } from '@/lib/useMediaQuery'
 
-import {
-    CHANGE_PITCH,
-    LOWER_PITCH,
-    MOVE_NEXT,
-    MOVE_PREVIOUS,
-    RAISE_PITCH,
-    SET_ACCIDENTAL,
-    SET_DURATION,
-    TOGGLE_DOT,
-    TOGGLE_REST,
-    TOGGLE_TIE,
-    TOGGLE_TUPLET,
-} from './actions'
+import { CHANGE_PITCH, LOWER_PITCH, MOVE_NEXT, MOVE_PREVIOUS, RAISE_PITCH } from './actions'
 import { ChangeInstrumentDialog } from './ChangeInstrumentDialog'
-import { COMPACT_POPOVER_SHEET, MobileEditorActions, NoteToolDock, TransportControls } from './EditorControls'
+import { EditorHeader } from './EditorHeader'
+import { HistoryTools } from './HistoryTools'
 import { KeyboardShortcutsDialog } from './KeyboardShortcutsDialog'
+import { NoteToolDock } from './NoteToolDock'
+import { PitchTools } from './PitchTools'
 import { ConcurrentRecordingDialog, MicModeGuideDialog, RecordingLimitDialog } from './RecordingDialogs'
-import { RecordingsMenu } from './RecordingsMenu'
+import { ScoreAttributePopover } from './ScoreAttributePopover'
 import { ScoreManipulator } from './ScoreManipulator'
-import { ShareMenu } from './ShareMenu'
-import { TitleInput } from './TitleInput'
+import { MobileEditorActions, type TransportControlsProps } from './TransportControls'
+import { useAccountKeybindings } from './useAccountKeybindings'
+import { usePitchHighlight } from './usePitchHighlight'
 import { usePlayback } from './usePlayback'
 import { useRecording } from './useRecording'
 import { useScoreAutosave } from './useScoreAutosave'
@@ -75,35 +52,14 @@ export default function ScoreEditorPage() {
     const [instrumentDialogOpen, setInstrumentDialogOpen] = useState(false)
     const [shortcutsOpen, setShortcutsOpen] = useState(false)
     const [transposeOpen, setTransposeOpen] = useState(false)
-    const transposeAnchorRef = useRef<HTMLDivElement>(null)
-    // Transient magenta emphasis on the canvas: a pulse over the open transpose popover's
-    // target range, replaced by a fading flash the moment a pitch operation lands.
-    const [pitchHighlight, setPitchHighlight] = useState<ScoreHighlight | null>(null)
-    const highlightSeq = useRef(0)
-    const highlightTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+    const { highlight: pitchHighlight, aim: aimTranspose } = usePitchHighlight(manipulator)
     // Phone-sized chrome: transport moves into the dock (thumb reach), the keyboard
     // shortcuts entry point disappears, and header/dock controls tighten up.
     const isMobile = useMediaQuery('(max-width: 767px)')
 
     const { data: scoreDocument, error: loadError, refetch } = useScoreDocument(id)
 
-    // Keyboard shortcuts follow the account: adopt the server's override set once it loads
-    // (or push this device's up when the account has none yet), then mirror every change.
-    const { data: settings } = useSettings()
-    const { mutate: saveShortcuts } = useSaveKeyboardShortcuts()
-    const shortcutsSyncedRef = useRef(false)
-    useEffect(() => {
-        const keybindings = manipulator.keybindings
-        if (settings && !shortcutsSyncedRef.current) {
-            shortcutsSyncedRef.current = true
-            if (settings.keyboardShortcuts) keybindings.hydrate(settings.keyboardShortcuts)
-            else if (keybindings.hasCustomizations) saveShortcuts(keybindings.toStored())
-        }
-        keybindings.onDidChange = (stored) => saveShortcuts(stored)
-        return () => {
-            keybindings.onDidChange = undefined
-        }
-    }, [settings, manipulator, saveShortcuts])
+    useAccountKeybindings(manipulator.keybindings)
 
     const saveToApi = useScoreAutosave(id)
 
@@ -127,156 +83,30 @@ export default function ScoreEditorPage() {
         manipulator.attach(s, (score) => saveToApi({ score }))
     }, [loaded, manipulator, saveToApi])
 
-    // Listeners are thin: each maps a dock callback or mouse event to a manipulator
-    // dispatch. The actions themselves live in ./actions; the manipulator owns selection,
-    // autosave, and re-rendering. (Keyboard input is bound directly to manipulator.handleKeyDown.)
+    // The score view's listeners are thin: each maps a mouse/touch event to a manipulator
+    // dispatch, and stays referentially stable because ScoreView is memoized. The actions live
+    // in ./actions; the manipulator owns selection, autosave and re-rendering. The dock and the
+    // header tools dispatch to the manipulator themselves, and keyboard input is bound directly
+    // to manipulator.handleKeyDown.
     const handleNoteChange = useCallback((_note: Note, newPitch: Pitch) => manipulator.run(CHANGE_PITCH, newPitch), [manipulator])
     const handleSelectionStart = useCallback((note: Note) => manipulator.select(note), [manipulator])
     const handleSelectionExtend = useCallback((note: Note) => manipulator.extendSelectionTo(note), [manipulator])
-    const handleAccidentalChange = useCallback((acc: Accidental | undefined) => manipulator.run(SET_ACCIDENTAL, acc), [manipulator])
-    const handleDurationChange = useCallback((duration: DurationType) => manipulator.run(SET_DURATION, duration), [manipulator])
-    const handleDotToggle = useCallback(() => manipulator.run(TOGGLE_DOT), [manipulator])
-    const handleTupletToggle = useCallback(() => manipulator.run(TOGGLE_TUPLET), [manipulator])
-    const handleTieToggle = useCallback(() => manipulator.run(TOGGLE_TIE), [manipulator])
-    const handleRestToggle = useCallback(() => manipulator.run(TOGGLE_REST), [manipulator])
-    // The dock's measure-context edits apply at the active note's position (mid-measure for
-    // clef / key / tempo), through the same setters as the in-score glyph popovers.
-    const handleTempoSet = useCallback(
-        (bpm: number) => {
-            const at = manipulator.activePosition
-            if (at) manipulator.setTempoAt(at.measureIndex, at.beat, bpm)
-        },
-        [manipulator],
-    )
-    const handleClefSet = useCallback(
-        (type: ClefType) => {
-            const at = manipulator.activePosition
-            if (at) manipulator.setClefAt(at.measureIndex, type, at.beat)
-        },
-        [manipulator],
-    )
-    const handleKeySet = useCallback(
-        (fifths: number) => {
-            const at = manipulator.activePosition
-            if (at) manipulator.setKeyAt(at.measureIndex, fifths, at.beat)
-        },
-        [manipulator],
-    )
-    const handleTimeSet = useCallback(
-        (beatAmount: number, beatType: number) => {
-            const at = manipulator.activePosition
-            if (at) manipulator.setTimeSignatureAt(at.measureIndex, beatAmount, beatType)
-        },
-        [manipulator],
-    )
     const handleAddMeasure = useCallback(() => manipulator.addMeasure(), [manipulator])
     const handleRemoveMeasure = useCallback(() => manipulator.removeMeasure(), [manipulator])
-    const handleUndo = useCallback(() => manipulator.undo(), [manipulator])
-    const handleRedo = useCallback(() => manipulator.redo(), [manipulator])
-    const handleMinimizeAccidentals = useCallback(() => manipulator.minimizeAccidentals(), [manipulator])
-    const handleTransposeApply = useCallback(
-        (interval: Interval, scope: 'score' | 'selection') => {
-            manipulator.transpose(interval, scope)
-            setTransposeOpen(false)
-        },
-        [manipulator],
-    )
-    const closeTranspose = useCallback(() => setTransposeOpen(false), [])
 
-    // The open transpose popover aims a gentle pulse at its target range; closing clears it
-    // — but never a flash that an Apply just set (the popover closes right after applying).
-    const handleTransposeAim = useCallback(
-        (scope: 'score' | 'selection' | null) => {
-            setPitchHighlight((current) => {
-                if (scope === null) return current?.kind === 'pulse' ? null : current
-                return { kind: 'pulse', notes: scope === 'selection' ? manipulator.selectedNotes : 'all', id: ++highlightSeq.current }
-            })
-        },
-        [manipulator],
-    )
-
-    // The transpose shortcut opens this popover — view state the manipulator can't own, so
-    // the command reaches back through this registration. The highlight hook flashes the
-    // range a pitch operation (transpose apply / minimize accidentals) just rewrote.
+    // The transpose shortcut opens the transpose popover — view state the manipulator can't
+    // own, so the command reaches back through this registration.
     useEffect(() => {
         manipulator.onTransposeRequest = () => setTransposeOpen(true)
-        manipulator.onPitchHighlight = (notes) => {
-            if (highlightTimer.current) clearTimeout(highlightTimer.current)
-            setPitchHighlight({ kind: 'flash', notes, id: ++highlightSeq.current })
-            highlightTimer.current = setTimeout(() => setPitchHighlight(null), 900)
-        }
         return () => {
             manipulator.onTransposeRequest = undefined
-            manipulator.onPitchHighlight = undefined
-            if (highlightTimer.current) clearTimeout(highlightTimer.current)
         }
     }, [manipulator])
 
-    // In-score attribute glyphs (tempo / clef / key / time): the ScoreView only reports the
-    // click; this page owns the popover it opens and applies the change through the
-    // manipulator. The admin console renders the same ScoreView with no callbacks —
-    // that's what keeps its score page read-only.
+    // In-score attribute glyphs (tempo / clef / key / time): the ScoreView reports the click,
+    // and ScoreAttributePopover opens the matching popover and applies the change.
     const [attributePopover, setAttributePopover] = useState<AttributeClickEvent | null>(null)
     const closeAttributePopover = useCallback(() => setAttributePopover(null), [])
-
-    // The open attribute popover's panel. Rendered from two spots so it matches the dock's
-    // equivalent popovers: on desktop anchored at the clicked glyph (clamped inside the
-    // score wrapper), on mobile as the same full-width sheet above the dock that the dock's
-    // own clef/key/time/tempo chips open — anchored panels clip at the viewport edge.
-    const renderAttributePopover = (className: string) => {
-        if (!attributePopover) return null
-        switch (attributePopover.kind) {
-            case 'tempo':
-                return (
-                    <TempoPopover
-                        className={className}
-                        initialBpm={attributePopover.bpm}
-                        timeSignature={score?.measures[attributePopover.measureIndex]?.timeSignature ?? DEFAULT_TIME_SIGNATURE}
-                        onSubmit={(bpm) => {
-                            manipulator.setTempoAt(attributePopover.measureIndex, attributePopover.beatPosition, bpm)
-                            closeAttributePopover()
-                        }}
-                        onDismiss={closeAttributePopover}
-                    />
-                )
-            case 'clef':
-                return (
-                    <ClefPopover
-                        active={attributePopover.clef}
-                        className={className}
-                        onSelect={(type) => {
-                            manipulator.setClefAt(attributePopover.measureIndex, type)
-                            closeAttributePopover()
-                        }}
-                        onDismiss={closeAttributePopover}
-                    />
-                )
-            case 'key':
-                return (
-                    <KeySignaturePopover
-                        active={attributePopover.fifths}
-                        className={className}
-                        onSelect={(fifths) => {
-                            manipulator.setKeyAt(attributePopover.measureIndex, fifths)
-                            closeAttributePopover()
-                        }}
-                        onDismiss={closeAttributePopover}
-                    />
-                )
-            case 'time':
-                return (
-                    <TimeSignaturePopover
-                        active={{ beatAmount: attributePopover.beatAmount, beatType: attributePopover.beatType }}
-                        className={className}
-                        onSelect={(beatAmount, beatType) => {
-                            manipulator.setTimeSignatureAt(attributePopover.measureIndex, beatAmount, beatType)
-                            closeAttributePopover()
-                        }}
-                        onDismiss={closeAttributePopover}
-                    />
-                )
-        }
-    }
 
     // The floating selection-actions bar (mobile): opened by the score's selection-menu
     // gestures — long-press, double-tap, or lifting a range drag. Selection-scoped actions
@@ -297,7 +127,7 @@ export default function ScoreEditorPage() {
         return { x: anchor.x * scale, y: anchor.y * scale }
     })()
 
-    const { transportRef, playbackCursorRef, playbackState, metronome, setMetronome, stopAll, handlePlayToggle, instrumentsReady } =
+    const { transportRef, playbackCursorRef, playbackState, metronome, toggleMetronome, stopAll, handlePlayToggle, instrumentsReady } =
         usePlayback({
             score,
             activeNote,
@@ -318,7 +148,7 @@ export default function ScoreEditorPage() {
         recordingState,
         recordingHalt,
         dismissRecordingHalt,
-        handleRecordToggle,
+        toggleRecording,
         micModeGuideOpen,
         confirmMicModeGuide,
         dismissMicModeGuide,
@@ -332,6 +162,20 @@ export default function ScoreEditorPage() {
         stopAll,
         saveToApi,
     })
+
+    // One transport prop bag for the header (desktop) and the dock's action row (mobile), so
+    // the two can't drift. A take records into the selected note's measure, so Record needs
+    // one to start — the take itself clears the selection, which must not lock its own stop.
+    const transport: TransportControlsProps = {
+        playbackState,
+        onPlayToggle: handlePlayToggle,
+        onStop: stopAll,
+        recordingState,
+        onRecordToggle: toggleRecording,
+        recordDisabled: recordingState === 'idle' && !activeNote,
+        metronome,
+        onMetronomeToggle: toggleMetronome,
+    }
 
     // Route keyboard input through the manipulator. Re-runs once the editor chrome (and so the
     // container) mounts — which happens only after the score AND its instruments load, hence
@@ -383,110 +227,25 @@ export default function ScoreEditorPage() {
 
     return (
         <div ref={containerRef} tabIndex={0} className="relative flex flex-col h-dvh bg-surface text-on-surface outline-none">
-            <header className="flex items-center gap-2 sm:gap-4 px-3 sm:px-5 py-2 bg-surface-container-low/85 backdrop-blur-xl tonal-layer-glow z-10">
-                <div className="flex items-center gap-1.5 sm:gap-2.5 min-w-0 flex-1">
-                    <button
-                        onClick={() => router.push('/scores')}
-                        aria-label="Back to library"
-                        className={[
-                            'bg-transparent border-0 cursor-pointer text-on-surface-variant p-1.5 -ml-1.5 inline-flex rounded-full',
-                            'hover:text-on-surface transition-colors duration-150 ease-solkey',
-                            'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
-                        ].join(' ')}>
-                        <Icon name="arrow-left" size={20} />
-                    </button>
-                    <Wordmark size={19} className="max-[52rem]:hidden" />
-                    <div className="w-px h-5 bg-outline-variant/15 max-[52rem]:hidden" />
-                    <TitleInput
-                        value={title}
-                        onChange={(v) => {
-                            setTitle(v)
-                            saveToApi({ title: v })
-                        }}
-                    />
-                    <button
-                        type="button"
-                        onClick={() => setInstrumentDialogOpen(true)}
-                        aria-label={`Change instrument (current: ${score.instrument.displayName})`}
-                        className={[
-                            'shrink-0 inline-flex items-center gap-1 border-0 rounded-full px-2.5 py-1.5 cursor-pointer',
-                            'font-label font-semibold text-[11px] leading-none whitespace-nowrap',
-                            'max-md:max-w-28 min-w-0',
-                            'bg-secondary-soft/70 text-on-secondary-soft hover:bg-secondary-soft',
-                            'transition-colors duration-150 ease-solkey',
-                            'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
-                        ].join(' ')}>
-                        <span className="truncate">{score.instrument.displayName}</span>
-                        <Icon name="sliders-horizontal" size={11} />
-                    </button>
-                </div>
-                {!isMobile && (
-                    <TransportControls
-                        playbackState={playbackState}
-                        onPlayToggle={handlePlayToggle}
-                        onStop={stopAll}
-                        recordingState={recordingState}
-                        onRecordToggle={() => void handleRecordToggle()}
-                        metronome={metronome}
-                        onMetronomeToggle={() => setMetronome((m) => !m)}
-                    />
-                )}
-                <div className="flex items-center gap-2 shrink-0 sm:flex-1 justify-end">
-                    {/* Undo/redo sit in the header, not the tool dock: the dock's tools edit the
-                        selection, while history travel is a document-level (meta) operation —
-                        like export, it belongs with the chrome. On phones the pair moves into
-                        the dock's tool strip instead (thumb reach, and there is no ⌘Z). */}
-                    {/* Pitch operations follow the same rule: minimize-accidentals and transpose act on
-                        the whole score by default (a multi-note selection narrows them), so they live
-                        with the document-level chrome. On phones they join the dock's settings well. */}
-                    {!isMobile && (
-                        <div role="group" aria-label="Pitch" className="flex items-center gap-1">
-                            <ChipToggle onClick={handleMinimizeAccidentals} disabled={!activeNote} ariaLabel="Minimize accidentals">
-                                <Icon name="natural" size={16} />
-                            </ChipToggle>
-                            <div ref={transposeAnchorRef} className="relative">
-                                <ChipToggle active={transposeOpen} onClick={() => setTransposeOpen((o) => !o)} ariaLabel="Transpose">
-                                    <Icon name="transpose" size={16} />
-                                </ChipToggle>
-                                {transposeOpen && (
-                                    <TransposePopover
-                                        score={score}
-                                        selectedNotes={manipulator.selectedNotes}
-                                        anchorRef={transposeAnchorRef}
-                                        className="right-0 top-[calc(100%+0.5rem)]"
-                                        onApply={handleTransposeApply}
-                                        onDismiss={closeTranspose}
-                                        onScopeChange={handleTransposeAim}
-                                    />
-                                )}
-                            </div>
-                        </div>
-                    )}
-                    {!isMobile && (
-                        <div role="group" aria-label="History" className="flex items-center gap-1">
-                            <ChipToggle onClick={handleUndo} disabled={!manipulator.canUndo} ariaLabel="Undo">
-                                <Icon name="undo" size={16} />
-                            </ChipToggle>
-                            <ChipToggle onClick={handleRedo} disabled={!manipulator.canRedo} ariaLabel="Redo">
-                                <Icon name="redo" size={16} />
-                            </ChipToggle>
-                        </div>
-                    )}
-                    {!isMobile && (
-                        <ChipToggle active={shortcutsOpen} onClick={() => setShortcutsOpen(true)} ariaLabel="Keyboard shortcuts">
-                            <Icon name="keyboard" size={16} />
-                        </ChipToggle>
-                    )}
-                    <ShareMenu scoreId={id} shareToken={scoreDocument?.meta.shareToken ?? null} compact={isMobile} />
-                    <RecordingsMenu scoreId={id} compact={isMobile} />
-                    <ExportMenu
-                        score={score}
-                        title={title}
-                        compact={isMobile}
-                        getSvg={() => scoreAreaRef.current?.querySelector('svg') ?? null}
-                    />
-                </div>
-            </header>
+            <EditorHeader
+                scoreId={id}
+                shareToken={scoreDocument?.meta.shareToken ?? null}
+                manipulator={manipulator}
+                title={title}
+                onTitleChange={(v) => {
+                    setTitle(v)
+                    saveToApi({ title: v })
+                }}
+                onChangeInstrument={() => setInstrumentDialogOpen(true)}
+                compact={isMobile}
+                transport={transport}
+                transposeOpen={transposeOpen}
+                onTransposeOpenChange={setTransposeOpen}
+                onTransposeAim={aimTranspose}
+                shortcutsOpen={shortcutsOpen}
+                onOpenShortcuts={() => setShortcutsOpen(true)}
+                getSvg={() => scoreAreaRef.current?.querySelector('svg') ?? null}
+            />
             {/* flex-col + grow (not min-h-full): the canvas must fill the scroll viewport
                 even when the score is short, and a percentage min-height can't resolve
                 against a flex-sized (height-less) scroll container. */}
@@ -538,11 +297,12 @@ export default function ScoreEditorPage() {
                             />
                         )}
                         {attributePopover && !isMobile && (
-                            <AttributePopoverAnchor
-                                x={attributePopover.x}
-                                y={attributePopover.y + (attributePopover.kind === 'tempo' ? -30 : 40)}>
-                                {renderAttributePopover('left-0 top-0')}
-                            </AttributePopoverAnchor>
+                            <ScoreAttributePopover
+                                event={attributePopover}
+                                manipulator={manipulator}
+                                placement="anchored"
+                                onClose={closeAttributePopover}
+                            />
                         )}
                     </div>
                 </div>
@@ -550,64 +310,39 @@ export default function ScoreEditorPage() {
             {/* On mobile the in-score attribute popovers render here instead, as the same
                 full-width sheet above the dock that the dock's own chips open. */}
             <div className="relative shrink-0">
-                {isMobile && renderAttributePopover(COMPACT_POPOVER_SHEET)}
+                {attributePopover && isMobile && (
+                    <ScoreAttributePopover
+                        event={attributePopover}
+                        manipulator={manipulator}
+                        placement="sheet"
+                        onClose={closeAttributePopover}
+                    />
+                )}
                 <NoteToolDock
-                    accidental={activeNote?.pitch?.accidental}
-                    duration={activeNote?.duration.type}
-                    accidentalDisabled={activeNote?.isRest ?? true}
-                    onAccidentalChange={handleAccidentalChange}
-                    onDurationChange={handleDurationChange}
-                    dotted={(activeNote?.duration.dots ?? 0) > 0}
-                    onDotToggle={handleDotToggle}
-                    tuplet={activeNote?.inTuplet ?? false}
-                    tupletDisabled={!activeNote || (!activeNote.inTuplet && !activeNote.duration.tripletDivision())}
-                    onTupletToggle={handleTupletToggle}
-                    tie={activeNote?.tiesForward ?? false}
-                    onTieToggle={handleTieToggle}
-                    rest={activeNote?.isRest ?? false}
-                    onRestToggle={handleRestToggle}
-                    bpm={score.bpmAt(activeNote)}
-                    onTempoSet={handleTempoSet}
-                    clef={activeNote?.clef.type ?? 'treble'}
-                    onClefSet={handleClefSet}
-                    keyFifths={activeNote?.keySignature.fifths ?? 0}
-                    onKeySet={handleKeySet}
-                    time={{
-                        beatAmount: activeNote?.measure.timeSignature.beatAmount ?? 4,
-                        beatType: activeNote?.measure.timeSignature.beatType ?? 4,
-                    }}
-                    onTimeSet={handleTimeSet}
-                    selectionDisabled={!activeNote}
+                    manipulator={manipulator}
                     compact={isMobile}
-                    pitch={
-                        isMobile
-                            ? {
-                                  onMinimize: handleMinimizeAccidentals,
-                                  score,
-                                  selectedNotes: manipulator.selectedNotes,
-                                  onTranspose: handleTransposeApply,
-                                  onTransposeAim: handleTransposeAim,
-                              }
-                            : undefined
+                    settingsExtras={
+                        isMobile ? (
+                            <>
+                                <PitchTools
+                                    manipulator={manipulator}
+                                    plain
+                                    compact
+                                    transposeOpen={transposeOpen}
+                                    onTransposeOpenChange={setTransposeOpen}
+                                    onTransposeAim={aimTranspose}
+                                />
+                                <ChipToggle plain active={metronome} onClick={toggleMetronome} ariaLabel="Metronome">
+                                    <Icon name="audio-lines" size={14} />
+                                </ChipToggle>
+                            </>
+                        ) : undefined
                     }
-                    metronome={isMobile ? { active: metronome, onToggle: () => setMetronome((m) => !m) } : undefined}
-                    history={
-                        isMobile
-                            ? { canUndo: manipulator.canUndo, canRedo: manipulator.canRedo, onUndo: handleUndo, onRedo: handleRedo }
-                            : undefined
-                    }
+                    trailingGroup={isMobile ? <HistoryTools manipulator={manipulator} plain /> : undefined}
                     footer={
                         isMobile ? (
                             <MobileEditorActions
-                                transport={{
-                                    playbackState,
-                                    onPlayToggle: handlePlayToggle,
-                                    onStop: stopAll,
-                                    recordingState,
-                                    onRecordToggle: () => void handleRecordToggle(),
-                                    metronome,
-                                    onMetronomeToggle: () => setMetronome((m) => !m),
-                                }}
+                                transport={transport}
                                 onPrevious={() => manipulator.run(MOVE_PREVIOUS)}
                                 onNext={() => manipulator.run(MOVE_NEXT)}
                                 onPitchUp={() => manipulator.run(RAISE_PITCH)}
@@ -634,40 +369,6 @@ export default function ScoreEditorPage() {
             )}
             {recordingHalt?.kind === 'concurrent' && <ConcurrentRecordingDialog onClose={dismissRecordingHalt} />}
             {micModeGuideOpen && <MicModeGuideDialog onConfirm={confirmMicModeGuide} onClose={dismissMicModeGuide} />}
-        </div>
-    )
-}
-
-/** Space kept between an anchored attribute popover and the score wrapper's side edges. */
-/** Meter assumed for the in-score tempo popover when its measure is gone (the score reloaded underneath it). */
-const DEFAULT_TIME_SIGNATURE = new TimeSignature(4, 4)
-
-const POPOVER_EDGE_MARGIN = 8
-
-/**
- * Positions an in-score attribute popover at the clicked glyph, pulled left just enough to
- * stay inside the score wrapper (its offsetParent) — the same measure-and-clamp approach as
- * SelectionPopover. Re-measured every render: the panel's width depends on which popover is
- * inside, and there is no ResizeObserver.
- */
-function AttributePopoverAnchor({ x, y, children }: { x: number; y: number; children: ReactNode }) {
-    const ref = useRef<HTMLDivElement>(null)
-    const [left, setLeft] = useState<number | null>(null)
-    useLayoutEffect(() => {
-        const el = ref.current
-        const parent = el?.offsetParent as HTMLElement | null
-        // Measure the popover panel, not the anchor: the panel is absolutely positioned
-        // inside it, so the anchor itself has no size.
-        const panel = el?.firstElementChild as HTMLElement | null
-        if (!el || !parent || !panel) return
-        setLeft(Math.min(x, Math.max(POPOVER_EDGE_MARGIN, parent.clientWidth - panel.offsetWidth - POPOVER_EDGE_MARGIN)))
-    })
-    return (
-        <div
-            ref={ref}
-            className="absolute z-(--z-popover)"
-            style={{ left: left ?? x, top: y, visibility: left === null ? 'hidden' : undefined }}>
-            {children}
         </div>
     )
 }

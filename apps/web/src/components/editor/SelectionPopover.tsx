@@ -103,7 +103,7 @@ function SelectionAction({ label, destructive = false, onClick }: { label: strin
                 'font-label font-semibold text-[13px] leading-none',
                 'transition-colors duration-150 ease-solkey',
                 'hover:bg-surface-container-highest active:bg-surface-dim',
-                'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
+                'focus-ring',
                 destructive ? 'text-secondary' : 'text-on-surface',
             ].join(' ')}>
             {label}

@@ -1,4 +1,4 @@
-import { expect, MOCK_SCORE_ID, MOCK_SHARE_TOKEN, test } from './fixtures'
+import { expect, focusEditor, MOCK_SCORE_ID, MOCK_SHARE_TOKEN, test, waitForAutosave } from './fixtures'
 
 /**
  * Mocked-API editor-chrome e2e: the dock controls and popovers that
@@ -13,12 +13,6 @@ test.beforeEach(async ({ page, apiMock }) => {
     await expect(page.getByRole('button', { name: 'Export score' })).toBeVisible()
 })
 
-function waitForAutosave(page: import('@playwright/test').Page) {
-    return page.waitForRequest((r) => r.method() === 'PATCH' && new RegExp(`/scores/${MOCK_SCORE_ID}$`).test(r.url()), {
-        timeout: 8000,
-    })
-}
-
 test('renaming the score in the header autosaves the new title', async ({ page, apiMock }) => {
     const title = page.getByRole('textbox', { name: 'Score title' })
     await title.fill('Renamed by e2e')
@@ -29,7 +23,7 @@ test('renaming the score in the header autosaves the new title', async ({ page, 
 test('a score edit inside the autosave window does not drop a pending rename', async ({ page, apiMock }) => {
     await page.getByRole('textbox', { name: 'Score title' }).fill('Renamed then edited')
     // Well inside the 2 s debounce: the edit's save must carry the title along, not replace it.
-    await page.locator('div[tabindex="0"]').first().focus()
+    await focusEditor(page)
     await page.keyboard.press('ArrowUp')
 
     await expect
@@ -40,11 +34,10 @@ test('a score edit inside the autosave window does not drop a pending rename', a
 })
 
 test('turning the share link on after an edit keeps the edit and the incremental autosave', async ({ page }) => {
-    const editor = page.locator('div[tabindex="0"]').first()
     const scoreSvg = page.locator('.max-w-240 svg').first()
 
     // A freshly loaded score is fully structure-dirty, so the first save sends every measure.
-    await editor.focus()
+    await focusEditor(page)
     const firstPatch = waitForAutosave(page)
     await page.keyboard.press('ArrowUp')
     expect(((await firstPatch).postDataJSON() as Record<string, unknown>).allMeasures).toBeTruthy()
@@ -60,7 +53,7 @@ test('turning the share link on after an edit keeps the edit and the incremental
     expect(await scoreSvg.innerHTML()).toBe(edited)
 
     // A re-attached score would be structure-dirty again; the live one saves just the changed measure.
-    await editor.focus()
+    await focusEditor(page)
     const secondPatch = waitForAutosave(page)
     await page.keyboard.press('ArrowUp')
     const body = (await secondPatch).postDataJSON() as Record<string, unknown>
@@ -69,6 +62,20 @@ test('turning the share link on after an edit keeps the edit and the incremental
 })
 
 test('dotted, triplet, and tie dock toggles edit the selected note', async ({ page }) => {
+    // Tying is offered only where a tie can bind: the first note (C5) can't tie into D5.
+    const tie = page.getByRole('button', { name: 'Tie', exact: true })
+    await expect(tie).toBeDisabled()
+    // Lower the second note onto C5 and step back: now the first note has a note to tie into.
+    await focusEditor(page)
+    await page.keyboard.press('ArrowRight')
+    await page.keyboard.press('ArrowDown')
+    await page.keyboard.press('ArrowLeft')
+    await expect(tie).toBeEnabled()
+    await tie.click()
+    await expect(tie).toHaveAttribute('aria-pressed', 'true')
+    await tie.click()
+    await expect(tie).toHaveAttribute('aria-pressed', 'false')
+
     const dotted = page.getByRole('button', { name: 'Dotted' })
     const patchDot = waitForAutosave(page)
     await dotted.click()
@@ -82,12 +89,6 @@ test('dotted, triplet, and tie dock toggles edit the selected note', async ({ pa
     await expect(triplet).toHaveAttribute('aria-pressed', 'true')
     await triplet.click()
     await expect(triplet).toHaveAttribute('aria-pressed', 'false')
-
-    const tie = page.getByRole('button', { name: 'Tie', exact: true })
-    await tie.click()
-    await expect(tie).toHaveAttribute('aria-pressed', 'true')
-    await tie.click()
-    await expect(tie).toHaveAttribute('aria-pressed', 'false')
 })
 
 test('the accidental segmented control sets flat, sharp, and natural', async ({ page }) => {
@@ -310,7 +311,7 @@ test('shortcuts dialog: a binding can be removed and defaults restored', async (
 
     // R is now unbound: pressing it must not toggle the rest.
     const restToggle = page.getByRole('button', { name: 'Rest', exact: true })
-    await page.locator('div[tabindex="0"]').first().focus()
+    await focusEditor(page)
     await page.keyboard.press('r')
     await expect(restToggle).toHaveAttribute('aria-pressed', 'false')
 

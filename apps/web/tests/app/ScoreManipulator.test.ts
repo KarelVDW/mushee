@@ -2,31 +2,16 @@ import { Duration, Interval, Note, Pitch } from '@mushee/notation/model'
 import { makeScore, pitched } from '@mushee/notation/testing'
 import { beforeEach, describe, expect, it } from 'vitest'
 
-import { MINIMIZE_ACCIDENTALS, RAISE_PITCH, REMOVE_NOTE, SET_DURATION, TOGGLE_REST } from '@/app/scores/[id]/actions'
+import { RAISE_PITCH, REMOVE_NOTE, SET_DURATION, TOGGLE_REST } from '@/app/scores/[id]/actions'
 import { EDITOR_COMMANDS } from '@/app/scores/[id]/commands'
 import { ScoreManipulator } from '@/app/scores/[id]/ScoreManipulator'
 import { Keybindings, Shortcut } from '@/lib/Keybindings'
 
+import { allNotes, setupPitched } from './editorFixtures'
+
 beforeEach(() => {
     localStorage.clear()
 })
-
-/** A one-measure score of four pitched quarter notes (C5 D5 E5 F5), attached to a manipulator. */
-function setupPitched(): { manipulator: ScoreManipulator; notes: Note[] } {
-    const score = makeScore(1)
-    const measure = score.firstMeasure
-    if (!measure) throw new Error('expected a measure')
-    const notes = score.replace(measure.notes, [pitched('C', 5), pitched('D', 5), pitched('E', 5), pitched('F', 5)])
-    // A platform-pinned keymap so Mod means Ctrl regardless of the machine running the tests.
-    const manipulator = new ScoreManipulator(new Keybindings(EDITOR_COMMANDS, { storageKey: 'test:editor-shortcuts', isMac: false }))
-    manipulator.attach(score, () => undefined)
-    return { manipulator, notes }
-}
-
-/** Every note in the score, in score order. */
-function allNotes(manipulator: ScoreManipulator): Note[] {
-    return manipulator.score?.measures.flatMap((m) => m.notes) ?? []
-}
 
 const ids = (notes: Note[]): string[] => notes.map((n) => n.id)
 
@@ -547,6 +532,18 @@ describe('ScoreManipulator pitch operations (transpose / minimize accidentals)',
         expect(ids(manipulator.selectedNotes)).toEqual(ids(allNotes(manipulator).slice(0, 2)))
     })
 
+    it('only a multi-note selection narrows a pitch operation: a single note transposes the whole score', () => {
+        const { manipulator } = setupPitched() // C5 selected
+        expect(manipulator.selectionNarrowsPitchOps).toBe(false)
+        manipulator.transpose(Interval.fromParts(2, 'major'), 'selection')
+        expect(manipulator.score?.firstMeasure?.keySignature.fifths).toBe(2) // re-keyed: the whole score moved
+        expect(spellings(manipulator)).toEqual(['D5', 'E5', 'F#5', 'G5'])
+
+        manipulator.select(allNotes(manipulator)[0])
+        manipulator.extendSelectionTo(allNotes(manipulator)[1])
+        expect(manipulator.selectionNarrowsPitchOps).toBe(true)
+    })
+
     it('a transpose is one undoable step', () => {
         const { manipulator } = setupPitched()
         manipulator.transpose(Interval.fromParts(2, 'major'), 'score')
@@ -568,7 +565,7 @@ describe('ScoreManipulator pitch operations (transpose / minimize accidentals)',
             new Note({ duration: new Duration({ type: 'q' }), pitch: new Pitch({ name: 'F', octave: 4, alter: 1 }) }),
         ])
         manipulator.select(allNotes(manipulator)[2])
-        manipulator.run(MINIMIZE_ACCIDENTALS)
+        manipulator.minimizeAccidentals()
         expect(manipulator.score?.firstMeasure?.keySignature.fifths).toBe(4)
         expect(manipulator.selectedNote).toBe(allNotes(manipulator)[2])
     })
@@ -585,7 +582,7 @@ describe('ScoreManipulator pitch operations (transpose / minimize accidentals)',
         const notes = allNotes(manipulator)
         manipulator.select(notes[0])
         manipulator.extendSelectionTo(notes[1])
-        manipulator.run(MINIMIZE_ACCIDENTALS)
+        manipulator.minimizeAccidentals()
         expect(manipulator.score?.firstMeasure?.keySignature.fifths).toBe(-1)
         expect(spellings(manipulator)[0]).toBe('Bb4') // A♯ → B♭ (in key)
         expect(ids(manipulator.selectedNotes)).toEqual(ids(allNotes(manipulator).slice(0, 2)))

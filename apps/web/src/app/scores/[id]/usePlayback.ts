@@ -48,6 +48,16 @@ export function usePlayback({
     // Launching from a stop begins at the selected note (falling back to the top of the
     // score when nothing is selected); pause/resume keep their place instead.
     const handlePlayToggle = useCallback(() => toggle(activeNote), [toggle, activeNote])
+    const toggleMetronome = useCallback(() => setMetronome((on) => !on), [])
 
-    return { transportRef, playbackCursorRef, playbackState, metronome, setMetronome, stopAll, handlePlayToggle, instrumentsReady: ready }
+    return {
+        transportRef,
+        playbackCursorRef,
+        playbackState,
+        metronome,
+        toggleMetronome,
+        stopAll,
+        handlePlayToggle,
+        instrumentsReady: ready,
+    }
 }

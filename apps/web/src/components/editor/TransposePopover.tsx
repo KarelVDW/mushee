@@ -1,13 +1,14 @@
 'use client'
 
-import { KeySignatureIcon, ScoreView } from '@mushee/notation/components'
-import { Interval, type IntervalQuality, type Note, Score } from '@mushee/notation/model'
+import { ScoreView } from '@mushee/notation/components'
+import { Interval, type IntervalQuality, KeySignature, type Note, Score } from '@mushee/notation/model'
 import { type ReactNode, useCallback, useEffect, useMemo, useState } from 'react'
 
-import { KEY_NAMES } from '@/components/editor/KeySignaturePopover'
-import { Icon, Popover, PopoverOption, PrimaryButton, Segmented, TertiaryButton } from '@/components/ui'
+import type { PitchScope } from '@/app/scores/[id]/ScoreManipulator'
+import { KeySignatureGrid } from '@/components/editor/KeySignaturePopover'
+import { UnitNumberField } from '@/components/editor/UnitNumberField'
+import { Eyebrow, Icon, Popover, PopoverOption, PrimaryButton, Segmented, TertiaryButton } from '@/components/ui'
 
-type TransposeScope = 'score' | 'selection'
 type TransposeTab = 'interval' | 'key' | 'semitones'
 
 const DEGREES: { degree: number; label: string; name: string }[] = [
@@ -47,21 +48,23 @@ const PREVIEW_MAX_ZOOM = 1.2
  */
 const PREVIEW_CROP_HEIGHT = 128
 
-// Key options mirror the key-signature picker: flats → C → sharps.
-const KEY_ROWS: number[][] = [[-7, -6, -5, -4, -3, -2, -1], [0], [1, 2, 3, 4, 5, 6, 7]]
-
 interface TransposePopoverProps {
     score: Score
-    /** The current selection in score order — scope choice and the selection preview hang off it. */
+    /** The current selection in score order — the selection preview hangs off it. */
     selectedNotes: Note[]
-    onApply: (interval: Interval, scope: TransposeScope) => void
+    /**
+     * Whether the selection can narrow the transposition to itself
+     * (ScoreManipulator.selectionNarrowsPitchOps) — only then is the Apply-to choice offered.
+     */
+    selectionNarrowsPitchOps: boolean
+    onApply: (interval: Interval, scope: PitchScope) => void
     onDismiss: () => void
     /**
      * Reports the range the popover is currently aimed at — on open, whenever the scope
      * toggle flips, and `null` on close. The editor pulses that range on the canvas so the
      * target of the pending transposition is always visible. Keep referentially stable.
      */
-    onScopeChange?: (scope: TransposeScope | null) => void
+    onScopeChange?: (scope: PitchScope | null) => void
     /** Extra positioning/layout classes (e.g. `right-0 top-[calc(100%+0.5rem)]`). */
     className?: string
     /** Trigger element to exclude from outside-click dismissal, so its toggle isn't fought by the popover. */
@@ -75,10 +78,19 @@ interface TransposePopoverProps {
  * {@link Interval} and always respells the result minimally, so the preview
  * below is exactly what Apply produces.
  */
-export function TransposePopover({ score, selectedNotes, onApply, onDismiss, onScopeChange, className, anchorRef }: TransposePopoverProps) {
+export function TransposePopover({
+    score,
+    selectedNotes,
+    selectionNarrowsPitchOps,
+    onApply,
+    onDismiss,
+    onScopeChange,
+    className,
+    anchorRef,
+}: TransposePopoverProps) {
     const [advanced, setAdvanced] = useState(false)
     const [tab, setTab] = useState<TransposeTab>('interval')
-    const [scope, setScope] = useState<TransposeScope>('score')
+    const [scope, setScope] = useState<PitchScope>('score')
     const [semitones, setSemitones] = useState(0)
     const [degree, setDegree] = useState(2)
     const [quality, setQuality] = useState<IntervalQuality>('major')
@@ -86,8 +98,7 @@ export function TransposePopover({ score, selectedNotes, onApply, onDismiss, onS
     const [direction, setDirection] = useState<1 | -1>(1)
     const [targetFifths, setTargetFifths] = useState<number | null>(null)
 
-    const hasSelection = selectedNotes.length > 1
-    const effectiveScope = hasSelection && scope === 'selection' ? 'selection' : 'score'
+    const effectiveScope: PitchScope = selectionNarrowsPitchOps && scope === 'selection' ? 'selection' : 'score'
     const currentFifths =
         (effectiveScope === 'selection' && selectedNotes[0]
             ? selectedNotes[0].keySignature.fifths
@@ -237,30 +248,11 @@ export function TransposePopover({ score, selectedNotes, onApply, onDismiss, onS
                 <>
                     <div className="flex items-center justify-between gap-3">
                         <span className="font-body font-normal text-[13px] leading-none text-on-surface-variant">
-                            From <span className="font-medium text-on-surface">{KEY_NAMES[currentFifths]} major</span> to:
+                            From <span className="font-medium text-on-surface">{KeySignature.majorKeyName(currentFifths)} major</span> to:
                         </span>
                         <DirectionControl direction={direction} onChange={setDirection} />
                     </div>
-                    <div role="group" aria-label="Target key" className="flex flex-col gap-1.5 items-center">
-                        {KEY_ROWS.map((row, i) => (
-                            <div key={i} className="flex flex-wrap justify-center gap-1">
-                                {row.map((fifths) => (
-                                    <PopoverOption
-                                        key={fifths}
-                                        active={fifths === targetFifths}
-                                        ariaLabel={`${KEY_NAMES[fifths]} major`}
-                                        title={`${KEY_NAMES[fifths]} major`}
-                                        onClick={() => setTargetFifths(fifths)}
-                                        className="flex-col justify-end gap-0.5 w-10.5 h-12 px-1 py-1">
-                                        <span className="flex flex-1 items-center">
-                                            <KeySignatureIcon fifths={fifths} size={26} />
-                                        </span>
-                                        <span className="text-[10px] leading-none font-medium">{KEY_NAMES[fifths]}</span>
-                                    </PopoverOption>
-                                ))}
-                            </div>
-                        ))}
-                    </div>
+                    <KeySignatureGrid ariaLabel="Target key" active={targetFifths} onSelect={setTargetFifths} size="sm" />
                 </>
             )}
 
@@ -276,7 +268,7 @@ export function TransposePopover({ score, selectedNotes, onApply, onDismiss, onS
                 />
             )}
 
-            {hasSelection && (
+            {selectionNarrowsPitchOps && (
                 <div className="flex items-center justify-between gap-3">
                     <span className="font-body font-normal text-[13px] leading-none text-on-surface-variant">Apply to</span>
                     {/* Same segmented pill as the Up/Down direction toggle. */}
@@ -317,9 +309,7 @@ export function TransposePopover({ score, selectedNotes, onApply, onDismiss, onS
 function LabeledRow({ label, children }: { label: string; children: ReactNode }) {
     return (
         <div className="flex flex-col gap-1.5">
-            <span className="font-label font-semibold text-[11px] leading-none uppercase tracking-[0.12em] text-on-surface-variant">
-                {label}
-            </span>
+            <Eyebrow>{label}</Eyebrow>
             {children}
         </div>
     )
@@ -351,7 +341,7 @@ interface NumberStepperProps {
     grow?: boolean
 }
 
-/** A ± stepper around a numeric field, in the tempo popover's input style. */
+/** A ± stepper around a {@link UnitNumberField} (the tempo popover's field, one size down). */
 function NumberStepper({ value, min, max, onChange, ariaLabel, suffix, grow }: NumberStepperProps) {
     // A local draft lets partial input ("-", "") sit in the field without committing; every
     // parseable value commits immediately and outside changes (the ± buttons) sync back in.
@@ -369,33 +359,28 @@ function NumberStepper({ value, min, max, onChange, ariaLabel, suffix, grow }: N
                 'bg-surface-container-low text-on-surface cursor-pointer',
                 'enabled:hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-40',
                 'transition-colors duration-150 ease-solkey',
-                'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
+                'focus-ring',
             ].join(' ')}>
             <Icon name={delta > 0 ? 'plus' : 'minus'} size={14} />
         </button>
     )
     return (
         <div className={`flex items-stretch gap-1 ${grow ? 'flex-1' : ''}`}>
-            <div className={`relative flex items-center px-3 rounded-sm bg-surface-container-low ${grow ? 'flex-1' : 'w-24'}`}>
-                <input
-                    type="number"
-                    min={min}
-                    max={max}
-                    value={draft}
-                    onChange={(e) => {
-                        setDraft(e.target.value)
-                        const n = parseInt(e.target.value, 10)
-                        if (!Number.isNaN(n)) onChange(clamp(n))
-                    }}
-                    onBlur={() => setDraft(String(value))}
-                    aria-label={ariaLabel}
-                    className="flex-1 min-w-0 w-8 py-2.5 bg-transparent border-0 outline-0 font-body font-medium text-[15px] leading-none text-on-surface [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                />
-                <span className="font-label font-medium text-[10px] leading-none uppercase tracking-[0.12em] text-on-surface-variant">
-                    {suffix}
-                </span>
-                <div className="absolute left-0 right-0 bottom-0 h-0.5 bg-primary-container" />
-            </div>
+            <UnitNumberField
+                value={draft}
+                onChange={(raw) => {
+                    setDraft(raw)
+                    const n = parseInt(raw, 10)
+                    if (!Number.isNaN(n)) onChange(clamp(n))
+                }}
+                onBlur={() => setDraft(String(value))}
+                ariaLabel={ariaLabel}
+                unit={suffix}
+                min={min}
+                max={max}
+                size="sm"
+                className={grow ? 'flex-1' : 'w-24'}
+            />
             {stepButton(-1)}
             {stepButton(1)}
         </div>

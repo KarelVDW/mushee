@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 
-import { expect, type Page, type Route, test as base } from '@playwright/test'
+import { expect, type Locator, type Page, type Request, type Route, test as base } from '@playwright/test'
 
 import { CONSENT_VERSION } from '../src/lib/consent'
 
@@ -9,9 +9,9 @@ import { CONSENT_VERSION } from '../src/lib/consent'
  * Shared Playwright fixtures for the mocked-API editor suite.
  *
  * Every backend call (scores REST + better-auth session) is intercepted with
- * `page.route` and answered locally, so the suite needs no API, Postgres, or
- * Mongo. External traffic (font CDNs, smplr soundfont samples) is aborted to
- * keep runs hermetic and offline-friendly.
+ * `page.route` and answered locally, so the suite needs no API or Postgres.
+ * External traffic (font CDNs, smplr soundfont samples) is aborted to keep runs
+ * hermetic and offline-friendly.
  */
 
 export const MOCK_SCORE_ID = 'e2e-score-1'
@@ -43,7 +43,10 @@ const SESSION = {
     },
 }
 
-// Generated from the real ScoreSerializer — see tests/_genfixture (throwaway).
+// The stored-score DTO the load endpoint serves: two 4/4 bars (C5 D5 E5 F5 | four quarter
+// rests), serialized by @mushee/notation's ScoreSerializer. It is maintained by hand — when the
+// stored format changes, re-serialize the same score, e.g.
+// `JSON.stringify(new ScoreSerializer(score).toInput())`, and keep the specs' note counts true.
 // Playwright runs with cwd = apps/web, so resolve the fixture from there.
 const SCORE_PARTWISE = JSON.parse(readFileSync(resolve(process.cwd(), 'e2e/fixtures/score.partwise.json'), 'utf8')) as Record<
     string,
@@ -244,6 +247,34 @@ async function installApiMocks(page: Page, mock: ApiMock): Promise<void> {
         }
 
         return json({})
+    })
+}
+
+/** The score renderer marks each selected note's highlight band with this attribute. */
+export const SELECTION_BANDS = 'rect[data-selection-band]'
+
+/**
+ * The next autosave of the mock score: a PATCH to that score's own URL — filtered, so an
+ * unrelated PATCH elsewhere can't satisfy the wait.
+ */
+export function waitForAutosave(page: Page): Promise<Request> {
+    return page.waitForRequest((r) => r.method() === 'PATCH' && new RegExp(`/scores/${MOCK_SCORE_ID}$`).test(r.url()), {
+        timeout: 8000,
+    })
+}
+
+/** Focus the editor container (where the editor's keydown listener sits) and return it. */
+export async function focusEditor(page: Page): Promise<Locator> {
+    const editor = page.locator('div[tabindex="0"]').first()
+    await editor.focus()
+    return editor
+}
+
+/** Keep an unauthed page (no apiMock) hermetic: the app origin passes, everything else is cut. */
+export async function stayLocal(page: Page): Promise<void> {
+    await page.route(/^https?:\/\//, (route) => {
+        const url = new URL(route.request().url())
+        return url.hostname === 'localhost' ? route.continue() : route.abort()
     })
 }
 

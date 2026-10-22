@@ -3,7 +3,7 @@
 import type { Note, Score } from '@mushee/notation/model'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
-import { Transport, type TransportMode } from './Transport'
+import { type PlaybackState, Transport } from './Transport'
 
 /**
  * The React binding of one {@link Transport}, shared by the editor and the share page: owns
@@ -18,7 +18,7 @@ import { Transport, type TransportMode } from './Transport'
 export function useTransport(score: Score | null, { metronome }: { metronome: boolean }) {
     const transportRef = useRef<Transport | null>(null)
     const playbackCursorRef = useRef<SVGRectElement | null>(null)
-    const [state, setState] = useState<Exclude<TransportMode, 'recording'>>('stopped')
+    const [state, setState] = useState<PlaybackState>('stopped')
     const [ready, setReady] = useState(false)
 
     useEffect(() => {
