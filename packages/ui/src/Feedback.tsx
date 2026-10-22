@@ -120,7 +120,7 @@ export function StepProgress({ step, total, fill = false }: { step: number; tota
 /** Rotating loader glyph for in-flight actions. */
 export function Spinner({ size = 16 }: { size?: number }) {
     return (
-        <span className="inline-flex animate-[solkey-spin_1s_linear_infinite] text-on-surface-variant">
+        <span className="inline-flex animate-solkey-spin-glyph text-on-surface-variant">
             <Icon name="loader" size={size} />
         </span>
     )
