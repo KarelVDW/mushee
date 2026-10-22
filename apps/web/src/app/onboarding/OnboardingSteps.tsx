@@ -29,6 +29,9 @@ interface StepProps {
 /** How long the "Email verified" row shows before the flow moves on by itself (no animation, so reduced motion keeps it). */
 export const VERIFIED_ADVANCE_MS = 600
 
+/** The same beat for "Microphone connected." after a fresh grant off an iPhone. */
+export const MIC_GRANTED_ADVANCE_MS = VERIFIED_ADVANCE_MS
+
 /** better-auth's code for a verification code past its 10 minutes; a fresh one is sent at once. */
 const OTP_EXPIRED = 'OTP_EXPIRED'
 
@@ -282,15 +285,18 @@ const MIC_MODE_STEPS = [
 export function MicStep({
     micState,
     setMicState,
-    onGuideOpenChange,
+    onContinueHeldChange,
     onAdvance,
     titleRef,
 }: StepProps & {
     micState: MicState
     setMicState: (s: MicState) => void
-    /** Whether the iPhone walkthrough is showing, with its own buttons in place of the footer's Continue. */
-    onGuideOpenChange: (open: boolean) => void
-    /** 'Not now' and 'Done — Wide Spectrum is on' move on to the next step. */
+    /**
+     * Whether the step leads by itself for now, the footer's Continue held back: while the iPhone
+     * walkthrough shows its own buttons, and for the beat before a fresh grant moves on.
+     */
+    onContinueHeldChange: (held: boolean) => void
+    /** 'Not now', 'Done — Wide Spectrum is on' and a fresh grant off an iPhone move on to the next step. */
     onAdvance: () => void
 }) {
     // On iPhones the granted stream stays open while the walkthrough shows: Control Center only
@@ -305,11 +311,26 @@ export function MicStep({
         stream.getTracks().forEach((t) => t.stop())
         Microphone.endSession()
         setGuideOpen(false)
-        onGuideOpenChange(false)
+        onContinueHeldChange(false)
     }
     // Back, 'Skip setup' or any other way off the step.
     const releaseOnLeave = useEffectEvent(release)
     useEffect(() => () => releaseOnLeave(), [])
+
+    // A fresh grant off an iPhone leaves nothing to ask: "Microphone connected." shows for a beat,
+    // then the flow moves on by itself, as "Email verified" does (Back stays). Only a fresh one —
+    // back on this step later, the granted row waits for the footer's Continue.
+    const [justGranted, setJustGranted] = useState(false)
+    const advance = useEffectEvent(onAdvance)
+    const releaseHold = useEffectEvent(() => onContinueHeldChange(false))
+    useEffect(() => {
+        if (!justGranted) return
+        const timer = window.setTimeout(() => advance(), MIC_GRANTED_ADVANCE_MS)
+        return () => {
+            window.clearTimeout(timer)
+            releaseHold()
+        }
+    }, [justGranted])
 
     const requestMic = async () => {
         setMicState('requesting')
@@ -318,12 +339,14 @@ export function MicStep({
             if (isIPhone()) {
                 guideStream.current = stream
                 setGuideOpen(true)
-                onGuideOpenChange(true)
             } else {
                 // Only the permission grant was needed.
                 stream.getTracks().forEach((t) => t.stop())
                 Microphone.endSession()
+                setJustGranted(true)
             }
+            // Either way the step leads now: the walkthrough's buttons, or the move on by itself.
+            onContinueHeldChange(true)
             setMicState('granted')
         } catch {
             setMicState('denied')
@@ -368,11 +391,11 @@ export function MicStep({
                         {micState === 'granted' &&
                             (guideOpen
                                 ? 'One iPhone setting first. Your iPhone tunes its mic for phone calls, which hides whistling and instruments. Switch it once and it stays that way.'
-                                : "You're ready to record. Tap Continue.")}
+                                : "You're ready to record.")}
                         {micState === 'denied' &&
                             'No problem — the editor works without a mic, and recording will ask again when you need it.'}
                         {micState === 'requesting' && 'Your browser will ask you to confirm in a moment.'}
-                        {micState === 'idle' && 'When you tap Allow, your browser will ask for permission.'}
+                        {micState === 'idle' && 'Your browser will ask for permission next.'}
                     </span>
                 </div>
             </div>
@@ -428,7 +451,7 @@ export function MicStep({
                             <PrimaryButton onClick={() => void requestMic()} disabled={micState === 'requesting'} icon="mic">
                                 {micState === 'requesting' ? 'Asking…' : 'Allow microphone'}
                             </PrimaryButton>
-                            {/* Skipping the mic skips only the mic; the footer's Continue takes over once the browser has answered. */}
+                            {/* Skipping the mic skips only the mic. A yes moves on by itself; after a no, the footer's Continue leads. */}
                             <TertiaryButton onClick={onAdvance}>Not now</TertiaryButton>
                         </div>
                     )}

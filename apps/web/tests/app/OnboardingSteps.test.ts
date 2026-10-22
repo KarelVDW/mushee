@@ -13,7 +13,15 @@ vi.mock('@/lib/auth-client', () => ({ emailOtp: { verifyEmail, sendVerificationO
 vi.mock('@/lib/Microphone', () => ({ Microphone: { open: openMic, endSession } }))
 
 import { LEGACY_STEP_NAMES, onboardingSteps } from '@/app/onboarding/onboarding-data'
-import { AboutStep, InstrumentsStep, type MicState, MicStep, VERIFIED_ADVANCE_MS, VerifyStep } from '@/app/onboarding/OnboardingSteps'
+import {
+    AboutStep,
+    InstrumentsStep,
+    MIC_GRANTED_ADVANCE_MS,
+    type MicState,
+    MicStep,
+    VERIFIED_ADVANCE_MS,
+    VerifyStep,
+} from '@/app/onboarding/OnboardingSteps'
 
 // React's act() refuses to run outside a test-aware environment.
 ;(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
@@ -335,10 +343,10 @@ describe('MicStep', () => {
         const stop = vi.fn()
         return { stop, stream: { getTracks: () => [{ stop }] } as unknown as MediaStream }
     }
-    function renderMic(onAdvance = vi.fn(), onGuideOpenChange = vi.fn()) {
+    function renderMic(onAdvance = vi.fn(), onContinueHeldChange = vi.fn(), initial: MicState = 'idle') {
         function Harness() {
-            const [micState, setMicState] = useState<MicState>('idle')
-            return createElement(MicStep, { titleRef, micState, setMicState, onGuideOpenChange, onAdvance })
+            const [micState, setMicState] = useState<MicState>(initial)
+            return createElement(MicStep, { titleRef, micState, setMicState, onContinueHeldChange, onAdvance })
         }
         return mount(createElement(Harness))
     }
@@ -351,14 +359,60 @@ describe('MicStep', () => {
         expect(openMic).not.toHaveBeenCalled()
     })
 
-    it('releases the permission stream at once off an iPhone', async () => {
+    it('off an iPhone, lets go of the stream at once and moves on by itself after a beat, Continue held meanwhile', async () => {
+        vi.useFakeTimers()
         const { stop, stream: granted } = stream()
         openMic.mockResolvedValue(granted)
-        const host = renderMic()
+        const onAdvance = vi.fn()
+        const onContinueHeldChange = vi.fn()
+        const host = renderMic(onAdvance, onContinueHeldChange)
+        // Words for any device: no "tap" on a desktop.
+        expect(host.textContent).toContain('Your browser will ask for permission next.')
         click(buttonNamed(host, 'Allow microphone'))
         await settle()
+
         expect(stop).toHaveBeenCalled()
-        expect(host.textContent).toContain("You're ready to record. Tap Continue.")
+        expect(host.textContent).toContain("You're ready to record.")
+        expect(host.textContent).not.toContain('Tap Continue')
+        expect(onContinueHeldChange).toHaveBeenLastCalledWith(true)
+        act(() => {
+            vi.advanceTimersByTime(MIC_GRANTED_ADVANCE_MS - 1)
+        })
+        expect(onAdvance).not.toHaveBeenCalled()
+        act(() => {
+            vi.advanceTimersByTime(1)
+        })
+        expect(onAdvance).toHaveBeenCalledTimes(1)
+    })
+
+    it('lets go of the hold, and stays, when the step closes during that beat (Back)', async () => {
+        vi.useFakeTimers()
+        openMic.mockResolvedValue(stream().stream)
+        const onAdvance = vi.fn()
+        const onContinueHeldChange = vi.fn()
+        const host = renderMic(onAdvance, onContinueHeldChange)
+        click(buttonNamed(host, 'Allow microphone'))
+        await settle()
+        unmount?.()
+        unmount = undefined
+        expect(onContinueHeldChange).toHaveBeenLastCalledWith(false)
+        act(() => {
+            vi.advanceTimersByTime(MIC_GRANTED_ADVANCE_MS)
+        })
+        expect(onAdvance).not.toHaveBeenCalled()
+    })
+
+    it('waits for Continue when the mic was granted on an earlier visit to the step', () => {
+        vi.useFakeTimers()
+        const onAdvance = vi.fn()
+        const onContinueHeldChange = vi.fn()
+        const host = renderMic(onAdvance, onContinueHeldChange, 'granted')
+        expect(host.textContent).toContain('Microphone connected.')
+        act(() => {
+            vi.advanceTimersByTime(MIC_GRANTED_ADVANCE_MS * 2)
+        })
+        expect(onAdvance).not.toHaveBeenCalled()
+        expect(onContinueHeldChange).not.toHaveBeenCalledWith(true)
     })
 
     it('walks an iPhone through Wide Spectrum over the open mic, then remembers it and lets go', async () => {
@@ -366,13 +420,13 @@ describe('MicStep', () => {
         const { stop, stream: granted } = stream()
         openMic.mockResolvedValue(granted)
         const onAdvance = vi.fn()
-        const onGuideOpenChange = vi.fn()
-        const host = renderMic(onAdvance, onGuideOpenChange)
+        const onContinueHeldChange = vi.fn()
+        const host = renderMic(onAdvance, onContinueHeldChange)
         click(buttonNamed(host, 'Allow microphone'))
         await settle()
 
         expect(stop).not.toHaveBeenCalled()
-        expect(onGuideOpenChange).toHaveBeenLastCalledWith(true)
+        expect(onContinueHeldChange).toHaveBeenLastCalledWith(true)
         expect([...host.querySelectorAll('li')].map((li) => li.textContent)).toEqual([
             '1Swipe down from the top-right corner to open Control Center.',
             '2Tap Mic Mode.',
@@ -381,7 +435,7 @@ describe('MicStep', () => {
         click(buttonNamed(host, 'Done — Wide Spectrum is on'))
         expect(stop).toHaveBeenCalled()
         expect(endSession).toHaveBeenCalled()
-        expect(onGuideOpenChange).toHaveBeenLastCalledWith(false)
+        expect(onContinueHeldChange).toHaveBeenLastCalledWith(false)
         expect(onAdvance).toHaveBeenCalledTimes(1)
         expect(window.localStorage.getItem('solkey:mic-mode-guide')).not.toBeNull()
     })

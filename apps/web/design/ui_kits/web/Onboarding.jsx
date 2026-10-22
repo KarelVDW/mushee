@@ -628,11 +628,11 @@ function Onboarding({ onComplete, onSkip }) {
                                     {data.micState === 'idle' && 'Microphone access needed'}
                                 </span>
                                 <span style={{ font: '400 13px/1.5 var(--font-body)', color: 'var(--color-on-surface-variant)' }}>
-                                    {data.micState === 'granted' && "You're ready to record. Tap Continue."}
+                                    {data.micState === 'granted' && "You're ready to record."}
                                     {data.micState === 'denied' &&
                                         'No problem — the editor works without a mic, and recording will ask again when you need it.'}
                                     {data.micState === 'requesting' && 'Your browser will ask you to confirm in a moment.'}
-                                    {data.micState === 'idle' && 'When you tap Allow, your browser will ask for permission.'}
+                                    {data.micState === 'idle' && 'Your browser will ask for permission next.'}
                                 </span>
                             </div>
                         </div>

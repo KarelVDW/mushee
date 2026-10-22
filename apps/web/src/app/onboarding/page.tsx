@@ -59,7 +59,8 @@ export default function OnboardingPage() {
     // Mic permission state lives here (not in MicStep): the footer reads it, and it
     // must survive navigating away from the step and back.
     const [micState, setMicState] = useState<MicState>('idle')
-    const [micGuideOpen, setMicGuideOpen] = useState(false)
+    // The step leads by itself for now (the iPhone walkthrough, or the beat before a grant moves on).
+    const [micHoldsContinue, setMicHoldsContinue] = useState(false)
 
     // The answers. Every one is optional.
     const [instruments, setInstruments] = useState<Instrument[]>([])
@@ -189,8 +190,10 @@ export default function OnboardingPage() {
             : paidChoice
               ? `Continue to payment · ${formatMoney(billing === 'yearly' ? chosenPlan.priceYearly : chosenPlan.priceMonthly, currency)}/${billing === 'yearly' ? 'year' : 'month'}`
               : 'Start free'
-    // The verify step moves on by itself; the mic step's own buttons lead until the browser has answered.
-    const showContinue = stepName !== 'verify' && (stepName !== 'mic' || (micState === 'granted' && !micGuideOpen) || micState === 'denied')
+    // The verify step moves on by itself; the mic step's own buttons lead until the browser has
+    // answered, and a fresh yes moves on by itself too (Back stays meanwhile).
+    const showContinue =
+        stepName !== 'verify' && (stepName !== 'mic' || (micState === 'granted' && !micHoldsContinue) || micState === 'denied')
     // Nothing to go back to on the step after verify: a verified email has nothing to redo.
     const showBack = step >= 2
 
@@ -217,7 +220,7 @@ export default function OnboardingPage() {
                     titleRef={titleRef}
                     micState={micState}
                     setMicState={setMicState}
-                    onGuideOpenChange={setMicGuideOpen}
+                    onContinueHeldChange={setMicHoldsContinue}
                     onAdvance={next}
                 />
             )}

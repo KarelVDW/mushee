@@ -402,6 +402,24 @@ test.describe('onboarding', () => {
         expect(await page.evaluate(() => window.scrollY)).toBe(0)
     })
 
+    test('a granted mic off an iPhone moves on by itself, Back still there for the beat it shows', async ({ page }) => {
+        await page.addInitScript(() => {
+            Object.defineProperty(MediaDevices.prototype, 'getUserMedia', {
+                configurable: true,
+                value: () => Promise.resolve(new MediaStream()),
+            })
+        })
+        await page.goto('/onboarding')
+        await page.getByRole('button', { name: 'Continue' }).click()
+        await expect(page.getByText('Your browser will ask for permission next.')).toBeVisible()
+        await page.getByRole('button', { name: 'Allow microphone' }).click()
+
+        await expect(page.getByText("You're ready to record.")).toBeVisible()
+        await expect(page.getByRole('button', { name: 'Continue' })).toHaveCount(0)
+        await expect(page.getByRole('button', { name: 'Back' })).toBeVisible()
+        await expect(page.getByRole('heading', { name: 'A bit about you.' })).toBeFocused()
+    })
+
     test('a blocked mic leaves one next step: Continue, with Try again a quiet text button', async ({ page }) => {
         await page.addInitScript(() => {
             Object.defineProperty(MediaDevices.prototype, 'getUserMedia', {
