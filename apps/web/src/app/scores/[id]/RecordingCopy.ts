@@ -41,7 +41,11 @@ export type StripHint =
 export class RecordingStripCopy {
     /** The time left today shows once this little is left (seconds). */
     static readonly TIME_LEFT_FROM = 60
-    static readonly WARNING = "Solkey can't write notes right now. Your audio is still being saved, and this time won't count."
+    /**
+     * Two lines at most in a 360px phone's strip. It says what the time doesn't count against —
+     * in a flow with a count-in, "this time won't count" didn't.
+     */
+    static readonly WARNING = "Solkey can't write notes right now. Your audio is saved — these minutes are free."
     static readonly RECOVERED = 'Notes are back.'
     static readonly MIC_MODE = 'iPhone: keep Mic Mode on Wide Spectrum.'
 

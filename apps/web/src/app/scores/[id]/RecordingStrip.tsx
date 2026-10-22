@@ -53,7 +53,7 @@ function HintLine({ hint }: { hint: StripHint }) {
         )
         return <p className={`m-0 truncate ${quiet}`}>{hint.touch ? <>Tap {glyph} to stop</> : <>Press Space or {glyph} to stop</>}</p>
     }
-    // A transcription warning may run to two lines on a phone; everything else is one.
+    // A transcription warning may run to two lines on a phone (never more: RecordingStripCopy.WARNING); everything else is one.
     if (hint.kind === 'warning') {
         return <p className="m-0 font-body font-medium text-[13px] leading-snug text-on-surface text-center">{hint.text}</p>
     }
