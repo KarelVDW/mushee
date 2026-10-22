@@ -43,5 +43,3 @@ export const TUPLET_BRACKET_HEIGHT = 10
 /** Horizontal gap between bracket lines and the number */
 export const TUPLET_NUMBER_GAP = 5
 
-export const MEASURE_BUTTON_SIZE = 18
-export const MEASURE_BUTTON_GAP = 3

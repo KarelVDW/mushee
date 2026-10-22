@@ -1,6 +1,6 @@
 import { memo } from 'react'
 
-import type { TieLayout, TieSegment } from '../model/layout/TieLayout'
+import type { TieSegment } from '../model/layout/TieLayout'
 import { NOTATION_INK } from './constants'
 
 /** Outer bezier control point Y offset (thinner edge of tie) */
@@ -9,22 +9,13 @@ const TIE_CP1 = 8
 const TIE_CP2 = 12
 
 interface TieProps {
-    layout: TieLayout
-    layoutId: string
-    rowIndex: number
+    /** One row's segment of a tie — the same object while the tie's layout is reused, so the memo holds. */
+    segment: TieSegment
+    direction: 1 | -1
 }
 
-export const Tie = memo(function Tie({ layout, rowIndex }: TieProps) {
-    const { segments, direction } = layout
-    return (
-        <>
-            {segments
-                .filter((segment) => segment.rowIndex === rowIndex)
-                .map((segment, i) => (
-                    <path key={i} d={segmentPath(segment, direction)} fill={NOTATION_INK} />
-                ))}
-        </>
-    )
+export const Tie = memo(function Tie({ segment, direction }: TieProps) {
+    return <path d={segmentPath(segment, direction)} fill={NOTATION_INK} />
 })
 
 function segmentPath({ startX, startY, endX, endY }: TieSegment, direction: 1 | -1) {

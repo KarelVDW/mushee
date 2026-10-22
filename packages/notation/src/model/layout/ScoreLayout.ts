@@ -1,6 +1,16 @@
 import { sumBy } from 'lodash-es'
 
-import { MAX_MEASURES_PER_ROW, MEASURE_BUTTON_SPACING, ROW_GAP, ROW_HEIGHT, SCORE_WIDTH, TEMPO_MARKING_Y } from '../../engraving/constants'
+import {
+    MAX_MEASURES_PER_ROW,
+    MEASURE_BUTTON_GAP,
+    MEASURE_BUTTON_OFFSET,
+    MEASURE_BUTTON_SIZE,
+    MEASURE_BUTTON_SPACING,
+    ROW_GAP,
+    ROW_HEIGHT,
+    SCORE_WIDTH,
+    TEMPO_MARKING_Y,
+} from '../../engraving/constants'
 import type { KeySignature } from '../KeySignature'
 import type { Measure } from '../Measure'
 import type { Note } from '../Note'
@@ -12,7 +22,8 @@ import { MeasureLayout } from './MeasureLayout'
 import { NoteWidth } from './NoteWidth'
 import { RowLayout } from './RowLayout'
 import { availableRowWidth } from './rowWidth'
-import { TieLayout, type TieLayoutContext } from './TieLayout'
+import { Staff } from './Staff'
+import { TieLayout, type TieLayoutContext, type TieSegment } from './TieLayout'
 
 /** Packing converges in one or two passes in practice; the cap only guards pathological oscillation. */
 const MAX_PACKING_ITERATIONS = 10
@@ -57,10 +68,17 @@ export class ScoreLayout {
     readonly rows: RowLayout[]
     readonly ties: TieLayout[]
     readonly totalHeight: number
+    /**
+     * The add/remove-measure buttons after the final barline, stacked around the staff's
+     * middle line, in the last row's coordinates (inside the MEASURE_BUTTON_SPACING
+     * reserve). Null for a score with no measures or one ending without a barline.
+     */
+    readonly measureButtons: { x: number; addY: number; removeY: number; size: number } | null
 
     private readonly _measureLayouts = new Map<Measure, MeasureLayout>()
     private readonly _rowByMeasure = new Map<Measure, RowLayout>()
     private readonly _tiesByKey = new Map<string, TieLayout>()
+    private readonly _tieSegmentsByRow = new Map<number, Array<{ tie: TieLayout; segment: TieSegment }>>()
 
     constructor(score: Score, previous?: ScoreLayout, scoreWidth: number = SCORE_WIDTH) {
         const plans = ScoreLayout.buildPlans(score)
@@ -162,7 +180,28 @@ export class ScoreLayout {
                     previousTie?.contextSignature === TieLayout.signatureFor(context) ? previousTie : new TieLayout(note, nextNote, context)
                 this._tiesByKey.set(key, tie)
                 this.ties.push(tie)
+                for (const segment of tie.segments) {
+                    const onRow = this._tieSegmentsByRow.get(segment.rowIndex) ?? []
+                    onRow.push({ tie, segment })
+                    this._tieSegmentsByRow.set(segment.rowIndex, onRow)
+                }
             }
+        }
+
+        // --- Measure buttons, in the reserve after the final barline ---
+        const lastMeasure = plans.at(-1)?.measure
+        this.measureButtons = lastMeasure ? this.measureButtonsAfter(lastMeasure) : null
+    }
+
+    private measureButtonsAfter(lastMeasure: Measure): ScoreLayout['measureButtons'] {
+        const layout = this.measureLayoutFor(lastMeasure)
+        if (!layout.barline) return null
+        const top = Staff.MIDDLE_Y - (MEASURE_BUTTON_SIZE * 2 + MEASURE_BUTTON_GAP) / 2
+        return {
+            x: this.rowFor(lastMeasure).getMeasureX(lastMeasure) + layout.measureWidth + MEASURE_BUTTON_OFFSET,
+            addY: top,
+            removeY: top + MEASURE_BUTTON_SIZE + MEASURE_BUTTON_GAP,
+            size: MEASURE_BUTTON_SIZE,
         }
     }
 
@@ -270,6 +309,11 @@ export class ScoreLayout {
 
     getYForRow(row: RowLayout): number {
         return row.index * (this.rowHeight + this.rowGap)
+    }
+
+    /** The tie segments drawn on `row` (row-local), each with the tie it belongs to — the same segment objects while the tie is reused. */
+    tieSegmentsOn(row: RowLayout): ReadonlyArray<{ tie: TieLayout; segment: TieSegment }> {
+        return this._tieSegmentsByRow.get(row.index) ?? []
     }
 
     getRowForY(y: number): RowLayout | undefined {

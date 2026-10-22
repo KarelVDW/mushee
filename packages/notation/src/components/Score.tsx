@@ -11,7 +11,7 @@ import { NoteLayout } from '../model/layout/NoteLayout'
 import { Staff } from '../model/layout/Staff'
 import type { ClefType } from '../model/types'
 import { Barline } from './Barline'
-import { INTERACTION_BLUE, MEASURE_BUTTON_GAP, MEASURE_BUTTON_SIZE } from './constants'
+import { INTERACTION_BLUE } from './constants'
 import { CursorIndicator } from './CursorIndicator'
 import { HighlightLayer, type ScoreHighlight } from './HighlightLayer'
 import { Measure } from './Measure'
@@ -387,20 +387,8 @@ export const Score = memo(function Score({
         }
     }, [gestures, ghostNote, selectedNote, onNoteChange])
 
-    // Measure button positions (last row only)
-    const measureButtonPos = useMemo(() => {
-        const lastRow = rows[rows.length - 1]
-        if (!lastRow || !showMeasureButtons) return null
-        const lastMeasure = lastRow.measures[lastRow.measures.length - 1]
-        const barline = lastMeasure?.layout.barline
-        if (!barline) return null
-        const measureX = lastRow.getMeasureX(lastMeasure)
-        const staffCenterY = barline.y + barline.height / 2
-        const x = measureX + lastMeasure.layout.measureWidth + 10
-        const btnTotalHeight = MEASURE_BUTTON_SIZE * 2 + MEASURE_BUTTON_GAP
-        const topY = staffCenterY - btnTotalHeight / 2
-        return { x, topY }
-    }, [rows, showMeasureButtons])
+    // Measure buttons (last row only), placed by the layout
+    const measureButtons = showMeasureButtons ? layout.measureButtons : null
 
     const lastRowIndex = rows.length - 1
 
@@ -528,25 +516,25 @@ export const Score = memo(function Score({
 
                             <Barline layout={row.openingBarline} />
 
-                            {/* Ties are laid out in row-local coordinates; each renders only the segments on this row */}
-                            {layout.ties.map((tie) => (
-                                <Tie key={`${tie.note.id}-${row.id}`} layout={tie} layoutId={tie.id} rowIndex={row.index} />
+                            {/* Ties are laid out in row-local coordinates; this row draws only its own segments */}
+                            {layout.tieSegmentsOn(row).map(({ tie, segment }) => (
+                                <Tie key={tie.note.id} segment={segment} direction={tie.direction} />
                             ))}
 
-                            {ri === lastRowIndex && measureButtonPos && onAddMeasure && (
+                            {ri === lastRowIndex && measureButtons && onAddMeasure && (
                                 <MeasureButton
-                                    x={measureButtonPos.x}
-                                    y={measureButtonPos.topY}
-                                    size={MEASURE_BUTTON_SIZE}
+                                    x={measureButtons.x}
+                                    y={measureButtons.addY}
+                                    size={measureButtons.size}
                                     label="+"
                                     onClick={onAddMeasure}
                                 />
                             )}
-                            {ri === lastRowIndex && measureButtonPos && onRemoveMeasure && (
+                            {ri === lastRowIndex && measureButtons && onRemoveMeasure && (
                                 <MeasureButton
-                                    x={measureButtonPos.x}
-                                    y={measureButtonPos.topY + MEASURE_BUTTON_SIZE + MEASURE_BUTTON_GAP}
-                                    size={MEASURE_BUTTON_SIZE}
+                                    x={measureButtons.x}
+                                    y={measureButtons.removeY}
+                                    size={measureButtons.size}
                                     label="-"
                                     onClick={onRemoveMeasure}
                                     disabled={!canRemoveMeasure}

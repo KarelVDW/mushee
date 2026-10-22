@@ -68,4 +68,14 @@ export const ROW_GAP = 16
 export const ROW_HEIGHT = 160
 export const MAX_MEASURES_PER_ROW = 4
 
+/** Room reserved after the final barline (row budget and minimum score width) for the add/remove-measure buttons */
 export const MEASURE_BUTTON_SPACING = 30
+
+/** Gap between the final barline and the add/remove-measure buttons */
+export const MEASURE_BUTTON_OFFSET = 10
+
+/** Side of each (square) add/remove-measure button */
+export const MEASURE_BUTTON_SIZE = 18
+
+/** Vertical gap between the add and the remove button */
+export const MEASURE_BUTTON_GAP = 3

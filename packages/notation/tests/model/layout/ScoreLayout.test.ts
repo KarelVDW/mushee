@@ -1,5 +1,8 @@
 import {
     MAX_MEASURES_PER_ROW,
+    MEASURE_BUTTON_GAP,
+    MEASURE_BUTTON_OFFSET,
+    MEASURE_BUTTON_SIZE,
     MEASURE_BUTTON_SPACING,
     ROW_GAP,
     ROW_HEIGHT,
@@ -7,6 +10,7 @@ import {
     TEMPO_MARKING_Y,
 } from '@mushee/notation/engraving/constants'
 import { Duration } from '@mushee/notation/model/Duration'
+import { Staff } from '@mushee/notation/model/layout/Staff'
 import { Measure } from '@mushee/notation/model/Measure'
 import { Note } from '@mushee/notation/model/Note'
 import { Pitch } from '@mushee/notation/model/Pitch'
@@ -428,6 +432,58 @@ describe('ScoreLayout', () => {
             const after = score.layout
             expect(after.ties[0]).not.toBe(before.ties[0])
             expect(after.ties[0].note).toBe(before.ties[0].note) // same semantic tie, new geometry
+        })
+
+        it("tieSegmentsOn lists each row's own segments, as the tie layouts' segment objects", () => {
+            const score = makeScore(8) // rows of 4
+            tieWithin(score, score.measures[0])
+            // A second tie crossing the row break: the last note of row 0 into the first of row 1.
+            const crossStart = score.measures[3].lastNote as Note
+            const [crossing] = score.replace(
+                [crossStart, score.measures[4].notes[0]],
+                [
+                    new Note({ duration: new Duration({ type: 'q' }), pitch: new Pitch({ name: 'C', octave: 5 }), tie: 'start' }),
+                    new Note({ duration: new Duration({ type: 'q' }), pitch: new Pitch({ name: 'C', octave: 5 }) }),
+                ],
+            )
+            const layout = score.layout
+            const within = layout.ties.find((t) => t.note !== crossing)
+            const across = layout.ties.find((t) => t.note === crossing)
+            if (!within || !across) throw new Error('expected both ties')
+            expect(layout.tieSegmentsOn(layout.rows[0])).toEqual([
+                { tie: within, segment: within.segments[0] },
+                { tie: across, segment: across.segments[0] },
+            ])
+            expect(layout.tieSegmentsOn(layout.rows[1])).toEqual([{ tie: across, segment: across.segments[1] }])
+            expect(layout.tieSegmentsOn(layout.rows[1])[0].segment).toBe(across.segments[1])
+        })
+
+        it('tieSegmentsOn is empty for a row without ties', () => {
+            const score = makeScore(1)
+            expect(score.layout.tieSegmentsOn(score.layout.rows[0])).toEqual([])
+        })
+    })
+
+    describe('measureButtons', () => {
+        it('stacks add over remove around the middle line, just after the final barline of the last row', () => {
+            const score = makeScore(5) // rows of 4 + 1
+            const last = score.measures[4]
+            const buttons = score.layout.measureButtons
+            if (!buttons) throw new Error('expected measure buttons')
+            const row = score.layout.rowFor(last)
+            expect(buttons.x).toBe(row.getMeasureX(last) + last.layout.measureWidth + MEASURE_BUTTON_OFFSET)
+            expect(buttons.size).toBe(MEASURE_BUTTON_SIZE)
+            expect(buttons.removeY).toBe(buttons.addY + MEASURE_BUTTON_SIZE + MEASURE_BUTTON_GAP)
+            // Centred on the staff's middle line, and inside the reserve kept after the last measure.
+            expect((buttons.addY + buttons.removeY + MEASURE_BUTTON_SIZE) / 2).toBe(Staff.MIDDLE_Y)
+            expect(buttons.x + MEASURE_BUTTON_SIZE).toBeLessThanOrEqual(row.width + MEASURE_BUTTON_SPACING)
+        })
+
+        it('is null when the score ends without a barline, or has no measures', () => {
+            const score = makeScore(2)
+            score.measures[1].setEndBarline('none')
+            expect(score.layout.measureButtons).toBeNull()
+            expect(new Score().layout.measureButtons).toBeNull()
         })
     })
 })
