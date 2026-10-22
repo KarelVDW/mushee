@@ -208,8 +208,7 @@ export const EDITOR_COMMANDS: readonly EditorCommand[] = [
         defaultShortcut: 'Shift+KeyT',
         // Opens the transpose popover (no direct edit); declined — the browser keeps ⇧T — until the
         // editor registers it, and while a recording writes into the score.
-        run: (manipulator) =>
-            manipulator.onTransposeRequest && !manipulator.historyLocked ? manipulator.onTransposeRequest() : false,
+        run: (manipulator) => (manipulator.onTransposeRequest && !manipulator.historyLocked ? manipulator.onTransposeRequest() : false),
     },
     ...DURATION_COMMANDS,
     fromAction(TOGGLE_DOT, { group: 'Note length', shortcut: 'Period', singleNote: true }),
