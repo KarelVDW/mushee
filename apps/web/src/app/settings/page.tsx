@@ -225,6 +225,8 @@ export default function SettingsPage() {
             {deleteOpen && (
                 <DeleteAccountDialog
                     email={session?.user?.email}
+                    onExport={handleExport}
+                    exporting={exportData.isPending}
                     onCancel={() => setDeleteOpen(false)}
                     onConfirm={() => {
                         setDeleteOpen(false)

@@ -5,6 +5,18 @@ import { useState } from 'react'
 
 import { DialogPanel, Icon, isAcceptablePassword, NewPasswordFields, PasswordField, PrimaryButton, TertiaryButton } from '@/components/ui'
 import { changePassword } from '@/lib/auth-client'
+import { AuthErrorCopy } from '@/lib/AuthErrorCopy'
+
+/**
+ * What a failed change says. A wrong current password — by far the likeliest failure — gets
+ * its own line; anything else goes through the shared auth copy, so the auth library's own
+ * message is never shown.
+ */
+function changeErrorMessage(error: unknown): string {
+    const code = typeof error === 'object' && error !== null && 'code' in error ? error.code : undefined
+    if (code === 'INVALID_PASSWORD') return "That isn't your current password. Try again, or send yourself a reset link below."
+    return AuthErrorCopy.for(error).message
+}
 
 interface ChangePasswordDialogProps {
     /** Cancel, or Done after the password changed — the caller just closes the dialog. */
@@ -37,7 +49,7 @@ export function ChangePasswordDialog({ onClose }: ChangePasswordDialogProps) {
         })
         setSubmitting(false)
         if (err) {
-            setError(err.message ?? 'Couldn’t change your password. Check your current password and try again.')
+            setError(changeErrorMessage(err))
             return
         }
         setSaved(true)
@@ -46,7 +58,7 @@ export function ChangePasswordDialog({ onClose }: ChangePasswordDialogProps) {
     return (
         <DialogPanel
             title={saved ? 'Password updated.' : 'Change password'}
-            subtitle={saved ? 'Use your new password next time you sign in.' : 'At least 8 characters, with a mix of letters and numbers.'}
+            subtitle={saved ? 'Use your new password next time you sign in.' : 'Confirm your current password, then pick a new one.'}
             onClose={saved ? undefined : onClose}
             width={480}
             footer={
