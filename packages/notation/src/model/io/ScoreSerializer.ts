@@ -38,9 +38,7 @@ export class MeasureSerializer {
         const keyChanged =
             this.measure.leadingKeyExplicit ||
             !KeySignature.same(previousKey, this.measure.keySignature.fifths, this.measure.keySignature.mode)
-        const timeSignatureChanged =
-            previousTimeSignature?.beatAmount !== this.measure.timeSignature.beatAmount ||
-            previousTimeSignature?.beatType !== this.measure.timeSignature.beatType
+        const timeSignatureChanged = !previousTimeSignature?.equals(this.measure.timeSignature)
         // Emit <transpose> alongside the first measure's attributes when the score's instrument transposes.
         const isFirstMeasure = previousMeasure === null
         const instrument = this.measure.score.instrument
