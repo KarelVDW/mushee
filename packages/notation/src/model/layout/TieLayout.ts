@@ -33,7 +33,7 @@ export class TieLayout {
     readonly direction: 1 | -1
     readonly segments: TieSegment[]
     /** Input signature — ScoreLayout reuses the previous instance when it is unchanged. */
-    readonly contextSignature: string
+    readonly signature: string
 
     constructor(
         readonly note: Note,
@@ -53,7 +53,7 @@ export class TieLayout {
                 { rowIndex: context.endRowIndex, startX: 0, startY: endY, endX: context.endX, endY },
             ]
         }
-        this.contextSignature = TieLayout.signatureFor(context)
+        this.signature = TieLayout.signatureFor(context)
     }
 
     static signatureFor(context: TieLayoutContext): string {

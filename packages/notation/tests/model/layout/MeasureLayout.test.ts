@@ -360,7 +360,6 @@ describe('MeasureLayout', () => {
                 x: 0,
                 width: 300,
                 flags: { showsClef: false, showsKeySignature: false, showsTimeSignature: false, ...flags },
-                reuseSignature: 'direct-test',
             }
         }
 

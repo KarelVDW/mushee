@@ -37,8 +37,6 @@ export interface MeasureLayoutContext {
     width: number
     /** Which leading attributes this measure is asked to show (diff-based, plus row-start forcing). */
     flags: MeasureFlags
-    /** Input signature for reuse comparison across ScoreLayout rebuilds. */
-    reuseSignature: string
 }
 
 /**
@@ -58,7 +56,8 @@ export class MeasureLayout {
     /** Every attribute glyph drawn in this measure, left to right: the leading run, then mid-measure changes. */
     readonly attributes: ReadonlyArray<MeasureAttribute>
     readonly beams: BeamLayout[]
-    readonly reuseSignature: string
+    /** Input signature — ScoreLayout reuses the previous instance when it is unchanged. */
+    readonly signature: string
 
     private readonly _xMap = new Map<MeasureElement, { x: number; allottedWidth: number }>()
     private readonly _noteLayouts = new Map<Note, NoteLayout>()
@@ -77,7 +76,7 @@ export class MeasureLayout {
         this.showsClef = flags.showsClef
         this.showsKeySignature = flags.showsKeySignature && metrics.leadingKeyAccidentals.length > 0
         this.showsTimeSignature = flags.showsTimeSignature
-        this.reuseSignature = context.reuseSignature
+        this.signature = MeasureLayout.signatureFor(measure, context)
 
         const widthOf = (el: MeasureElement): PhysicalWidth => {
             if (el instanceof KeySignature) return metrics.keyWidthOf(el)
@@ -181,6 +180,24 @@ export class MeasureLayout {
         for (const tempo of measure.tempos) {
             this._tempoLayouts.set(tempo, new TempoLayout({ x: this.getXForBeat(tempo.beatPosition) }))
         }
+    }
+
+    /**
+     * Everything a measure's geometry depends on: its content (the measure's version), its slot in
+     * the row, its flags, and the leading key's drawn form — the one input that depends on the
+     * previous measure (a switch to C major draws the preceding key's naturals).
+     */
+    static signatureFor(measure: Measure, context: MeasureLayoutContext): string {
+        const { flags } = context
+        return [
+            measure.version,
+            context.x,
+            context.width,
+            flags.showsClef,
+            flags.showsKeySignature,
+            flags.showsTimeSignature,
+            context.metrics.leadingKeyAccidentals.map((a) => `${a.glyphName}${a.name}${a.octave}`).join(','),
+        ].join('|')
     }
 
     /** A mid-measure clef/key rides along as a zero-allotted child of the preceding note (or joins the leading run when no note precedes it). */

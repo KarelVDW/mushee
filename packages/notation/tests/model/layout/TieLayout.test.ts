@@ -169,7 +169,7 @@ describe('TieLayout', () => {
         if (!farNote) throw new Error('expected a note in the last measure')
         score.setTempo(farNote, 77)
         const after = tieStartingAt(score, before.note)
-        expect(after.contextSignature).toBe(before.contextSignature)
+        expect(after.signature).toBe(before.signature)
         expect(after).toBe(before)
         // Mutate the tie's own measure (pitch change shifts the note Y) → new instance.
         const [newStart] = score.replace([before.note, m.notes[1]], [halfNote('G', 5, 'start'), halfNote('G', 5, 'stop')])

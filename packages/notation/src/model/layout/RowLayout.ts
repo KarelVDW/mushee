@@ -31,16 +31,15 @@ export class RowLayout {
     readonly width: number
     readonly staffLines: LayoutLine[]
     readonly openingBarline: BarlineLayout
-    private readonly _minimalWidths: Map<Measure, number>
-    private readonly _scoreWidth: number
+    /** Input signature — ScoreLayout reuses the previous instance when it is unchanged. */
+    readonly signature: string
     private readonly _measureData = new Map<Measure, { width: number; measureX: number }>()
 
     constructor(context: RowLayoutContext) {
         this.index = context.index
         this.isLastRow = context.isLastRow
         this.measures = context.measures
-        this._minimalWidths = context.minimalWidths
-        this._scoreWidth = context.scoreWidth
+        this.signature = RowLayout.signatureFor(context)
 
         const totalWidth = RowLayout.availableWidth(context.scoreWidth, context.isLastRow)
         const allowIncompleteRow = context.isLastRow && context.measures.length <= MAX_UNSTRETCHED_LAST_ROW
@@ -77,14 +76,14 @@ export class RowLayout {
         return scoreWidth - (isLastRow ? MEASURE_BUTTON_SPACING : 0)
     }
 
-    /** Whether this row's inputs are identical — used by ScoreLayout to reuse the instance across rebuilds. */
-    matches(context: RowLayoutContext): boolean {
-        if (this.index !== context.index || this.isLastRow !== context.isLastRow) return false
-        if (this._scoreWidth !== context.scoreWidth) return false
-        if (this.measures.length !== context.measures.length) return false
-        return this.measures.every(
-            (measure, i) => context.measures[i] === measure && context.minimalWidths.get(measure) === this._minimalWidths.get(measure),
-        )
+    /** Everything a row's geometry depends on: its place, the score width, and each measure (by identity) with its minimal width. */
+    static signatureFor(context: RowLayoutContext): string {
+        return [
+            context.index,
+            context.isLastRow,
+            context.scoreWidth,
+            ...context.measures.map((measure) => `${measure.id}:${context.minimalWidths.get(measure)}`),
+        ].join('|')
     }
 
     getMeasureX(measure: Measure): number {

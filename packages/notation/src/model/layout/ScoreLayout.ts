@@ -97,7 +97,7 @@ export class ScoreLayout {
                 scoreWidth: this.scoreWidth,
             }
             const previousRow = previous?.rows[rowIndex]
-            const row = previousRow?.matches(context) ? previousRow : new RowLayout(context)
+            const row = previousRow?.signature === RowLayout.signatureFor(context) ? previousRow : new RowLayout(context)
             for (const measure of context.measures) this._rowByMeasure.set(measure, row)
             return row
         })
@@ -113,18 +113,10 @@ export class ScoreLayout {
                 x: row.getMeasureX(m.measure),
                 width: row.getMeasureWidth(m.measure),
                 flags: flags[i],
-                reuseSignature: [
-                    m.measure.version,
-                    row.getMeasureX(m.measure),
-                    row.getMeasureWidth(m.measure),
-                    flags[i].showsClef,
-                    flags[i].showsKeySignature,
-                    flags[i].showsTimeSignature,
-                    m.leadingKeyAccidentals.map((a) => `${a.glyphName}${a.name}${a.octave}`).join(','),
-                ].join('|'),
             }
             const previousLayout = previous?._measureLayouts.get(m.measure)
-            const layout = previousLayout?.reuseSignature === context.reuseSignature ? previousLayout : new MeasureLayout(m.measure, context)
+            const layout =
+                previousLayout?.signature === MeasureLayout.signatureFor(m.measure, context) ? previousLayout : new MeasureLayout(m.measure, context)
             this._measureLayouts.set(m.measure, layout)
         })
 
@@ -138,7 +130,7 @@ export class ScoreLayout {
                 const key = `${note.id}|${nextNote.id}`
                 const previousTie = previous?._tiesByKey.get(key)
                 const tie =
-                    previousTie?.contextSignature === TieLayout.signatureFor(context) ? previousTie : new TieLayout(note, context)
+                    previousTie?.signature === TieLayout.signatureFor(context) ? previousTie : new TieLayout(note, context)
                 this._tiesByKey.set(key, tie)
                 this.ties.push(tie)
                 for (const segment of tie.segments) {
