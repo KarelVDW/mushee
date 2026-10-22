@@ -5,9 +5,9 @@ import { expect, focusEditor, MOCK_SCORE_ID, MOCK_SHARE_TOKEN, MOCK_TITLE, SELEC
 /**
  * Mocked-API editor e2e. Drives the real editor in a real browser; the scores
  * API and auth session are intercepted (see fixtures.ts). Exercises rendering,
- * keyboard pitch editing + debounced autosave, range selection and the
- * clipboard, shortcut rebinding, the tool dock's popovers, the header's takes /
- * share menus, and exporting.
+ * the record button's selection guard, keyboard pitch editing + debounced
+ * autosave, range selection and the clipboard, shortcut rebinding, the tool
+ * dock's popovers, the header's takes / share menus, and exporting.
  */
 
 test.beforeEach(async ({ page, apiMock }) => {
@@ -37,6 +37,35 @@ test('no mic-source chip: the server classifies voice vs instrument itself', asy
     // The mic-source choice moved server-side (SourceClassifier on the audio
     // prefix), so the header must NOT ask the user what they are recording.
     await expect(page.getByRole('button', { name: /^Mic input:/ })).toHaveCount(0)
+})
+
+// The desktop half of mobile.spec's record guard: the header's Record button.
+test('Record is disabled with no note selected and enabled again after clicking one', async ({ page }) => {
+    // Refuse the microphone: the take clears the selection as it starts, then fails to open
+    // the mic — leaving the editor with no note selected (the only way to get there by hand).
+    // Both desktop engines run this; the refusal is installed whether or not the engine exposes
+    // mediaDevices on its own.
+    await page.evaluate(() => {
+        const getUserMedia = () => Promise.reject(new DOMException('Permission denied', 'NotAllowedError'))
+        if (navigator.mediaDevices) {
+            Object.defineProperty(navigator.mediaDevices, 'getUserMedia', { configurable: true, value: getUserMedia })
+        } else {
+            Object.defineProperty(navigator, 'mediaDevices', { configurable: true, value: { getUserMedia } })
+        }
+    })
+    // Where the auto-selected first note sits. The failed take's bar displaces it, but the
+    // spot stays on the first bar of the staff, so clicking it selects a note again.
+    const band = await page.locator(SELECTION_BANDS).first().boundingBox()
+    if (!band) throw new Error('expected the auto-selected note')
+
+    const record = page.getByRole('button', { name: 'Record' })
+    await expect(record).toBeEnabled()
+    await record.click()
+    await expect(page.getByRole('status').filter({ hasText: 'Microphone access was blocked' })).toBeVisible()
+    await expect(record).toBeDisabled()
+
+    await page.mouse.click(band.x + band.width / 2, band.y + band.height / 2)
+    await expect(record).toBeEnabled()
 })
 
 test('editing a note pitch with the keyboard triggers a debounced autosave', async ({ page }) => {
