@@ -1,5 +1,7 @@
 'use client'
 
+import { NOTATION_INK } from '@mushee/notation/components'
+
 import type { ScoreDocument } from '@/lib/api'
 import { buildPianoRoll, pitchLabel } from '@/lib/piano-roll'
 
@@ -13,8 +15,6 @@ import { buildPianoRoll, pitchLabel } from '@/lib/piano-roll'
 const QUARTER_WIDTH = 26
 const ROW_HEIGHT = 8
 const PADDING = 16
-const INK = '#2d2f2f'
-const GRID = 'rgba(172, 173, 173, 0.35)'
 
 export function ScorePreview({ document }: { document: ScoreDocument }) {
     if (typeof document.raw === 'string') {
@@ -54,16 +54,23 @@ export function ScorePreview({ document }: { document: ScoreDocument }) {
                             x2={width - PADDING / 2}
                             y1={y(midi) + ROW_HEIGHT / 2}
                             y2={y(midi) + ROW_HEIGHT / 2}
-                            stroke={GRID}
+                            className="stroke-outline-variant/35"
                         />
-                        <text x={2} y={y(midi) + ROW_HEIGHT / 2 - 3} fontSize={9} fill="#5a5c5c" fontFamily="var(--font-mono)">
+                        <text x={2} y={y(midi) + ROW_HEIGHT / 2 - 3} fontSize={9} className="fill-on-surface-variant font-mono">
                             {pitchLabel(midi)}
                         </text>
                     </g>
                 ))}
                 {roll.measureStarts.map((start, index) =>
                     index === 0 ? null : (
-                        <line key={index} x1={x(start)} x2={x(start)} y1={PADDING / 2} y2={height - PADDING / 2} stroke={GRID} />
+                        <line
+                            key={index}
+                            x1={x(start)}
+                            x2={x(start)}
+                            y1={PADDING / 2}
+                            y2={height - PADDING / 2}
+                            className="stroke-outline-variant/35"
+                        />
                     ),
                 )}
                 {roll.notes.map((note, index) => (
@@ -74,7 +81,7 @@ export function ScorePreview({ document }: { document: ScoreDocument }) {
                         width={Math.max(3, note.duration * QUARTER_WIDTH - 1.5)}
                         height={ROW_HEIGHT - 2}
                         rx={2}
-                        fill={INK}>
+                        fill={NOTATION_INK}>
                         <title>{`${pitchLabel(note.midi)} · beat ${(note.start + 1).toFixed(2).replace(/\.?0+$/, '')} · ${note.duration.toFixed(2).replace(/\.?0+$/, '')} quarters`}</title>
                     </rect>
                 ))}
