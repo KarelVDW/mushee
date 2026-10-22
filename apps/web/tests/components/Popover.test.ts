@@ -71,6 +71,20 @@ describe('Popover keyboard isolation', () => {
         expect(event.defaultPrevented).toBe(false)
     })
 
+    it("cancels Backspace's history-back default on a control, but not in a text field", () => {
+        const onKeyDown = vi.fn()
+        render({ onDismiss: vi.fn(), onKeyDown })
+        const button = host.querySelector('button') as HTMLButtonElement
+        const onButton = press(button, 'Backspace')
+        expect(onButton.defaultPrevented).toBe(true)
+        expect(onKeyDown).toHaveBeenCalledWith(onButton)
+        expect(editorKeys).toEqual([])
+
+        const input = document.createElement('input')
+        host.querySelector('[role="dialog"]')?.appendChild(input)
+        expect(press(input, 'Backspace').defaultPrevented).toBe(false)
+    })
+
     it('stops listening once unmounted', () => {
         render({ onDismiss: vi.fn() })
         act(() => root.render(null))

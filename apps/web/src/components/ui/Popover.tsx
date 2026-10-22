@@ -68,14 +68,19 @@ export function Popover({
     // every other key goes to `onKeyDown`, then stops here. Default actions still happen —
     // Tab moves focus, Enter/Space press the focused button, typing fills an input — but
     // React's handlers never see the event, so popover content handles keys through
-    // `onKeyDown`, not a React onKeyDown.
+    // `onKeyDown`, not a React onKeyDown. The one default blocked is Backspace outside a
+    // text field: WebKit's is history-back, which the editor's own Backspace binding used
+    // to absorb, and leaving the editor from inside a menu is never what the key meant.
     useEffect(() => {
         const onKey = (e: KeyboardEvent) => {
             e.stopPropagation()
             if (e.key === 'Escape') {
                 e.preventDefault()
                 onDismiss()
-            } else onKeyDown?.(e)
+                return
+            }
+            if (e.key === 'Backspace' && !isTextEntry(e.target)) e.preventDefault()
+            onKeyDown?.(e)
         }
         window.addEventListener('keydown', onKey, { capture: true })
         return () => window.removeEventListener('keydown', onKey, { capture: true })
@@ -112,6 +117,11 @@ export function Popover({
             {children}
         </div>
     )
+}
+
+/** Whether a key's default action edits text in `target` (an input, textarea or contenteditable). */
+function isTextEntry(target: EventTarget | null): boolean {
+    return target instanceof HTMLElement && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)
 }
 
 interface PopoverOptionProps {
