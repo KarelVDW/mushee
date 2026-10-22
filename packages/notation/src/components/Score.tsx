@@ -6,20 +6,18 @@ import { SCORE_WIDTH } from '../engraving/constants'
 import type { RecordingWaveformStore } from '../lib/RecordingWaveformStore'
 import { useObservedWidth } from '../lib/useObservedWidth'
 import { useSelectionGestures } from '../lib/useSelectionGestures'
-import type { Clef, Note, Pitch, Score as ScoreModel } from '../model'
+import type { Clef, Measure as MeasureModel, Note, Pitch, Score as ScoreModel } from '../model'
 import { NoteLayout } from '../model/layout/NoteLayout'
 import { Staff } from '../model/layout/Staff'
-import type { ClefType } from '../model/types'
 import { Barline } from './Barline'
 import { INTERACTION_BLUE } from './constants'
 import { CursorIndicator } from './CursorIndicator'
 import { HighlightLayer, type ScoreHighlight } from './HighlightLayer'
-import { Measure } from './Measure'
+import { type AttributeClick, Measure } from './Measure'
 import { MeasureButton } from './MeasureButton'
 import { NoteGroup } from './NoteGroup'
 import { RecordingWaveform } from './RecordingWaveform'
 import { StaffLines } from './StaffLines'
-import { TempoMarking } from './TempoMarking'
 import { Tie } from './Tie'
 
 /** Vertical offset from the reference Y to the teardrop tip */
@@ -77,51 +75,23 @@ interface ScoreProps {
     onRemoveMeasure?: () => void
     canRemoveMeasure?: boolean
     /**
-     * A tempo marking / clef / key signature was clicked. The score only
-     * reports the event — what happens next (the editor opens its popover)
-     * is the parent's call; omit the callback and the glyph renders inert
-     * (the read-only consumers pass nothing). `x`/`y` are pixel coordinates
-     * relative to this component's container, ready to anchor a popover.
+     * A tempo marking, clef, key or time signature was clicked. The score only reports the
+     * event — what happens next (the editor opens its popover) is the parent's call; omit the
+     * callback and the glyphs render inert (the read-only consumers pass nothing).
      */
-    onTempoClick?: (event: TempoClickEvent) => void
-    onClefClick?: (event: ClefClickEvent) => void
-    onKeySignatureClick?: (event: KeySignatureClickEvent) => void
-    onTimeSignatureClick?: (event: TimeSignatureClickEvent) => void
+    onAttributeClick?: (event: AttributeClickEvent) => void
 }
 
 export interface SelectionMenuEvent {
     note: Note
 }
 
-export interface TempoClickEvent {
-    measureIndex: number
-    beatPosition: number
-    bpm: number
-    x: number
-    y: number
-}
-
-export interface ClefClickEvent {
-    measureIndex: number
-    clef: ClefType
-    x: number
-    y: number
-}
-
-export interface KeySignatureClickEvent {
-    measureIndex: number
-    fifths: number
-    x: number
-    y: number
-}
-
-export interface TimeSignatureClickEvent {
-    measureIndex: number
-    beatAmount: number
-    beatType: number
-    x: number
-    y: number
-}
+/**
+ * A clicked attribute glyph, discriminated by `kind`, in the measure at `measureIndex`.
+ * `x`/`y` are pixel coordinates relative to the score's container, ready to anchor a popover:
+ * the marking itself for a tempo, the staff top for a clef, key or time signature.
+ */
+export type AttributeClickEvent = AttributeClick & { measureIndex: number; x: number; y: number }
 
 export const Score = memo(function Score({
     score,
@@ -137,10 +107,7 @@ export const Score = memo(function Score({
     onAddMeasure,
     onRemoveMeasure,
     canRemoveMeasure = true,
-    onTempoClick,
-    onClefClick,
-    onKeySignatureClick,
-    onTimeSignatureClick,
+    onAttributeClick,
 }: ScoreProps) {
     const containerRef = useRef<HTMLDivElement>(null)
     const svgRef = useRef<SVGSVGElement>(null)
@@ -198,24 +165,6 @@ export const Score = memo(function Score({
         [totalHeight, score],
     )
 
-    // SVG coordinate to container-relative pixel position (inverse of clientToSvg)
-    const svgToContainer = useCallback(
-        (svgX: number, svgY: number): { x: number; y: number } | null => {
-            const svg = svgRef.current
-            const container = containerRef.current
-            if (!svg || !container) return null
-            const svgRect = svg.getBoundingClientRect()
-            const containerRect = container.getBoundingClientRect()
-            const scaleX = svgRect.width / score.layout.scoreWidth
-            const scaleY = svgRect.height / totalHeight
-            return {
-                x: svgRect.left + svgX * scaleX - containerRect.left,
-                y: svgRect.top + svgY * scaleY - containerRect.top,
-            }
-        },
-        [totalHeight, score],
-    )
-
     // Scroll the nearest scrollable ancestor so the row at `layoutY` sits inside the
     // viewport (no-op when it already does) — how the selection and the playback
     // cursor stay in view on small screens.
@@ -263,44 +212,29 @@ export const Score = memo(function Score({
         return () => observer.disconnect()
     }, [playbackCursorRef, containerWidth, scrollRowIntoView])
 
-    // Attribute glyphs (tempo / clef / key) only *report* clicks, in container
-    // pixels — opening an editing surface is the parent's business.
-    const handleTempoClick = useCallback(
-        (measureIndex: number, beatPosition: number, bpm: number, svgX: number, svgY: number) => {
-            const pos = svgToContainer(svgX, svgY)
-            if (!pos) return
-            onTempoClick?.({ measureIndex, beatPosition, bpm, x: pos.x, y: pos.y })
+    // Attribute glyphs only *report* clicks, in container pixels — opening an editing surface
+    // is the parent's business. One stable handler for every measure (a per-measure adapter
+    // would defeat memo(Measure)); it converts the measure-local point to container pixels at
+    // click time, against the layout the click landed on.
+    const handleAttributeClick = useCallback(
+        (measure: MeasureModel, click: AttributeClick, localX: number, localY: number) => {
+            const svg = svgRef.current
+            const container = containerRef.current
+            if (!svg || !container || !onAttributeClick) return
+            const layout = score.layout
+            const row = layout.rowFor(measure)
+            const svgRect = svg.getBoundingClientRect()
+            const containerRect = container.getBoundingClientRect()
+            const svgX = row.getMeasureX(measure) + localX
+            const svgY = layout.getYForRow(row) + localY
+            onAttributeClick({
+                ...click,
+                measureIndex: score.getIndexForMeasure(measure),
+                x: svgRect.left + svgX * (svgRect.width / layout.scoreWidth) - containerRect.left,
+                y: svgRect.top + svgY * (svgRect.height / layout.totalHeight) - containerRect.top,
+            })
         },
-        [svgToContainer, onTempoClick],
-    )
-
-    const staffTopY = Staff.TOP_Y
-
-    const handleClefClick = useCallback(
-        (measureIndex: number, clef: ClefType, svgX: number, svgY: number) => {
-            const pos = svgToContainer(svgX, svgY)
-            if (!pos) return
-            onClefClick?.({ measureIndex, clef, x: pos.x, y: pos.y })
-        },
-        [svgToContainer, onClefClick],
-    )
-
-    const handleKeySignatureClick = useCallback(
-        (measureIndex: number, fifths: number, svgX: number, svgY: number) => {
-            const pos = svgToContainer(svgX, svgY)
-            if (!pos) return
-            onKeySignatureClick?.({ measureIndex, fifths, x: pos.x, y: pos.y })
-        },
-        [svgToContainer, onKeySignatureClick],
-    )
-
-    const handleTimeSignatureClick = useCallback(
-        (measureIndex: number, beatAmount: number, beatType: number, svgX: number, svgY: number) => {
-            const pos = svgToContainer(svgX, svgY)
-            if (!pos) return
-            onTimeSignatureClick?.({ measureIndex, beatAmount, beatType, x: pos.x, y: pos.y })
-        },
-        [svgToContainer, onTimeSignatureClick],
+        [score, onAttributeClick],
     )
 
     // Resolve the note under a client point (row → measure → note), with the row-local Y.
@@ -437,43 +371,16 @@ export const Score = memo(function Score({
                                     selectedNoteIds={selectedIds}
                                     hoveredNote={hoveredNote}
                                     layoutId={measure.layout.id}
-                                    onClefClick={
-                                        onClefClick &&
-                                        ((clef, localX) =>
-                                            handleClefClick(
-                                                score.getIndexForMeasure(measure),
-                                                clef.type,
-                                                row.getMeasureX(measure) + localX,
-                                                layout.getYForRow(row) + staffTopY,
-                                            ))
-                                    }
-                                    onKeySignatureClick={
-                                        onKeySignatureClick &&
-                                        ((key, localX) =>
-                                            handleKeySignatureClick(
-                                                score.getIndexForMeasure(measure),
-                                                key.fifths,
-                                                row.getMeasureX(measure) + localX,
-                                                layout.getYForRow(row) + staffTopY,
-                                            ))
-                                    }
-                                    onTimeSignatureClick={
-                                        onTimeSignatureClick &&
-                                        ((timeSignature, localX) =>
-                                            handleTimeSignatureClick(
-                                                score.getIndexForMeasure(measure),
-                                                timeSignature.beatAmount,
-                                                timeSignature.beatType,
-                                                row.getMeasureX(measure) + localX,
-                                                layout.getYForRow(row) + staffTopY,
-                                            ))
-                                    }
+                                    onAttributeClick={onAttributeClick && handleAttributeClick}
                                 />
 
+                                {/* Pointer-transparent: the overlay paints above the measure's tempo
+                                    markings, whose clicks must still reach them through a ghost. */}
                                 {selectedNote && selectedNote.measure === measure && cursorPos && (
                                     <g
                                         key={`cursor-${selectedNote.id}`}
                                         data-export-exclude
+                                        className="pointer-events-none"
                                         transform={`translate(${measure.layout.getXForElement(selectedNote)}, 0)`}>
                                         {ghostNote && ghostLayout && (
                                             <g key={ghostNote.id} opacity={0.35}>
@@ -483,27 +390,6 @@ export const Score = memo(function Score({
                                         <CursorIndicator x={cursorPos.x} y={cursorPos.y} />
                                     </g>
                                 )}
-
-                                {measure.tempos.map((tempo, ti) => (
-                                    <g key={`cursor-${tempo.id}`} transform={`translate(${tempo.layout.x}, 0)`}>
-                                        <TempoMarking
-                                            key={`tempo-${ti}`}
-                                            tempo={tempo}
-                                            layoutId={tempo.layout.id}
-                                            onClick={
-                                                onTempoClick &&
-                                                (() =>
-                                                    handleTempoClick(
-                                                        score.getIndexForMeasure(tempo.measure),
-                                                        tempo.beatPosition,
-                                                        tempo.bpm,
-                                                        row.getMeasureX(tempo.measure) + tempo.layout.x,
-                                                        layout.getYForRow(row) + tempo.layout.y,
-                                                    ))
-                                            }
-                                        />
-                                    </g>
-                                ))}
                             </g>
                         )),
                     )}

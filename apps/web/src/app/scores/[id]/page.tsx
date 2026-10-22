@@ -6,15 +6,7 @@
  * components/ holds what two or more routes use (ExportMenu also serves the share page).
  */
 
-import {
-    type ClefClickEvent,
-    type KeySignatureClickEvent,
-    Score as ScoreView,
-    type ScoreHighlight,
-    type SelectionMenuEvent,
-    type TempoClickEvent,
-    type TimeSignatureClickEvent,
-} from '@mushee/notation/components'
+import { type AttributeClickEvent, Score as ScoreView, type ScoreHighlight, type SelectionMenuEvent } from '@mushee/notation/components'
 import {
     type Accidental,
     type ClefType,
@@ -196,22 +188,12 @@ export default function ScoreEditorPage() {
         }
     }, [manipulator])
 
-    // In-score attribute glyphs (tempo / clef / key): the ScoreView only reports the
+    // In-score attribute glyphs (tempo / clef / key / time): the ScoreView only reports the
     // click; this page owns the popover it opens and applies the change through the
     // manipulator. The admin console renders the same ScoreView with no callbacks —
     // that's what keeps its score page read-only.
-    const [attributePopover, setAttributePopover] = useState<
-        | ({ kind: 'tempo' } & TempoClickEvent)
-        | ({ kind: 'clef' } & ClefClickEvent)
-        | ({ kind: 'key' } & KeySignatureClickEvent)
-        | ({ kind: 'time' } & TimeSignatureClickEvent)
-        | null
-    >(null)
+    const [attributePopover, setAttributePopover] = useState<AttributeClickEvent | null>(null)
     const closeAttributePopover = useCallback(() => setAttributePopover(null), [])
-    const handleTempoClick = useCallback((event: TempoClickEvent) => setAttributePopover({ kind: 'tempo', ...event }), [])
-    const handleClefClick = useCallback((event: ClefClickEvent) => setAttributePopover({ kind: 'clef', ...event }), [])
-    const handleKeySignatureClick = useCallback((event: KeySignatureClickEvent) => setAttributePopover({ kind: 'key', ...event }), [])
-    const handleTimeSignatureClick = useCallback((event: TimeSignatureClickEvent) => setAttributePopover({ kind: 'time', ...event }), [])
 
     // The open attribute popover's panel. Rendered from two spots so it matches the dock's
     // equivalent popovers: on desktop anchored at the clicked glyph (clamped inside the
@@ -513,10 +495,7 @@ export default function ScoreEditorPage() {
                             onAddMeasure={handleAddMeasure}
                             onRemoveMeasure={handleRemoveMeasure}
                             canRemoveMeasure={score.measures.length > 1}
-                            onTempoClick={handleTempoClick}
-                            onClefClick={handleClefClick}
-                            onKeySignatureClick={handleKeySignatureClick}
-                            onTimeSignatureClick={handleTimeSignatureClick}
+                            onAttributeClick={setAttributePopover}
                         />
                         {selectionMenuAnchor && activeNote && (
                             <SelectionPopover
