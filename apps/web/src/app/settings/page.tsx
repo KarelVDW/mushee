@@ -21,12 +21,11 @@ import {
     TextField,
     TopNav,
 } from '@/components/ui'
-import { AccountExport } from '@/lib/AccountExport'
 import { track } from '@/lib/analytics'
 import { useSession } from '@/lib/auth-client'
 import { downloadBlob } from '@/lib/FileDownload'
 import { type PlanTier, requestedPlanFrom } from '@/lib/plans'
-import { billingKeys, useAllRecordings, useScores, useSignOut, useUpdateProfile } from '@/lib/queries'
+import { billingKeys, useAllRecordings, useExportAccountData, useScores, useSignOut, useUpdateProfile } from '@/lib/queries'
 
 import { BillingSection } from './BillingSection'
 import { ChangePasswordDialog } from './ChangePasswordDialog'
@@ -88,26 +87,27 @@ export default function SettingsPage() {
         }
     }, [queryClient])
 
-    const [exporting, setExporting] = useState(false)
+    const exportData = useExportAccountData()
     /** GDPR portability: every score (MusicXML + JSON), profile and settings, zipped in the browser. */
-    async function handleExport() {
+    function handleExport() {
         const user = session?.user
         if (!user) return
-        setExporting(true)
-        try {
-            const archive = await AccountExport.collect({
-                name: user.name,
-                email: user.email,
-                createdAt: user.createdAt ? new Date(user.createdAt).toISOString() : undefined,
-            })
-            downloadBlob(archive.toBlob(), archive.filename)
-            track('data_export_downloaded', { scores: archive.scores.length })
-            showToast(`Your data is downloading (${archive.scores.length} ${archive.scores.length === 1 ? 'score' : 'scores'}).`, 'info')
-        } catch {
-            showToast("Your data couldn't be exported. Please try again.")
-        } finally {
-            setExporting(false)
+        const profile = {
+            name: user.name,
+            email: user.email,
+            createdAt: user.createdAt ? new Date(user.createdAt).toISOString() : undefined,
         }
+        // mutateAsync rather than mutate's onSuccess, which is skipped once this page
+        // unmounts: the download must still land if the user leaves Settings while the
+        // archive builds. A failure has already toasted through the mutation's meta.
+        exportData.mutateAsync(profile).then(
+            (archive) => {
+                downloadBlob(archive.toBlob(), archive.filename)
+                track('data_export_downloaded', { scores: archive.scores.length })
+                showToast(`Your data is downloading (${archive.scores.length} ${archive.scores.length === 1 ? 'score' : 'scores'}).`, 'info')
+            },
+            () => undefined,
+        )
     }
 
     return (
@@ -176,8 +176,8 @@ export default function SettingsPage() {
                                     title="Your data"
                                     subtitle="Download everything Solkey holds for you: your profile, settings, and every score as MusicXML and JSON.">
                                     <div>
-                                        <SecondaryButton onClick={() => void handleExport()} disabled={exporting}>
-                                            {exporting ? 'Preparing your download…' : 'Download my data'}
+                                        <SecondaryButton onClick={handleExport} disabled={exportData.isPending}>
+                                            {exportData.isPending ? 'Preparing your download…' : 'Download my data'}
                                         </SecondaryButton>
                                     </div>
                                     <RecordingsInventory />

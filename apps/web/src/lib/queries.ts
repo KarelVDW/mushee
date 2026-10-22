@@ -4,6 +4,7 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tansta
 import { useRouter } from 'next/navigation'
 import { useCallback, useMemo } from 'react'
 
+import { AccountExport, type ExportProfile } from './AccountExport'
 import {
     ApiError,
     type BillingInterval,
@@ -260,6 +261,14 @@ export function useRequestAccountDeletion() {
         onSuccess: () => queryClient.removeQueries({ queryKey: accountKeys.deletion }),
         // The dialog shows wrong-password feedback inline; a toast would double up.
         meta: { silentError: true },
+    })
+}
+
+/** Builds the GDPR "download my data" archive (every score, profile and settings) in the browser. */
+export function useExportAccountData() {
+    return useMutation({
+        mutationFn: (profile: ExportProfile) => AccountExport.collect(profile),
+        meta: { errorMessage: "Your data couldn't be exported. Please try again." },
     })
 }
 
