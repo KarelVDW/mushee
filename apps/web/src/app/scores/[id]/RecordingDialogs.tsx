@@ -7,7 +7,7 @@ import { DialogPanel, Icon, type IconName, PrimaryButton, TertiaryButton } from 
 import { formatMoney } from '@/lib/currency'
 import { BETA_MODE, CHEAPEST_PACK } from '@/lib/plans'
 import { usePlanCatalogue } from '@/lib/queries'
-import type { RecordingLimitInfo } from '@/lib/RecordingEngine'
+import type { RecordingLimitInfo } from '@/lib/TranscriptionSocket'
 import { formatRecordingTime } from '@/lib/recordingTime'
 import { useDisplayCurrency } from '@/lib/useDisplayCurrency'
 

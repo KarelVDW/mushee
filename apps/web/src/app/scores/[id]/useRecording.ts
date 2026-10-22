@@ -10,7 +10,8 @@ import { showToast } from '@/components/ui'
 import { track } from '@/lib/analytics'
 import { markMicModeGuideConfirmed, needsMicModeGuide, needsMicModeReminder } from '@/lib/micMode'
 import { Microphone, RecordingUnsupportedError } from '@/lib/Microphone'
-import type { RecordingLimitInfo, RecordingState } from '@/lib/RecordingEngine'
+import type { RecordingState } from '@/lib/RecordingEngine'
+import type { RecordingLimitInfo } from '@/lib/TranscriptionSocket'
 import type { Transport } from '@/lib/Transport'
 
 import type { ScoreManipulator } from './ScoreManipulator'
@@ -151,7 +152,6 @@ export function useRecording({
                     // notes animate out together.
                     if (state === 'idle') waveformStore.clearAll()
                 },
-                onSourceResolved: (resolution) => console.log('source', resolution),
                 onHealth: ({ ok }) => {
                     // The server's transcription backend went away (or came back). Say so:
                     // waveform bars with no notes must read as "Solkey is having trouble",

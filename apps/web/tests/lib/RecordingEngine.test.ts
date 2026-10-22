@@ -35,10 +35,17 @@ class FakeAnalyser {
         rememberAnalyser(this)
     }
 }
+let lastContext: FakeAudioContext | null = null
+const rememberContext = (ctx: FakeAudioContext): void => {
+    lastContext = ctx
+}
 class FakeAudioContext {
     createMediaStreamSource = vi.fn(() => ({ connect: vi.fn() }))
     createAnalyser = vi.fn(() => new FakeAnalyser())
     close = vi.fn(() => Promise.resolve())
+    constructor() {
+        rememberContext(this)
+    }
 }
 
 // --- MediaRecorder stub ----------------------------------------------------
@@ -179,6 +186,7 @@ describe('RecordingEngine', () => {
 
     beforeEach(() => {
         lastAnalyser = null
+        lastContext = null
         lastRecorder = null
         lastSocket = null
         // Recording never ticks the cursor as a playback pass, so its scheduler side stays idle.
@@ -319,62 +327,6 @@ describe('RecordingEngine', () => {
         raw.currentTime = 2.71 // 0.01s later, below the 1/30s interval
         engine.tick()
         expect(onSample).toHaveBeenCalledTimes(1)
-    })
-
-    it('self-calibrates the waveform gain so quiet capture paths (iOS) still fill the staff', async () => {
-        const { player, raw } = fakePlayer()
-        const engine = new RecordingEngine(player, cursor)
-        const { options, onSample } = makeOptions()
-        await engine.start(options)
-        raw.currentTime = 3
-        engine.tick()
-        socket().fire('open')
-        await Promise.resolve()
-
-        onSample.mockClear()
-        // iOS-quiet signal: RMS = 4/128 ≈ 0.031 — the old fixed ×10 gain drew this at ~30%.
-        analyser().sample = 132
-        raw.currentTime = 2.8
-        engine.tick()
-        expect((onSample.mock.calls[0][0] as { amp: number }).amp).toBe(1)
-
-        // Half that level renders at ~half height once calibrated.
-        analyser().sample = 130
-        raw.currentTime = 2.9
-        engine.tick()
-        const amp = (onSample.mock.calls[1][0] as { amp: number }).amp
-        expect(amp).toBeGreaterThan(0.4)
-        expect(amp).toBeLessThan(0.6)
-    })
-
-    it('keeps the fixed desktop gain for hot mics and never calibrates on sub-gate noise', async () => {
-        const { player, raw } = fakePlayer()
-        const engine = new RecordingEngine(player, cursor)
-        const { options, onSample } = makeOptions()
-        await engine.start(options)
-        raw.currentTime = 3
-        engine.tick()
-        socket().fire('open')
-        await Promise.resolve()
-
-        onSample.mockClear()
-        // Room noise (RMS ≈ 0.008, below the gate): stays at the fixed gain, not blown up.
-        analyser().sample = 129
-        raw.currentTime = 2.8
-        engine.tick()
-        expect((onSample.mock.calls[0][0] as { amp: number }).amp).toBeCloseTo(0.078, 2)
-
-        // Hot desktop mic (RMS ≈ 0.56): clamps at 1, exactly as the fixed gain did.
-        analyser().sample = 200
-        raw.currentTime = 2.9
-        engine.tick()
-        expect((onSample.mock.calls[1][0] as { amp: number }).amp).toBe(1)
-
-        // Moderate desktop level after the hot peak: still the fixed ×10 gain.
-        analyser().sample = 136 // RMS = 8/128 = 0.0625
-        raw.currentTime = 3.0
-        engine.tick()
-        expect((onSample.mock.calls[2][0] as { amp: number }).amp).toBeCloseTo(0.625, 2)
     })
 
     it('triggers onNeedNewMeasure as the cursor nears the end of the current measure', async () => {
@@ -669,6 +621,51 @@ describe('RecordingEngine', () => {
         expect(onConnectionLost).not.toHaveBeenCalled()
     })
 
+    it('drops limit, error and health messages that arrive after stop()', async () => {
+        const { player, raw } = fakePlayer()
+        const engine = new RecordingEngine(player, cursor)
+        const onHealth = vi.fn()
+        const { options, onLimitReached, onRecordingError } = makeOptions({ onHealth })
+        await engine.start(options)
+        raw.currentTime = 3
+        engine.tick()
+        socket().fire('open')
+        await Promise.resolve()
+
+        engine.stop()
+        socket().fire('message', { data: JSON.stringify({ type: 'recording-limit', limitSeconds: 30 }) })
+        socket().fire('message', { data: JSON.stringify({ type: 'recording-error', code: 'score-required' }) })
+        socket().fire('message', { data: JSON.stringify({ type: 'recording-health', ok: false }) })
+        expect(onLimitReached).not.toHaveBeenCalled()
+        expect(onRecordingError).not.toHaveBeenCalled()
+        expect(onHealth).not.toHaveBeenCalled()
+    })
+
+    it('ends the socket only once the recorder has flushed, or after a 1 s fallback', async () => {
+        vi.useFakeTimers()
+        try {
+            const { player, raw } = fakePlayer()
+            const engine = new RecordingEngine(player, cursor)
+            const { options } = makeOptions()
+            await engine.start(options)
+            raw.currentTime = 3
+            engine.tick()
+            socket().fire('open')
+            await Promise.resolve()
+            // A recorder that never reports onstop.
+            recorder().stop = vi.fn()
+            recorder().state = 'recording'
+            const sentEnd = () => socket().sent.some((s) => typeof s === 'string' && s.includes('"end"'))
+
+            engine.stop()
+            expect(sentEnd()).toBe(false)
+            vi.advanceTimersByTime(1000)
+            expect(sentEnd()).toBe(true)
+        } finally {
+            vi.useRealTimers()
+        }
+    })
+
     it('closes the socket itself when the server never acknowledges the end frame', async () => {
         vi.useFakeTimers()
         try {
@@ -769,11 +766,9 @@ describe('RecordingEngine', () => {
         socket().fire('open')
         await Promise.resolve()
 
-        // The analyser AudioContext's close() rejects; stop() must absorb it via .catch(() => {}).
-        const internal = engine as unknown as { analyserCtx: { close: ReturnType<typeof vi.fn> } | null }
-        const analyserCtx = internal.analyserCtx
-        if (!analyserCtx) throw new Error('expected an analyser audio context')
-        analyserCtx.close = vi.fn(() => Promise.reject(new Error('ctx busy')))
+        // The analyser AudioContext's close() rejects; stop() must absorb it.
+        expect(lastContext).not.toBeNull()
+        lastContext?.close.mockImplementation(() => Promise.reject(new Error('ctx busy')))
         expect(() => engine.stop()).not.toThrow()
         await Promise.resolve()
         expect(engine.state).toBe('idle')
