@@ -10,6 +10,9 @@
  * corpus row in the DB fully reproduces its expected notes.
  */
 
+import { KeySignature } from '@mushee/notation/model/KeySignature'
+import { Pitch, type PitchStep } from '@mushee/notation/model/Pitch'
+
 import type { ClipMelody, MelodyEvent, MelodyPitch } from './melody'
 
 export interface RegisterRange {
@@ -62,133 +65,30 @@ interface KeyDef {
     label: string
     mode: 'major' | 'minor'
     fifths: number
-    /** The seven scale degrees, spelled. */
-    steps: ReadonlyArray<{ step: MelodyPitch['step']; alter: number }>
 }
 
+// Natural minors share their relative major's signature, so the key
+// signature alone spells every scale degree.
 const KEYS: readonly KeyDef[] = [
-    {
-        label: 'C major',
-        mode: 'major',
-        fifths: 0,
-        steps: [
-            { step: 'C', alter: 0 },
-            { step: 'D', alter: 0 },
-            { step: 'E', alter: 0 },
-            { step: 'F', alter: 0 },
-            { step: 'G', alter: 0 },
-            { step: 'A', alter: 0 },
-            { step: 'B', alter: 0 },
-        ],
-    },
-    {
-        label: 'G major',
-        mode: 'major',
-        fifths: 1,
-        steps: [
-            { step: 'G', alter: 0 },
-            { step: 'A', alter: 0 },
-            { step: 'B', alter: 0 },
-            { step: 'C', alter: 0 },
-            { step: 'D', alter: 0 },
-            { step: 'E', alter: 0 },
-            { step: 'F', alter: 1 },
-        ],
-    },
-    {
-        label: 'D major',
-        mode: 'major',
-        fifths: 2,
-        steps: [
-            { step: 'D', alter: 0 },
-            { step: 'E', alter: 0 },
-            { step: 'F', alter: 1 },
-            { step: 'G', alter: 0 },
-            { step: 'A', alter: 0 },
-            { step: 'B', alter: 0 },
-            { step: 'C', alter: 1 },
-        ],
-    },
-    {
-        label: 'F major',
-        mode: 'major',
-        fifths: -1,
-        steps: [
-            { step: 'F', alter: 0 },
-            { step: 'G', alter: 0 },
-            { step: 'A', alter: 0 },
-            { step: 'B', alter: -1 },
-            { step: 'C', alter: 0 },
-            { step: 'D', alter: 0 },
-            { step: 'E', alter: 0 },
-        ],
-    },
-    {
-        label: 'B♭ major',
-        mode: 'major',
-        fifths: -2,
-        steps: [
-            { step: 'B', alter: -1 },
-            { step: 'C', alter: 0 },
-            { step: 'D', alter: 0 },
-            { step: 'E', alter: -1 },
-            { step: 'F', alter: 0 },
-            { step: 'G', alter: 0 },
-            { step: 'A', alter: 0 },
-        ],
-    },
-    {
-        label: 'A minor',
-        mode: 'minor',
-        fifths: 0,
-        steps: [
-            { step: 'A', alter: 0 },
-            { step: 'B', alter: 0 },
-            { step: 'C', alter: 0 },
-            { step: 'D', alter: 0 },
-            { step: 'E', alter: 0 },
-            { step: 'F', alter: 0 },
-            { step: 'G', alter: 0 },
-        ],
-    },
-    {
-        label: 'E minor',
-        mode: 'minor',
-        fifths: 1,
-        steps: [
-            { step: 'E', alter: 0 },
-            { step: 'F', alter: 1 },
-            { step: 'G', alter: 0 },
-            { step: 'A', alter: 0 },
-            { step: 'B', alter: 0 },
-            { step: 'C', alter: 0 },
-            { step: 'D', alter: 0 },
-        ],
-    },
-    {
-        label: 'D minor',
-        mode: 'minor',
-        fifths: -1,
-        steps: [
-            { step: 'D', alter: 0 },
-            { step: 'E', alter: 0 },
-            { step: 'F', alter: 0 },
-            { step: 'G', alter: 0 },
-            { step: 'A', alter: 0 },
-            { step: 'B', alter: -1 },
-            { step: 'C', alter: 0 },
-        ],
-    },
+    { label: 'C major', mode: 'major', fifths: 0 },
+    { label: 'G major', mode: 'major', fifths: 1 },
+    { label: 'D major', mode: 'major', fifths: 2 },
+    { label: 'F major', mode: 'major', fifths: -1 },
+    { label: 'B♭ major', mode: 'major', fifths: -2 },
+    { label: 'A minor', mode: 'minor', fifths: 0 },
+    { label: 'E minor', mode: 'minor', fifths: 1 },
+    { label: 'D minor', mode: 'minor', fifths: -1 },
 ]
 
-const STEP_SEMITONE: Record<MelodyPitch['step'], number> = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 }
+const LETTERS: readonly PitchStep[] = ['C', 'D', 'E', 'F', 'G', 'A', 'B']
 
 /** Every note of `key` inside the register, spelled, sorted by pitch. */
 function scaleNotesInRange(key: KeyDef, range: RegisterRange): MelodyPitch[] {
     const notes: MelodyPitch[] = []
     for (let octave = 0; octave <= 9; octave++) {
-        for (const { step, alter } of key.steps) {
-            const midi = (octave + 1) * 12 + STEP_SEMITONE[step] + alter
+        for (const step of LETTERS) {
+            const alter = KeySignature.alterInKey(key.fifths, step)
+            const midi = new Pitch({ name: step, alter, octave }).toMidi()
             if (midi >= range.lowMidi && midi <= range.highMidi) notes.push({ step, alter, octave, midi })
         }
     }
