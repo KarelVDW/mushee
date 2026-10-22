@@ -21,6 +21,13 @@ test('profile: saving a display name posts the update and confirms with a toast'
     await expect(page.getByRole('status').first()).toContainText(/saved|updated/i)
 })
 
+// The library's half (?new=1 opens the dialog) is covered in library.spec.ts.
+test('the top-nav "New score" lands in the library with the create dialog open', async ({ page }) => {
+    await page.getByRole('button', { name: 'New score' }).first().click()
+    await expect(page).toHaveURL(/\/scores$/)
+    await expect(page.getByRole('dialog', { name: 'New score' })).toBeVisible()
+})
+
 test('account tab: the recordings inventory lists every take with its score and deletes one', async ({ page, apiMock }) => {
     await page.getByRole('button', { name: 'Account', exact: true }).click()
     await expect(page.getByText(/4 recordings kept/)).toBeVisible()
