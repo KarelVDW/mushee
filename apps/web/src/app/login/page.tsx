@@ -4,9 +4,9 @@ import { useRouter } from 'next/navigation'
 import { type FormEvent, useState } from 'react'
 
 import { AuthCard, AuthShell } from '@/components/ui'
-import { getAccountDeletionStatus } from '@/lib/api'
 import { signIn } from '@/lib/auth-client'
 import { nextPathFrom } from '@/lib/nextPath'
+import { useCheckPendingDeletion } from '@/lib/queries'
 
 import { ReactivateAccountDialog } from './ReactivateAccountDialog'
 
@@ -23,6 +23,7 @@ export default function LoginPage() {
     const [error, setError] = useState<string | null>(null)
     const [loading, setLoading] = useState(false)
     const [pendingDeletion, setPendingDeletion] = useState<PendingDeletion | null>(null)
+    const checkPendingDeletion = useCheckPendingDeletion()
 
     function continueToApp(emailVerified: boolean) {
         if (!emailVerified) {
@@ -50,7 +51,7 @@ export default function LoginPage() {
 
             // A soft-deleted account signs in normally during the grace period;
             // intercept here so the user can reactivate or stay on track.
-            const deletion = await getAccountDeletionStatus().catch(() => null)
+            const deletion = await checkPendingDeletion().catch(() => null)
             if (deletion?.pending) {
                 setPendingDeletion({ purgeAfter: deletion.purgeAfter, emailVerified })
                 setLoading(false)

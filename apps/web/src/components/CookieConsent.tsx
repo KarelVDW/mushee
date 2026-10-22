@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { type ReactNode, useEffect, useState } from 'react'
 
-import { DialogPanel, DialogScrim, Eyebrow, PrimaryButton, SecondaryButton, Switch, TertiaryButton } from '@/components/ui'
+import { DialogPanel, Eyebrow, PrimaryButton, SecondaryButton, Switch, TertiaryButton } from '@/components/ui'
 import { getConsent, onConsentSettingsRequested, saveConsent } from '@/lib/consent'
 
 /**
@@ -55,7 +55,7 @@ function CookieBanner({ onCustomize, onDecide }: { onCustomize: () => void; onDe
         <div
             role="dialog"
             aria-label="Cookie consent"
-            className="fixed bottom-5 left-5 right-5 z-60 max-w-180 mx-auto glass-panel rounded-lg px-5.5 py-4.5 shadow-(--shadow-tonal) flex items-center gap-5 flex-wrap">
+            className="fixed bottom-5 left-5 right-5 z-(--z-banner) max-w-180 mx-auto glass-panel rounded-lg px-5.5 py-4.5 shadow-(--shadow-tonal) flex items-center gap-5 flex-wrap">
             <div className="flex-1 min-w-55 flex flex-col gap-1.5">
                 <Eyebrow>Cookies</Eyebrow>
                 <p className="font-body font-normal text-[14px] leading-normal text-on-surface m-0">
@@ -88,41 +88,39 @@ interface CookiePreferencesDialogProps {
 /** Per-category preferences, reopened any time from the footer's 'Cookie settings'. */
 function CookiePreferencesDialog({ analytics, onAnalyticsChange, onDecide, onClose }: CookiePreferencesDialogProps) {
     return (
-        <DialogScrim onDismiss={onClose}>
-            <DialogPanel
-                title="Cookie preferences"
-                subtitle="Choose what Solkey may use. You can change this any time via 'Cookie settings' in the footer."
-                onClose={onClose}
-                width={520}
-                footer={
-                    <>
-                        <TertiaryButton onClick={() => onDecide(false)}>Essential only</TertiaryButton>
-                        <PrimaryButton onClick={() => onDecide(analytics)}>Save preferences</PrimaryButton>
-                    </>
-                }>
-                <div className="flex flex-col gap-5 pb-2">
-                    <ConsentCategory header={<CategoryTitle title="Essential" status="Always on" />}>
-                        Keeps you signed in and remembers this cookie choice. Solkey doesn&apos;t work without these.
-                    </ConsentCategory>
-                    <ConsentCategory header={<CategoryTitle title="Anonymous statistics" status="Always on · no cookies" />}>
-                        Counts pages and feature use without cookies or anything stored on your device — never linked to who you are
-                        (PostHog, hosted in the EU).
-                    </ConsentCategory>
-                    <ConsentCategory
-                        header={<Switch checked={analytics} onChange={onAnalyticsChange} label="Session replay & linked analytics" />}>
-                        Lets us watch anonymized replays of rough edges and connect usage to your account id so we can debug your issues.
-                        Uses one PostHog cookie. Off by default.
-                    </ConsentCategory>
-                    <p className="font-body font-normal text-[12px] leading-normal text-on-surface-variant m-0">
-                        Details in our{' '}
-                        <Link href="/privacy#cookies" className="text-primary underline">
-                            privacy policy
-                        </Link>
-                        .
-                    </p>
-                </div>
-            </DialogPanel>
-        </DialogScrim>
+        <DialogPanel
+            title="Cookie preferences"
+            subtitle="Choose what Solkey may use. You can change this any time via 'Cookie settings' in the footer."
+            onClose={onClose}
+            width={520}
+            footer={
+                <>
+                    <TertiaryButton onClick={() => onDecide(false)}>Essential only</TertiaryButton>
+                    <PrimaryButton onClick={() => onDecide(analytics)}>Save preferences</PrimaryButton>
+                </>
+            }>
+            <div className="flex flex-col gap-5 pb-2">
+                <ConsentCategory header={<CategoryTitle title="Essential" status="Always on" />}>
+                    Keeps you signed in and remembers this cookie choice. Solkey doesn&apos;t work without these.
+                </ConsentCategory>
+                <ConsentCategory header={<CategoryTitle title="Anonymous statistics" status="Always on · no cookies" />}>
+                    Counts pages and feature use without cookies or anything stored on your device — never linked to who you are (PostHog,
+                    hosted in the EU).
+                </ConsentCategory>
+                <ConsentCategory
+                    header={<Switch checked={analytics} onChange={onAnalyticsChange} label="Session replay & linked analytics" />}>
+                    Lets us watch anonymized replays of rough edges and connect usage to your account id so we can debug your issues. Uses
+                    one PostHog cookie. Off by default.
+                </ConsentCategory>
+                <p className="font-body font-normal text-[12px] leading-normal text-on-surface-variant m-0">
+                    Details in our{' '}
+                    <Link href="/privacy#cookies" className="text-primary underline">
+                        privacy policy
+                    </Link>
+                    .
+                </p>
+            </div>
+        </DialogPanel>
     )
 }
 

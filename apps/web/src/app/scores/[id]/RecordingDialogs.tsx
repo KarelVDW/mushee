@@ -1,8 +1,9 @@
 'use client'
 
-import { type CSSProperties, useEffect } from 'react'
+import Link from 'next/link'
+import type { CSSProperties } from 'react'
 
-import { DialogPanel, DialogScrim, Icon, PrimaryButton, TertiaryButton } from '@/components/ui'
+import { DialogPanel, Icon, type IconName, PrimaryButton, TertiaryButton } from '@/components/ui'
 import { formatMoney } from '@/lib/currency'
 import { BETA_MODE, CHEAPEST_PACK } from '@/lib/plans'
 import { usePlanCatalogue } from '@/lib/queries'
@@ -10,16 +11,19 @@ import type { RecordingLimitInfo } from '@/lib/RecordingEngine'
 import { formatRecordingTime } from '@/lib/recordingTime'
 import { useDisplayCurrency } from '@/lib/useDisplayCurrency'
 
-// Format seconds as S"s" under a minute, M:SS under an hour, then H"h".
-
-function useEscape(onClose: () => void) {
-    useEffect(() => {
-        const handleEsc = (e: KeyboardEvent) => {
-            if (e.key === 'Escape') onClose()
-        }
-        window.addEventListener('keydown', handleEsc)
-        return () => window.removeEventListener('keydown', handleEsc)
-    }, [onClose])
+/** The red-tinted icon row that opens a recording dialog's body: what is blocked, then the reassurance or next step. */
+function DialogCallout({ icon, title, body }: { icon: IconName; title: string; body: string }) {
+    return (
+        <div className="flex items-center gap-3.5 bg-surface-container-low rounded-[10px] p-4">
+            <span className="w-11 h-11 rounded-full shrink-0 bg-error-container text-on-error-container inline-flex items-center justify-center">
+                <Icon name={icon} size={20} />
+            </span>
+            <div className="flex flex-col gap-0.5">
+                <span className="font-body font-semibold text-[14px] leading-[1.3] text-on-surface">{title}</span>
+                <span className="font-body font-normal text-[12px] leading-[1.4] text-on-surface-variant">{body}</span>
+            </div>
+        </div>
+    )
 }
 
 interface RecordingLimitDialogProps {
@@ -34,59 +38,48 @@ interface RecordingLimitDialogProps {
  * the secondary action acknowledges the cap.
  */
 export function RecordingLimitDialog({ info, onUpgrade, onClose }: RecordingLimitDialogProps) {
-    useEscape(onClose)
     const currency = useDisplayCurrency()
 
     const nextPlanName = usePlanCatalogue().nextAfter(info.planId)?.name
 
     return (
-        <DialogScrim onDismiss={onClose}>
-            <DialogPanel
-                title={`You've used today's ${formatRecordingTime(info.limitSeconds ?? info.usedSeconds)} of recording.`}
-                subtitle={`Your ${info.planName} plan resets at midnight. Until then, playback, editing, and export still work — only mic capture pauses.`}
-                onClose={onClose}
-                width={480}
-                footer={
-                    <>
-                        <TertiaryButton onClick={onClose}>OK, I&apos;ll wait</TertiaryButton>
-                        {nextPlanName && (
-                            <PrimaryButton emphasis="pop" icon="arrow-right" onClick={onUpgrade}>
-                                Upgrade to {nextPlanName}
-                            </PrimaryButton>
-                        )}
-                    </>
-                }>
-                <div className="flex flex-col gap-3.5 pb-2">
-                    <div className="flex items-center gap-3.5 bg-surface-container-low rounded-[10px] p-4">
-                        <span className="w-11 h-11 rounded-full shrink-0 bg-error-container text-on-error-container inline-flex items-center justify-center">
-                            <Icon name="mic-off" size={20} />
-                        </span>
-                        <div className="flex flex-col gap-0.5">
-                            <span className="font-body font-semibold text-[14px] leading-[1.3] text-on-surface">
-                                Recording paused until tomorrow
-                            </span>
-                            <span className="font-body font-normal text-[12px] leading-[1.4] text-on-surface-variant">
-                                We stop capture the moment your daily budget runs out — no surprise charges, ever.
-                            </span>
-                        </div>
-                    </div>
+        <DialogPanel
+            title={`You've used today's ${formatRecordingTime(info.limitSeconds ?? info.usedSeconds)} of recording.`}
+            subtitle={`Your ${info.planName} plan resets at midnight. Until then, playback, editing, and export still work — only mic capture pauses.`}
+            onClose={onClose}
+            width={480}
+            footer={
+                <>
+                    <TertiaryButton onClick={onClose}>OK, I&apos;ll wait</TertiaryButton>
                     {nextPlanName && (
-                        <span className="font-body font-normal text-[13px] leading-normal text-on-surface-variant">
-                            Upgrading to <strong className="text-on-surface">{nextPlanName}</strong> lifts the cap immediately.
-                        </span>
+                        <PrimaryButton emphasis="pop" icon="arrow-right" onClick={onUpgrade}>
+                            Upgrade to {nextPlanName}
+                        </PrimaryButton>
                     )}
-                    {!BETA_MODE && (
-                        <span className="font-body font-normal text-[12px] leading-normal text-on-surface-variant">
-                            Just need to finish this one?{' '}
-                            <a href="/settings" className="text-primary underline">
-                                One-time minute packs
-                            </a>{' '}
-                            start at {formatMoney(CHEAPEST_PACK.price, currency)} and never expire.
-                        </span>
-                    )}
-                </div>
-            </DialogPanel>
-        </DialogScrim>
+                </>
+            }>
+            <div className="flex flex-col gap-3.5 pb-2">
+                <DialogCallout
+                    icon="mic-off"
+                    title="Recording paused until tomorrow"
+                    body="We stop capture the moment your daily budget runs out — no surprise charges, ever."
+                />
+                {nextPlanName && (
+                    <span className="font-body font-normal text-[13px] leading-normal text-on-surface-variant">
+                        Upgrading to <strong className="text-on-surface">{nextPlanName}</strong> lifts the cap immediately.
+                    </span>
+                )}
+                {!BETA_MODE && (
+                    <span className="font-body font-normal text-[12px] leading-normal text-on-surface-variant">
+                        Just need to finish this one?{' '}
+                        <Link href="/settings" className="text-primary underline">
+                            One-time minute packs
+                        </Link>{' '}
+                        start at {formatMoney(CHEAPEST_PACK.price, currency)} and never expire.
+                    </span>
+                )}
+            </div>
+        </DialogPanel>
     )
 }
 
@@ -177,30 +170,26 @@ interface MicModeGuideDialogProps {
  * a bare "OK".
  */
 export function MicModeGuideDialog({ onConfirm, onClose }: MicModeGuideDialogProps) {
-    useEscape(onClose)
-
     return (
-        <DialogScrim onDismiss={onClose}>
-            <DialogPanel
-                title="iPhone user"
-                subtitle="Your iPhone filters the microphone for speech — one setting fixes it."
-                onClose={onClose}
-                width={480}
-                footer={
-                    <PrimaryButton icon="mic" onClick={onConfirm}>
-                        I&apos;ve set Wide Spectrum — record
-                    </PrimaryButton>
-                }>
-                <div className="flex flex-col gap-3.5 pb-2">
-                    <WideSpectrumWalkthrough />
-                    <span className="font-body font-normal text-[13px] leading-[1.4] text-on-surface-variant">
-                        Without <strong className="text-on-surface">Wide Spectrum</strong>, iOS removes whistling and instrument notes
-                        before Solkey can hear them. Your microphone is already on, so Mic Mode is waiting in Control Center — set it now,
-                        come back, and your iPhone remembers the choice for this browser.
-                    </span>
-                </div>
-            </DialogPanel>
-        </DialogScrim>
+        <DialogPanel
+            title="iPhone user"
+            subtitle="Your iPhone filters the microphone for speech — one setting fixes it."
+            onClose={onClose}
+            width={480}
+            footer={
+                <PrimaryButton icon="mic" onClick={onConfirm}>
+                    I&apos;ve set Wide Spectrum — record
+                </PrimaryButton>
+            }>
+            <div className="flex flex-col gap-3.5 pb-2">
+                <WideSpectrumWalkthrough />
+                <span className="font-body font-normal text-[13px] leading-[1.4] text-on-surface-variant">
+                    Without <strong className="text-on-surface">Wide Spectrum</strong>, iOS removes whistling and instrument notes before
+                    Solkey can hear them. Your microphone is already on, so Mic Mode is waiting in Control Center — set it now, come back,
+                    and your iPhone remembers the choice for this browser.
+                </span>
+            </div>
+        </DialogPanel>
     )
 }
 
@@ -213,32 +202,20 @@ interface ConcurrentRecordingDialogProps {
  * one in flight — one recording at a time is a hard rule.
  */
 export function ConcurrentRecordingDialog({ onClose }: ConcurrentRecordingDialogProps) {
-    useEscape(onClose)
-
     return (
-        <DialogScrim onDismiss={onClose}>
-            <DialogPanel
-                title="One recording at a time."
-                subtitle="Your account already has a recording running — maybe in another tab, or on another device."
-                onClose={onClose}
-                width={480}
-                footer={<PrimaryButton onClick={onClose}>Got it</PrimaryButton>}>
-                <div className="flex flex-col gap-3.5 pb-2">
-                    <div className="flex items-center gap-3.5 bg-surface-container-low rounded-[10px] p-4">
-                        <span className="w-11 h-11 rounded-full shrink-0 bg-error-container text-on-error-container inline-flex items-center justify-center">
-                            <Icon name="mic" size={20} />
-                        </span>
-                        <div className="flex flex-col gap-0.5">
-                            <span className="font-body font-semibold text-[14px] leading-[1.3] text-on-surface">
-                                The mic is busy somewhere else
-                            </span>
-                            <span className="font-body font-normal text-[12px] leading-[1.4] text-on-surface-variant">
-                                Finish or stop that session first, then hit record here. Nothing in this score was changed.
-                            </span>
-                        </div>
-                    </div>
-                </div>
-            </DialogPanel>
-        </DialogScrim>
+        <DialogPanel
+            title="One recording at a time."
+            subtitle="Your account already has a recording running — maybe in another tab, or on another device."
+            onClose={onClose}
+            width={480}
+            footer={<PrimaryButton onClick={onClose}>Got it</PrimaryButton>}>
+            <div className="flex flex-col gap-3.5 pb-2">
+                <DialogCallout
+                    icon="mic"
+                    title="The mic is busy somewhere else"
+                    body="Finish or stop that session first, then hit record here. Nothing in this score was changed."
+                />
+            </div>
+        </DialogPanel>
     )
 }

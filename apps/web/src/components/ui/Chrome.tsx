@@ -1,14 +1,18 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname, useRouter } from 'next/navigation'
-import { type KeyboardEvent, type ReactNode, useEffect, useId, useRef } from 'react'
+import { usePathname } from 'next/navigation'
+import type { ReactNode } from 'react'
 
 import { requestConsentSettings } from '@/lib/consent'
 
-import { Avatar, ModalTitle, PageTitle, SubHeadline, Wordmark } from './Brand'
+import { Avatar, PageTitle, SubHeadline, Wordmark } from './Brand'
 import { PrimaryButton } from './Buttons'
-import { Icon } from './Icon'
+
+const NAV_ITEMS = [
+    { label: 'Library', href: '/scores' },
+    { label: 'Settings', href: '/settings' },
+] as const
 
 interface TopNavProps {
     user?: string
@@ -17,26 +21,22 @@ interface TopNavProps {
 
 export function TopNav({ user, onCreate }: TopNavProps) {
     const pathname = usePathname()
-    const router = useRouter()
-    const items: { label: string; href: string; match: (p: string) => boolean }[] = [
-        { label: 'Library', href: '/scores', match: (p) => p === '/scores' || p === '/' },
-        { label: 'Settings', href: '/settings', match: (p) => p.startsWith('/settings') },
-    ]
 
     return (
-        <nav className="sticky top-0 z-50 bg-surface-container-low/85 backdrop-blur-xl tonal-layer-glow">
+        <nav className="sticky top-0 z-(--z-sticky) bg-surface-container-low/85 backdrop-blur-xl tonal-layer-glow">
             <div className="max-w-384 mx-auto px-4 sm:px-8 py-3.5 sm:py-4.5 flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3 sm:gap-6.5 min-w-0">
                     <Link href="/scores" className="no-underline max-[24rem]:hidden">
                         <Wordmark size={28} />
                     </Link>
                     <div className="flex items-center gap-4 sm:gap-5.5 sm:ml-4">
-                        {items.map((n) => {
-                            const active = n.match(pathname ?? '')
+                        {NAV_ITEMS.map((n) => {
+                            const active = pathname.startsWith(n.href)
                             return (
                                 <Link
                                     key={n.label}
                                     href={n.href}
+                                    aria-current={active ? 'page' : undefined}
                                     className={[
                                         'no-underline cursor-pointer font-body font-medium text-[14px] leading-none pb-1',
                                         'transition-colors duration-150 ease-solkey',
@@ -64,39 +64,29 @@ export function TopNav({ user, onCreate }: TopNavProps) {
                             </span>
                         </>
                     )}
-                    <button
-                        onClick={() => router.push('/settings')}
+                    <Link
+                        href="/settings"
                         title={user}
                         aria-label="Account settings"
-                        className="inline-flex border-0 bg-transparent p-0 rounded-full cursor-pointer">
+                        className="inline-flex no-underline rounded-full focus-ring">
                         <Avatar
                             name={user ?? 'You'}
                             size="sm"
                             tone="neutral"
                             className="hover:bg-surface-container-highest transition-colors duration-150 ease-solkey"
                         />
-                    </button>
+                    </Link>
                 </div>
             </div>
         </nav>
     )
 }
 
-export function PageHeader({
-    title,
-    subtitle,
-    italic = false,
-    right,
-}: {
-    title: ReactNode
-    subtitle?: ReactNode
-    italic?: boolean
-    right?: ReactNode
-}) {
+export function PageHeader({ title, subtitle, right }: { title: ReactNode; subtitle?: ReactNode; right?: ReactNode }) {
     return (
         <div className="flex flex-col md:flex-row md:justify-between md:items-end gap-4.5 pb-4.5">
             <div className="flex flex-col gap-2">
-                <PageTitle italic={italic}>{title}</PageTitle>
+                <PageTitle>{title}</PageTitle>
                 {subtitle && <SubHeadline>{subtitle}</SubHeadline>}
             </div>
             {right}
@@ -136,104 +126,14 @@ export function Footer({ width = 'app' }: FooterProps) {
                         Cookie settings
                     </button>
                 </nav>
-                <span className="font-body font-normal text-[12px] leading-none text-on-surface-variant whitespace-nowrap">
-                    © 2026 Solkey.
+                {/* The year is computed at render: prerendered pages show the build year until the next
+                    deploy, and suppressHydrationWarning covers a server/client mismatch across New Year. */}
+                <span
+                    suppressHydrationWarning
+                    className="font-body font-normal text-[12px] leading-none text-on-surface-variant whitespace-nowrap">
+                    © {new Date().getFullYear()} Solkey.
                 </span>
             </div>
         </footer>
-    )
-}
-
-interface DialogScrimProps {
-    children: ReactNode
-    onDismiss?: () => void
-}
-
-const FOCUSABLE = 'button:not([disabled]), [href], input:not([disabled]), select, textarea, [tabindex]:not([tabindex="-1"])'
-
-export function DialogScrim({ children, onDismiss }: DialogScrimProps) {
-    const panelRef = useRef<HTMLDivElement>(null)
-
-    // Move focus into the dialog on open and hand it back to the trigger on close, so
-    // keyboard users never end up "behind" the scrim.
-    useEffect(() => {
-        const previouslyFocused = document.activeElement instanceof HTMLElement ? document.activeElement : null
-        panelRef.current?.focus()
-        return () => previouslyFocused?.focus()
-    }, [])
-
-    const handleKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
-        if (e.key === 'Escape') {
-            onDismiss?.()
-            return
-        }
-        if (e.key !== 'Tab') return
-        // Cycle Tab within the dialog instead of letting it escape into the page behind.
-        const focusables = panelRef.current?.querySelectorAll<HTMLElement>(FOCUSABLE)
-        if (!focusables?.length) return
-        const first = focusables[0]
-        const last = focusables[focusables.length - 1]
-        if (e.shiftKey && (document.activeElement === first || document.activeElement === panelRef.current)) {
-            e.preventDefault()
-            last.focus()
-        } else if (!e.shiftKey && document.activeElement === last) {
-            e.preventDefault()
-            first.focus()
-        }
-    }
-
-    return (
-        <div onClick={onDismiss} className="fixed inset-0 z-100 bg-on-surface/40 backdrop-blur-xs flex items-center justify-center p-6">
-            <div ref={panelRef} tabIndex={-1} onKeyDown={handleKeyDown} onClick={(e) => e.stopPropagation()} className="outline-none">
-                {children}
-            </div>
-        </div>
-    )
-}
-
-interface DialogPanelProps {
-    title: ReactNode
-    subtitle?: ReactNode
-    children?: ReactNode
-    footer?: ReactNode
-    onClose?: () => void
-    /** Pixel width — kept as inline style because it's a runtime prop value. */
-    width?: number
-}
-
-export function DialogPanel({ title, subtitle, children, footer, onClose, width = 560 }: DialogPanelProps) {
-    const titleId = useId()
-    return (
-        <div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby={titleId}
-            className="glass-panel rounded-lg editorial-shadow max-w-[90vw] max-h-[90dvh] flex flex-col"
-            style={{ width }}>
-            <header className="px-7 pt-6 pb-4 flex items-start justify-between">
-                <div className="flex flex-col gap-1.5">
-                    <ModalTitle id={titleId}>{title}</ModalTitle>
-                    {subtitle && (
-                        <span className="font-body font-normal text-[13px] leading-[1.4] text-on-surface-variant">{subtitle}</span>
-                    )}
-                </div>
-                {onClose && (
-                    <button
-                        onClick={onClose}
-                        aria-label="Close"
-                        className={[
-                            'bg-transparent border-0 text-on-surface-variant cursor-pointer p-1 rounded-full',
-                            'hover:text-on-surface transition-colors duration-150 ease-solkey',
-                            'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
-                        ].join(' ')}>
-                        <Icon name="x" size={20} />
-                    </button>
-                )}
-            </header>
-            {/* The body scrolls when the content outgrows the panel (tall dialogs on phones) so the
-                header and footer stay put; -my-1/py-1 keeps focus rings at its edges unclipped. */}
-            <div className="px-7 -my-1 py-1 flex-1 min-h-0 flex flex-col overflow-y-auto overscroll-contain">{children}</div>
-            {footer && <footer className="px-7 py-5 flex justify-end items-center gap-3">{footer}</footer>}
-        </div>
     )
 }

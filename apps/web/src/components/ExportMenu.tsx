@@ -7,10 +7,9 @@ import { MusicXmlExporter } from '@mushee/notation/model/io/MusicXmlExporter'
 import { useCallback, useState } from 'react'
 import { flushSync } from 'react-dom'
 
-import { ChipToggle, Eyebrow, Icon, showToast } from '@/components/ui'
+import { HeaderMenu, showToast } from '@/components/ui'
 import { downloadBlob } from '@/lib/FileDownload'
 import { PdfExporter } from '@/lib/PdfExporter'
-import { useDismissablePopover } from '@/lib/useDismissablePopover'
 
 type ExportFormat = 'musicxml' | 'pdf' | 'midi'
 
@@ -30,11 +29,11 @@ interface ExportMenuProps {
 }
 
 export function ExportMenu({ score, title, getSvg, compact = false }: ExportMenuProps) {
-    const { open, setOpen, anchorRef, popRef } = useDismissablePopover()
+    // Held here, not in the panel: an export keeps running (and blocks a second one) after Escape closes the menu.
     const [busy, setBusy] = useState<ExportFormat | null>(null)
 
     const handleExport = useCallback(
-        async (format: ExportFormat) => {
+        async (format: ExportFormat, onExported: () => void) => {
             if (busy) return
             const basename = title.replace(/[/\\:*?"<>|]/g, '').trim() || 'score'
             setBusy(format)
@@ -57,7 +56,7 @@ export function ExportMenu({ score, title, getSvg, compact = false }: ExportMenu
                         if (displayWidth !== SCORE_WIDTH) flushSync(() => score.setLayoutWidth(displayWidth))
                     }
                 }
-                setOpen(false)
+                onExported()
             } catch (err) {
                 console.error(`Export to ${format} failed`, err)
                 showToast(`The ${FORMATS.find((f) => f.format === format)?.label ?? format} export failed. Please try again.`)
@@ -69,45 +68,29 @@ export function ExportMenu({ score, title, getSvg, compact = false }: ExportMenu
     )
 
     return (
-        <div ref={anchorRef} className="relative shrink-0">
-            <ChipToggle active={open} onClick={() => setOpen((o) => !o)} ariaLabel="Export score">
-                <span className="inline-flex items-center gap-1.5">
-                    <Icon name="download" size={14} />
-                    {!compact && 'Export'}
-                </span>
-            </ChipToggle>
-            {open && (
-                <div
-                    ref={popRef}
-                    role="dialog"
-                    aria-label="Export score"
-                    className="glass-panel tonal-layer-glow absolute z-50 flex flex-col gap-2 p-4 rounded-lg right-0 top-[calc(100%+0.5rem)]"
-                    onMouseDown={(e) => e.stopPropagation()}>
-                    <Eyebrow>Export as</Eyebrow>
-                    <div role="group" aria-label="Export format" className="flex flex-col gap-1.5">
-                        {FORMATS.map(({ format, label, description }) => (
-                            <button
-                                key={format}
-                                type="button"
-                                disabled={busy !== null}
-                                onClick={() => void handleExport(format)}
-                                className={[
-                                    'flex flex-col items-start gap-1 w-56 px-3 py-2.5 rounded-md border-0 text-left',
-                                    'cursor-pointer disabled:cursor-not-allowed disabled:opacity-40',
-                                    'bg-surface-container-low hover:bg-surface-container',
-                                    'transition-colors duration-150 ease-solkey',
-                                ].join(' ')}>
-                                <span className="font-label font-semibold text-[13px] leading-none text-on-surface">
-                                    {busy === format ? `Exporting ${label}…` : label}
-                                </span>
-                                <span className="font-body font-normal text-[11px] leading-none text-on-surface-variant">
-                                    {description}
-                                </span>
-                            </button>
-                        ))}
-                    </div>
+        <HeaderMenu icon="download" label="Export" compact={compact} ariaLabel="Export score" title="Export as" className="gap-2">
+            {({ close }) => (
+                <div role="group" aria-label="Export format" className="flex flex-col gap-1.5">
+                    {FORMATS.map(({ format, label, description }) => (
+                        <button
+                            key={format}
+                            type="button"
+                            disabled={busy !== null}
+                            onClick={() => void handleExport(format, close)}
+                            className={[
+                                'flex flex-col items-start gap-1 w-56 px-3 py-2.5 rounded-md border-0 text-left',
+                                'cursor-pointer disabled:cursor-not-allowed disabled:opacity-40',
+                                'bg-surface-container-low hover:bg-surface-container',
+                                'transition-colors duration-150 ease-solkey',
+                            ].join(' ')}>
+                            <span className="font-label font-semibold text-[13px] leading-none text-on-surface">
+                                {busy === format ? `Exporting ${label}…` : label}
+                            </span>
+                            <span className="font-body font-normal text-[11px] leading-none text-on-surface-variant">{description}</span>
+                        </button>
+                    ))}
                 </div>
             )}
-        </div>
+        </HeaderMenu>
     )
 }

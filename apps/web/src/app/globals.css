@@ -89,6 +89,17 @@
     --font-mono: var(--font-geist-mono), 'JetBrains Mono', ui-monospace, monospace;
 }
 
+/* Stacking layers, lowest first (design/README.md lists them too). Toasts sit above the
+   dialog scrim: an error raised from inside a dialog stays visible, and its × lands on the
+   toast instead of the backdrop (which would dismiss the dialog). */
+:root {
+    --z-sticky: 50;
+    --z-popover: 50;
+    --z-banner: 60;
+    --z-dialog: 100;
+    --z-toast: 110;
+}
+
 body {
     background: var(--color-background);
     color: var(--color-on-background);

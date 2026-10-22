@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 
-import { BusyNotice, DialogPanel, DialogScrim, PrimaryButton, TertiaryButton } from '@/components/ui'
+import { BusyNotice, DialogPanel, PrimaryButton, TertiaryButton } from '@/components/ui'
 import { track } from '@/lib/analytics'
 import { formatMoney } from '@/lib/currency'
 import { CREDIT_PACKS, type CreditPack, SONGWRITER, SONGWRITER_DAILY_MINUTES } from '@/lib/plans'
@@ -41,73 +41,66 @@ export function PacksDialog({ onClose, onSeePlans }: PacksDialogProps) {
     }
 
     return (
-        <DialogScrim onDismiss={locked ? undefined : onClose}>
-            <DialogPanel
-                title={phase === 'redirecting' ? 'Redirecting to Polar…' : 'One-time minute packs'}
-                subtitle={
-                    phase === 'choose'
-                        ? 'Extra recording minutes without a subscription. They never expire and are used once your daily minutes run out.'
-                        : undefined
-                }
-                onClose={locked ? undefined : onClose}
-                width={640}
-                footer={
-                    phase === 'choose' ? (
-                        <>
-                            {onSeePlans && <TertiaryButton onClick={onSeePlans}>See subscription plans</TertiaryButton>}
-                            <PrimaryButton icon="external-link" onClick={buy}>
-                                {`Buy ${pack.name} · ${formatMoney(pack.price, currency)}`}
-                            </PrimaryButton>
-                        </>
-                    ) : null
-                }>
-                {phase === 'choose' && (
-                    <div className="flex flex-col gap-4 pb-2">
-                        <div className="bg-surface-container-low text-on-surface-variant rounded-md px-3.5 py-3 font-body font-normal text-[13px] leading-normal">
-                            Recording regularly? <strong>{SONGWRITER.name}</strong> gives you {SONGWRITER_DAILY_MINUTES} minutes{' '}
-                            <em>every day</em> for {formatMoney(SONGWRITER.priceMonthly, currency)}/month — packs are for the
-                            once-in-a-while.
-                        </div>
-
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3" role="radiogroup" aria-label="Minute pack">
-                            {CREDIT_PACKS.map((p) => {
-                                const active = selected === p.id
-                                return (
-                                    <button
-                                        key={p.id}
-                                        type="button"
-                                        role="radio"
-                                        aria-checked={active}
-                                        onClick={() => setSelected(p.id)}
-                                        className={[
-                                            'text-left border-0 rounded-lg p-4 cursor-pointer',
-                                            'flex flex-col gap-2',
-                                            'focus-ring',
-                                            active
-                                                ? 'bg-primary-soft text-on-primary-soft'
-                                                : 'bg-surface-container-lowest text-on-surface tonal-layer-glow',
-                                        ].join(' ')}>
-                                        <span className="font-body font-semibold text-[14px] leading-[1.2]">{p.name}</span>
-                                        <span className="font-mono font-semibold text-[22px] leading-none tracking-[-0.01em]">
-                                            {formatMoney(p.price, currency)}
-                                        </span>
-                                        <span className="font-body font-normal text-[13px] leading-[1.4]">
-                                            {p.minutes} min of recording
-                                        </span>
-                                        <span className="font-body font-normal text-[12px] leading-[1.4] opacity-80">{p.blurb}</span>
-                                    </button>
-                                )
-                            })}
-                        </div>
-
-                        <p className="font-body font-normal text-[12px] leading-normal text-on-surface-variant m-0">
-                            {pack.compare(currency)}
-                        </p>
+        <DialogPanel
+            title={phase === 'redirecting' ? 'Redirecting to Polar…' : 'One-time minute packs'}
+            subtitle={
+                phase === 'choose'
+                    ? 'Extra recording minutes without a subscription. They never expire and are used once your daily minutes run out.'
+                    : undefined
+            }
+            onClose={locked ? undefined : onClose}
+            width={640}
+            footer={
+                phase === 'choose' ? (
+                    <>
+                        {onSeePlans && <TertiaryButton onClick={onSeePlans}>See subscription plans</TertiaryButton>}
+                        <PrimaryButton icon="external-link" onClick={buy}>
+                            {`Buy ${pack.name} · ${formatMoney(pack.price, currency)}`}
+                        </PrimaryButton>
+                    </>
+                ) : null
+            }>
+            {phase === 'choose' && (
+                <div className="flex flex-col gap-4 pb-2">
+                    <div className="bg-surface-container-low text-on-surface-variant rounded-md px-3.5 py-3 font-body font-normal text-[13px] leading-normal">
+                        Recording regularly? <strong>{SONGWRITER.name}</strong> gives you {SONGWRITER_DAILY_MINUTES} minutes{' '}
+                        <em>every day</em> for {formatMoney(SONGWRITER.priceMonthly, currency)}/month — packs are for the once-in-a-while.
                     </div>
-                )}
 
-                {phase === 'redirecting' && <BusyNotice>Sending you to Polar&apos;s secure checkout…</BusyNotice>}
-            </DialogPanel>
-        </DialogScrim>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3" role="radiogroup" aria-label="Minute pack">
+                        {CREDIT_PACKS.map((p) => {
+                            const active = selected === p.id
+                            return (
+                                <button
+                                    key={p.id}
+                                    type="button"
+                                    role="radio"
+                                    aria-checked={active}
+                                    onClick={() => setSelected(p.id)}
+                                    className={[
+                                        'text-left border-0 rounded-lg p-4 cursor-pointer',
+                                        'flex flex-col gap-2',
+                                        'focus-ring',
+                                        active
+                                            ? 'bg-primary-soft text-on-primary-soft'
+                                            : 'bg-surface-container-lowest text-on-surface tonal-layer-glow',
+                                    ].join(' ')}>
+                                    <span className="font-body font-semibold text-[14px] leading-[1.2]">{p.name}</span>
+                                    <span className="font-mono font-semibold text-[22px] leading-none tracking-[-0.01em]">
+                                        {formatMoney(p.price, currency)}
+                                    </span>
+                                    <span className="font-body font-normal text-[13px] leading-[1.4]">{p.minutes} min of recording</span>
+                                    <span className="font-body font-normal text-[12px] leading-[1.4] opacity-80">{p.blurb}</span>
+                                </button>
+                            )
+                        })}
+                    </div>
+
+                    <p className="font-body font-normal text-[12px] leading-normal text-on-surface-variant m-0">{pack.compare(currency)}</p>
+                </div>
+            )}
+
+            {phase === 'redirecting' && <BusyNotice>Sending you to Polar&apos;s secure checkout…</BusyNotice>}
+        </DialogPanel>
     )
 }

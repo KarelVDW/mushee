@@ -2,7 +2,7 @@
 
 import { Fragment, useEffect, useState, useSyncExternalStore } from 'react'
 
-import { DialogPanel, DialogScrim, Eyebrow, IconButton, PrimaryButton, TertiaryButton } from '@/components/ui'
+import { DialogPanel, Eyebrow, IconButton, PrimaryButton, TertiaryButton } from '@/components/ui'
 import { type Keybindings, Shortcut } from '@/lib/Keybindings'
 
 import { EDITOR_COMMAND_GROUPS, type EditorCommand } from './commands'
@@ -13,7 +13,6 @@ interface KeyboardLayoutNavigator {
 }
 
 interface KeyboardShortcutsDialogProps {
-    open: boolean
     keybindings: Keybindings<EditorCommand>
     onClose: () => void
 }
@@ -22,8 +21,9 @@ interface KeyboardShortcutsDialogProps {
  * Lists every editor command with its shortcut and lets the user rebind them: click a
  * shortcut, press the new keys. Changes persist through the {@link Keybindings} store and
  * apply immediately. Keycap labels follow the user's own keyboard layout (see Keybindings).
+ * Mounted only while open, so each opening starts with no recording and no notice.
  */
-export function KeyboardShortcutsDialog({ open, keybindings, onClose }: KeyboardShortcutsDialogProps) {
+export function KeyboardShortcutsDialog({ keybindings, onClose }: KeyboardShortcutsDialogProps) {
     useSyncExternalStore(keybindings.subscribe, keybindings.getSnapshot, keybindings.getSnapshot)
     const [layout, setLayout] = useState<ReadonlyMap<string, string> | null>(null)
     const [editingId, setEditingId] = useState<string | null>(null)
@@ -32,15 +32,13 @@ export function KeyboardShortcutsDialog({ open, keybindings, onClose }: Keyboard
     // Fetch the browser's live code → character map on every open (the user may have switched
     // system layouts); where the API is missing, labels fall back inside Shortcut.displayParts.
     useEffect(() => {
-        if (!open) return
-        setEditingId(null)
-        setNotice(null)
         const { keyboard } = navigator as Navigator & KeyboardLayoutNavigator
         keyboard?.getLayoutMap?.().then(setLayout, () => undefined)
-    }, [open])
+    }, [])
 
-    // While recording, capture every keydown before the rest of the app sees it: Escape
-    // cancels, a bare modifier keeps waiting, anything else becomes the new binding.
+    // While recording, capture every keydown before the rest of the app sees it — DialogPanel's
+    // own Escape included: Escape cancels the recording (the dialog stays open), a bare modifier
+    // keeps waiting, anything else becomes the new binding.
     useEffect(() => {
         if (!editingId) return
         const record = (e: KeyboardEvent) => {
@@ -64,67 +62,53 @@ export function KeyboardShortcutsDialog({ open, keybindings, onClose }: Keyboard
         return () => window.removeEventListener('keydown', record, { capture: true })
     }, [editingId, keybindings])
 
-    // Escape closes the dialog — unless a recording is in progress, which captures it above.
-    useEffect(() => {
-        if (!open) return
-        const handleEsc = (e: KeyboardEvent) => {
-            if (e.key === 'Escape') onClose()
-        }
-        window.addEventListener('keydown', handleEsc)
-        return () => window.removeEventListener('keydown', handleEsc)
-    }, [open, onClose])
-
-    if (!open) return null
-
     return (
-        <DialogScrim onDismiss={onClose}>
-            <DialogPanel
-                title="Keyboard shortcuts"
-                subtitle="Click a shortcut to record a new one. Keys follow your keyboard layout."
-                onClose={onClose}
-                width={620}
-                footer={
-                    <>
-                        {notice && (
-                            <span className="mr-auto text-left font-body font-normal text-[12px] leading-[1.4] text-on-surface-variant">
-                                {notice}
-                            </span>
-                        )}
-                        {keybindings.hasCustomizations && (
-                            <TertiaryButton
-                                onClick={() => {
-                                    keybindings.resetAll()
-                                    setNotice(null)
-                                }}>
-                                Restore defaults
-                            </TertiaryButton>
-                        )}
-                        <PrimaryButton onClick={onClose}>Done</PrimaryButton>
-                    </>
-                }>
-                <div className="overflow-y-auto min-h-0 flex flex-col gap-5 pb-2">
-                    {EDITOR_COMMAND_GROUPS.map((group) => (
-                        <section key={group} className="flex flex-col">
-                            <div className="px-2.5 pb-1.5">
-                                <Eyebrow>{group}</Eyebrow>
-                            </div>
-                            {keybindings.commands
-                                .filter((command) => command.group === group)
-                                .map((command) => (
-                                    <ShortcutRow
-                                        key={command.id}
-                                        command={command}
-                                        keybindings={keybindings}
-                                        layout={layout}
-                                        editing={editingId === command.id}
-                                        onEditToggle={() => setEditingId((current) => (current === command.id ? null : command.id))}
-                                    />
-                                ))}
-                        </section>
-                    ))}
-                </div>
-            </DialogPanel>
-        </DialogScrim>
+        <DialogPanel
+            title="Keyboard shortcuts"
+            subtitle="Click a shortcut to record a new one. Keys follow your keyboard layout."
+            onClose={onClose}
+            width={620}
+            footer={
+                <>
+                    {notice && (
+                        <span className="mr-auto text-left font-body font-normal text-[12px] leading-[1.4] text-on-surface-variant">
+                            {notice}
+                        </span>
+                    )}
+                    {keybindings.hasCustomizations && (
+                        <TertiaryButton
+                            onClick={() => {
+                                keybindings.resetAll()
+                                setNotice(null)
+                            }}>
+                            Restore defaults
+                        </TertiaryButton>
+                    )}
+                    <PrimaryButton onClick={onClose}>Done</PrimaryButton>
+                </>
+            }>
+            <div className="overflow-y-auto min-h-0 flex flex-col gap-5 pb-2">
+                {EDITOR_COMMAND_GROUPS.map((group) => (
+                    <section key={group} className="flex flex-col">
+                        <div className="px-2.5 pb-1.5">
+                            <Eyebrow>{group}</Eyebrow>
+                        </div>
+                        {keybindings.commands
+                            .filter((command) => command.group === group)
+                            .map((command) => (
+                                <ShortcutRow
+                                    key={command.id}
+                                    command={command}
+                                    keybindings={keybindings}
+                                    layout={layout}
+                                    editing={editingId === command.id}
+                                    onEditToggle={() => setEditingId((current) => (current === command.id ? null : command.id))}
+                                />
+                            ))}
+                    </section>
+                ))}
+            </div>
+        </DialogPanel>
     )
 }
 

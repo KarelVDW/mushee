@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 
-import { DialogPanel, DialogScrim, PrimaryButton, TertiaryButton } from '@/components/ui'
+import { DialogPanel, PrimaryButton, TertiaryButton } from '@/components/ui'
 import { signOut } from '@/lib/auth-client'
 import { useReactivateAccount } from '@/lib/queries'
 
@@ -34,29 +34,27 @@ export function ReactivateAccountDialog({ purgeAfter, onReactivated, onDecline }
     }
 
     return (
-        <DialogScrim>
-            <DialogPanel
-                title="Your account is set to be deleted."
-                subtitle={`Everything will be permanently deleted on ${purgeDate}.`}
-                width={520}
-                footer={
-                    <>
-                        <TertiaryButton danger onClick={() => void decline()}>
-                            {declining ? 'Signing out…' : 'Continue deletion'}
-                        </TertiaryButton>
-                        <PrimaryButton
-                            emphasis="pop"
-                            disabled={declining || reactivation.isPending}
-                            onClick={() => reactivation.mutate(undefined, { onSuccess: onReactivated })}>
-                            {reactivation.isPending ? 'Reactivating…' : 'Reactivate my account'}
-                        </PrimaryButton>
-                    </>
-                }>
-                <p className="font-body font-normal text-[14px] leading-normal text-on-surface-variant m-0 pb-4">
-                    You asked us to delete this account, and nothing is gone yet. Reactivate now and your scores, recordings, and settings
-                    will be exactly where you left them.
-                </p>
-            </DialogPanel>
-        </DialogScrim>
+        <DialogPanel
+            title="Your account is set to be deleted."
+            subtitle={`Everything will be permanently deleted on ${purgeDate}.`}
+            width={520}
+            footer={
+                <>
+                    <TertiaryButton danger onClick={() => void decline()}>
+                        {declining ? 'Signing out…' : 'Continue deletion'}
+                    </TertiaryButton>
+                    <PrimaryButton
+                        emphasis="pop"
+                        disabled={declining || reactivation.isPending}
+                        onClick={() => reactivation.mutate(undefined, { onSuccess: onReactivated })}>
+                        {reactivation.isPending ? 'Reactivating…' : 'Reactivate my account'}
+                    </PrimaryButton>
+                </>
+            }>
+            <p className="font-body font-normal text-[14px] leading-normal text-on-surface-variant m-0 pb-4">
+                You asked us to delete this account, and nothing is gone yet. Reactivate now and your scores, recordings, and settings will
+                be exactly where you left them.
+            </p>
+        </DialogPanel>
     )
 }

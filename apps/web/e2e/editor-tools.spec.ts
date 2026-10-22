@@ -184,8 +184,42 @@ test('popovers and the export menu dismiss with Escape without touching the scor
     await expect(page.getByRole('dialog', { name: 'Export score' })).toBeVisible()
     await page.keyboard.press('Escape')
     await expect(page.getByRole('dialog', { name: 'Export score' })).toHaveCount(0)
+    // Focus goes back to the chip that opened the menu.
+    await expect(page.getByRole('button', { name: 'Export score' })).toBeFocused()
 
     expect(apiMock.patches.length).toBe(before)
+})
+
+test('keys pressed inside the export menu stay out of the score', async ({ page, apiMock }) => {
+    const before = apiMock.patches.length
+    const restToggle = page.getByRole('button', { name: 'Rest', exact: true })
+
+    await page.getByRole('button', { name: 'Export score' }).click()
+    const menu = page.getByRole('dialog', { name: 'Export score' })
+    await expect(menu.getByRole('button', { name: 'MusicXML' })).toBeFocused()
+
+    // Backspace would clear the selected note's pitch if it reached the editor.
+    await page.keyboard.press('Backspace')
+    await expect(menu).toBeVisible()
+    await expect(restToggle).toHaveAttribute('aria-pressed', 'false')
+    expect(apiMock.patches.length).toBe(before)
+})
+
+test('an open popover keeps editor shortcuts from firing behind it', async ({ page, apiMock }) => {
+    const before = apiMock.patches.length
+    const restToggle = page.getByRole('button', { name: 'Rest', exact: true })
+
+    await page.getByRole('button', { name: /^Clef:/ }).click()
+    await expect(page.getByRole('dialog', { name: 'Select clef' })).toBeVisible()
+    await page.keyboard.press('r')
+    await expect(restToggle).toHaveAttribute('aria-pressed', 'false')
+    expect(apiMock.patches.length).toBe(before)
+
+    // Once the popover is gone the same key reaches the score again.
+    await page.keyboard.press('Escape')
+    await expect(page.getByRole('dialog', { name: 'Select clef' })).toHaveCount(0)
+    await page.keyboard.press('r')
+    await expect(restToggle).toHaveAttribute('aria-pressed', 'true')
 })
 
 test('changing the instrument through the dialog updates the header chip', async ({ page }) => {

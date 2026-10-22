@@ -1,5 +1,11 @@
 'use client'
 
+/*
+ * The score editor route. Where editor files live: components/editor/ holds the page-agnostic
+ * popovers; this folder holds the page plus its page-wired views, hooks and controllers; and
+ * components/ holds what two or more routes use (ExportMenu also serves the share page).
+ */
+
 import {
     type ClefClickEvent,
     type KeySignatureClickEvent,
@@ -30,6 +36,7 @@ import { SelectionPopover } from '@/components/editor/SelectionPopover'
 import { TempoPopover } from '@/components/editor/TempoPopover'
 import { TimeSignaturePopover } from '@/components/editor/TimeSignaturePopover'
 import { TransposePopover } from '@/components/editor/TransposePopover'
+import { ExportMenu } from '@/components/ExportMenu'
 import { ChipToggle, ErrorScreen, Icon, Wordmark } from '@/components/ui'
 import { ApiError, NetworkError } from '@/lib/api'
 import { useSaveKeyboardShortcuts, useScoreDocument, useSettings } from '@/lib/queries'
@@ -53,7 +60,6 @@ import {
 } from './actions'
 import { ChangeInstrumentDialog } from './ChangeInstrumentDialog'
 import { COMPACT_POPOVER_SHEET, MobileEditorActions, NoteToolDock, TransportControls } from './EditorControls'
-import { ExportMenu } from './ExportMenu'
 import { KeyboardShortcutsDialog } from './KeyboardShortcutsDialog'
 import { ConcurrentRecordingDialog, MicModeGuideDialog, RecordingLimitDialog } from './RecordingDialogs'
 import { RecordingsMenu } from './RecordingsMenu'
@@ -617,14 +623,15 @@ export default function ScoreEditorPage() {
                 />
             </div>
 
-            <ChangeInstrumentDialog
-                open={instrumentDialogOpen}
-                current={score.instrument}
-                onCancel={() => setInstrumentDialogOpen(false)}
-                onConfirm={handleInstrumentChange}
-            />
+            {instrumentDialogOpen && (
+                <ChangeInstrumentDialog
+                    current={score.instrument}
+                    onCancel={() => setInstrumentDialogOpen(false)}
+                    onConfirm={handleInstrumentChange}
+                />
+            )}
 
-            <KeyboardShortcutsDialog open={shortcutsOpen} keybindings={manipulator.keybindings} onClose={() => setShortcutsOpen(false)} />
+            {shortcutsOpen && <KeyboardShortcutsDialog keybindings={manipulator.keybindings} onClose={() => setShortcutsOpen(false)} />}
 
             {recordingHalt?.kind === 'limit' && (
                 <RecordingLimitDialog
@@ -664,7 +671,10 @@ function AttributePopoverAnchor({ x, y, children }: { x: number; y: number; chil
         setLeft(Math.min(x, Math.max(POPOVER_EDGE_MARGIN, parent.clientWidth - panel.offsetWidth - POPOVER_EDGE_MARGIN)))
     })
     return (
-        <div ref={ref} className="absolute z-50" style={{ left: left ?? x, top: y, visibility: left === null ? 'hidden' : undefined }}>
+        <div
+            ref={ref}
+            className="absolute z-(--z-popover)"
+            style={{ left: left ?? x, top: y, visibility: left === null ? 'hidden' : undefined }}>
             {children}
         </div>
     )

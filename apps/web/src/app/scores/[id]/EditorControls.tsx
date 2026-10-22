@@ -132,9 +132,7 @@ export function TransportControls({
                 disabled={isRecording}>
                 <Icon name={isPlaying ? 'pause' : 'play'} size={large ? 20 : 18} />
             </TransportBtn>
-            <TransportBtn size={large ? 54 : 40} tone="record" active={isRecording} onClick={onRecordToggle} ariaLabel="Record">
-                <Icon name="circle" size={16} />
-            </TransportBtn>
+            <TransportBtn size={large ? 54 : 40} tone="record" active={isRecording} onClick={onRecordToggle} ariaLabel="Record" />
             {showMetronome && (
                 <TransportBtn size={large ? 36 : 30} active={metronome} onClick={onMetronomeToggle} ariaLabel="Metronome">
                     <Icon name="audio-lines" size={large ? 14 : 12} />
