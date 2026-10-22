@@ -37,12 +37,13 @@ What it covers:
   selection guard; keyboard pitch editing + debounced autosave; duration/rest
   controls; range selection (shift+arrows, drag, select all); copy/cut/paste;
   fixed clipboard shortcuts; shortcut rebinding persists; clef/tempo popovers
-  open from the tool dock; takes and share menus; export to **MusicXML**,
+  open from the tool dock; a mocked recording and its summary (Hear it back,
+  Undo this recording); recordings and share menus; export to **MusicXML**,
   **MIDI**, and **PDF** (real downloads, verified headers).
 - `editor-keyboard.spec.ts` — every remaining default keybinding from
   `commands.ts` (arrow navigation, R/T/./3 toggles, Backspace clear pitch, M
-  minimize accidentals, Shift+T transpose) and that shortcuts stay suspended
-  while a dialog is open.
+  minimize accidentals, Shift+T transpose, ? for the shortcuts list) and that
+  shortcuts stay suspended while a dialog is open.
 - `editor-tools.spec.ts` — title rename autosave (and a rename surviving a
   following edit); share toggle keeping the live score; dotted/triplet/tie
   toggles; accidental segmented control; clef/key-signature/time-signature/tempo
@@ -51,12 +52,12 @@ What it covers:
   popovers; change-instrument dialog (apply + cancel); shortcuts dialog
   remove/restore-defaults; in-score add/remove measure; transport idle states.
 - `errors.spec.ts` — full-page errors while the API is unreachable (library,
-  editor) and recovery on retry; a raw (non-JSON) stored document takes the
+  editor) and recovery on retry; a missing score (page and tab title); a raw (non-JSON) stored document takes the
   editor's error page and is never autosaved over.
 - `library.spec.ts` — list, open (title + pencil), create (validation, Enter
   submit, cancel/Escape, instrument choice), delete (confirm, decline, Escape,
   ×, failure toast on a 500), search filter + no-match state, empty state,
-  top-nav controls.
+  top-nav controls; the score cap and its upgrade into Change plan.
 - `auth.spec.ts` — login (password visibility, Enter submit, links), signup
   into onboarding, reset-password stages + validation.
 - `settings.spec.ts` — tabs, profile save, change-password validation,
@@ -74,7 +75,7 @@ What it covers:
   chips.
 
 Auth/score responses live in `e2e/fixtures.ts`, along with the shared helpers
-(`waitForAutosave`, `focusEditor`, `stayLocal`, `denyMicrophone`,
+(`waitForAutosave`, `focusEditor`, `stayLocal`, `denyMicrophone`, `mockBilling`,
 `SELECTION_BANDS`) and the `rawDocument` option (`test.use({ rawDocument: true })`
 serves an unreadable stored document instead of the fixture score). The score
 DTO in `e2e/fixtures/score.partwise.json` is maintained by hand: it is the
