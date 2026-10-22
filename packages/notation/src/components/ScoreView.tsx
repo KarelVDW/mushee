@@ -245,15 +245,24 @@ export const ScoreView = memo(function ScoreView({
         },
         [attributeEvent, onAttributeClick],
     )
+    // Whether the pointer is on a clickable attribute glyph's hit box. A glyph's column can sit
+    // over the selected note (the tempo mark above it), and the pitch ghost must not draw over a
+    // marking that a click opens: the hit box takes the hover, the ghost steps aside. A ref, set
+    // by the glyph's pointerenter — which the browser fires before the move that brought it there.
+    const overAttribute = useRef(false)
     const handleAttributeHover = useCallback(
         (measure: MeasureModel, click: AttributeClick | null, localX: number, localY: number) => {
+            overAttribute.current = click !== null
+            if (click) setGhost(null)
             onAttributeHover?.(click && attributeEvent(measure, click, localX, localY))
         },
         [attributeEvent, onAttributeHover],
     )
     // Going view-only under a hovering pointer leaves no pointerleave to report: clear it here.
     useEffect(() => {
-        if (!interactive) onAttributeHover?.(null)
+        if (interactive) return
+        overAttribute.current = false
+        onAttributeHover?.(null)
     }, [interactive, onAttributeHover])
 
     // Report where the bar buttons go, in container pixels (the svg sits at the container's
@@ -341,6 +350,11 @@ export const ScoreView = memo(function ScoreView({
             // Hover-to-pitch preview is a mouse affordance; a finger can't hover, and on
             // touch the ghost would flash under every tap.
             if (e.pointerType !== 'mouse') return
+            // On a clef, key, time or tempo glyph, the click opens its popover — no ghost over it.
+            if (overAttribute.current) {
+                if (ghost) setGhost(null)
+                return
+            }
             const hoverLine = Staff.noteLineForY(localY)
             // Only the selected note previews, and never at its own pitch (nothing would change). A
             // rest has no pitch, so it still previews — and commits — a note at its rest line.
@@ -455,7 +469,9 @@ export const ScoreView = memo(function ScoreView({
                                     selectedNoteIds={selectedIds}
                                     hoveredNoteId={hoveredNote && hoveredMeasure === measure ? hoveredNote.id : undefined}
                                     onAttributeClick={interactive && onAttributeClick ? handleAttributeClick : undefined}
-                                    onAttributeHover={onAttributeHover && handleAttributeHover}
+                                    // Reported whenever the glyphs are clickable — the ghost needs it even
+                                    // when the host doesn't listen.
+                                    onAttributeHover={onAttributeClick && handleAttributeHover}
                                 />
 
                                 {/* Pointer-transparent: the overlay paints above the measure's tempo
@@ -467,7 +483,7 @@ export const ScoreView = memo(function ScoreView({
                                         className="pointer-events-none"
                                         transform={`translate(${measure.layout.getXForElement(selectedNote)}, 0)`}>
                                         {ghostNote && ghostLayout && (
-                                            <g key={ghostNote.id}>
+                                            <g key={ghostNote.id} data-ghost-note="">
                                                 <g opacity={GHOST_OPACITY}>
                                                     <NoteGroup layout={ghostLayout} stem={ghostLayout.stem} beamed={false} />
                                                 </g>

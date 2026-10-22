@@ -376,6 +376,21 @@ test('the dock teaches moving a note until the first pitch edit', async ({ page 
     await expect(hint).toHaveCount(0)
 })
 
+test('pointing at the tempo mark over the selected note draws no ghost note through it', async ({ page }) => {
+    const svg = page.locator('.max-w-240 svg[data-score-canvas]')
+    const ghost = svg.locator('[data-ghost-note]')
+    const band = await svg.locator(SELECTION_BANDS).first().boundingBox()
+    const mark = await svg.locator('text', { hasText: '= 120' }).boundingBox()
+    if (!band || !mark) throw new Error('expected the selected note and the tempo mark above it')
+    // Over the selected note, a line off its pitch: the ghost previews the new pitch.
+    await page.mouse.move(band.x + band.width / 2, band.y + band.height - 4)
+    await expect(ghost).toHaveCount(1)
+    // Onto the mark (its "= 120" text, in the note's column): the ghost steps aside for its tooltip.
+    await page.mouse.move(mark.x + mark.width / 2, mark.y + mark.height / 2, { steps: 4 })
+    await expect(page.getByText('Change tempo', { exact: true })).toBeVisible()
+    await expect(ghost).toHaveCount(0)
+})
+
 test('hovering a dock control names it, with its hint and live shortcut', async ({ page }) => {
     await page.getByRole('button', { name: 'Quarter note' }).hover()
     // The tooltip card is decorative (the hidden role=tooltip text describes the control).
