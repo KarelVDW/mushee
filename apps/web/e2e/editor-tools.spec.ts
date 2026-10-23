@@ -282,6 +282,15 @@ test('the transpose popover expands to more options and transposes to a target k
 
     const tabs = popover.getByRole('group', { name: 'Transpose by' })
     await expect(tabs).toBeVisible()
+    // The four qualities stay on one level row whichever is picked: the check never wraps one away.
+    const qualities = popover.getByRole('group', { name: 'Interval quality' }).getByRole('button')
+    await expect(qualities).toHaveCount(4)
+    for (const name of ['Major', 'Minor', 'Augmented', 'Diminished']) {
+        await qualities.filter({ hasText: name }).click()
+        const tops = new Set(await qualities.evaluateAll((els) => els.map((el) => Math.round(el.getBoundingClientRect().top))))
+        expect(tops.size, `qualities wrap with ${name} picked`).toBe(1)
+    }
+    await qualities.filter({ hasText: 'Major' }).click()
     // The semitone stepper is still there for those who count that way.
     await tabs.getByRole('button', { name: 'Semitones' }).click()
     await popover.getByRole('button', { name: 'Increase semitones' }).click()

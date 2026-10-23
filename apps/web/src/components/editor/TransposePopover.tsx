@@ -292,7 +292,9 @@ export function TransposePopover({
                         </div>
                     </LabeledRow>
                     <LabeledRow label="Quality">
-                        <div role="group" aria-label="Interval quality" className="flex flex-wrap gap-1">
+                        {/* One level row: the cells share the leftover width, so the picked one's check
+                            never pushes 'Diminished' onto a line of its own, whichever is picked. */}
+                        <div role="group" aria-label="Interval quality" className="flex gap-1">
                             {qualities.map((value) => (
                                 <PopoverOption
                                     key={value}
@@ -300,7 +302,7 @@ export function TransposePopover({
                                     ariaLabel={QUALITY_LABELS[value]}
                                     onClick={() => setQuality(value)}
                                     layout="cell"
-                                    className="justify-center px-3 h-10 text-[13px] font-medium">
+                                    className={`flex-auto min-w-0 justify-center ${sheet ? 'px-2' : 'px-2.5'} h-10 text-[13px] font-medium`}>
                                     {QUALITY_LABELS[value]}
                                 </PopoverOption>
                             ))}
