@@ -17,12 +17,20 @@ export const NOTATION_INK = '#2d2f2f'
  * exports never contain it.
  */
 export const INTERACTION_BLUE = '#1e90ff'
+/**
+ * The selection band's fill: INTERACTION_BLUE at 14%. Exported for drawings outside the
+ * canvas that show a selected note (the landing page's vignettes), so none hard-codes it.
+ */
 export const INTERACTION_BLUE_BAND = 'rgba(30, 144, 255, 0.14)'
 
 /**
  * The playback cursor while a take records: red, the universal "recording" signal, so the
  * cursor itself says the take is live and that what it passes over is being written. Like
- * INTERACTION_BLUE it is a transient overlay, `data-export-exclude`d with the cursor rect.
+ * INTERACTION_BLUE it is a transient overlay, `data-export-exclude`d with the playhead.
+ *
+ * The one recording red: it mirrors `--color-record` in packages/ui's theme.css (the record
+ * button, the strip's live dot, the count-in dots). A literal here, like every canvas colour,
+ * so the canvas never depends on the app's stylesheet — keep the two equal.
  */
 export const RECORDING_CURSOR_RED = '#ef4444'
 
