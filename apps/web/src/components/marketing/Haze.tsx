@@ -1,7 +1,13 @@
 /** Where a haze sits in its section (the section is `relative overflow-hidden`). */
 const PLACEMENT = {
-    /** Centred on the section's top-right corner, at most 760px across (110vw on phones), so it stays a corner glow. */
-    'top-right': 'top-0 right-0 translate-x-1/2 -translate-y-1/2 aspect-square w-[min(110vw,760px)]',
+    /**
+     * A corner glow at most 760px across (110vw on phones), centred on the section's right edge with
+     * its top on the section's top edge, so the fade is complete along the whole top edge and no clip
+     * line shows against the band above (the nav band, the auth brand strip). In a section shorter
+     * than it is wide (the desktop hero, the auth card) it flattens to the section's height, so the
+     * fade completes at the bottom edge as well.
+     */
+    'top-right': 'top-0 right-0 translate-x-1/2 aspect-square w-[min(110vw,760px)] max-h-full',
     /**
      * Centred on the section's right edge and exactly as tall as the section, so its fade completes
      * at the section's top and bottom edges and no clip line shows against the bands around it.

@@ -8,6 +8,17 @@ import { Icon, Tooltip } from '@/components/ui'
 const STAFF_CLEARANCE = 24
 const INK_CLEARANCE = 12
 
+/**
+ * Selects the controls' in-flow placeholder, which sits after the whole score <svg>: the empty
+ * state below measures it to lift itself from there up to the row the buttons really sit in.
+ */
+export const BAR_ROW_PLACEHOLDER = '[data-bar-row-placeholder]'
+
+/** Where the controls' row starts, in the score wrapper's pixels: under the last row (see MeasureControls). */
+export function barRowTop(rect: MeasureButtonsRect): number {
+    return Math.max(rect.staffBottom + STAFF_CLEARANCE, rect.inkBottom + INK_CLEARANCE)
+}
+
 interface MeasureControlsProps {
     /** Where the score's final barline and last row are, from the ScoreView (container pixels). */
     rect: MeasureButtonsRect
@@ -38,9 +49,9 @@ interface MeasureControlsProps {
  * empty state below doesn't move.
  */
 export function MeasureControls({ rect, canRemove, waiting, onAdd, onRemove }: MeasureControlsProps) {
-    const top = Math.max(rect.staffBottom + STAFF_CLEARANCE, rect.inkBottom + INK_CLEARANCE)
+    const top = barRowTop(rect)
     return (
-        <div data-export-exclude className="mt-3 h-8 pointer-coarse:h-10">
+        <div data-export-exclude data-bar-row-placeholder="" className="mt-3 h-8 pointer-coarse:h-10">
             <div
                 className={[
                     // Over the svg's empty room under the last row: only the buttons take the pointer,

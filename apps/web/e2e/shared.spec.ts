@@ -31,6 +31,10 @@ test('a valid share link renders the score read-only with its title, export and 
     for (const name of ['PDF', 'MIDI', 'MusicXML']) await expect(formats.getByRole('button', { name })).toBeVisible()
     await page.keyboard.press('Escape')
     await expect(formats).toHaveCount(0)
+    // Every player-bar control is one height (the lg capsule: 48px, 52px on touch), the menu chip included.
+    const barControls = [download, page.getByRole('button', { name: 'Play' }), page.getByRole('button', { name: 'Save a copy' })]
+    const barHeights = await Promise.all(barControls.map(async (control) => (await control.boundingBox())?.height))
+    expect(new Set(barHeights).size, `player bar heights ${barHeights.join(', ')}`).toBe(1)
 
     // Playback: the play button arms once samples resolve (or fail, in this hermetic run) and toggles to Pause.
     // Stop only appears once something plays — never as a disabled ghost.

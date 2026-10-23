@@ -336,6 +336,19 @@ test('pitch actions live in the More sheet and the transpose sheet swaps in with
     await expect(page.getByRole('dialog')).toHaveCount(0)
 })
 
+test('at 390×664 the simple transpose sheet shows its four moves and the whole preview without scrolling', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 664 })
+    const sheet = await openMore(page)
+    await sheet.getByRole('button', { name: 'Transpose' }).tap()
+    const transpose = page.getByRole('dialog', { name: 'Transpose' })
+    await expect(transpose.getByRole('button', { name: 'Up an octave' })).toBeVisible()
+    await transpose.evaluate((el) => Promise.all(el.getAnimations({ subtree: true }).map((a) => a.finished)))
+    // Nothing scrolls, so no fade washes over the preview's foot.
+    await expect(transpose.locator('[data-sheet-fade="bottom"]')).toHaveCount(0)
+    const fits = await transpose.locator('[data-popover-body]').evaluate((body) => body.scrollHeight <= body.clientHeight + 1)
+    expect(fits).toBe(true)
+})
+
 test('transpose’s More options keeps Apply pinned in view, the interval row whole, and fades the clipped body', async ({ page }) => {
     await page.setViewportSize({ width: 360, height: 740 })
     const sheet = await openMore(page)
@@ -383,6 +396,42 @@ test('with a note selected the More sheet leaves its row in view, even from the 
     const sheetBox = await sheet.boundingBox()
     expect((selected?.y ?? Infinity) + (selected?.height ?? 0)).toBeLessThanOrEqual(sheetBox?.y ?? 0)
 })
+
+for (const viewport of [
+    { width: 390, height: 664 },
+    { width: 360, height: 640 },
+]) {
+    test(`at ${viewport.width}×${viewport.height} the folded More sheet ends on a whole row, never across the sharp-or-flat track`, async ({
+        page,
+    }) => {
+        await page.setViewportSize(viewport)
+        const sheet = await openMore(page)
+        const track = sheet.getByRole('group', { name: 'Sharp or flat' })
+        await expect(track).toBeAttached()
+        // Measured once the sheet has risen in: its parts are read one by one.
+        await sheet.evaluate((el) => Promise.all(el.getAnimations({ subtree: true }).map((a) => a.finished)))
+        // The bottom 16px of the sheet is its fade: what lies there may only be blank, or a tile's
+        // bare 8px top padding — never any of the filled track, nor a tile's label.
+        const sheetBox = await sheet.boundingBox()
+        if (!sheetBox) throw new Error('expected the sheet')
+        const bottom = sheetBox.y + sheetBox.height
+        const parts = [
+            { part: track, bare: 0 },
+            ...['Dotted', 'Triplet', 'Rest', 'Tie'].map((name) => ({ part: sheet.getByRole('button', { name, exact: true }), bare: 8 })),
+        ]
+        for (const { part, bare } of parts) {
+            const box = await part.boundingBox()
+            if (!box) throw new Error('expected the part laid out')
+            const whole = box.y + box.height <= bottom - 16 + 1
+            const hidden = box.y + bare >= bottom - 1
+            expect(
+                whole || hidden,
+                `a part spans ${Math.round(box.y)}–${Math.round(box.y + box.height)}; the sheet ends at ${Math.round(bottom)}`,
+            ).toBe(true)
+        }
+        await expect(sheet.getByRole('button', { name: 'Dotted' })).toBeInViewport({ ratio: 1 })
+    })
+}
 
 test('one Undo too many is taken back from the top of the More sheet’s Whole score rows', async ({ page }) => {
     await page.getByRole('button', { name: 'Higher', exact: true }).tap()
@@ -771,4 +820,38 @@ test('export chip: the format menu opens from the icon-only chip', async ({ page
     expect(box?.x ?? -1).toBeGreaterThanOrEqual(0)
     expect((box?.x ?? 0) + (box?.width ?? Infinity)).toBeLessThanOrEqual((viewport?.width ?? 0) + 1)
     await expectHeaderFitsViewport(page)
+})
+
+test('onboarding: a chordal pick scrolls its melody line clear of the sticky Continue bar', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 664 })
+    await page.goto('/onboarding')
+    await expect(page.getByRole('heading', { name: 'What will you record?' })).toBeVisible()
+    await page.getByRole('button', { name: 'Pick Violin', exact: true }).tap()
+    await page.getByRole('button', { name: 'Pick Piano', exact: true }).tap()
+    const hint = page.getByText('On piano, play the tune one note at a time — Solkey writes melodies.')
+    await expect(hint).toBeVisible()
+    // The line ends above the bar's 24px fade, not under it (the smooth scroll settles first).
+    const bar = page.locator('[data-sticky-actions]')
+    await expect
+        .poll(async () => {
+            const [line, actions] = await Promise.all([hint.boundingBox(), bar.boundingBox()])
+            return (line?.y ?? Infinity) + (line?.height ?? 0) <= (actions?.y ?? 0) - 24
+        })
+        .toBe(true)
+})
+
+test('Change instrument fades its clipped instrument list, and the fade goes at the list’s end', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 664 })
+    await page.getByRole('button', { name: /^Change instrument/ }).tap()
+    const dialog = page.getByRole('dialog', { name: 'Change instrument' })
+    await expect(dialog.getByRole('button', { name: 'Pick Trumpet' })).toBeAttached()
+    const bottomFade = dialog.locator('[data-picker-fade="bottom"]')
+    await expect(bottomFade).toHaveCount(1)
+    // The fade sits on the list's own scroller: scrolled to its end, nothing is clipped below.
+    await bottomFade.evaluate((fade) => {
+        const list = fade.parentElement?.firstElementChild
+        list?.scrollTo({ top: list.scrollHeight })
+    })
+    await expect(bottomFade).toHaveCount(0)
+    await expect(dialog.locator('[data-picker-fade="top"]')).toHaveCount(1)
 })

@@ -250,9 +250,19 @@ describe('TakesList score names', () => {
         // Newest first, as the API lists them: two in score-1 made in the same minute, one elsewhere.
         const takes = [later('c', 'score-1', 40), later('b', 'score-2', 30), later('a', 'score-1', 10), take('z')]
         act(() => root.render(createElement(TakesList, { takes, scoreTitleFor: () => 'Shots scratch' })))
-        const firstLines = [...container.querySelectorAll('li')].map((row) => row.querySelector('.truncate')?.textContent ?? '')
+        const firstLines = [...container.querySelectorAll('li')].map((row) => row.querySelector('.text-pretty')?.textContent ?? '')
         expect(firstLines.map((line) => line.split(' · ')[0])).toEqual(['Recording 3', 'Recording 1', 'Recording 2', 'Recording 1'])
         expect(firstLines[0]).not.toBe(firstLines[2])
+    })
+
+    it('never ellipsizes the date that tells two takes apart: a narrow row breaks between number and date', () => {
+        act(() => root.render(createElement(TakesList, { takes: [take('a')], scoreTitleFor: () => 'Scale Study' })))
+        const title = container.querySelector('li .text-pretty')
+        expect(title?.classList.contains('truncate')).toBe(false)
+        const unbroken = [...(title?.querySelectorAll('.whitespace-nowrap') ?? [])].map((part) => part.textContent)
+        expect(unbroken).toHaveLength(2)
+        expect(unbroken[0]).toBe('Recording 1 ·')
+        expect(title?.textContent).toBe(`Recording 1 · ${unbroken[1]}`)
     })
 
     it('keeps the score link out of the truncating date line, so its focus ring is never clipped', () => {

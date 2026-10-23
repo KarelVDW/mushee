@@ -101,9 +101,9 @@ describe('ExportMenu', () => {
         expect(chip('Export score')).toBeNull()
     })
 
-    it('passes its size on to the chip (the share page’s 44px Download)', () => {
+    it('passes its size on to the chip (the share page’s Download, at the lg capsule height of its neighbours)', () => {
         render({ label: 'Download', ariaLabel: 'Download score', size: 'lg' })
-        expect(chip('Download score')?.className).toContain('h-11 px-5')
+        expect(chip('Download score')?.className).toContain('h-(--control-lg) px-6.5')
         render()
         expect(chip('Export score')?.className).toContain('h-(--control-sm)')
     })

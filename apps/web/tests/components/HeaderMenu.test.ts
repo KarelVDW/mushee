@@ -133,14 +133,14 @@ describe('HeaderMenu', () => {
         expect(heading.className).not.toContain('uppercase')
     })
 
-    it('an icon-only chip is a circle; a labelled one keeps its pill; lg is the 44px size', () => {
+    it('an icon-only chip is a circle; a labelled one keeps its pill; lg is the capsule height', () => {
         render(createElement('span', null, 'x'), { compact: true })
         expect(chip().className).toContain('size-(--control-sm) p-0')
         expect(chip().querySelectorAll('svg')).toHaveLength(2)
         render(createElement('span', null, 'x'))
         expect(chip().className).toContain('h-(--control-sm) px-3.5')
         render(createElement('span', null, 'x'), { size: 'lg' })
-        expect(chip().className).toContain('h-11 px-5')
+        expect(chip().className).toContain('h-(--control-lg) px-6.5')
         expect(chip().className).toContain('text-[14px]')
     })
 

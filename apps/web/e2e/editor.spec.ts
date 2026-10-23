@@ -837,6 +837,11 @@ test.describe('an empty score', () => {
             page.getByText('Press record, wait for the count-in, then go. Solkey writes melodies, one note at a time.'),
         ).toBeVisible()
         await expect(page.getByText('Or click a beat on the staff to place notes by hand.')).toBeVisible()
+        // It reads on from the first bar: 40px under the (still hidden) bar buttons' row, not under the whole canvas.
+        const barRow = await page.locator('[data-bar-row-placeholder] > div').boundingBox()
+        const heading = await page.getByRole('heading', { name: 'Sing, hum or play your tune' }).boundingBox()
+        if (!barRow || !heading) throw new Error('expected the bar row and the empty state laid out')
+        expect(Math.abs(heading.y - (barRow.y + barRow.height) - 40)).toBeLessThanOrEqual(1)
         // The card is the one instruction: the dock's how-to-move-a-note line waits for a note.
         await expect(page.getByText('To move a note, click higher or lower on the staff, or press ↑ ↓.')).toHaveCount(0)
         // Start recording has a name of its own: the transport's Record stays the one exact 'Record'.

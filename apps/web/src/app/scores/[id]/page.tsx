@@ -31,7 +31,7 @@ import { EditorEmptyState } from './EditorEmptyState'
 import { EditorHeader, HEADER_FIT_QUERIES, type HeaderFit, UNTITLED_SCORE } from './EditorHeader'
 import { EditorSkeleton } from './EditorSkeleton'
 import { KeyboardShortcutsDialog } from './KeyboardShortcutsDialog'
-import { MeasureControls } from './MeasureControls'
+import { barRowTop, MeasureControls } from './MeasureControls'
 import { NoteToolDock } from './NoteToolDock'
 import { NoteToolStates } from './NoteToolParts'
 import { OneTimeHint, SELECTION_TIP_KEY } from './OneTimeHint'
@@ -706,6 +706,7 @@ export default function ScoreEditorPage() {
                                 }}
                                 descriptionId={emptyStateId}
                                 startRef={startRecordingRef}
+                                barRowTop={measureButtonsRect && !taking ? barRowTop(measureButtonsRect) : undefined}
                             />
                             {!isMobile && <KeyboardHelp id={keyboardHelpId} keybindings={manipulator.keybindings} />}
                             <AttributeHoverTip event={attributePopover ? null : attributeHover} />

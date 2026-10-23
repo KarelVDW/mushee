@@ -502,6 +502,19 @@ export function InstrumentsStep({
         onChange(value.includes(instrument) ? value.filter((i) => i !== instrument) : [...value, instrument])
     const chordal = firstChordal(value)
 
+    // The pick that adds the melody line brings it into view: on a phone it lands under the sticky
+    // Continue bar otherwise. The root's scroll padding (globals.css) keeps 'nearest' above the bar.
+    const hintRef = useRef<HTMLDivElement>(null)
+    const hintShown = useRef(chordal !== undefined)
+    useEffect(() => {
+        const shown = chordal !== undefined
+        if (shown && !hintShown.current) {
+            const smooth = !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+            hintRef.current?.scrollIntoView?.({ block: 'nearest', behavior: smooth ? 'smooth' : 'auto' })
+        }
+        hintShown.current = shown
+    }, [chordal])
+
     return (
         <StepShell
             titleRef={titleRef}
@@ -510,7 +523,9 @@ export function InstrumentsStep({
             <div className="flex flex-col gap-3">
                 <PopularInstrumentTiles multiple value={value} onChange={onChange} />
                 {/* Always mounted, so a screen reader hears the line the moment a chordal pick adds it. */}
-                <div aria-live="polite">{chordal && <InstrumentChordHint instrument={chordal} />}</div>
+                <div ref={hintRef} aria-live="polite">
+                    {chordal && <InstrumentChordHint instrument={chordal} />}
+                </div>
                 <button
                     type="button"
                     aria-expanded={expanded}

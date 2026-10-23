@@ -190,7 +190,9 @@ export function EditorHeader({
                 {!compact && !narrow && (
                     <div className="flex items-center gap-2">
                         <HistoryTools manipulator={manipulator} />
+                        {/* It opens a dialog: open, it takes the tonal open state every popup trigger shares, never the pressed cyan. */}
                         <ChipToggle
+                            popup
                             active={shortcutsOpen}
                             onClick={onOpenShortcuts}
                             ariaLabel="Keyboard shortcuts"

@@ -52,6 +52,25 @@ test('lists scores and opens one in the editor', async ({ page }) => {
     await expect(page.getByRole('button', { name: 'Export score' })).toBeVisible()
 })
 
+test('on a wide screen the two date columns are named over their own cells', async ({ page }) => {
+    await page.goto('/scores')
+    const row = page.getByRole('row').filter({ has: page.getByRole('button', { name: MOCK_TITLE, exact: true }) })
+    await expect(row).toBeVisible()
+    const cells = row.getByRole('cell')
+    for (const [index, name] of [
+        [1, 'Created'],
+        [2, 'Updated'],
+    ] as const) {
+        const header = page.getByRole('columnheader', { name, exact: true })
+        await expect(header).toBeVisible()
+        const [headerBox, cellBox] = await Promise.all([header.boundingBox(), cells.nth(index).boundingBox()])
+        if (!headerBox || !cellBox) throw new Error(`${name} column not laid out`)
+        // The label starts where its column's dates start, above the first card.
+        expect(Math.abs(headerBox.x - cellBox.x)).toBeLessThanOrEqual(1)
+        expect(headerBox.y + headerBox.height).toBeLessThan(cellBox.y)
+    }
+})
+
 test('creates a new score and navigates into it', async ({ page, apiMock }) => {
     await page.goto('/scores')
     await page.getByRole('button', { name: 'New score' }).click()
