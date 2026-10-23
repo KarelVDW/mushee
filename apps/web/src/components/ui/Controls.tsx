@@ -1,4 +1,6 @@
-import { type CSSProperties, type ReactNode, useId } from 'react'
+'use client'
+
+import { createContext, type CSSProperties, type ReactNode, useContext, useId } from 'react'
 
 import { Tooltip, type TooltipShortcut } from './Tooltip'
 
@@ -48,7 +50,15 @@ function tooltipFor({ tooltip, hint, shortcut, tooltipSide }: TooltipProps, aria
 interface ToolGroupProps {
     ariaLabel: string
     children: ReactNode
+    /**
+     * `header`: the editor header's slimmer well — 32px (44px on coarse pointers), its plain chips
+     * 28px (40px) — so it lines up with the header's 32px chips.
+     */
+    size?: 'default' | 'header'
 }
+
+/** The size of the ToolGroup a control sits in (none outside one), so its plain chips can match the well. */
+const ToolGroupContext = createContext<'default' | 'header' | null>(null)
 
 /**
  * A white capsule well that makes a cluster of tool controls read as one group —
@@ -56,13 +66,16 @@ interface ToolGroupProps {
  * lift) instead of borders or dividers. Controls inside it render `plain`
  * (transparent at rest); the well is what separates them from the chrome behind.
  */
-export function ToolGroup({ ariaLabel, children }: ToolGroupProps) {
+export function ToolGroup({ ariaLabel, children, size = 'default' }: ToolGroupProps) {
     return (
         <div
             role="group"
             aria-label={ariaLabel}
-            className="inline-flex items-center gap-0.5 p-0.75 rounded-full bg-surface-container-lowest tonal-layer-glow">
-            {children}
+            className={[
+                'inline-flex items-center rounded-full bg-surface-container-lowest tonal-layer-glow',
+                size === 'header' ? 'min-h-8 p-0.5 gap-0.5 pointer-coarse:min-h-11' : 'gap-0.5 p-0.75',
+            ].join(' ')}>
+            <ToolGroupContext.Provider value={size}>{children}</ToolGroupContext.Provider>
         </div>
     )
 }
@@ -149,15 +162,61 @@ interface ChipToggleProps extends TooltipProps, DisableableProps {
      * aria-haspopup="dialog" and aria-expanded (from `active`) instead of aria-pressed.
      */
     popup?: boolean
+    /**
+     * `default`: the 32px chip (40px on coarse pointers). `dock`: the dock's unit, 40px tall and
+     * at least as wide (44px coarse), so a 3px well around it makes the dock's 46px (50px) row.
+     */
+    size?: 'default' | 'dock'
+    /** An icon-only circle of the size's height: 32px (40px coarse), or 40px (44px) in the dock. */
+    round?: boolean
 }
 
+/** A ChipToggle's box per size: a full pill, or with `round` a circle of the same height. */
+const CHIP_SIZES = {
+    default: { pill: 'h-(--control-sm) px-3.5 pointer-coarse:px-4', round: 'size-(--control-sm) p-0' },
+    dock: { pill: 'h-(--control-md) min-w-(--control-md) px-3', round: 'size-(--control-md) p-0' },
+} as const
+
+/** A plain chip inside a header-sized ToolGroup: 28px in its 32px well (40px in a 44px one on touch). */
+const HEADER_WELL_CHIP = 'h-7 min-w-9 px-2.5 pointer-coarse:h-10 pointer-coarse:min-w-10'
+
+/** The press every unpressed chip shares: a tonal step on touch and a slight shrink (more on touch, none under reduced motion). */
+const CHIP_PRESS = 'pointer-coarse:active:bg-surface-container-high motion-safe:active:scale-[0.97] pointer-coarse:motion-safe:active:scale-[0.94]'
+
 /**
- * Pressed-state toggle for editor chrome and header menus (primary-container when
- * active); for form option choice use Chip. With `popup` it is a menu trigger instead.
+ * Pressed-state toggle for editor chrome and header menus (primary-container when pressed);
+ * for form option choice use Chip. With `popup` it is a menu trigger instead, and open it turns
+ * one tonal step darker — never cyan: it is open, not chosen, and the panel shows that. Disabled,
+ * it keeps its surface and fades only its content, so a disabled Undo still reads as a control
+ * (an active one shows the open tone, faded).
  */
-export function ChipToggle({ active, onClick, ariaLabel, children, disabled, disabledReason, plain, popup, ...tip }: ChipToggleProps) {
+export function ChipToggle({
+    active,
+    onClick,
+    ariaLabel,
+    children,
+    disabled,
+    disabledReason,
+    plain,
+    popup,
+    size = 'default',
+    round = false,
+    ...tip
+}: ChipToggleProps) {
     const state = disabledState({ disabled, disabledReason })
+    const well = useContext(ToolGroupContext)
     const rest = plain ? 'bg-transparent text-on-surface' : 'bg-surface-container-lowest tonal-layer-glow text-on-surface'
+    const pressed = !popup && !!active
+    const box = plain && well === 'header' && !round ? HEADER_WELL_CHIP : CHIP_SIZES[size][round ? 'round' : 'pill']
+    const palette = state.off
+        ? active
+            ? 'bg-surface-container-high text-on-surface'
+            : rest
+        : pressed
+          ? 'bg-primary-container text-on-primary-container active:brightness-95'
+          : active
+            ? `bg-surface-container-high text-on-surface ${CHIP_PRESS}`
+            : `${rest} hover:bg-surface-container-high ${CHIP_PRESS}`
     return (
         <Tooltip {...tooltipFor(tip, ariaLabel, state.reason)}>
             <button
@@ -170,20 +229,16 @@ export function ChipToggle({ active, onClick, ariaLabel, children, disabled, dis
                 disabled={state.native}
                 onClick={state.off ? undefined : onClick}
                 className={[
-                    'border-0 rounded-full px-3.5 py-1.75 min-h-8 whitespace-nowrap',
-                    'pointer-coarse:min-h-10 pointer-coarse:px-4',
+                    'border-0 rounded-full whitespace-nowrap',
+                    box,
                     'font-label font-semibold text-[13px] leading-none',
                     'inline-flex items-center justify-center',
-                    state.off ? 'cursor-not-allowed opacity-40' : 'cursor-pointer',
-                    'transition-[background-color,color] duration-150 ease-solkey',
+                    state.off ? 'cursor-not-allowed' : 'cursor-pointer',
+                    'transition-[transform,scale,background-color,color,filter] duration-150 ease-solkey',
                     'focus-ring',
-                    active
-                        ? 'bg-primary-container text-on-primary-container'
-                        : state.off
-                          ? rest
-                          : `${rest} hover:bg-surface-container-high`,
+                    palette,
                 ].join(' ')}>
-                {children}
+                {state.off ? <span className="inline-flex items-center gap-[inherit] opacity-40">{children}</span> : children}
             </button>
         </Tooltip>
     )

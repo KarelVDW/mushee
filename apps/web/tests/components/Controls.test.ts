@@ -3,7 +3,7 @@ import { createRoot, type Root } from 'react-dom/client'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { ChipToggle, Segmented, Switch, TransportBtn } from '@/components/ui/Controls'
+import { ChipToggle, Segmented, Switch, ToolGroup, TransportBtn } from '@/components/ui/Controls'
 
 // React's act() refuses to run outside a test-aware environment.
 ;(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
@@ -63,6 +63,44 @@ describe('ChipToggle', () => {
         expect(trigger).not.toContain('aria-pressed')
     })
 
+    it('an open menu trigger turns one tone darker — never cyan; a pressed toggle stays loud', () => {
+        const open = html(createElement(ChipToggle, { active: true, popup: true, ariaLabel: 'Share score', children: 'Share' }))
+        expect(open).toContain('aria-expanded="true"')
+        expect(open).toContain('bg-surface-container-high text-on-surface')
+        expect(open).not.toContain('bg-primary-container')
+        const pressed = html(createElement(ChipToggle, { active: true, ariaLabel: 'Rest', children: 'Rest' }))
+        expect(pressed).toContain('bg-primary-container text-on-primary-container active:brightness-95')
+        // Unpressed chips shrink a little when pressed (more on touch); a pressed one only darkens.
+        const rest = html(createElement(ChipToggle, { ariaLabel: 'Rest', children: 'Rest' }))
+        expect(rest).toContain('motion-safe:active:scale-[0.97]')
+        expect(rest).toContain('pointer-coarse:motion-safe:active:scale-[0.94]')
+        expect(rest).toContain('pointer-coarse:active:bg-surface-container-high')
+        expect(pressed).not.toContain('active:scale-')
+    })
+
+    it('sizes by token: 32px by default, the 40px dock unit, and a circle when round', () => {
+        expect(html(createElement(ChipToggle, { ariaLabel: 'Rest', children: 'Rest' }))).toContain('h-(--control-sm) px-3.5')
+        const dock = html(createElement(ChipToggle, { ariaLabel: 'Rest', size: 'dock', children: 'Rest' }))
+        expect(dock).toContain('h-(--control-md) min-w-(--control-md) px-3')
+        expect(html(createElement(ChipToggle, { ariaLabel: 'Share score', round: true, children: 'x' }))).toContain('size-(--control-sm) p-0')
+        expect(html(createElement(ChipToggle, { ariaLabel: 'Share score', round: true, size: 'dock', children: 'x' }))).toContain(
+            'size-(--control-md) p-0',
+        )
+    })
+
+    it('a plain chip in a header well takes the well’s 28px size', () => {
+        const markup = html(
+            createElement(ToolGroup, {
+                ariaLabel: 'History',
+                size: 'header',
+                children: createElement(ChipToggle, { ariaLabel: 'Undo', plain: true, children: 'u' }),
+            }),
+        )
+        expect(markup).toContain('min-h-8 p-0.5 gap-0.5 pointer-coarse:min-h-11')
+        expect(markup).toContain('h-7 min-w-9')
+        expect(markup).not.toContain('h-(--control-sm)')
+    })
+
     it('renders bare without tooltip props, and wrapped with them', () => {
         expect(html(createElement(ChipToggle, { ariaLabel: 'Rest', children: 'Rest' }))).toMatch(/^<button/)
         const tipped = html(
@@ -107,7 +145,21 @@ describe('ChipToggle', () => {
             expect(onClick).not.toHaveBeenCalled()
             const description = document.getElementById(button.getAttribute('aria-describedby') as string)
             expect(description?.textContent).toBe('Tie needs the next note to be the same pitch.')
-            expect(button.className).toContain('opacity-40')
+            // Only the content fades: the chip keeps its white fill and lift, so it still reads as a control.
+            expect(button.className).not.toContain('opacity-40')
+            expect(button.className).toContain('bg-surface-container-lowest tonal-layer-glow')
+            const content = button.firstElementChild as HTMLElement
+            expect(content.className).toContain('opacity-40')
+            expect(content.textContent).toBe('Tie')
+            expect(button.className).toContain('cursor-not-allowed')
+        })
+
+        it('disabled and active shows the open tone with faded content, never cyan', () => {
+            act(() => root.render(createElement(ChipToggle, { ariaLabel: 'Tie', disabled: true, active: true, children: 'Tie' })))
+            const button = host.querySelector('button') as HTMLButtonElement
+            expect(button.className).toContain('bg-surface-container-high')
+            expect(button.className).not.toContain('bg-primary-container')
+            expect((button.firstElementChild as HTMLElement).className).toContain('opacity-40')
         })
 
         it('without a reason: natively disabled, as before', () => {
