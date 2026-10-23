@@ -14,12 +14,13 @@ import { settingsTabPath } from '../../settings/settingsTabs'
 import { MicFailure, RecordingLimitCopy } from './RecordingCopy'
 
 /**
- * The neutral icon row in a recording dialog's body: the next step, under an optional title for
- * what is in the way. Never red — none of these is an error.
+ * The neutral icon row in a recording dialog's body — one anatomy for all of them: the way
+ * forward, under an optional title for what is in the way, recessed into the white panel.
+ * Never red — none of these is an error. Body text never drops below 13px.
  */
-function DialogCallout({ icon, title, body }: { icon: IconName; title?: string; body: string }) {
+function DialogCallout({ icon, title, body }: { icon: IconName; title?: string; body: ReactNode }) {
     return (
-        <div className="flex items-center gap-3.5 bg-surface-container-low rounded-[10px] p-4">
+        <div className="flex items-center gap-3.5 bg-surface-container-low rounded-md p-4">
             <span className="w-11 h-11 rounded-full shrink-0 bg-surface-container text-on-surface-variant inline-flex items-center justify-center">
                 <Icon name={icon} size={20} />
             </span>
@@ -28,7 +29,7 @@ function DialogCallout({ icon, title, body }: { icon: IconName; title?: string; 
                 <span
                     className={
                         title
-                            ? 'font-body font-normal text-[12px] leading-[1.4] text-on-surface-variant'
+                            ? 'font-body font-normal text-[13px] leading-[1.4] text-on-surface-variant'
                             : 'font-body font-normal text-[13px] leading-normal text-on-surface'
                     }>
                     {body}
@@ -62,6 +63,23 @@ export function RecordingLimitDialog({ info, onUpgrade, onClose }: RecordingLimi
         next: next && { name: next.name, dailySeconds: next.dailyRecordingSeconds },
         resetsAt: info.resetsAt,
     })
+    // The way forward, in one callout: what the next plan gives (its title) over the minute
+    // packs (its body) — either alone as an untitled callout, and none when there is neither.
+    const packs = BETA_MODE ? null : (
+        <>
+            Just need to finish this one?{' '}
+            <Link href={`${settingsTabPath('plan')}&packs=1`} className="text-primary underline">
+                Minute packs
+            </Link>{' '}
+            start at {formatMoney(CHEAPEST_PACK.price, currency)} and never expire.
+        </>
+    )
+    const callout =
+        copy.upgrade && packs ? (
+            <DialogCallout icon="mic" title={copy.upgrade} body={packs} />
+        ) : copy.upgrade || packs ? (
+            <DialogCallout icon="mic" body={copy.upgrade ?? packs} />
+        ) : null
 
     return (
         <DialogPanel
@@ -79,18 +97,7 @@ export function RecordingLimitDialog({ info, onUpgrade, onClose }: RecordingLimi
                     )}
                 </>
             }>
-            <div className="flex flex-col gap-2.5 pb-2">
-                {copy.upgrade && <span className="font-body font-normal text-[13px] leading-normal text-on-surface">{copy.upgrade}</span>}
-                {!BETA_MODE && (
-                    <span className="font-body font-normal text-[12px] leading-normal text-on-surface-variant">
-                        Just need to finish this one?{' '}
-                        <Link href={`${settingsTabPath('plan')}&packs=1`} className="text-primary underline">
-                            Minute packs
-                        </Link>{' '}
-                        start at {formatMoney(CHEAPEST_PACK.price, currency)} and never expire.
-                    </span>
-                )}
-            </div>
+            {callout && <div className="pb-2">{callout}</div>}
         </DialogPanel>
     )
 }
@@ -98,7 +105,7 @@ export function RecordingLimitDialog({ info, onUpgrade, onClose }: RecordingLimi
 /** One step of the Wide Spectrum walkthrough: its number, a small schematic, and what to do. */
 function WalkthroughStep({ number, scene, children }: { number: number; scene: ReactNode; children: ReactNode }) {
     return (
-        <li className="flex items-center gap-3.5 rounded-[10px] bg-surface-container-low px-3.5 py-3">
+        <li className="flex items-center gap-3.5 rounded-md bg-surface-container-low px-3.5 py-3">
             <span className="font-mono font-medium text-[13px] leading-none text-primary w-3 shrink-0">{number}</span>
             <span aria-hidden className="w-20 shrink-0 inline-flex justify-center">
                 {scene}
