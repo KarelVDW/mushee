@@ -50,7 +50,7 @@ describe('CopyAddressButton', () => {
         writeText.mockResolvedValue(undefined)
         await act(() => click())
         expect(writeText).toHaveBeenCalledWith('support@solkey.io')
-        expect(showToast).toHaveBeenCalledWith('Address copied', 'info')
+        expect(showToast).toHaveBeenCalledWith('Address copied.', 'info', { icon: 'check' })
     })
 
     it('says the address where the clipboard refuses', async () => {

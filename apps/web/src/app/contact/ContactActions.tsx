@@ -14,7 +14,7 @@ export function CopyAddressButton({ address }: { address: string }) {
     const copy = async () => {
         try {
             await navigator.clipboard.writeText(address)
-            showToast('Address copied', 'info')
+            showToast('Address copied.', 'info', { icon: 'check' })
         } catch {
             showToast(`Couldn't copy it — the address is ${address}.`)
         }

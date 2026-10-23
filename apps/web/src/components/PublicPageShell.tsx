@@ -70,15 +70,19 @@ export function ShortVersion({ points, closing, sections }: ShortVersionProps) {
                     className="font-headline font-semibold text-[20px] leading-[1.2] tracking-[-0.01em] text-on-surface m-0">
                     The short version
                 </h2>
-                <ul className="m-0 pl-5 flex flex-col gap-2.5 font-body font-normal text-[16px] leading-[1.55] text-on-surface list-disc">
+                {/* The marketing surface's own marker, never the browser's bullet: a 6px primary dot on each first line. */}
+                <ul className="m-0 list-none pl-0 flex flex-col gap-3 font-body font-normal text-[16px] leading-[1.55] text-on-surface">
                     {points.map((point) => (
-                        <li key={point}>{point}</li>
+                        <li key={point} className="flex gap-3">
+                            <span aria-hidden className="size-1.5 bg-primary rounded-full mt-2.5 shrink-0" />
+                            {point}
+                        </li>
                     ))}
                 </ul>
                 <p className="m-0 font-body font-normal text-[14px] leading-normal text-on-surface-variant">{closing}</p>
             </section>
             <nav aria-label="On this page" className="flex flex-col gap-2">
-                <Eyebrow>On this page</Eyebrow>
+                <Eyebrow className="text-primary">On this page</Eyebrow>
                 <ul className="m-0 p-0 list-none flex flex-wrap gap-x-4 gap-y-1">
                     {sections.map((section) => (
                         <li key={section.id}>

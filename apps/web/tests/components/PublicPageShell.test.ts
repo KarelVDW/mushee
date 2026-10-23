@@ -45,4 +45,19 @@ describe('ShortVersion', () => {
         const toc = host.querySelector('nav[aria-label="On this page"]')
         expect([...(toc?.querySelectorAll('a') ?? [])].map((a) => a.getAttribute('href'))).toEqual(['#controller', '#rights'])
     })
+
+    it('marks its points with the primary dot, never the browser’s bullet, and labels in primary', () => {
+        const host = render(
+            createElement(ShortVersion, {
+                points: ['We only listen while you’re recording.'],
+                closing: 'The full policy below is the one that counts.',
+                sections: [{ id: 'rights', title: 'Your rights' }],
+            }),
+        )
+        const list = host.querySelector('section ul')
+        expect(list?.className).toContain('list-none')
+        const dot = list?.querySelector('li > span[aria-hidden="true"]')
+        expect(dot?.className).toContain('bg-primary')
+        expect(host.querySelector('nav[aria-label="On this page"] span')?.className).toContain('text-primary')
+    })
 })
