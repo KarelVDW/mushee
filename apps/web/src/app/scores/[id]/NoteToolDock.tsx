@@ -163,10 +163,11 @@ function AnimatedHeight({ children }: { children: ReactNode }) {
  * the editor's bottom edge — the chrome mirror of the slim header, so it never hangs over the
  * score. Desktop, left to right: Pitch (Higher · Lower) — Length (five values + Dotted) —
  * Sharp or flat — Rest — More (Triplet, Tie, Simplify sharps and flats) — the score's clef,
- * key, time and tempo. Each group sits in a white capsule well (or is a white chip on its
- * own), popovers open upward, and groups wrap onto more rows rather than overflow. Phones
- * get one tool row — Undo, the note values and a labelled More tile — and the rest in the
- * More sheet. Every icon-only control wears a tooltip with its live shortcut.
+ * key, time and tempo. Each group sits in a white capsule well, 46px tall like every unit in
+ * the row (a lone tool, Rest or More, is a one-control well), popovers open upward, and groups
+ * wrap onto more rows rather than overflow. Phones get one tool row spanning the dock — Undo,
+ * the note values filling the row and a labelled More capsule — and the rest in the More
+ * sheet. Every icon-only control wears a tooltip with its live shortcut.
  *
  * The dock reads the selection's state straight off the manipulator (it subscribes itself)
  * and dispatches every edit to it directly; what is pressed, off and why follows
