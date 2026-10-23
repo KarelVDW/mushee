@@ -80,8 +80,11 @@ const KEY_ACCIDENTAL_ADVANCE = 7
  */
 const KEY_STAFF_WINDOW = { top: 19, height: 66 }
 const EMPTY_STAFF_WINDOW = { top: Staff.TOP_Y - 2, height: Staff.HEIGHT + 4 }
-/** The faint staff behind a staffed key signature: outline_variant at 40%, so the accidentals stay the ink. */
-const KEY_STAFF_COLOR = 'var(--color-outline-variant, #acadad)'
+/**
+ * The faint staff behind a staffed key signature: outline_variant at 40%, so the accidentals stay
+ * the ink. A picker icon on the app's chrome, so the theme token (theme.css), never a copied hex.
+ */
+const KEY_STAFF_COLOR = 'var(--color-outline-variant)'
 /** The gap between a staffed key signature's accidentals (the score's own is ACCIDENTAL_GAP, 2). */
 const KEY_STAFF_ACCIDENTAL_GAP = 0.5
 const KEY_STAFF_OPACITY = 0.4

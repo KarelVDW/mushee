@@ -5,8 +5,17 @@ import { Fragment, useEffect, useState, useSyncExternalStore } from 'react'
 import { DialogPanel, Eyebrow, IconButton, Keycap, PrimaryButton, TertiaryButton } from '@/components/ui'
 import { useKeyboardLayout } from '@/components/ui/Tooltip'
 import { type Keybindings, KeyboardLayout, Shortcut } from '@/lib/Keybindings'
+import { useMediaQuery } from '@/lib/useMediaQuery'
 
 import { EDITOR_COMMAND_GROUPS, type EditorCommand } from './commands'
+
+/**
+ * From lg (Tailwind's 64rem) the list runs in three columns of 32px rows on a wider panel, so the
+ * whole of it fits a laptop screen (1440×900) without scrolling; from md two columns on the 672px
+ * panel. Either way each column stays narrow enough that a key sits close to its label.
+ */
+const THREE_COLUMNS_QUERY = '(min-width: 64rem)'
+const DIALOG_WIDTH = { twoColumns: 672, threeColumns: 1040 } as const
 
 interface KeyboardShortcutsDialogProps {
     keybindings: Keybindings<EditorCommand>
@@ -25,6 +34,7 @@ export function KeyboardShortcutsDialog({ keybindings, onClose }: KeyboardShortc
     const layout = useKeyboardLayout()
     const [editingId, setEditingId] = useState<string | null>(null)
     const [notice, setNotice] = useState<string | null>(null)
+    const threeColumns = useMediaQuery(THREE_COLUMNS_QUERY)
 
     // Fetch the browser's live code → character map again on every open (the user may have
     // switched system layouts); every other surface naming a key follows the refreshed map.
@@ -61,7 +71,7 @@ export function KeyboardShortcutsDialog({ keybindings, onClose }: KeyboardShortc
             title="Keyboard shortcuts"
             subtitle="Click a shortcut to change it. Keys follow your keyboard layout."
             onClose={onClose}
-            width={672}
+            width={threeColumns ? DIALOG_WIDTH.threeColumns : DIALOG_WIDTH.twoColumns}
             footer={
                 <>
                     {notice && (
@@ -81,9 +91,10 @@ export function KeyboardShortcutsDialog({ keybindings, onClose }: KeyboardShortc
                     <PrimaryButton onClick={onClose}>Done</PrimaryButton>
                 </>
             }>
-            {/* Two columns from md, the groups flowing down them in order (never split), so every key
-                sits close to its label and the whole list fits without scrolling. */}
-            <div className="min-h-0 pb-2 md:columns-2 md:gap-x-10">
+            {/* Two columns from md, three from lg, the groups flowing down them in order (never split), so
+                every key sits close to its label. The box keeps its full height (shrink-0): where the
+                list outgrows the dialog the body scrolls down, never spilling a column sideways. */}
+            <div className="shrink-0 pb-2 md:columns-2 md:gap-x-10 lg:columns-3">
                 {EDITOR_COMMAND_GROUPS.map((group) => (
                     <section key={group} className="flex flex-col break-inside-avoid mb-5">
                         <div className="px-2.5 pb-1.5">
@@ -108,8 +119,12 @@ export function KeyboardShortcutsDialog({ keybindings, onClose }: KeyboardShortc
     )
 }
 
-/** One shortcut row: at least 36px, its 14px label on the left and the keys on the right. */
-const ROW = 'flex items-center justify-between gap-4 min-h-9 px-2.5 rounded-md hover:bg-surface-container transition-colors duration-150'
+/**
+ * One shortcut row: its 14px label on the left and the keys on the right, at least 36px tall
+ * (32px in the three columns, which is what lets the list fit a 900px-tall screen).
+ */
+const ROW =
+    'flex items-center justify-between gap-4 min-h-9 lg:min-h-8 px-2.5 rounded-md hover:bg-surface-container transition-colors duration-150'
 const ROW_LABEL = 'font-body font-normal text-[14px] leading-tight text-on-surface'
 
 interface ShortcutRowProps {
