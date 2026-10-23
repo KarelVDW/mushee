@@ -99,7 +99,9 @@ export function HeaderMenu({
                     manageFocus
                     variant={sheet ? 'header-sheet' : 'anchored'}
                     viewportGutter={VIEWPORT_GUTTER_PX}
-                    className={sheet ? className : `right-0 top-[calc(100%+0.5rem)] max-w-[calc(100vw-2rem)]${className ? ` ${className}` : ''}`}>
+                    className={
+                        sheet ? className : `right-0 top-[calc(100%+0.5rem)] max-w-[calc(100vw-2rem)]${className ? ` ${className}` : ''}`
+                    }>
                     {typeof children === 'function' ? children({ close }) : children}
                 </Popover>
             )}

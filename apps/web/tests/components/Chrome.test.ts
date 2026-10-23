@@ -85,7 +85,10 @@ describe('app chrome', () => {
     })
 
     it('the New score CTA pops by default and can go flat where the page already leads with a pop CTA', () => {
-        const ctas = () => [...host.querySelectorAll<HTMLButtonElement>('button')].filter((b) => /New score/.test(b.textContent + (b.getAttribute('aria-label') ?? '')))
+        const ctas = () =>
+            [...host.querySelectorAll<HTMLButtonElement>('button')].filter((b) =>
+                /New score/.test(b.textContent + (b.getAttribute('aria-label') ?? '')),
+            )
         act(() => root.render(createElement(TopNav, { user: 'Ada', onCreate: vi.fn() })))
         expect(ctas()).toHaveLength(2)
         expect(ctas().every((b) => b.className.includes('shadow-(--shadow-offset-3)'))).toBe(true)

@@ -3,6 +3,7 @@ import { createRoot, hydrateRoot, type Root } from 'react-dom/client'
 import { renderToStaticMarkup, renderToString } from 'react-dom/server'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { Keycap } from '@/components/ui/Keycap'
 import {
     focusWithoutTooltip,
     shortcutText,
@@ -12,7 +13,6 @@ import {
     TOOLTIP_HOVER_DELAY_MS,
     TooltipCard,
 } from '@/components/ui/Tooltip'
-import { Keycap } from '@/components/ui/Keycap'
 import { Shortcut } from '@/lib/Keybindings'
 
 // React's act() refuses to run outside a test-aware environment.
@@ -450,7 +450,9 @@ describe('TooltipCard', () => {
         expect(html).toMatch(/^<span aria-hidden="true" class="tooltip-enter [^"]*rounded-md bg-surface-container-lowest shadow-overlay/)
         expect(html).toContain('max-w-72 text-balance')
         expect(html).toContain('<span class="font-label font-semibold">Quarter note</span>')
-        expect(html).toContain('<span class="text-on-surface-variant"> — </span><span class="text-on-surface-variant text-pretty">1 beat</span>')
+        expect(html).toContain(
+            '<span class="text-on-surface-variant"> — </span><span class="text-on-surface-variant text-pretty">1 beat</span>',
+        )
         expect(html).toContain('>Q</kbd>')
     })
 

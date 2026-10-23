@@ -160,7 +160,8 @@ export function Segmented<T extends string | undefined>({
         },
     )
     const sizes = SEGMENTED_SIZES[size]
-    const picked = tone === 'inset' ? 'bg-surface-container-lowest tonal-layer-glow text-on-surface' : 'bg-primary-container text-on-primary-container'
+    const picked =
+        tone === 'inset' ? 'bg-surface-container-lowest tonal-layer-glow text-on-surface' : 'bg-primary-container text-on-primary-container'
     return (
         <div
             role={radio ? 'radiogroup' : 'group'}
@@ -247,7 +248,8 @@ const CHIP_SIZES = {
 const HEADER_WELL_CHIP = 'h-7 min-w-9 px-2.5 pointer-coarse:h-10 pointer-coarse:min-w-10'
 
 /** The press every unpressed chip shares: a tonal step on touch and a slight shrink (more on touch, none under reduced motion). */
-const CHIP_PRESS = 'pointer-coarse:active:bg-surface-container-high motion-safe:active:scale-[0.97] pointer-coarse:motion-safe:active:scale-[0.94]'
+const CHIP_PRESS =
+    'pointer-coarse:active:bg-surface-container-high motion-safe:active:scale-[0.97] pointer-coarse:motion-safe:active:scale-[0.94]'
 
 /**
  * Pressed-state toggle for editor chrome and header menus (primary-container when pressed);

@@ -61,7 +61,9 @@ describe('Segmented', () => {
     }
 
     it('rests in full-strength ink and picks in loud primary on the chrome track', () => {
-        const box = mount(html(createElement(Segmented, { options: [...accidentals], value: 'flat', onChange: noop, ariaLabel: 'Accidental' })))
+        const box = mount(
+            html(createElement(Segmented, { options: [...accidentals], value: 'flat', onChange: noop, ariaLabel: 'Accidental' })),
+        )
         const [track, buttons] = [box.firstElementChild as HTMLElement, [...box.querySelectorAll('button')]]
         expect(track.className).toContain('bg-surface-container-lowest tonal-layer-glow')
         expect(buttons[0].className).toContain('bg-primary-container text-on-primary-container')
@@ -71,17 +73,36 @@ describe('Segmented', () => {
 
     it('an inset track recedes on white panels, its pick a raised white thumb', () => {
         const box = mount(
-            html(createElement(Segmented, { options: [...accidentals], value: 'flat', onChange: noop, ariaLabel: 'Accidental', tone: 'inset' })),
+            html(
+                createElement(Segmented, {
+                    options: [...accidentals],
+                    value: 'flat',
+                    onChange: noop,
+                    ariaLabel: 'Accidental',
+                    tone: 'inset',
+                }),
+            ),
         )
         const track = box.firstElementChild as HTMLElement
         expect(track.className).toContain('bg-surface-container-low')
         expect(track.className).not.toContain('tonal-layer-glow')
-        expect((box.querySelector('button') as HTMLElement).className).toContain('bg-surface-container-lowest tonal-layer-glow text-on-surface')
+        expect((box.querySelector('button') as HTMLElement).className).toContain(
+            'bg-surface-container-lowest tonal-layer-glow text-on-surface',
+        )
     })
 
     it('the dock size is a 40px option in a track one well-pad bigger; fill shares the row', () => {
         const box = mount(
-            html(createElement(Segmented, { options: [...accidentals], value: 'flat', onChange: noop, ariaLabel: 'Accidental', size: 'dock', fill: true })),
+            html(
+                createElement(Segmented, {
+                    options: [...accidentals],
+                    value: 'flat',
+                    onChange: noop,
+                    ariaLabel: 'Accidental',
+                    size: 'dock',
+                    fill: true,
+                }),
+            ),
         )
         const track = box.firstElementChild as HTMLElement
         expect(track.className).toContain('h-[calc(var(--control-md)+2*var(--well-pad))] p-(--well-pad)')
@@ -113,7 +134,11 @@ describe('Segmented', () => {
 
         it('is a radiogroup with one tab stop; the arrows move and pick', () => {
             const onChange = vi.fn()
-            act(() => root.render(createElement(Segmented, { options: [...billing], value: 'monthly', onChange, ariaLabel: 'Billing', mode: 'radio' })))
+            act(() =>
+                root.render(
+                    createElement(Segmented, { options: [...billing], value: 'monthly', onChange, ariaLabel: 'Billing', mode: 'radio' }),
+                ),
+            )
             expect(host.querySelector('[role="radiogroup"]')?.getAttribute('aria-label')).toBe('Billing')
             const radios = [...host.querySelectorAll<HTMLButtonElement>('[role="radio"]')]
             expect(radios.map((r) => r.getAttribute('aria-checked'))).toEqual(['true', 'false'])
@@ -128,7 +153,9 @@ describe('Segmented', () => {
         })
 
         it('the default mode keeps toggle buttons', () => {
-            act(() => root.render(createElement(Segmented, { options: [...billing], value: 'monthly', onChange: noop, ariaLabel: 'Billing' })))
+            act(() =>
+                root.render(createElement(Segmented, { options: [...billing], value: 'monthly', onChange: noop, ariaLabel: 'Billing' })),
+            )
             expect(host.querySelector('[role="radiogroup"]')).toBeNull()
             expect(host.querySelector('[role="group"]')).not.toBeNull()
             expect(host.querySelector('button')?.getAttribute('aria-pressed')).toBe('true')
@@ -167,7 +194,9 @@ describe('ChipToggle', () => {
         expect(html(createElement(ChipToggle, { ariaLabel: 'Rest', children: 'Rest' }))).toContain('h-(--control-sm) px-3.5')
         const dock = html(createElement(ChipToggle, { ariaLabel: 'Rest', size: 'dock', children: 'Rest' }))
         expect(dock).toContain('h-(--control-md) min-w-(--control-md) px-3')
-        expect(html(createElement(ChipToggle, { ariaLabel: 'Share score', round: true, children: 'x' }))).toContain('size-(--control-sm) p-0')
+        expect(html(createElement(ChipToggle, { ariaLabel: 'Share score', round: true, children: 'x' }))).toContain(
+            'size-(--control-sm) p-0',
+        )
         expect(html(createElement(ChipToggle, { ariaLabel: 'Share score', round: true, size: 'dock', children: 'x' }))).toContain(
             'size-(--control-md) p-0',
         )
@@ -423,7 +452,11 @@ describe('Switch', () => {
     it('off: a grey track and a small outline knob; on: the primary track and a bigger white knob, no check', () => {
         const knob = (checked: boolean) => {
             const { box, button } = mount({ checked })
-            const classes = { track: button.className, knob: (button.firstElementChild as HTMLElement).className, svg: button.querySelector('svg') }
+            const classes = {
+                track: button.className,
+                knob: (button.firstElementChild as HTMLElement).className,
+                svg: button.querySelector('svg'),
+            }
             box.remove()
             return classes
         }

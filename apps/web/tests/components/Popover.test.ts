@@ -162,7 +162,9 @@ describe('Popover surfaces', () => {
         const panelRect = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect')
         const render = () =>
             act(() =>
-                root.render(createElement(Popover, { ariaLabel: 'More', title: 'More', onDismiss: vi.fn(), anchorRef, children: option() })),
+                root.render(
+                    createElement(Popover, { ariaLabel: 'More', title: 'More', onDismiss: vi.fn(), anchorRef, children: option() }),
+                ),
             )
         // Above the chip (the dock): it rises the last 6px.
         panelRect.mockReturnValue(rect(300, 488))
@@ -283,13 +285,17 @@ describe('Popover surfaces', () => {
             expect(ghost.className).toContain('pointer-events-none')
             expect(ghost.className).not.toContain('popover-sheet-enter')
             // Gone once its exit has played.
-            act(() => ghost.dispatchEvent(new Event('animationend')))
+            act(() => {
+                ghost.dispatchEvent(new Event('animationend'))
+            })
             expect(frame.querySelector('[data-popover-sheet-leaving]')).toBeNull()
             // And, should animationend never come, shortly after anyway.
             renderSheet(vi.fn())
             renderSheet(vi.fn(), false)
             expect(frame.querySelector('[data-popover-sheet-leaving]')).not.toBeNull()
-            act(() => vi.advanceTimersByTime(400))
+            act(() => {
+                vi.advanceTimersByTime(400)
+            })
             expect(frame.querySelector('[data-popover-sheet-leaving]')).toBeNull()
             vi.useRealTimers()
         })
@@ -338,7 +344,13 @@ describe('Popover surfaces', () => {
 describe('PopoverOption', () => {
     const markup = (props: Partial<Parameters<typeof PopoverOption>[0]> = {}) =>
         renderToStaticMarkup(
-            createElement(PopoverOption, { active: false, onClick: () => undefined, ariaLabel: 'Set Treble clef', children: 'Treble', ...props }),
+            createElement(PopoverOption, {
+                active: false,
+                onClick: () => undefined,
+                ariaLabel: 'Set Treble clef',
+                children: 'Treble',
+                ...props,
+            }),
         )
     const button = (props: Partial<Parameters<typeof PopoverOption>[0]> = {}) => {
         const box = document.createElement('div')
@@ -369,7 +381,7 @@ describe('PopoverOption', () => {
     })
 
     it('shows a picked row by a trailing mark, a tile by a corner mark, a cell by a check by its label', () => {
-        const mark = (el: Element) => el.querySelector('[aria-hidden="true"]') as HTMLElement | null
+        const mark = (el: Element) => el.querySelector<HTMLElement>('[aria-hidden="true"]')
         const row = button({ active: true, className: 'w-full h-14 gap-3 px-3 text-left' })
         expect(mark(row)?.className).toContain('ml-auto')
         expect(mark(button({ className: 'w-full h-14 gap-3 px-3 text-left' }))).toBeNull()
