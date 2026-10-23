@@ -50,17 +50,25 @@ export function TimeSignaturePopover({
     const [expanded, setExpanded] = useState(() => MORE_METERS.some(isActive))
     const sheet = variant === 'sheet'
 
+    // Content hangs from the top, the numerals in a fixed box: every meter's digits share one
+    // line however its caption wraps. Phones fill the sheet in four fluid columns.
     const cell = (meter: TimeSignature) => (
         <PopoverOption
             key={`${meter.beatAmount}/${meter.beatType}`}
             active={isActive(meter)}
             ariaLabel={`Set ${meter.beatAmount}/${meter.beatType} time`}
             onClick={() => onSelect(meter.beatAmount, meter.beatType)}
-            className="flex-col justify-center gap-1 w-18 h-18 px-1">
-            <TimeSignatureIcon beatAmount={meter.beatAmount} beatType={meter.beatType} size={30} />
-            <span className="font-label font-medium text-[11px] leading-tight text-center">{meter.plainName}</span>
+            layout="cell"
+            className={`flex-col justify-start gap-1.5 h-20 px-1 pt-3 ${sheet ? 'w-full min-w-0' : 'w-18'}`}>
+            <span className="flex h-7.5 items-center">
+                <TimeSignatureIcon beatAmount={meter.beatAmount} beatType={meter.beatType} size={30} />
+            </span>
+            <span className={`font-label font-medium leading-tight text-center text-balance ${sheet ? 'text-[11px]' : 'text-[12px]'}`}>
+                {meter.plainName}
+            </span>
         </PopoverOption>
     )
+    const row = sheet ? 'grid grid-cols-4 gap-1.5' : 'flex flex-wrap gap-1.5'
 
     return (
         <Popover
@@ -73,8 +81,8 @@ export function TimeSignaturePopover({
             lead={lead}
             className={sheet ? 'gap-2' : `w-86 gap-2${className ? ` ${className}` : ''}`}>
             <div role="group" aria-label="Time signature" className="flex flex-col gap-1.5">
-                <div className="flex flex-wrap gap-1.5">{COMMON_METERS.map(cell)}</div>
-                {expanded && <div className="flex flex-wrap gap-1.5">{MORE_METERS.map(cell)}</div>}
+                <div className={row}>{COMMON_METERS.map(cell)}</div>
+                {expanded && <div className={row}>{MORE_METERS.map(cell)}</div>}
             </div>
             {!expanded && (
                 <div>

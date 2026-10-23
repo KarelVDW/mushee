@@ -4,6 +4,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 
 import { ClefPopover } from '@/components/editor/ClefPopover'
+import { KeySignaturePopover } from '@/components/editor/KeySignaturePopover'
 import { tapReadout } from '@/components/editor/TempoPopover'
 import { TimeSignaturePopover } from '@/components/editor/TimeSignaturePopover'
 import { transposeReadout } from '@/components/editor/TransposePopover'
@@ -63,6 +64,27 @@ describe('ClefPopover', () => {
         // A cello's usual clef is bass, already in the tier: nothing extra.
         expect(firstTier(render('treble', Instrument.Cello))).toEqual(['Treble', 'Bass'])
         expect(firstTier(render('bass', Instrument.Violin))).toEqual(['Treble', 'Bass'])
+    })
+})
+
+describe('KeySignaturePopover', () => {
+    const render = (active: number) =>
+        renderToStaticMarkup(createElement(KeySignaturePopover, { active, onSelect: noop, onDismiss: noop }))
+    /** The markup's visible text: tags and attributes (names, titles) dropped. */
+    const visibleText = (markup: string) => markup.replace(/<[^>]*>/g, ' ')
+
+    it('names every key as before, drawing each name’s sharp or flat as notation', () => {
+        const markup = render(0)
+        for (const name of ['C♭', 'F', 'C', 'G', 'F♯', 'C♯']) expect(markup).toContain(`aria-label="${name} major"`)
+        expect(visibleText(markup)).not.toMatch(/[♯♭]/)
+    })
+
+    it('makes C the wide tile with no sharps or flats, picked with a check', () => {
+        const markup = render(0)
+        expect(visibleText(markup)).toContain('no sharps or flats')
+        expect(markup).toMatch(/aria-pressed="true" aria-label="C major"/)
+        // Every other key sits on its faint five-line staff: 14 keys, 5 lines each, and C's empty one.
+        expect(markup.match(/<line /g)).toHaveLength(15 * 5)
     })
 })
 

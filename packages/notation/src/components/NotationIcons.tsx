@@ -7,6 +7,8 @@
 
 import { useMemo } from 'react'
 
+import { Bravura } from '../engraving/Bravura'
+import { NUM_STAFF_LINES } from '../engraving/constants'
 import type { Duration } from '../model/Duration'
 import { KeySignature } from '../model/KeySignature'
 import { ClefLayout } from '../model/layout/ClefLayout'
@@ -70,9 +72,39 @@ export function AccidentalIcon({ alter, size = 20, color = 'currentColor' }: Ico
 /** Horizontal step between the accidentals of a key-signature icon. */
 const KEY_ACCIDENTAL_ADVANCE = 7
 
-/** The run of sharps/flats for a key, drawn on a mini treble staff; C major (no accidentals) is a natural on the middle line. */
-export function KeySignatureIcon({ fifths, size = 30, color = 'currentColor' }: IconProps & { fifths: number }) {
+/**
+ * A staffed key signature's window (y down): the five lines plus room for the highest sharp
+ * (G♯ above the top line reaches y ≈ 20.9) and the lowest flat (F♭ in the first space, ≈ 82.1),
+ * the same for every key so a grid of them shares one staff line. An empty staff keeps 2 units
+ * round its lines.
+ */
+const KEY_STAFF_WINDOW = { top: 19, height: 66 }
+const EMPTY_STAFF_WINDOW = { top: Staff.TOP_Y - 2, height: Staff.HEIGHT + 4 }
+/** The faint staff behind a staffed key signature: outline_variant at 40%, so the accidentals stay the ink. */
+const KEY_STAFF_COLOR = 'var(--color-outline-variant, #acadad)'
+/** The gap between a staffed key signature's accidentals (the score's own is ACCIDENTAL_GAP, 2). */
+const KEY_STAFF_ACCIDENTAL_GAP = 0.5
+const KEY_STAFF_OPACITY = 0.4
+
+interface KeySignatureIconProps extends IconProps {
+    fifths: number
+    /**
+     * Draw the accidentals on a faint five-line staff — notation, so they read as a key rather
+     * than specks. `size` is then the staff's own height (its five lines), the window growing
+     * round it to fit the accidentals; C major is the staff alone.
+     */
+    staff?: boolean
+    /** A staffed icon's width in px, wider than the accidentals need (C major's short empty staff); the accidentals stay centred. */
+    width?: number
+}
+
+/**
+ * The run of sharps/flats for a key. Bare, in a `size`-tall window over the staff region, C major
+ * (no accidentals) a natural on the middle line; with `staff`, on faint staff lines of `size` px.
+ */
+export function KeySignatureIcon({ fifths, size = 30, color = 'currentColor', staff = false, width }: KeySignatureIconProps) {
     const accidentals = KeySignature.accidentalsForFifths(fifths)
+    if (staff) return <StaffedKeySignature fifths={fifths} staffSize={size} color={color} width={width} />
     const viewWidth = Math.max(1, accidentals.length) * KEY_ACCIDENTAL_ADVANCE + 4
     if (accidentals.length === 0) {
         return (
@@ -96,6 +128,50 @@ export function KeySignatureIcon({ fifths, size = 30, color = 'currentColor' }: 
                     key={i}
                     name={a.glyphName}
                     x={2 + i * KEY_ACCIDENTAL_ADVANCE}
+                    y={Staff.yForNoteLine(new Pitch({ name: a.name, octave: a.octave }).line)}
+                    fill={color}
+                />
+            ))}
+        </svg>
+    )
+}
+
+/** {@link KeySignatureIcon} on its staff: the lines, then the accidentals over them, centred across the width. */
+function StaffedKeySignature({ fifths, staffSize, color, width }: { fifths: number; staffSize: number; color: string; width?: number }) {
+    const accidentals = KeySignature.accidentalsForFifths(fifths)
+    const window = accidentals.length ? KEY_STAFF_WINDOW : EMPTY_STAFF_WINDOW
+    const scale = staffSize / Staff.HEIGHT
+    // On a staff the accidentals keep their real proportions, so they step by their own widths
+    // (a touch tighter than the score's spacing) instead of overlapping: each one's x, then the run's ink.
+    const xs: number[] = []
+    let ink = 0
+    for (const a of accidentals) {
+        if (xs.length) ink += KEY_STAFF_ACCIDENTAL_GAP
+        xs.push(ink)
+        ink += Bravura.width(a.glyphName)
+    }
+    const viewWidth = Math.max(ink + 4, width === undefined ? 0 : width / scale)
+    const left = (viewWidth - ink) / 2
+    return (
+        <svg width={viewWidth * scale} height={window.height * scale} viewBox={`0 ${window.top} ${viewWidth} ${window.height}`} aria-hidden>
+            {Array.from({ length: NUM_STAFF_LINES }, (_, i) => (
+                <line
+                    key={i}
+                    x1={0}
+                    x2={viewWidth}
+                    y1={Staff.yForStaffLine(i)}
+                    y2={Staff.yForStaffLine(i)}
+                    stroke={KEY_STAFF_COLOR}
+                    strokeOpacity={KEY_STAFF_OPACITY}
+                    strokeWidth={1}
+                    vectorEffect="non-scaling-stroke"
+                />
+            ))}
+            {accidentals.map((a, i) => (
+                <Glyph
+                    key={i}
+                    name={a.glyphName}
+                    x={left + xs[i]}
                     y={Staff.yForNoteLine(new Pitch({ name: a.name, octave: a.octave }).line)}
                     fill={color}
                 />
