@@ -42,8 +42,10 @@ export default function RootLayout({
     children: React.ReactNode
 }>) {
     return (
-        <html lang="en">
-            <body className={`${manrope.variable} ${spaceGrotesk.variable} ${geistMono.variable} antialiased`}>
+        // The next/font family variables sit on <html>, beside :root, so the theme's
+        // --font-body / --font-headline (theme.css) resolve for hand-written CSS too.
+        <html lang="en" className={`${manrope.variable} ${spaceGrotesk.variable} ${geistMono.variable}`}>
+            <body className="antialiased">
                 <Providers>{children}</Providers>
             </body>
         </html>

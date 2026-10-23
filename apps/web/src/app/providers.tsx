@@ -31,9 +31,22 @@ export function SessionCacheScope() {
     return null
 }
 
+/**
+ * iOS Safari applies `:active` only once the document has a touch listener, so without one no
+ * button shows its pressed state under a finger. One passive no-op listener turns it on app-wide.
+ */
+function useTouchActiveStates() {
+    useEffect(() => {
+        const noop = () => {}
+        document.addEventListener('touchstart', noop, { passive: true })
+        return () => document.removeEventListener('touchstart', noop)
+    }, [])
+}
+
 export function Providers({ children }: { children: ReactNode }) {
     // useState ensures one client per browser session, stable across re-renders.
     const [queryClient] = useState(createQueryClient)
+    useTouchActiveStates()
 
     return (
         <QueryClientProvider client={queryClient}>

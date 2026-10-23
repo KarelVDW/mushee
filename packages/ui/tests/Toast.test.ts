@@ -2,7 +2,7 @@ import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { dismissToast, showToast, Toaster, ToastQueue, toasts } from '../src/Toast'
+import { dismissToast, showToast, Toaster, type ToastItem, ToastQueue, toasts, ToastStage } from '../src/Toast'
 
 const render = () => renderToStaticMarkup(createElement(Toaster))
 const messages = () => toasts.visible.map((t) => t.message)
@@ -35,6 +35,37 @@ describe('Toaster regions', () => {
         expect(alert).toContain('Microphone access was blocked.')
     })
 
+    it('draws an opaque card that rises in, never glass', () => {
+        showToast('Saved.', 'info', 'check')
+        const classes = card(render()).split(' ')
+        expect(classes).toEqual(
+            expect.arrayContaining([
+                'bg-surface-container-lowest',
+                'shadow-overlay',
+                'rounded-lg',
+                'animate-[toast-in_200ms_var(--ease-solkey)]',
+            ]),
+        )
+        expect(classes.some((c) => c.includes('backdrop-blur') || c.includes('/85') || c === 'editorial-shadow')).toBe(false)
+    })
+
+    it('gives each tone its well: red for errors, cyan-soft for info, neutral for a notice', () => {
+        showToast('Could not save.')
+        showToast('Saved.', 'info', 'check')
+        const html = render()
+        expect(html).toContain(
+            'w-7 h-7 rounded-full shrink-0 inline-flex items-center justify-center bg-error-container text-on-error-container',
+        )
+        expect(html).toContain('w-7 h-7 rounded-full shrink-0 inline-flex items-center justify-center bg-primary-soft text-on-primary-soft')
+        expect(html).not.toContain('bg-primary-container text-on-primary-container')
+        toasts.clear()
+        showToast('The connection dropped.', 'notice', 'wifi-off')
+        const notice = render()
+        const status = notice.slice(notice.indexOf('role="status"'), notice.indexOf('role="alert"'))
+        expect(status).toContain('bg-surface-container-high text-on-surface-variant')
+        expect(status).toContain('The connection dropped.')
+    })
+
     it('reads the --toast-bottom offset, never under the safe-area inset', () => {
         expect(render()).toContain('bottom-[max(var(--toast-bottom,1.5rem),env(safe-area-inset-bottom))]')
     })
@@ -62,11 +93,7 @@ describe('Toaster regions', () => {
         expect(html).toMatch(/<button type="button" class="[^"]*h-10[^"]*">Hear it back<\/button>/)
     })
 
-    // Layout is measured in a browser; these pin the rule that gives a phone's message its line.
-    const card = (html: string) => html.match(/<div class="(pointer-events-auto [^"]*)">/)?.[1] ?? ''
-    const messageRow = (html: string) => html.match(/<span class="([^"]*)"><span class="w-7 h-7/)?.[1] ?? ''
-
-    it('wraps a two-button toast below sm: the message keeps the first line, the buttons and × go under it at the end', () => {
+    it('wraps a two-button toast below sm into two rows: icon, message and × first, the buttons under the message', () => {
         showToast('Added bars 3–6. Tap any note to fix it.', 'info', {
             actions: [
                 { label: 'Hear it back', onClick: () => {} },
@@ -74,20 +101,76 @@ describe('Toaster regions', () => {
             ],
         })
         const html = render()
-        expect(card(html).split(' ')).toEqual(expect.arrayContaining(['flex', 'max-sm:flex-wrap', 'sm:max-w-xl']))
-        expect(messageRow(html).split(' ')).toEqual(expect.arrayContaining(['min-w-0', 'flex-auto', 'max-sm:basis-full']))
-        // Both buttons and the × share one end-aligned group, after the message in reading order.
+        expect(card(html).split(' ')).toEqual(
+            expect.arrayContaining(['flex', 'max-sm:grid', 'max-sm:grid-cols-[1fr_auto]', 'max-sm:gap-y-1', 'sm:max-w-xl']),
+        )
+        expect(messageRow(html).split(' ')).toEqual(
+            expect.arrayContaining(['min-w-0', 'flex-auto', 'max-sm:col-start-1', 'max-sm:row-start-1']),
+        )
+        // The group dissolves into the grid below sm: the buttons span the second row, their text
+        // under the message's; the × keeps its DOM place after them and sits at the first row's end.
         expect(html).toMatch(
-            /<span class="[^"]*ml-auto[^"]*"><span class="[^"]*"><button[^>]*>Hear it back<\/button><button[^>]*>Undo<\/button><\/span><button[^>]*aria-label="Dismiss"/,
+            /<span class="[^"]*ml-auto[^"]*max-sm:contents"><span class="[^"]*max-sm:col-span-2 max-sm:row-start-2 max-sm:justify-start max-sm:pl-7"><button[^>]*>Hear it back<\/button><button[^>]*>Undo<\/button><\/span><span class="inline-flex max-sm:row-start-1 max-sm:col-start-2 max-sm:self-start"><button[^>]*aria-label="Dismiss"/,
         )
     })
 
     it('keeps a one-button toast on one line, its message free to wrap between the icon and the button', () => {
         showToast('Deleted 3 notes.', 'info', { action: { label: 'Undo', ariaLabel: 'Undo delete', onClick: () => {} } })
         const html = render()
-        expect(card(html)).not.toContain('flex-wrap')
-        expect(messageRow(html)).not.toContain('basis-full')
+        expect(card(html)).not.toContain('grid')
+        expect(html).not.toContain('max-sm:contents')
+        expect(messageRow(html)).not.toContain('row-start')
         expect(html).toMatch(/<span class="min-w-0 wrap-break-word [^"]*">Deleted 3 notes\.<\/span>/)
+    })
+})
+
+// Layout is measured in a browser; these pin the classes that shape it.
+function card(html: string) {
+    return html.match(/<div class="(flex items-center gap-3 max-w-full [^"]*)">/)?.[1] ?? ''
+}
+function messageRow(html: string) {
+    return html.match(/<span class="([^"]*)"><span class="w-7 h-7/)?.[1] ?? ''
+}
+
+describe('ToastStage', () => {
+    const item = (id: number, message = `Toast ${id}.`): ToastItem => ({ id, message, tone: 'info', actions: [] })
+
+    it('keeps a removed toast in its place as a leaving ghost and adds new toasts at the end', () => {
+        const a = item(1)
+        const b = item(2)
+        const c = item(3)
+        const shown = ToastStage.next([], [a, b])
+        expect(shown).toEqual([
+            { toast: a, leaving: false },
+            { toast: b, leaving: false },
+        ])
+        // The cap evicts the oldest as a third arrives: it stays, leaving, where it was.
+        expect(ToastStage.next(shown, [b, c])).toEqual([
+            { toast: a, leaving: true },
+            { toast: b, leaving: false },
+            { toast: c, leaving: false },
+        ])
+    })
+
+    it('takes a refreshed toast’s latest content in place', () => {
+        const shown = ToastStage.next([], [item(1, 'Moved.')])
+        const refreshed = { ...item(1, 'Moved.'), icon: 'check' as const }
+        expect(ToastStage.next(shown, [refreshed])).toEqual([{ toast: refreshed, leaving: false }])
+    })
+
+    it('drops a ghost once its exit has played, and only ghosts', () => {
+        const staged = ToastStage.next(ToastStage.next([], [item(1), item(2)]), [item(2)])
+        expect(ToastStage.drop(staged, 1)).toEqual([{ toast: item(2), leaving: false }])
+        expect(ToastStage.drop(staged, 2)).toEqual(staged)
+        expect(ToastStage.GHOST_MAX_MS).toBe(300)
+    })
+
+    it('leaves the queue itself untouched: a dismissed toast is gone at once', () => {
+        const id = showToast('Link copied.', 'info')
+        dismissToast(id)
+        expect(messages()).toEqual([])
+        // The first render after a removal has nothing to ghost from: it starts from the queue.
+        expect(render()).not.toContain('Link copied.')
     })
 })
 
@@ -133,8 +216,9 @@ describe('toast actions', () => {
 })
 
 describe('ToastQueue.durationFor', () => {
-    it('gives info 6 s and errors max(8 s, 0.3 s per word)', () => {
+    it('gives info and notices 6 s and errors max(8 s, 0.3 s per word)', () => {
         expect(ToastQueue.durationFor('Link copied.', 'info')).toBe(6000)
+        expect(ToastQueue.durationFor('The connection dropped. Your take so far is saved.', 'notice')).toBe(6000)
         expect(ToastQueue.durationFor('Could not copy.', 'error')).toBe(8000)
         const thirtyWords = Array.from({ length: 30 }, (_, i) => `word${i}`).join(' ')
         expect(ToastQueue.durationFor(thirtyWords, 'error')).toBe(9000)

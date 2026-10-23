@@ -14,6 +14,9 @@ const newsreader = Newsreader({
     variable: '--font-newsreader',
     subsets: ['latin'],
     style: ['normal', 'italic'],
+    // The optical-size axis: Newsreader draws its display cut at headline sizes and its text
+    // cut small (font-optical-sizing: auto, the default, picks per size).
+    axes: ['opsz'],
 })
 
 const manrope = Manrope({
@@ -78,8 +81,10 @@ export default function RootLayout({
     children: React.ReactNode
 }>) {
     return (
-        <html lang="en">
-            <body className={`${newsreader.variable} ${manrope.variable} ${spaceGrotesk.variable} ${geistMono.variable} antialiased`}>
+        // The next/font family variables sit on <html>, beside :root, so the theme's
+        // --font-body / --font-headline (theme.css) resolve for hand-written CSS too.
+        <html lang="en" className={`${newsreader.variable} ${manrope.variable} ${spaceGrotesk.variable} ${geistMono.variable}`}>
+            <body className="antialiased">
                 <HydrationMarker />
                 <Providers>
                     {children}
