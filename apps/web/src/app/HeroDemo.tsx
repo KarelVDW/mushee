@@ -174,7 +174,7 @@ export function HeroDemo() {
                 <div
                     role="img"
                     aria-label="Demo: a hummed melody turning into notes on a staff"
-                    className="bg-surface-container-lowest rounded-lg editorial-shadow p-6 -rotate-[1.5deg]">
+                    className="bg-surface-container-lowest rounded-lg editorial-shadow p-7 -rotate-[1.5deg]">
                     <DemoCard animate={animate} seconds={seconds} />
                 </div>
                 {motion && (

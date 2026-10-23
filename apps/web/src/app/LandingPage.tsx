@@ -1,5 +1,6 @@
 import { FaqList } from '@/components/marketing/FaqList'
 import { GetStartedButton, GetStartedNote } from '@/components/marketing/GetStartedButton'
+import { Haze } from '@/components/marketing/Haze'
 import { MarketingNav } from '@/components/marketing/MarketingNav'
 import { SectionHeading } from '@/components/marketing/SectionHeading'
 import { Container, Eyebrow, Footer, Icon, type IconName } from '@/components/ui'
@@ -30,33 +31,35 @@ export function LandingPage() {
 function Hero() {
     return (
         <section className="relative overflow-hidden pt-10 pb-14 sm:pt-16 sm:pb-20">
-            <div className="absolute -top-[10%] -right-[5%] w-120 h-120 bg-primary-container/[0.18] rounded-full blur-[120px] pointer-events-none" />
-            <Container width="marketing" className="relative z-2 grid grid-cols-1 lg:grid-cols-[1.05fr_1fr] gap-10 lg:gap-12 items-center">
-                <div className="flex flex-col gap-6">
-                    <Eyebrow className="text-primary">{BETA_MODE ? 'Now in closed beta' : 'Melody to sheet music'}</Eyebrow>
-                    <h1 className="font-display font-bold text-[40px] sm:text-[56px] lg:text-[72px] leading-[0.95] tracking-[-0.04em] text-on-surface m-0">
+            <Haze placement="top-right" />
+            <Container width="marketing" className="relative z-2 grid grid-cols-1 lg:grid-cols-[1fr_1.1fr] gap-10 lg:gap-12 items-center">
+                {/* An explicit rhythm, not one flat gap: eyebrow 20px, headline 24px, then 36px to the CTA. */}
+                <div className="flex flex-col">
+                    <Eyebrow className="text-primary mb-5">{BETA_MODE ? 'Now in closed beta' : 'Melody to sheet music'}</Eyebrow>
+                    <h1 className="type-hero text-on-surface m-0 mb-6">
                         The fastest way to get a melody
                         <br />
                         <em className="font-serif font-normal">on the page.</em>
                     </h1>
-                    <p className="font-body font-normal text-[18px] leading-normal text-on-surface-variant m-0 max-w-120">
+                    <p className="font-body font-normal text-[18px] leading-normal text-on-surface-variant m-0 mb-9 max-w-120">
                         Hum it, sing it, or play it — Solkey listens and writes the sheet music in front of your eyes.
                     </p>
-                    {/* One action: the nav keeps the only "Sign in"; the line under it answers "is it free, do I install anything?" (signed out only). */}
-                    <div className="flex gap-3 items-center mt-2 flex-wrap">
+                    {/* One action: the nav keeps the only "Sign in"; the line 12px under it is the button's caption, answering
+                        "is it free, do I install anything?" (signed out only). */}
+                    <div className="flex flex-col items-start gap-3">
                         <GetStartedButton location="hero" size="lg" emphasis="pop" />
+                        <GetStartedNote>
+                            {BETA_MODE ? (
+                                <p className="font-body font-normal text-[13px] leading-normal text-on-surface-variant m-0">
+                                    Free during the beta · 30 minutes of recording per day · approved personally, usually within a day.
+                                </p>
+                            ) : (
+                                <p className="font-body font-normal text-[14px] leading-normal text-on-surface-variant m-0">
+                                    Free to start — no card, nothing to install.
+                                </p>
+                            )}
+                        </GetStartedNote>
                     </div>
-                    <GetStartedNote>
-                        {BETA_MODE ? (
-                            <p className="font-body font-normal text-[13px] leading-normal text-on-surface-variant m-0">
-                                Free during the beta · 30 minutes of recording per day · approved personally, usually within a day.
-                            </p>
-                        ) : (
-                            <p className="font-body font-normal text-[14px] leading-normal text-on-surface-variant m-0">
-                                Free to start — no card, nothing to install.
-                            </p>
-                        )}
-                    </GetStartedNote>
                 </div>
                 <HeroDemo />
             </Container>
@@ -186,7 +189,7 @@ function GoodToKnow() {
 function FinalCTA() {
     return (
         <section className="py-16 sm:py-24 relative overflow-hidden">
-            <div className="absolute -bottom-[30%] -right-[5%] w-[540px] h-[540px] rounded-full bg-primary-container/[0.18] blur-[120px] pointer-events-none" />
+            <Haze placement="right-edge" />
             <Container width="marketing" className="relative z-2">
                 {/* The closing statement: no eyebrow, and its CTA follows at the hero's 36px. */}
                 <div className="max-w-190 mx-auto flex flex-col items-center">
