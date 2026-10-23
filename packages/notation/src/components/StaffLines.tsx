@@ -5,9 +5,10 @@ interface StaffLinesProps {
     lines: LayoutLine[]
 }
 
+/** One row's five staff lines; `data-staff-lines` names the group for tests that measure the staff. */
 export function StaffLines({ lines }: StaffLinesProps) {
     return (
-        <g>
+        <g data-staff-lines>
             {lines.map((line, i) => (
                 <line key={i} x1={line.x1} y1={line.y1} x2={line.x2} y2={line.y2} stroke={NOTATION_INK} strokeWidth={1} />
             ))}

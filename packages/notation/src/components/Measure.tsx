@@ -163,13 +163,15 @@ export const Measure = memo(function Measure({
                 // One band per selected note (the e2e suites count them), spanning the note's full
                 // allotted slot — the last note reaching the end barline — so a run of selected notes
                 // reads as one continuous strip: inside a run the bands meet square, and only a lone
-                // selected note keeps soft corners. A run that carries on into the next bar takes its
-                // last band on through the barline (which draws over it) to the bar's end, where the
-                // next band begins, or the strip would break above and below the staff. The bands abut
-                // rather than overlap: the fill is translucent, so an overlap would paint a darker
-                // hairline at every note, while abutting edges blend to the band's own colour.
-                const inRun = !!selectedNoteIds && [notes[i - 1], notes[i + 1]].some((n) => !!n && selectedNoteIds.has(n.id))
-                const runsOn = isSelected && i === notes.length - 1 && !!selectedNoteIds?.has(note.getNext()?.id ?? '')
+                // selected note keeps soft corners. A run is judged in score order, across barlines:
+                // one that carries on into the next bar takes its last band on through the barline
+                // (which draws over it) to the bar's end, where the next bar's square band begins, or
+                // the strip would break (or show rounded nicks) above and below the staff. The bands
+                // abut rather than overlap: the fill is translucent, so an overlap would paint a
+                // darker hairline at every note, while abutting edges blend to the band's own colour.
+                const selectedNext = isSelected && !!selectedNoteIds?.has(note.getNext()?.id ?? '')
+                const inRun = selectedNext || (isSelected && !!selectedNoteIds?.has(note.getPrevious()?.id ?? ''))
+                const runsOn = selectedNext && i === notes.length - 1
                 return (
                     <g key={note.id} transform={`translate(${noteX}, 0)`}>
                         {isSelected && (

@@ -18,10 +18,10 @@ function render(landing?: boolean): ReactElement<{ className?: string }> {
 }
 
 describe('NoteGroup landing', () => {
-    it('wraps a landing note’s parts in one group that fades in with the note-land keyframe', () => {
+    it('wraps a landing note’s parts in one group that fades in with theme.css’s note-land class', () => {
         const group = render(true)
         expect(group.type).toBe('g')
-        expect(group.props.className).toBe('animate-[note-land_200ms_var(--ease-solkey)]')
+        expect(group.props.className).toBe('note-land')
     })
 
     it('keeps any other note’s parts flat, unwrapped', () => {

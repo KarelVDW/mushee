@@ -1,5 +1,4 @@
 import {
-    INPUT_CURSOR_GAP,
     INPUT_CURSOR_TAIL,
     MAX_MEASURES_PER_ROW,
     MEASURE_BUTTON_GAP,
@@ -125,22 +124,20 @@ export class ScoreLayout {
 
     /** The lowest ink on `row`, row-local: see {@link measureButtons}' `inkBottom`. */
     private inkBottomOf(row: RowLayout): number {
-        const staffBottom = Staff.TOP_Y + Staff.HEIGHT
-        let bottom = staffBottom
+        let bottom = Staff.TOP_Y + Staff.HEIGHT // the bottom staff line
         for (const measure of row.measures) {
             const layout = this.measureLayoutFor(measure)
             for (const note of measure.notes) {
-                const { noteY, stem, ledgerLines } = layout.noteLayoutFor(note)
+                const noteLayout = layout.noteLayoutFor(note)
+                const { noteY, ledgerLines } = noteLayout
                 const drawn = layout.stemFor(note)
-                // The input cursor hangs under the note's own lowest point (its notehead or own
-                // stem), never above the staff bottom — the editor's ScoreView draws it there.
-                const cursorAnchor = Math.max(staffBottom, noteY, stem?.y1 ?? noteY, stem?.y2 ?? noteY)
                 bottom = Math.max(
                     bottom,
                     noteY + STAVE_LINE_DISTANCE / 2, // the notehead's lower edge
                     ...ledgerLines.map((line) => line.y1),
                     drawn ? Math.max(drawn.y1, drawn.y2) : noteY,
-                    cursorAnchor + INPUT_CURSOR_GAP + INPUT_CURSOR_TAIL,
+                    // The input cursor's teardrop, hung where ScoreView draws it when the note is selected.
+                    noteLayout.inputCursor.y + INPUT_CURSOR_TAIL,
                 )
             }
         }

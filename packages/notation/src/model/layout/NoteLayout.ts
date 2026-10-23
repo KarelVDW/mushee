@@ -1,5 +1,12 @@
 import type { GlyphName } from '../../engraving/Bravura'
-import { DOTTED_FLAG_SCALE, LEDGER_LINE_EXTENSION, STAVE_LINE_DISTANCE, STEM_HEIGHT, STEM_WIDTH } from '../../engraving/constants'
+import {
+    DOTTED_FLAG_SCALE,
+    INPUT_CURSOR_GAP,
+    LEDGER_LINE_EXTENSION,
+    STAVE_LINE_DISTANCE,
+    STEM_HEIGHT,
+    STEM_WIDTH,
+} from '../../engraving/constants'
 import type { Clef } from '../Clef'
 import type { Duration } from '../Duration'
 import { Note } from '../Note'
@@ -71,6 +78,20 @@ export class NoteLayout {
         if (width.dotXs.length > 0) {
             const dotY = Number.isInteger(line) ? this.noteY - STAVE_LINE_DISTANCE / 2 : this.noteY
             this.dots = width.dotXs.map((x) => ({ x, y: dotY }))
+        }
+    }
+
+    /**
+     * Where the editor's input cursor (its teardrop) hangs when this note is selected, note-local:
+     * under the notehead's centre, INPUT_CURSOR_GAP below the note's lowest point (its head or
+     * its own stem), and never above the staff's bottom line. ScoreView draws the cursor here,
+     * and ScoreLayout's `inkBottom` keeps the bar controls clear of it — one rule for both.
+     */
+    get inputCursor(): { x: number; y: number } {
+        const lowest = this.stem ? Math.max(this.noteY, this.stem.y1, this.stem.y2) : this.noteY
+        return {
+            x: this.noteX + this.width.noteHeadWidth / 2,
+            y: Math.max(Staff.TOP_Y + Staff.HEIGHT, lowest) + INPUT_CURSOR_GAP,
         }
     }
 

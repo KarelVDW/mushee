@@ -2,7 +2,7 @@
 
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
-import { INPUT_CURSOR_GAP, MEASURE_BUTTON_OFFSET, SCORE_WIDTH } from '../engraving/constants'
+import { MEASURE_BUTTON_OFFSET, SCORE_WIDTH } from '../engraving/constants'
 import { NoteLanding } from '../lib/NoteLanding'
 import type { RecordingWaveformStore } from '../lib/RecordingWaveformStore'
 import { useObservedWidth } from '../lib/useObservedWidth'
@@ -204,17 +204,8 @@ export const ScoreView = memo(function ScoreView({
     const [noteLanding] = useState(() => new NoteLanding())
     noteLanding.update(score, recording)
 
-    // Input-cursor position: note-local x, row-local y
-    const inputCursorPos = useMemo(() => {
-        if (!selectedNote) return null
-        const x = selectedNote.layout.noteX + selectedNote.layout.width.noteHeadWidth / 2
-        let lowestY = selectedNote.layout.noteY
-        const stem = selectedNote.layout.stem
-        if (stem) lowestY = Math.max(lowestY, stem.y1, stem.y2)
-        const bottomStaffY = Staff.TOP_Y + Staff.HEIGHT
-        const y = Math.max(bottomStaffY, lowestY) + INPUT_CURSOR_GAP
-        return { x, y }
-    }, [selectedNote, selectedNote?.layout.id])
+    // Input-cursor position: note-local x, row-local y (the note's layout owns the rule)
+    const inputCursorPos = useMemo(() => selectedNote?.layout.inputCursor ?? null, [selectedNote, selectedNote?.layout.id])
 
     // Client to SVG coordinate conversion
     const clientToSvg = useCallback(

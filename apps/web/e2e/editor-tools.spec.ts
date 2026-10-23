@@ -429,9 +429,9 @@ test('Add bar and Remove last bar are named buttons under the final barline', as
     // Right-aligned under the last row's final barline — hugging the row, at least 24px under its
     // bottom staff line rather than after the svg's empty room below it — the remove 16px clear of the add.
     const [addBox, removeBox, svgBox] = await Promise.all([add.boundingBox(), remove.boundingBox(), svg.boundingBox()])
-    // The staff lines: the lines of each row's pointer-transparent staff group.
+    // The lowest staff line, of any row.
     const staffBottom = await svg.evaluate((el) =>
-        Math.max(...Array.from(el.querySelectorAll('g.pointer-events-none > g > line'), (line) => line.getBoundingClientRect().bottom)),
+        Math.max(...Array.from(el.querySelectorAll('[data-staff-lines] line'), (line) => line.getBoundingClientRect().bottom)),
     )
     expect(addBox?.y ?? 0).toBeGreaterThanOrEqual(staffBottom + 24 - 1)
     expect(addBox?.y ?? Infinity).toBeLessThan((svgBox?.y ?? 0) + (svgBox?.height ?? 0))

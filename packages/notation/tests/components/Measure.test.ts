@@ -1,4 +1,4 @@
-import { makeScore } from '@mushee/notation/testing'
+import { fill, makeScore, pitched } from '@mushee/notation/testing'
 import { isValidElement, type ReactElement, type ReactNode } from 'react'
 import { describe, expect, it } from 'vitest'
 
@@ -25,14 +25,19 @@ function elements(node: ReactNode): ReactElement[] {
     return [node, ...elements((node.props as { children?: ReactNode }).children)]
 }
 
-/** The selection bands measure `index` of `score` draws, with `selected` (note indices there) selected. */
-function bands(score: Score, index: number, selected: number[]): BandProps[] {
+/** The selection bands measure `index` of `score` draws, with the notes `selectedNoteIds` names selected (anywhere in the score). */
+function bandsWith(score: Score, index: number, selectedNoteIds: ReadonlySet<string>): BandProps[] {
     const measure = score.measures[index]
-    const selectedNoteIds = new Set(selected.map((i) => measure.notes[i].id))
     const tree = renderMeasure({ measure, layout: score.layout.measureLayoutFor(measure), selectedNoteIds })
     return elements(tree)
         .map((el) => el.props as BandProps)
         .filter((props) => props['data-selection-band'])
+}
+
+/** The selection bands measure `index` of `score` draws, with `selected` (note indices there) selected. */
+function bands(score: Score, index: number, selected: number[]): BandProps[] {
+    const measure = score.measures[index]
+    return bandsWith(score, index, new Set(selected.map((i) => measure.notes[i].id)))
 }
 
 describe('Measure selection bands', () => {
@@ -67,12 +72,35 @@ describe('Measure selection bands', () => {
         expect(bands(score, 0, [2]).map((band) => band.rx)).toEqual([3])
     })
 
-    it('judges neighbours within the measure: a run’s note at a barline is lone on its own side', () => {
+    it('judges neighbours in score order, so a run over a barline meets square there', () => {
         const score = makeScore(2)
-        // The last note of bar 1 with nothing else selected in it stays round, even when the
-        // run carries on into bar 2 (the barline draws over the meeting).
+        const [first, second] = score.measures
+        // The last note of bar 1 and the first of bar 2: one run, a lone note on either side of
+        // the barline — both bands square, or their rounded corners would nick the strip above
+        // and below the staff, where the barline doesn't reach.
+        const junction = new Set([first.notes[3].id, second.notes[0].id])
+        expect(bandsWith(score, 0, junction).map((band) => band.rx)).toEqual([0])
+        expect(bandsWith(score, 1, junction).map((band) => band.rx)).toEqual([0])
+        // Without its neighbour across the barline, each is lone again.
         expect(bands(score, 0, [3]).map((band) => band.rx)).toEqual([3])
-        expect(bands(score, 1, [0, 1]).map((band) => band.rx)).toEqual([0, 0])
+        expect(bands(score, 1, [0]).map((band) => band.rx)).toEqual([3])
+    })
+
+    it('squares every band of a select-all over one-note bars, each band running on to the next bar', () => {
+        const score = makeScore(3)
+        const wholes = [0, 1, 2].map((i) => fill(score, i, [pitched('G', 4, 'w')]).notes[0])
+        const all = new Set(wholes.map((note) => note.id))
+        const drawn = [0, 1, 2].map((i) => bandsWith(score, i, all))
+        expect(drawn.map((measureBands) => measureBands.map((band) => band.rx))).toEqual([[0], [0], [0]])
+        // On through each barline to the bar's end; the score's last note keeps its own slot.
+        drawn.forEach(([band], i) => {
+            const layout = score.layout.measureLayoutFor(score.measures[i])
+            const note = wholes[i]
+            const end = i < 2 ? layout.measureWidth - layout.getXForElement(note) : layout.getAllottedWidth(note)
+            expect(band.width).toBe(end)
+        })
+        // The middle bar alone is a lone note.
+        expect(bandsWith(score, 1, new Set([wholes[1].id])).map((band) => band.rx)).toEqual([3])
     })
 
     it('takes a run that carries on into the next bar through the barline, and stops a run that ends there', () => {
@@ -80,10 +108,7 @@ describe('Measure selection bands', () => {
         const [first, second] = score.measures
         const layout = score.layout.measureLayoutFor(first)
         const last = first.notes[3]
-        const bandsOf = (selected: string[]) =>
-            elements(renderMeasure({ measure: first, layout, selectedNoteIds: new Set(selected) }))
-                .map((el) => el.props as BandProps)
-                .filter((props) => props['data-selection-band'])
+        const bandsOf = (selected: string[]) => bandsWith(score, 0, new Set(selected))
         // Into bar 2: on through the barline (which stands between the last slot and the bar's
         // end, and draws over the band), to where bar 2's first band begins.
         const [across] = bandsOf([last.id, second.notes[0].id])
@@ -100,9 +125,7 @@ describe('Measure selection bands', () => {
         // The score's last note has no next bar to run on into.
         const lastLayout = score.layout.measureLayoutFor(second)
         const final = second.notes[3]
-        const [end] = elements(renderMeasure({ measure: second, layout: lastLayout, selectedNoteIds: new Set([final.id]) }))
-            .map((el) => el.props as BandProps)
-            .filter((props) => props['data-selection-band'])
+        const [end] = bandsWith(score, 1, new Set([final.id]))
         expect(end.width).toBe(lastLayout.getAllottedWidth(final))
     })
 

@@ -8,11 +8,11 @@ import { Glyph } from './Glyph'
 
 /**
  * A note landing during a recording: it fades in over 200ms, opacity only, as its waveform
- * bursts (the `note-land` keyframe, from packages/ui's theme.css). The end state is the note
- * at full opacity, so an export never shows it mid-fade; under reduced motion the global rule
- * collapses it and the note appears at once. A class needs the literal duration and easing.
+ * bursts — packages/ui theme.css's `.note-land` class (the `note-land` keyframe at --t-snap,
+ * --ease-solkey). The end state is the note at full opacity, so an export never shows it
+ * mid-fade; under reduced motion the global rule collapses it and the note appears at once.
  */
-const NOTE_LAND = 'animate-[note-land_200ms_var(--ease-solkey)]'
+const NOTE_LAND = 'note-land'
 
 interface NoteGroupProps {
     /** The note's layout snapshot — the placed note in a measure, or the ghost note's NoteLayout.preview. */
