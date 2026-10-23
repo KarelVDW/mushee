@@ -107,6 +107,17 @@ const FLATTENED_TRACK =
  */
 const FILLED_TRACK_OPTIONS = '[&>[role=group]>*]:flex-1 [&>[role=group]>*]:min-w-0'
 
+/**
+ * The one line along the dock's top edge. While a dock popover is open (an anchored panel
+ * inside the dock rises over it) the line fades out rather than being cut mid-sentence, keeping
+ * its height so the tools don't move; under reduced motion it goes at once.
+ */
+const HINT_LINE = [
+    'm-0 pb-2 text-center font-body font-normal text-[13px] leading-tight text-on-surface-variant truncate',
+    'motion-safe:animate-[tooltip-in_200ms_var(--ease-solkey)]',
+    'transition-opacity duration-150 ease-solkey motion-reduce:transition-none group-has-[[role=dialog]]/dock:opacity-0',
+].join(' ')
+
 /** Slack around the phone dock's height animation, so focus rings at its edges aren't clipped (px). */
 const RING_SLACK_PX = 4
 
@@ -201,7 +212,7 @@ export function NoteToolDock({
 
     return (
         <div
-            className={`relative z-20 shrink-0 py-2.5 pb-[max(0.625rem,env(safe-area-inset-bottom))] ${compact ? 'px-2' : 'px-3 sm:px-4'}`}>
+            className={`group/dock relative z-20 shrink-0 py-2.5 pb-[max(0.625rem,env(safe-area-inset-bottom))] ${compact ? 'px-2' : 'px-3 sm:px-4'}`}>
             {/* The chrome tone and its blur sit on a layer of their own: a bar with a backdrop-filter
                 would become the backdrop root of every popover and tooltip opened inside it. */}
             <span
@@ -215,7 +226,7 @@ export function NoteToolDock({
                     ) : (
                         <>
                             {line && (
-                                <p className="m-0 pb-2 text-center font-body font-normal text-[13px] leading-tight text-on-surface-variant truncate motion-safe:animate-[tooltip-in_200ms_var(--ease-solkey)]">
+                                <p className={HINT_LINE}>
                                     {line}
                                 </p>
                             )}
@@ -243,7 +254,7 @@ export function NoteToolDock({
             ) : (
                 <>
                     {line && (
-                        <p className="m-0 pb-2 text-center font-body font-normal text-[13px] leading-tight text-on-surface-variant truncate motion-safe:animate-[tooltip-in_200ms_var(--ease-solkey)]">
+                        <p className={HINT_LINE}>
                             {line}
                         </p>
                     )}
