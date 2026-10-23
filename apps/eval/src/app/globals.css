@@ -1,5 +1,5 @@
 @import 'tailwindcss';
-/* Tokens, base styles and the shared utilities (focus-ring, shadows, type roles) — one
+/* Tokens, base styles and the shared utilities (focus-ring, shadows, glass) — one
    source for every app; see packages/ui/src/theme.css. */
 @import '@mushee/ui/theme.css';
 /* The notation renderer (packages/notation) and the shared kit (packages/ui)
