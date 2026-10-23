@@ -31,60 +31,60 @@ describe('formatRecordingTime', () => {
 
 describe('formatAllowance', () => {
     it('names whole minutes and hours in words, never as a clock', () => {
-        expect(formatAllowance(180)).toBe('3 minutes')
-        expect(formatAllowance(1200)).toBe('20 minutes')
-        expect(formatAllowance(1800)).toBe('30 minutes')
-        expect(formatAllowance(10800)).toBe('3 hours')
-        expect(formatAllowance(28800)).toBe('8 hours')
+        expect(formatAllowance(180)).toBe('3\u00a0minutes')
+        expect(formatAllowance(1200)).toBe('20\u00a0minutes')
+        expect(formatAllowance(1800)).toBe('30\u00a0minutes')
+        expect(formatAllowance(10800)).toBe('3\u00a0hours')
+        expect(formatAllowance(28800)).toBe('8\u00a0hours')
     })
 
     it('uses the singular for one unit, and seconds below a minute', () => {
-        expect(formatAllowance(60)).toBe('1 minute')
-        expect(formatAllowance(3600)).toBe('1 hour')
-        expect(formatAllowance(1)).toBe('1 second')
-        expect(formatAllowance(30)).toBe('30 seconds')
-        expect(formatAllowance(0)).toBe('0 seconds')
+        expect(formatAllowance(60)).toBe('1\u00a0minute')
+        expect(formatAllowance(3600)).toBe('1\u00a0hour')
+        expect(formatAllowance(1)).toBe('1\u00a0second')
+        expect(formatAllowance(30)).toBe('30\u00a0seconds')
+        expect(formatAllowance(0)).toBe('0\u00a0seconds')
     })
 
     it('falls back to the short form for amounts between whole units', () => {
-        expect(formatAllowance(160)).toBe('2 min 40 sec')
-        expect(formatAllowance(5400)).toBe('1 h 30 min')
+        expect(formatAllowance(160)).toBe('2\u00a0min 40\u00a0sec')
+        expect(formatAllowance(5400)).toBe('1\u00a0h 30\u00a0min')
     })
 
     it('rounds down and never goes negative', () => {
-        expect(formatAllowance(180.9)).toBe('3 minutes')
-        expect(formatAllowance(-5)).toBe('0 seconds')
+        expect(formatAllowance(180.9)).toBe('3\u00a0minutes')
+        expect(formatAllowance(-5)).toBe('0\u00a0seconds')
     })
 })
 
 describe('formatAllowanceShort', () => {
     it('counts minutes and seconds below an hour, dropping empty parts', () => {
-        expect(formatAllowanceShort(180)).toBe('3 min')
-        expect(formatAllowanceShort(156)).toBe('2 min 36 sec')
-        expect(formatAllowanceShort(45)).toBe('45 sec')
-        expect(formatAllowanceShort(3599)).toBe('59 min 59 sec')
+        expect(formatAllowanceShort(180)).toBe('3\u00a0min')
+        expect(formatAllowanceShort(156)).toBe('2\u00a0min 36\u00a0sec')
+        expect(formatAllowanceShort(45)).toBe('45\u00a0sec')
+        expect(formatAllowanceShort(3599)).toBe('59\u00a0min 59\u00a0sec')
     })
 
     it('counts hours and minutes from an hour on', () => {
-        expect(formatAllowanceShort(10800)).toBe('3 h')
-        expect(formatAllowanceShort(10740)).toBe('2 h 59 min')
-        expect(formatAllowanceShort(3661)).toBe('1 h 1 min')
+        expect(formatAllowanceShort(10800)).toBe('3\u00a0h')
+        expect(formatAllowanceShort(10740)).toBe('2\u00a0h 59\u00a0min')
+        expect(formatAllowanceShort(3661)).toBe('1\u00a0h 1\u00a0min')
     })
 
     it('says zero plainly and rounds down', () => {
-        expect(formatAllowanceShort(0)).toBe('0 sec')
-        expect(formatAllowanceShort(0.9)).toBe('0 sec')
-        expect(formatAllowanceShort(-1)).toBe('0 sec')
-        expect(formatAllowanceShort(59.99)).toBe('59 sec')
+        expect(formatAllowanceShort(0)).toBe('0\u00a0sec')
+        expect(formatAllowanceShort(0.9)).toBe('0\u00a0sec')
+        expect(formatAllowanceShort(-1)).toBe('0\u00a0sec')
+        expect(formatAllowanceShort(59.99)).toBe('59\u00a0sec')
     })
 })
 
 describe('formatTimeLeftToday', () => {
     it("says what is left of today's recording", () => {
-        expect(formatTimeLeftToday(60)).toBe('1 min left today')
-        expect(formatTimeLeftToday(30)).toBe('30 sec left today')
-        expect(formatTimeLeftToday(160)).toBe('2 min 40 sec left today')
-        expect(formatTimeLeftToday(10740)).toBe('2 h 59 min left today')
+        expect(formatTimeLeftToday(60)).toBe('1\u00a0min left today')
+        expect(formatTimeLeftToday(30)).toBe('30\u00a0sec left today')
+        expect(formatTimeLeftToday(160)).toBe('2\u00a0min 40\u00a0sec left today')
+        expect(formatTimeLeftToday(10740)).toBe('2\u00a0h 59\u00a0min left today')
     })
 })
 

@@ -3,7 +3,8 @@
 import { Glyph } from '@mushee/notation/components'
 import { Instrument, Score } from '@mushee/notation/model'
 import { ScoreSerializer } from '@mushee/notation/model/io/ScoreSerializer'
-import { Skeleton } from '@mushee/ui'
+import { Skeleton, TextLink } from '@mushee/ui'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
@@ -335,7 +336,11 @@ function AllowanceLine({ allowance }: { allowance: ScoreAllowance }) {
     return (
         <span className="inline-flex flex-wrap items-center gap-x-2 text-[14px]">
             {allowance.line}
-            {allowance.atCap && next && <TertiaryButton href={withPlan(settingsTabPath('plan'), next.id)}>See plans</TertiaryButton>}
+            {allowance.atCap && next && (
+                <TextLink as={Link} href={withPlan(settingsTabPath('plan'), next.id)}>
+                    See plans
+                </TextLink>
+            )}
         </span>
     )
 }

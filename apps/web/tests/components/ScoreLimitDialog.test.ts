@@ -60,27 +60,29 @@ describe('ScoreAllowance', () => {
     it('stays quiet until two below the cap, then counts the free scores', () => {
         expect(sketch(0).line).toBeNull()
         expect(sketch(2).line).toBeNull()
-        expect(sketch(3).line).toBe('3 of 5 free scores')
-        expect(sketch(4).line).toBe('4 of 5 free scores')
+        expect(sketch(3).line).toBe('3 of 5\u00a0free\u00a0scores')
+        expect(sketch(4).line).toBe('4 of 5\u00a0free\u00a0scores')
         expect(sketch(4).atCap).toBe(false)
     })
 
     it('says plainly when the cap is reached — and past it, after a downgrade', () => {
-        expect(sketch(5).line).toBe("You've used all 5 free scores.")
+        expect(sketch(5).line).toBe("You've used all 5\u00a0free\u00a0scores.")
         expect(sketch(5).atCap).toBe(true)
         expect(sketch(7).atCap).toBe(true)
     })
 
     it('names another capped tier instead of calling its scores free', () => {
         const beta = new ScoreAllowance({ count: 9, cap: 10, tierId: 'beta', tierName: 'Beta' })
-        expect(beta.line).toBe('9 of 10 scores on Beta')
-        expect(new ScoreAllowance({ count: 10, cap: 10, tierId: 'beta', tierName: 'Beta' }).line).toBe("You've used all 10 scores on Beta.")
+        expect(beta.line).toBe('9 of 10\u00a0scores on Beta')
+        expect(new ScoreAllowance({ count: 10, cap: 10, tierId: 'beta', tierName: 'Beta' }).line).toBe(
+            "You've used all 10\u00a0scores on Beta.",
+        )
     })
 
     it('summarises a capped plan at any count, in the same words', () => {
-        expect(sketch(1).summary).toBe('1 of 5 free scores')
-        expect(sketch(5).summary).toBe("You've used all 5 free scores.")
-        expect(new ScoreAllowance({ count: 2, cap: 10, tierId: 'beta', tierName: 'Beta' }).summary).toBe('2 of 10 scores on Beta')
+        expect(sketch(1).summary).toBe('1 of 5\u00a0free\u00a0scores')
+        expect(sketch(5).summary).toBe("You've used all 5\u00a0free\u00a0scores.")
+        expect(new ScoreAllowance({ count: 2, cap: 10, tierId: 'beta', tierName: 'Beta' }).summary).toBe('2 of 10\u00a0scores on Beta')
     })
 
     it('never counts an uncapped plan', () => {
@@ -125,7 +127,7 @@ describe('useScoreAllowance', () => {
 describe('ScoreLimitCopy', () => {
     it('states the plan fact and the two ways forward in one sentence, priced', () => {
         const copy = new ScoreLimitCopy({ planName: 'Sketch', limit: 5, next: planById('pro'), nextLimit: null, price: '$9' })
-        expect(copy.title).toBe('Your Sketch plan holds 5 scores.')
+        expect(copy.title).toBe('Your Sketch plan holds 5\u00a0scores.')
         expect(copy.body).toBe(
             "To start a new one, delete a score you don't need — or switch to Songwriter for as many scores as you like ($9 a month).",
         )
@@ -133,7 +135,7 @@ describe('ScoreLimitCopy', () => {
 
     it('keeps to what the next tier really holds, and drops what it can’t say', () => {
         expect(new ScoreLimitCopy({ planName: 'Sketch', limit: 5, next: planById('pro'), nextLimit: 50 }).body).toBe(
-            "To start a new one, delete a score you don't need — or switch to Songwriter for up to 50 scores.",
+            "To start a new one, delete a score you don't need — or switch to Songwriter for up to 50\u00a0scores.",
         )
         expect(new ScoreLimitCopy({ planName: 'Beta', limit: 10 }).body).toBe("To start a new one, delete a score you don't need.")
         expect(new ScoreLimitCopy({ planName: 'Sketch', limit: null }).title).toBe("You've reached your plan's score limit.")
@@ -149,7 +151,7 @@ describe('ScoreLimitDialog', () => {
         mount(createElement(ScoreLimitDialog, { onUpgrade, onClose: () => {} }))
         const dialog = document.querySelector('[role="dialog"]')
         if (!dialog) throw new Error('no dialog')
-        expect(dialog.textContent).toContain('Your Sketch plan holds 5 scores.')
+        expect(dialog.textContent).toContain('Your Sketch plan holds 5\u00a0scores.')
         expect(dialog.textContent).toContain("Everything you've written stays safe and editable.")
         expect(dialog.textContent).toContain('for as many scores as you like (€9 a month).')
         // No error tone anywhere: this is a plan limit, not a failure.
@@ -172,6 +174,6 @@ describe('ScoreLimitDialog', () => {
 
         billing.data = undefined
         mount(createElement(ScoreLimitDialog, { onUpgrade: () => {}, onClose: () => {} }))
-        expect(document.body.textContent).toContain('Your Sketch plan holds 5 scores.')
+        expect(document.body.textContent).toContain('Your Sketch plan holds 5\u00a0scores.')
     })
 })

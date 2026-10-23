@@ -1,6 +1,6 @@
 'use client'
 
-import { Skeleton } from '@mushee/ui'
+import { Skeleton, TextLink } from '@mushee/ui'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { type KeyboardEvent, useEffect, useLayoutEffect, useRef, useState } from 'react'
@@ -211,18 +211,17 @@ export default function SettingsPage() {
                                         }
                                     />
                                     <SettingsSection title="Support" subtitle="Stuck, found a bug, or want to say hi? We read everything.">
-                                        <div className="flex items-center gap-4 flex-wrap">
-                                            <a
-                                                href="mailto:support@solkey.io"
-                                                className="inline-flex items-center gap-2 font-body font-medium text-[14px] text-primary no-underline">
-                                                <Icon name="mail" size={16} />
-                                                support@solkey.io
-                                            </a>
-                                            <Link
-                                                href="/contact"
-                                                className="font-body font-normal text-[13px] text-on-surface-variant underline">
+                                        {/* Both in the one in-sentence link role; the mail glyph stays outside the underline. */}
+                                        <div className="flex items-center gap-x-5 gap-y-2 flex-wrap font-body text-[14px] leading-normal">
+                                            <span className="inline-flex items-center gap-2">
+                                                <span className="inline-flex text-primary">
+                                                    <Icon name="mail" size={16} />
+                                                </span>
+                                                <TextLink href="mailto:support@solkey.io">support@solkey.io</TextLink>
+                                            </span>
+                                            <TextLink as={Link} href="/contact">
                                                 All contact options
-                                            </Link>
+                                            </TextLink>
                                         </div>
                                     </SettingsSection>
                                     <SettingsSection

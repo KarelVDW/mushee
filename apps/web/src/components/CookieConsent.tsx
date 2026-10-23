@@ -1,5 +1,6 @@
 'use client'
 
+import { TextLink } from '@mushee/ui'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { type ReactNode, type RefObject, useEffect, useRef, useState } from 'react'
@@ -109,9 +110,9 @@ function CookieBanner({ onCustomize, onDecide }: { onCustomize: () => void; onDe
                         Solkey uses essential cookies to keep you signed in, and counts visits without cookies. If you allow it, we&apos;d
                         also record how you use the editor, linked to your account, so we can find and fix bugs. Up to you.
                     </span>{' '}
-                    <Link href="/privacy#cookies" className="text-primary underline">
+                    <TextLink as={Link} href="/privacy#cookies">
                         Learn more
-                    </Link>
+                    </TextLink>
                     .
                 </p>
             </div>
@@ -173,9 +174,9 @@ function CookiePreferencesDialog({ analytics, onAnalyticsChange, onDecide, onClo
                 </ConsentCategory>
                 <p className="font-body font-normal text-[12px] leading-normal text-on-surface-variant m-0">
                     Details in our{' '}
-                    <Link href="/privacy#cookies" className="text-primary underline">
+                    <TextLink as={Link} href="/privacy#cookies">
                         privacy policy
-                    </Link>
+                    </TextLink>
                     .
                 </p>
             </div>

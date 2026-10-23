@@ -57,7 +57,7 @@ export class PlanCardCopy {
         if (this.isBeta) return 'Solkey is in closed beta — your plan is on the house. Paid plans arrive at launch.'
         if (this.plan.priceMonthly > 0 || this.hasSubscription) return `You're on ${this.billing.tierName}.`
         const budget = this.dailySeconds === null ? 'no daily recording limit' : `${formatAllowance(this.dailySeconds)} of recording a day`
-        return this.maxScores === null ? `Free — ${budget}.` : `Free — ${budget} and up to ${this.maxScores} scores.`
+        return this.maxScores === null ? `Free — ${budget}.` : `Free — ${budget} and up to ${this.maxScores}\u00a0scores.`
     }
 
     /**

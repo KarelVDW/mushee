@@ -37,8 +37,8 @@ const copyFor = (billing: BillingState, maxScores: number | null = null, clock =
 
 describe('PlanCardCopy', () => {
     it('describes Sketch by what it gives, in words', () => {
-        expect(copyFor(SKETCH, 5).subtitle).toBe('Free — 3 minutes of recording a day and up to 5 scores.')
-        expect(copyFor(SKETCH, null).subtitle).toBe('Free — 3 minutes of recording a day.')
+        expect(copyFor(SKETCH, 5).subtitle).toBe('Free — 3\u00a0minutes of recording a day and up to 5\u00a0scores.')
+        expect(copyFor(SKETCH, null).subtitle).toBe('Free — 3\u00a0minutes of recording a day.')
         expect(copyFor(SKETCH).priceLine).toBe('Free')
     })
 
@@ -69,12 +69,12 @@ describe('PlanCardCopy', () => {
 
     it('meters time left in words, never as a clock', () => {
         const meter = copyFor(SKETCH).meter
-        expect(meter?.value).toBe('2 min 36 sec left of 3 min')
+        expect(meter?.value).toBe('2\u00a0min 36\u00a0sec left of 3\u00a0min')
         expect(meter?.percent).toBeCloseTo(13.33, 1)
         // The gauge fills with what is left, agreeing with the words.
         expect(meter?.percentLeft).toBeCloseTo(86.67, 1)
         const studio = copyFor({ ...SKETCH, credits: { ...SKETCH.credits, limitSeconds: 10800, usedSeconds: 24 } }).meter
-        expect(studio?.value).toBe('2 h 59 min left of 3 h')
+        expect(studio?.value).toBe('2\u00a0h 59\u00a0min left of 3\u00a0h')
     })
 
     it("says when today's minutes refill, in the viewer's own clock", () => {
@@ -94,7 +94,7 @@ describe('PlanCardCopy', () => {
         const meter = copyFor({ ...SKETCH, credits: { ...SKETCH.credits, usedSeconds: 200, remainingSeconds: 0 } }).meter
         expect(meter?.percent).toBe(100)
         expect(meter?.percentLeft).toBe(0)
-        expect(meter?.value).toBe('0 sec left of 3 min')
+        expect(meter?.value).toBe('0\u00a0sec left of 3\u00a0min')
         expect(meter?.helper).toBe('All used today — refills tonight at 8:00 PM.')
         expect(copyFor({ ...SKETCH, credits: { ...SKETCH.credits, limitSeconds: 0, usedSeconds: 0 } }).meter?.percent).toBe(100)
     })
@@ -102,20 +102,20 @@ describe('PlanCardCopy', () => {
     it('has no meter without a daily limit, and never says "unlimited"', () => {
         const copy = copyFor({ ...SONGWRITER, credits: { ...SONGWRITER.credits, limitSeconds: null, usedSeconds: 24 } })
         expect(copy.meter).toBeNull()
-        expect(copy.noLimitLine).toBe('No daily recording limit — 24 sec recorded today.')
+        expect(copy.noLimitLine).toBe('No daily recording limit — 24\u00a0sec recorded today.')
         expect(copy.noLimitLine).not.toMatch(/unlimited/i)
     })
 
     it('counts pack minutes in words', () => {
         expect(copyFor(SKETCH).packLine).toBeNull()
         expect(copyFor({ ...SKETCH, credits: { ...SKETCH.credits, packSeconds: 900 } }).packLine).toBe(
-            "15 min from packs — used once today's minutes run out, and they never expire.",
+            "15\u00a0min from packs — used once today's minutes run out, and they never expire.",
         )
     })
 
     it('counts scores against a cap only, in the library’s words', () => {
-        expect(copyFor(SKETCH, 5).scoresLine(3)).toBe('3 of 5 free scores')
-        expect(copyFor(SKETCH, 5).scoresLine(5)).toBe("You've used all 5 free scores.")
+        expect(copyFor(SKETCH, 5).scoresLine(3)).toBe('3 of 5\u00a0free\u00a0scores')
+        expect(copyFor(SKETCH, 5).scoresLine(5)).toBe("You've used all 5\u00a0free\u00a0scores.")
         expect(copyFor(SONGWRITER, null).scoresLine(12)).toBeNull()
     })
 })

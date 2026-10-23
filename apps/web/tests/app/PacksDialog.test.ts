@@ -65,15 +65,15 @@ describe('PacksDialog', () => {
     it('measures packs against a free account’s allowance and nudges it toward Songwriter once', () => {
         const host = render(SKETCH)
         expect(host.textContent).toContain('Extra recording minutes')
-        expect(subtitle(host)).toBe('For busy days: used after your free 3 minutes run out, and they never expire.')
-        expect(host.textContent).toContain('Recording regularly? Songwriter gives you 20 minutes every day for $9 a month')
+        expect(subtitle(host)).toBe('For busy days: used after your free 3\u00a0minutes run out, and they never expire.')
+        expect(host.textContent).toContain('Recording regularly? Songwriter gives you 20\u00a0minutes every day for $9 a month')
         // The per-card subscription comparison stays on the marketing teaser only.
         expect(host.textContent).not.toContain('more a month')
     })
 
     it('gives a subscriber no subscription nudge, measured against its own daily allowance', () => {
         const host = render(STUDIO)
-        expect(subtitle(host)).toBe('For busy days: used after your daily 3 hours run out, and they never expire.')
+        expect(subtitle(host)).toBe('For busy days: used after your daily 3\u00a0hours run out, and they never expire.')
         expect(host.textContent).not.toContain('Recording regularly?')
     })
 

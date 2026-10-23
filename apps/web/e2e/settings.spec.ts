@@ -172,9 +172,10 @@ test('plan tab: the plan card says what Sketch gives, what is left today and whe
     await expect(card).toContainText('3 min left of 3 min')
     await expect(card).toContainText(/Refills (tonight|today|tomorrow) at /)
     await expect(card).toContainText('1 of 5 free scores')
+    // Each number is held to its unit by a no-break space, which an exact attribute match would not normalise.
     await expect(page.getByRole('progressbar', { name: 'Recording time left today' })).toHaveAttribute(
         'aria-valuetext',
-        '3 min left of 3 min',
+        /^3\smin left of 3\smin$/,
     )
     // Without billing in this environment nothing can be bought.
     await expect(page.getByRole('button', { name: 'See plans' })).toHaveCount(0)

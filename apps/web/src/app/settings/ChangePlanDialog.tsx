@@ -1,5 +1,6 @@
 'use client'
 
+import { TEXT_LINK_CLASS } from '@mushee/ui'
 import { useState } from 'react'
 
 import { PlanPicker } from '@/components/PlanPicker'
@@ -164,7 +165,7 @@ export function ChangePlanDialog({ billing: state, initialTier, onClose, onShowP
                             <button
                                 type="button"
                                 onClick={onShowPacks}
-                                className="border-0 bg-transparent p-0 cursor-pointer font-body font-medium text-[12px] text-primary underline rounded-sm focus-ring">
+                                className={`border-0 bg-transparent p-0 cursor-pointer font-body ${TEXT_LINK_CLASS}`}>
                                 Buy extra minutes
                             </button>
                         </p>

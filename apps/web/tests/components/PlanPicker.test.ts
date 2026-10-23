@@ -79,10 +79,10 @@ describe('PlanPicker compact', () => {
         const host = renderCompact('free')
         const compare = button(host, /^Compare plans$/)
         expect(compare?.getAttribute('aria-expanded')).toBe('false')
-        expect(host.textContent).not.toContain('Up to 5 scores')
+        expect(host.textContent).not.toContain('Up to 5\u00a0scores')
         act(() => compare?.click())
         expect(compare?.getAttribute('aria-expanded')).toBe('true')
-        expect(host.textContent).toContain('Up to 5 scores')
+        expect(host.textContent).toContain('Up to 5\u00a0scores')
     })
 
     it('from md, runs each row’s features as one line that describes the row rather than naming it', () => {
