@@ -210,8 +210,14 @@ test('Shift+R from a focused dock tool keeps the keys on the editor: Space still
 })
 
 test('the shortcuts dialog opens with the Playback group', async ({ page }) => {
+    // The chip opens a dialog, so it says so (and is open, not pressed, while the dialog shows).
+    const chip = page.locator('header button[aria-label="Keyboard shortcuts"]')
+    await expect(chip).toHaveAttribute('aria-haspopup', 'dialog')
+    await expect(chip).toHaveAttribute('aria-expanded', 'false')
+    await expect(chip).not.toHaveAttribute('aria-pressed')
     await page.getByRole('button', { name: 'Keyboard shortcuts' }).click()
     const dialog = page.getByRole('dialog', { name: 'Keyboard shortcuts' })
+    await expect(chip).toHaveAttribute('aria-expanded', 'true')
     await expect(dialog.getByText('Playback', { exact: true })).toBeVisible()
     for (const label of ['Play or pause (also stops a recording)', 'Stop recording']) {
         await expect(dialog.getByText(label, { exact: true })).toBeVisible()
