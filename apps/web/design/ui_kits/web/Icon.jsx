@@ -1,5 +1,5 @@
 // Icon component — renders the custom Solkey glyph set ("Precision Maverick"):
-// 24px grid, 2px strokes, squared terminals, mitered joins. Mirrors
+// 24px grid, true 2px strokes, squared terminals, mitered joins. Mirrors
 // packages/ui/src/Icon.tsx (the shared @mushee/ui kit); keep the glyph data
 // in sync with it.
 const GLYPHS = {
@@ -125,6 +125,11 @@ const GLYPHS = {
 // Crossed box — renders when an icon name has no glyph, so gaps are visible.
 const FALLBACK_GLYPH = '<rect x="6.5" y="6.5" width="11" height="11"/><path d="m6.5 6.5 11 11"/>'
 
+// The stroke in viewBox units that renders a true 2px line at `size` pixels, capped at 3
+// units so small glyphs stay open (2px from 16px up, 1.75px at 14px, 1.5px at 12px) —
+// the same formula as packages/ui's strokeWidthFor.
+const strokeWidthFor = (size) => Math.round(Math.min(3, 48 / size) * 1000) / 1000
+
 function Icon({ name, size = 18, color = 'currentColor', style }) {
     return (
         <span
@@ -145,7 +150,7 @@ function Icon({ name, size = 18, color = 'currentColor', style }) {
                 height={size}
                 fill="none"
                 stroke="currentColor"
-                strokeWidth={2}
+                strokeWidth={strokeWidthFor(size)}
                 strokeLinecap="square"
                 strokeLinejoin="miter"
                 aria-hidden="true"

@@ -12,7 +12,7 @@ export {
     StepProgress,
     SuccessMark,
 } from './Feedback'
-export { Icon, type IconName } from './Icon'
+export { Icon, ICON_SIZES, type IconName, type IconSize } from './Icon'
 export { Chip, FieldFrame, SelectedMark, TextArea, TextField, type TextFieldProps } from './Inputs'
 export { RenderBoundary } from './RenderBoundary'
 export { dismissToast, showToast, type ToastAction, Toaster, type ToastOptions } from './Toast'

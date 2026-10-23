@@ -2,9 +2,10 @@ import type { ReactElement } from 'react'
 
 /**
  * Custom Solkey glyph set — "Precision Maverick". Drawn on a 24px grid with
- * 2px strokes, squared terminals, and mitered joins so the icons read like
- * technical schematics next to Space Grotesk. Filled details (noteheads,
- * indicator dots) opt out of the stroke locally.
+ * 2px strokes (true 2px at every size from 16px up, see strokeWidthFor), squared
+ * terminals, and mitered joins so the icons read like technical schematics next
+ * to Space Grotesk. Filled details (noteheads, indicator dots) opt out of the
+ * stroke locally.
  *
  * The registry deliberately includes reserved glyphs that no call site uses
  * yet (transport, sharing, billing, status, …) so future features pull from
@@ -645,10 +646,24 @@ const FALLBACK = (
 /** Every registered icon name — exposed for tests. */
 export const iconNames = Object.keys(GLYPHS) as IconName[]
 
+/** The named steps of the icon size scale, in pixels. */
+export const ICON_SIZES = { xs: 12, sm: 16, md: 20, lg: 24, xl: 32 } as const
+
+export type IconSize = keyof typeof ICON_SIZES | number
+
+/**
+ * The stroke, in viewBox units, that renders a true 2px line at `px` pixels: 48 / px
+ * (the 24-unit grid scaled to the box), capped at 3 units so small glyphs stay open —
+ * 2px from 16px up, 1.75px at 14px, 1.5px at 12px.
+ */
+export function strokeWidthFor(px: number): number {
+    return Math.round(Math.min(3, 48 / px) * 1000) / 1000
+}
+
 interface IconProps {
     name: IconName
-    /** Pixel size — used for both the glyph and the box. */
-    size?: number
+    /** Pixel size, or a step of the scale (xs 12, sm 16, md 20, lg 24, xl 32) — the glyph and its box. */
+    size?: IconSize
     className?: string
 }
 
@@ -657,7 +672,8 @@ interface IconProps {
  * the parent controls hue via `text-*` utilities. Size has to stay as a
  * `style` because it is genuinely dynamic per call site.
  */
-export function Icon({ name, size = 18, className }: IconProps) {
+export function Icon({ name, size: requested = 18, className }: IconProps) {
+    const size = typeof requested === 'number' ? requested : ICON_SIZES[requested]
     return (
         <span
             className={`inline-flex items-center justify-center align-middle leading-none ${className ?? ''}`}
@@ -668,7 +684,7 @@ export function Icon({ name, size = 18, className }: IconProps) {
                 height={size}
                 fill="none"
                 stroke="currentColor"
-                strokeWidth={2}
+                strokeWidth={strokeWidthFor(size)}
                 strokeLinecap="square"
                 strokeLinejoin="miter"
                 aria-hidden="true">
