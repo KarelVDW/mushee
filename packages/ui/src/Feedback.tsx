@@ -189,7 +189,7 @@ export function ErrorScreen({
                     <h1 className="font-headline font-bold text-[28px] leading-[1.15] text-on-surface m-0 text-balance">
                         {offline ? OFFLINE_TITLE : title}
                     </h1>
-                    <p className="mt-3 font-body font-normal text-[15px] leading-normal text-pretty max-w-[36ch] text-on-surface-variant m-0">
+                    <p className="mt-3 mb-0 font-body font-normal text-[15px] leading-normal text-pretty max-w-[36ch] text-on-surface-variant">
                         {offline ? OFFLINE_MESSAGE : message}
                     </p>
                     <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
@@ -221,7 +221,7 @@ export function ErrorScreen({
                     {onRetry && (
                         <p
                             role="status"
-                            className="mt-3 font-body font-normal text-[13px] leading-[1.4] min-h-[1.4em] text-on-surface-variant m-0">
+                            className="mt-3 mb-0 font-body font-normal text-[13px] leading-[1.4] min-h-[1.4em] text-on-surface-variant">
                             {retrying ? 'Trying again…' : ''}
                         </p>
                     )}
