@@ -5,6 +5,7 @@ import { SelectedMark } from '@mushee/ui'
 import { useId, useMemo, useState } from 'react'
 
 import { Chip, Eyebrow, Icon, TextField } from '@/components/ui'
+import { useScrollEdges } from '@/components/ui/Dialog'
 
 /** A plain line under a tile whose name alone undersells it. */
 const TILE_SUBLINES: ReadonlyMap<string, string> = new Map([[Instrument.VoiceLead.id, 'Sing, hum or whistle']])
@@ -136,6 +137,8 @@ export function InstrumentPicker({ value, onChange, chordHint = true, showIntro 
     }, [query, initial, value])
 
     const showFamilies = query !== '' || expanded
+    // The list scrolls inside its dialog; where it is clipped, a 16px fade in the panel's white says so.
+    const { ref: listRef, measure: measureList, scrolled, clipped } = useScrollEdges()
 
     return (
         <div
@@ -174,46 +177,65 @@ export function InstrumentPicker({ value, onChange, chordHint = true, showIntro 
                 clearLabel="Clear search"
                 autoFocus={autoFocusSearch}
             />
-            <div className="flex-1 min-h-40 overflow-y-auto flex flex-col gap-3.5 py-1">
-                {query === '' && (
-                    <>
-                        <PopularInstrumentTiles value={value} onChange={onChange} />
-                        <button
-                            type="button"
-                            aria-expanded={expanded}
-                            onClick={() => setExpanded((open) => !open)}
-                            className={[
-                                'self-start inline-flex items-center gap-1.5 bg-transparent border-0 cursor-pointer py-2 px-0 pointer-coarse:min-h-10',
-                                'font-body font-medium text-[13px] leading-none text-on-surface-variant hover:text-primary',
-                                'transition-colors duration-150 ease-solkey focus-ring rounded-sm',
-                            ].join(' ')}>
-                            All instruments
-                            <Icon name={expanded ? 'chevron-up' : 'chevron-down'} size={14} />
-                        </button>
-                    </>
-                )}
-                {showFamilies &&
-                    groups.map(({ category, instruments }) => (
-                        <div key={category} className="flex flex-col gap-2">
-                            <Eyebrow>{category}</Eyebrow>
-                            <div className="flex flex-wrap gap-2">
-                                {instruments.map((i) => (
-                                    <Chip
-                                        key={i.id}
-                                        size="md"
-                                        active={i.id === value.id}
-                                        onClick={() => onChange(i)}
-                                        ariaLabel={`Pick ${i.displayName}`}>
-                                        {i.displayName}
-                                    </Chip>
-                                ))}
+            <div className="relative flex-1 min-h-40 flex flex-col">
+                <div
+                    ref={listRef}
+                    onScroll={measureList}
+                    className="flex-1 min-h-0 overflow-y-auto overscroll-contain flex flex-col gap-3.5 py-1">
+                    {query === '' && (
+                        <>
+                            <PopularInstrumentTiles value={value} onChange={onChange} />
+                            <button
+                                type="button"
+                                aria-expanded={expanded}
+                                onClick={() => setExpanded((open) => !open)}
+                                className={[
+                                    'self-start inline-flex items-center gap-1.5 bg-transparent border-0 cursor-pointer py-2 px-0 pointer-coarse:min-h-10',
+                                    'font-body font-medium text-[13px] leading-none text-on-surface-variant hover:text-primary',
+                                    'transition-colors duration-150 ease-solkey focus-ring rounded-sm',
+                                ].join(' ')}>
+                                All instruments
+                                <Icon name={expanded ? 'chevron-up' : 'chevron-down'} size={14} />
+                            </button>
+                        </>
+                    )}
+                    {showFamilies &&
+                        groups.map(({ category, instruments }) => (
+                            <div key={category} className="flex flex-col gap-2">
+                                <Eyebrow>{category}</Eyebrow>
+                                <div className="flex flex-wrap gap-2">
+                                    {instruments.map((i) => (
+                                        <Chip
+                                            key={i.id}
+                                            size="md"
+                                            active={i.id === value.id}
+                                            onClick={() => onChange(i)}
+                                            ariaLabel={`Pick ${i.displayName}`}>
+                                            {i.displayName}
+                                        </Chip>
+                                    ))}
+                                </div>
                             </div>
-                        </div>
-                    ))}
-                {query !== '' && groups.length === 0 && (
-                    <span className="font-body font-normal text-[13px] leading-normal text-on-surface-variant p-1">
-                        No instruments match &ldquo;{search.trim()}&rdquo;
-                    </span>
+                        ))}
+                    {query !== '' && groups.length === 0 && (
+                        <span className="font-body font-normal text-[13px] leading-normal text-on-surface-variant p-1">
+                            No instruments match &ldquo;{search.trim()}&rdquo;
+                        </span>
+                    )}
+                </div>
+                {scrolled && (
+                    <div
+                        aria-hidden="true"
+                        data-picker-fade="top"
+                        className="pointer-events-none absolute inset-x-0 top-0 h-4 bg-linear-to-b from-surface-container-lowest to-transparent"
+                    />
+                )}
+                {clipped && (
+                    <div
+                        aria-hidden="true"
+                        data-picker-fade="bottom"
+                        className="pointer-events-none absolute inset-x-0 bottom-0 h-4 bg-linear-to-t from-surface-container-lowest to-transparent"
+                    />
                 )}
             </div>
         </div>

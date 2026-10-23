@@ -839,3 +839,19 @@ test('onboarding: a chordal pick scrolls its melody line clear of the sticky Con
         })
         .toBe(true)
 })
+
+test('Change instrument fades its clipped instrument list, and the fade goes at the list’s end', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 664 })
+    await page.getByRole('button', { name: /^Change instrument/ }).tap()
+    const dialog = page.getByRole('dialog', { name: 'Change instrument' })
+    await expect(dialog.getByRole('button', { name: 'Pick Trumpet' })).toBeAttached()
+    const bottomFade = dialog.locator('[data-picker-fade="bottom"]')
+    await expect(bottomFade).toHaveCount(1)
+    // The fade sits on the list's own scroller: scrolled to its end, nothing is clipped below.
+    await bottomFade.evaluate((fade) => {
+        const list = fade.parentElement?.firstElementChild
+        list?.scrollTo({ top: list.scrollHeight })
+    })
+    await expect(bottomFade).toHaveCount(0)
+    await expect(dialog.locator('[data-picker-fade="top"]')).toHaveCount(1)
+})
