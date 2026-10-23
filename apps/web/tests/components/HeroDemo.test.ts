@@ -74,6 +74,26 @@ describe('HeroDemo', () => {
         expect(toggle()?.getAttribute('aria-label')).toBe('Pause demo')
     })
 
+    it('starts the loop on the finished sheet, so the notes never vanish when motion takes over', () => {
+        stubReducedMotion(false)
+        render()
+        // Every window on the loop is entered at the handoff frame (a negative delay): all notes landed, Saved on.
+        const notes = [...host.querySelectorAll<SVGGElement>('[role="img"] svg g[opacity]')]
+        expect(notes.length).toBeGreaterThan(0)
+        for (const note of notes) expect(note.style.animation).toMatch(/ linear -\d+ms infinite$/)
+        const bar = host.querySelector<SVGRectElement>('rect.waveform-bar')
+        expect(bar?.style.animation).toMatch(/ linear -\d+ms infinite$/)
+    })
+
+    it('draws the take in the editor’s own language: the red recording cursor and a titled card', () => {
+        stubReducedMotion(false)
+        render()
+        const img = host.querySelector('[role="img"]')
+        expect(img?.querySelector('line[stroke="#ef4444"]')).not.toBeNull()
+        expect(img?.textContent).toContain('Frère Jacques')
+        expect(img?.textContent).toContain('Saved')
+    })
+
     it('shows the finished sheet, with no pause control, under reduced motion', () => {
         stubReducedMotion(true)
         render()

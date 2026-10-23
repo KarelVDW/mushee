@@ -359,3 +359,13 @@ export function planPriceParts(plan: PlanTier, billing: BillingInterval, currenc
     }
     return { amount: formatMoney(plan.priceMonthly, currency), cadence: '/month', note: 'billed monthly', savings }
 }
+
+/**
+ * What paying yearly saves over twelve monthly payments, as a whole percentage ("save 17%");
+ * 0 for a free plan. The one source for every "save n%" line, on the pricing cards and in-app.
+ */
+export function planSavingsPercent(plan: Pick<PlanTier, 'priceMonthly' | 'priceYearly'>): number {
+    const twelveMonths = plan.priceMonthly * 12
+    if (twelveMonths <= 0) return 0
+    return Math.round(((twelveMonths - plan.priceYearly) / twelveMonths) * 100)
+}

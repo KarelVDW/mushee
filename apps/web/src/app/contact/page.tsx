@@ -30,8 +30,8 @@ export default function ContactPage() {
                     {/* One obvious inbox first; a copy button for when mailto: opens nothing (webmail). */}
                     <section
                         aria-labelledby="contact-support"
-                        className="bg-surface-container-lowest rounded-lg editorial-shadow p-6 sm:p-8 flex flex-col gap-3">
-                        <Eyebrow>Need a hand?</Eyebrow>
+                        className="bg-surface-container-lowest rounded-lg tonal-layer-glow p-6 sm:p-8 flex flex-col gap-3">
+                        <Eyebrow className="text-primary">Need a hand?</Eyebrow>
                         <h2
                             id="contact-support"
                             className="font-headline font-semibold text-[24px] sm:text-[28px] leading-[1.15] tracking-[-0.01em] text-on-surface m-0 break-all select-all">

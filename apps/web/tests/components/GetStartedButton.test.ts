@@ -86,6 +86,12 @@ describe('GetStartedButton', () => {
         expect(secondary).toContain('w-full')
     })
 
+    it('sizes both variants alike, so a card’s secondary CTA is as tall as its primary one', () => {
+        for (const variant of ['primary', 'secondary'] as const) {
+            expect(html({ location: 'pricing', variant, size: 'lg', children: 'Start free' }), variant).toContain('h-(--control-lg)')
+        }
+    })
+
     it('tracks the click with its location and the beta flag', () => {
         const host = document.createElement('div')
         const root = createRoot(host)

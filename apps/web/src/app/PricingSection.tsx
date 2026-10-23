@@ -1,10 +1,12 @@
 'use client'
 
+import { PriceTag } from '@mushee/ui'
 import { useState } from 'react'
 
 import { settingsTabPath } from '@/app/settings/settingsTabs'
 import { GetStartedButton } from '@/components/marketing/GetStartedButton'
-import { Badge, Eyebrow, Icon, PrimaryButton, SecondaryButton } from '@/components/ui'
+import { SectionHeading } from '@/components/marketing/SectionHeading'
+import { Badge, Container, Icon, PrimaryButton, SecondaryButton } from '@/components/ui'
 import { useSession } from '@/lib/auth-client'
 import { type Currency, formatMoney } from '@/lib/currency'
 import {
@@ -15,6 +17,7 @@ import {
     planBudgetHint,
     planCtaLabel,
     planFeatures,
+    planSavingsPercent,
     type PlanTier,
     recordingBudgetLabel,
     withPlan,
@@ -40,19 +43,15 @@ interface PricingProps {
 export function Pricing({ ctaLocation, intro = true }: PricingProps) {
     const currency = useDisplayCurrency()
     return (
-        <section id="pricing" className={intro ? 'py-14 sm:py-22 px-5 sm:px-8' : 'pt-10 pb-14 sm:pt-12 sm:pb-22 px-5 sm:px-8'}>
-            <div className="max-w-320 mx-auto">
+        <section id="pricing" className={intro ? 'py-14 sm:py-22' : 'pt-10 pb-14 sm:pt-12 sm:pb-22'}>
+            <Container width="marketing">
                 {intro && (
-                    <div className="mb-12 text-center">
-                        <Eyebrow className="text-primary">Pricing</Eyebrow>
-                        <h2 className="font-display font-bold text-[32px] sm:text-[48px] leading-none tracking-[-0.03em] text-on-surface mt-3 mx-auto mb-0">
-                            Free to start. Pay only for more recording time.
-                        </h2>
-                        <p className="font-body font-normal text-[15px] leading-normal text-on-surface-variant mt-4 max-w-140 mx-auto">
-                            Every plan gets the full editor, recording that writes the notes for you, and playback. The plans differ in how
-                            much you can record each day — and Sketch holds up to five scores.
-                        </p>
-                    </div>
+                    <SectionHeading
+                        eyebrow="Pricing"
+                        align="center"
+                        title="Free to start. Pay only for more recording time."
+                        sub="Every plan gets the full editor, recording that writes the notes for you, and playback. The plans differ in how much you can record each day — and Sketch holds up to five scores."
+                    />
                 )}
 
                 <TierCards currency={currency} ctaLocation={ctaLocation} />
@@ -64,7 +63,7 @@ export function Pricing({ ctaLocation, intro = true }: PricingProps) {
                         ? 'Euro prices include VAT — the amount you see is the total you pay.'
                         : 'Prices are shown before local sales tax, which is added at checkout.'}
                 </p>
-            </div>
+            </Container>
         </section>
     )
 }
@@ -76,17 +75,17 @@ export function Pricing({ ctaLocation, intro = true }: PricingProps) {
  *  lands on it (the site's own links go to /pricing). */
 export function BetaPricing() {
     return (
-        <section id="pricing" className="py-14 sm:py-22 px-5 sm:px-8">
-            <div className="max-w-190 mx-auto text-center">
-                <Eyebrow className="text-primary">Pricing</Eyebrow>
-                <h2 className="font-display font-bold text-[32px] sm:text-[48px] leading-none tracking-[-0.03em] text-on-surface mt-3 mb-0">
-                    Free while the beta runs.
-                </h2>
-                <p className="font-body font-normal text-[15px] leading-normal text-on-surface-variant mt-4 mb-0 max-w-140 mx-auto">
-                    Every beta account gets the same plan: the full editor, recording that writes the notes for you, playback, and 30
-                    minutes of recording a day — no card, no charge. Paid plans arrive at launch.
-                </p>
-            </div>
+        <section id="pricing" className="py-14 sm:py-22">
+            <Container width="marketing">
+                {/* Nothing follows the heading, so it takes no space under it. */}
+                <SectionHeading
+                    eyebrow="Pricing"
+                    align="center"
+                    className="mb-0"
+                    title="Free while the beta runs."
+                    sub="Every beta account gets the same plan: the full editor, recording that writes the notes for you, playback, and 30 minutes of recording a day — no card, no charge. Paid plans arrive at launch."
+                />
+            </Container>
         </section>
     )
 }
@@ -142,28 +141,23 @@ interface CardProps {
 }
 
 /**
- * A tier card's button. For a stranger: "Start free" / "Choose {plan}" into signup (or, for a
- * signed-in visitor whose plan isn't known yet, the plan dialog). Once the visitor's plan is
- * known: "Your plan" on their own card, to the plan tab, and "Switch to {plan}" on the others,
- * to the plan tab's Change plan with that tier selected.
+ * A tier card's button, always the big (lg) capsule across the card, and always flat: the
+ * page's magenta pop belongs to its hero and closing CTAs. For a stranger: "Start free" /
+ * "Choose {plan}" into signup (or, for a signed-in visitor whose plan isn't known yet, the plan
+ * dialog). Once the visitor's plan is known: "Your plan" on their own card, to the plan tab, and
+ * "Switch to {plan}" on the others, to the plan tab's Change plan with that tier selected.
  */
-function PlanCardCta({
-    tier,
-    ctaLocation,
-    currentTierId,
-    primary,
-    fullWidth = false,
-}: CardProps & { primary: boolean; fullWidth?: boolean }) {
+function PlanCardCta({ tier, ctaLocation, currentTierId, primary }: CardProps & { primary: boolean }) {
     if (currentTierId === null) {
         return (
-            <GetStartedButton location={ctaLocation} plan={tier.id} variant={primary ? 'primary' : 'secondary'} fullWidth={fullWidth}>
+            <GetStartedButton location={ctaLocation} plan={tier.id} variant={primary ? 'primary' : 'secondary'} size="lg" fullWidth>
                 {planCtaLabel(tier)}
             </GetStartedButton>
         )
     }
     if (tier.id === currentTierId) {
         return (
-            <SecondaryButton href={settingsTabPath('plan')} fullWidth={fullWidth}>
+            <SecondaryButton href={settingsTabPath('plan')} size="lg" fullWidth>
                 Your plan
             </SecondaryButton>
         )
@@ -171,48 +165,58 @@ function PlanCardCta({
     const href = withPlan(settingsTabPath('plan'), tier.id)
     const label = `Switch to ${tier.name}`
     return primary ? (
-        <PrimaryButton href={href} fullWidth={fullWidth}>
+        <PrimaryButton href={href} size="lg" fullWidth>
             {label}
         </PrimaryButton>
     ) : (
-        <SecondaryButton href={href} fullWidth={fullWidth}>
+        <SecondaryButton href={href} size="lg" fullWidth>
             {label}
         </SecondaryButton>
     )
 }
 
-/** The professional tier: present enough to anchor the ladder, slim enough
- *  not to compete with the consumer cards. */
+/** A paid plan's second price line: the year's price and what it saves, in the app's own words. */
+function yearlyLine(tier: PlanTier, currency: Currency): string {
+    return `or ${formatMoney(tier.priceYearly, currency)} a year — save ${planSavingsPercent(tier)}%`
+}
+
+// PriceTag sets its cadence and note in on_surface_variant, which sinks on the charcoal card: there
+// they take the inverse quiet tone (the note is the tag's last line, the cadence its first line's last part).
+const PRICE_ON_DARK = '[&>span:last-child]:text-inverse-on-surface [&>span:first-child>span:last-child]:text-inverse-on-surface'
+
+/**
+ * The professional tier: one wide card under the ladder, on its grid — name and what it adds on
+ * the left, its price, then its button — present enough to anchor the ladder, quiet enough not
+ * to compete with the consumer cards. Stacked on phones.
+ */
 function ProfessionalCard(props: CardProps) {
     const { tier, currency, currentTierId } = props
+    const lines = [recordingBudgetLabel(tier.dailyRecordingSeconds), ...tier.features]
     return (
-        <div className="mt-6 max-w-190 mx-auto w-full bg-surface-container-lowest tonal-layer-glow rounded-lg px-6 py-5 flex flex-wrap items-center gap-4">
-            <span className="w-10 h-10 rounded-full bg-secondary-soft text-on-secondary-soft inline-flex items-center justify-center shrink-0">
-                <Icon name={tier.icon} size={18} />
-            </span>
-            <div className="flex flex-col gap-0.5 flex-1 min-w-50">
-                <span className="inline-flex flex-wrap items-center gap-2 font-headline font-semibold text-[16px] leading-[1.2] text-on-surface">
-                    {tier.name} — {tier.tagline.toLowerCase()}
-                    {tier.id === currentTierId && <Badge tone="neutral">Your plan</Badge>}
-                </span>
-                <span className="font-body font-normal text-[13px] leading-[1.4] text-on-surface-variant">
-                    {recordingBudgetLabel(tier.dailyRecordingSeconds)} · everything in Studio · direct support from the maker
-                </span>
+        <div className="mt-6 w-full rounded-lg bg-surface-container-lowest tonal-layer-glow p-7 flex flex-col gap-5 md:grid md:grid-cols-[minmax(0,1fr)_auto_auto] md:items-center md:gap-10">
+            <div className="flex flex-col gap-3 min-w-0">
+                <div className="flex flex-col gap-1.5">
+                    <div className="flex flex-wrap items-center gap-2">
+                        <h3 className="type-heading text-on-surface m-0">{tier.name}</h3>
+                        {tier.id === currentTierId && <Badge tone="neutral">Your plan</Badge>}
+                    </div>
+                    <span className="font-body font-normal text-[14px] leading-[1.3] text-on-surface-variant">{tier.tagline}</span>
+                </div>
+                <ul className="list-none p-0 m-0 flex flex-wrap gap-x-6 gap-y-2">
+                    {lines.map((line) => (
+                        <FeatureLine key={line} emphasis={false}>
+                            {line}
+                        </FeatureLine>
+                    ))}
+                </ul>
             </div>
-            <div className="flex items-baseline gap-1.5">
-                <span className="font-mono font-semibold text-[22px] leading-none tracking-[-0.01em] text-on-surface">
-                    {formatMoney(tier.priceMonthly, currency)}
-                </span>
-                <span className="font-body font-medium text-[12px] leading-none text-on-surface-variant">
-                    / month · {formatMoney(tier.priceYearly, currency)}/yr
-                </span>
-            </div>
+            <PriceTag size="lg" amount={formatMoney(tier.priceMonthly, currency)} cadence="/ month" note={yearlyLine(tier, currency)} />
             <PlanCardCta {...props} primary={false} />
         </div>
     )
 }
 
-/** One-time packs, one click away — the subscriptions above stay the offer. */
+/** One-time packs, one click away — the subscriptions above stay the offer. A disclosure: its chevron turns as it opens. */
 function PacksTeaser({ currency }: { currency: Currency }) {
     const [open, setOpen] = useState(false)
     return (
@@ -221,17 +225,20 @@ function PacksTeaser({ currency }: { currency: Currency }) {
                 type="button"
                 onClick={() => setOpen((v) => !v)}
                 aria-expanded={open}
-                className="border-0 bg-transparent p-0 cursor-pointer font-body font-medium text-[14px] text-primary underline">
+                className="group inline-flex items-center gap-2 border-0 bg-transparent p-0 cursor-pointer font-body font-medium text-[14px] leading-normal text-primary hover:text-primary-dim transition-colors duration-150 ease-solkey rounded-sm focus-ring pointer-coarse:min-h-10">
                 Not ready for a subscription? One-time minute packs, from {formatMoney(CHEAPEST_PACK.price, currency)}
+                <span
+                    aria-hidden
+                    className="shrink-0 inline-flex transition-transform duration-150 ease-solkey group-aria-expanded:rotate-180 motion-reduce:transition-none">
+                    <Icon name="chevron-down" size={16} />
+                </span>
             </button>
             {open && (
                 <div className="mt-5 max-w-190 mx-auto grid grid-cols-1 sm:grid-cols-3 gap-4 text-left">
                     {CREDIT_PACKS.map((pack) => (
                         <div key={pack.id} className="bg-surface-container-lowest tonal-layer-glow rounded-lg p-5 flex flex-col gap-1.5">
                             <span className="font-headline font-semibold text-[15px] leading-[1.2] text-on-surface">{pack.name}</span>
-                            <span className="font-mono font-semibold text-[20px] leading-none tracking-[-0.01em] text-on-surface">
-                                {formatMoney(pack.price, currency)}
-                            </span>
+                            <PriceTag amount={formatMoney(pack.price, currency)} className="text-on-surface" />
                             <span className="font-body font-normal text-[13px] leading-[1.4] text-on-surface-variant">
                                 {pack.minutes} min of recording · {pack.blurb}
                             </span>
@@ -256,30 +263,34 @@ function PricingCard(props: CardProps) {
     const [budget, ...features] = planFeatures(tier)
     const budgetHint = planBudgetHint(tier)
     const quiet = emphasis ? 'text-inverse-on-surface' : 'text-on-surface-variant'
+    const free = tier.priceMonthly === 0
     return (
         <div
             className={[
                 'rounded-lg p-7 flex flex-col gap-4',
+                // The popular card is set apart by its charcoal alone (no offset plate: the magenta is the
+                // hero CTA's); on it the focus ring turns neon so it stays visible.
                 emphasis
-                    ? 'bg-on-surface text-surface shadow-(--shadow-offset-3)'
+                    ? 'bg-on-surface text-surface [--focus-ring-color:var(--color-primary-container)]'
                     : 'bg-surface-container-lowest text-on-surface tonal-layer-glow',
             ].join(' ')}>
             <div className="flex justify-between items-start gap-3">
                 <div className="flex flex-col gap-1.5">
                     <h3 className="font-headline font-semibold text-[20px] leading-none tracking-[-0.01em] m-0">{tier.name}</h3>
-                    <span className={`font-body font-normal text-[13px] leading-[1.3] ${quiet}`}>{tier.tagline}</span>
+                    <span className={`font-body font-normal text-[14px] leading-[1.3] ${quiet}`}>{tier.tagline}</span>
                 </div>
                 {/* The visitor's own plan wins the corner; "Best value" stays on the popular card otherwise. */}
                 {current ? <Badge tone="neutral">Your plan</Badge> : emphasis && <Badge tone="secondary">Best value</Badge>}
             </div>
-            <div className="flex items-baseline gap-1.5">
-                <span className="font-display font-bold text-[40px] tracking-[-0.03em]">
-                    {tier.priceMonthly === 0 ? 'Free' : formatMoney(tier.priceMonthly, currency)}
-                </span>
-                <span className={`font-body font-medium text-[13px] leading-none ${quiet}`}>
-                    {tier.priceMonthly === 0 ? 'forever' : `/ month · ${formatMoney(tier.priceYearly, currency)}/yr`}
-                </span>
-            </div>
+            {/* One price block: the month, and under it the year with its saving; Sketch keeps the line's
+                height empty, so the three cards' feature lists start level. */}
+            <PriceTag
+                size="xl"
+                amount={free ? 'Free' : formatMoney(tier.priceMonthly, currency)}
+                cadence={free ? 'forever' : '/ month'}
+                note={free ? null : yearlyLine(tier, currency)}
+                className={emphasis ? PRICE_ON_DARK : undefined}
+            />
             <ul className="list-none p-0 m-0 flex flex-col gap-2.5">
                 <FeatureLine emphasis={emphasis} hint={budgetHint}>
                     {budget}
@@ -291,23 +302,23 @@ function PricingCard(props: CardProps) {
                 ))}
             </ul>
             <div className="mt-auto pt-2">
-                <PlanCardCta {...props} primary={emphasis} fullWidth />
+                <PlanCardCta {...props} primary={emphasis} />
             </div>
         </div>
     )
 }
 
-/** One checked line of a tier card, with an optional 12px picture of what it means (the free budget's). */
+/** One checked line of a tier card (15px), with an optional 13px picture of what it means (the free budget's). */
 function FeatureLine({ emphasis, hint, children }: { emphasis: boolean; hint?: string | null; children: string }) {
     return (
-        <li className="flex gap-2.5 items-start font-body font-normal text-[14px] leading-normal">
-            <span className={emphasis ? 'text-primary-container' : 'text-primary'}>
+        <li className="flex gap-3 items-start font-body font-normal text-[15px] leading-normal">
+            <span className={`shrink-0 ${emphasis ? 'text-primary-container' : 'text-primary'}`}>
                 <Icon name="check" size={16} />
             </span>
             <span className="flex flex-col gap-0.5">
                 <span>{children}</span>
                 {hint && (
-                    <span className={`text-[12px] leading-[1.4] ${emphasis ? 'text-inverse-on-surface' : 'text-on-surface-variant'}`}>
+                    <span className={`text-[13px] leading-[1.4] ${emphasis ? 'text-inverse-on-surface' : 'text-on-surface-variant'}`}>
                         {hint}
                     </span>
                 )}

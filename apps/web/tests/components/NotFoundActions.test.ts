@@ -8,6 +8,7 @@ vi.mock('@/lib/auth-client', () => ({
     useSession: () => ({ data: visitor.authed ? { user: { id: 'u1' } } : null, isPending: visitor.pending }),
 }))
 
+import NotFound from '@/app/not-found'
 import { NotFoundActions } from '@/app/NotFoundActions'
 
 function render() {
@@ -15,7 +16,9 @@ function render() {
     host.innerHTML = renderToStaticMarkup(createElement(NotFoundActions))
     return {
         text: host.querySelector('p')?.textContent,
-        links: [...host.querySelectorAll('a')].map((a) => [a.textContent, a.getAttribute('href')]),
+        // The screen's own actions, not the wordmark's way home.
+        links: [...host.querySelectorAll('a:not([aria-label="Solkey home"])')].map((a) => [a.textContent, a.getAttribute('href')]),
+        heading: host.querySelector('h1')?.textContent,
     }
 }
 
@@ -47,5 +50,24 @@ describe('NotFoundActions', () => {
     it('offers neither set until the session resolves', () => {
         visitor.pending = true
         expect(render().links).toEqual([])
+    })
+
+    it('is the neutral missing screen: the empty bar, never a fault’s well, and both ways out as buttons', () => {
+        const host = document.createElement('div')
+        host.innerHTML = renderToStaticMarkup(createElement(NotFoundActions))
+        expect(host.querySelector('h1')?.textContent).toBe("This page doesn't exist")
+        expect(host.querySelector('.bg-error-container')).toBeNull()
+        expect(host.querySelector('svg line.stroke-outline-variant')).not.toBeNull()
+        // Sign in is the screen's second button, as tall as the first.
+        const signIn = host.querySelector('a[href="/login"]')
+        expect(signIn?.className).toContain('rounded-full')
+        expect(signIn?.className).toContain('h-(--control-md)')
+    })
+
+    it('sits in the page’s main landmark, the skip link’s target', () => {
+        const host = document.createElement('div')
+        host.innerHTML = renderToStaticMarkup(createElement(NotFound))
+        expect(host.querySelectorAll('main')).toHaveLength(1)
+        expect(host.querySelector('main#content h1')?.textContent).toBe("This page doesn't exist")
     })
 })
