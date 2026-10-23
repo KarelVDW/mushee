@@ -267,8 +267,10 @@ const REGION_CLASS = 'flex flex-col items-center gap-3 max-w-full empty:-mt-3'
  * that appears together with them): info and notice toasts in a polite `status` region,
  * errors in an `alert` region. A toast rises in over 200ms; one that leaves plays a 150ms
  * exit as an inert ghost (see ToastStage). The stack sits `--toast-bottom` above the
- * viewport's bottom edge (1.5rem by default; the editor raises it above its dock, a phone
- * sheet dialog above its footer), never under the safe-area inset.
+ * viewport's bottom edge (1.5rem by default), never under the safe-area inset. The variable is
+ * the whole offset, not an addition to the default: whoever raises the stack sets the height it
+ * clears plus its own gap (the editor: the dock's height + 12px; a phone sheet dialog: its
+ * footer's height + 12px) and removes the variable when done.
  */
 export function Toaster() {
     const [staged, setStaged] = useState<StagedToast[]>(() => ToastStage.next([], toasts.visible))

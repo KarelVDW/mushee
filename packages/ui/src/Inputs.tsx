@@ -53,10 +53,12 @@ const FIELD_TEXT = 'text-on-surface font-body font-normal text-[14px] pointer-co
 const FIELD_FRAME = 'relative group/field bg-(--field-fill) rounded-sm min-h-(--control-md)'
 
 // The focus stroke: 2px `primary` (the neon fill fails 3:1 on the input fill), grown from the
-// centre while anything inside the frame has focus. Never a resting stroke. Above the error
-// stroke (later in the DOM, z-1), so focusing an invalid field still sweeps primary over red.
+// centre while the frame's text entry has focus. Not :focus-within: tabbing on to a button in
+// the frame (the clear ×, a rightSlot such as the password toggle) must not light it. Never a
+// resting stroke. Above the error stroke (later in the DOM, z-1), so focusing an invalid field
+// still sweeps primary over red.
 const FOCUS_STROKE =
-    'absolute inset-x-0 bottom-0 z-1 h-0.5 bg-primary origin-center scale-x-0 group-focus-within/field:scale-x-100 transition-transform duration-(--t-flow) ease-solkey motion-reduce:transition-none'
+    'absolute inset-x-0 bottom-0 z-1 h-0.5 bg-primary origin-center scale-x-0 group-has-[:is(input,textarea,select):focus]/field:scale-x-100 transition-transform duration-(--t-flow) ease-solkey motion-reduce:transition-none'
 
 // While the field is invalid: a full-width 2px `error` stroke at rest (5.99:1 on the fill).
 const ERROR_STROKE = 'absolute inset-x-0 bottom-0 h-0.5 bg-error'
@@ -74,8 +76,9 @@ interface FieldFrameProps {
 
 /**
  * The filled box every text entry is built on: the container's `--field-fill`, 4px corners, at
- * least --control-md tall, and the 2px primary stroke that grows from the centre while the
- * field has focus (:focus-within, 300ms, instant under reduced motion). With `invalid` a red
+ * least --control-md tall, and the 2px primary stroke that grows from the centre while its
+ * input, textarea or select has focus (300ms, instant under reduced motion), but not while a
+ * button inside the frame does. With `invalid` a red
  * stroke rests underneath it, and returns on blur.
  */
 export function FieldFrame({ children, invalid = false, className }: FieldFrameProps) {

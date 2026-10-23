@@ -61,7 +61,9 @@ describe('TextField', () => {
         const markup = html(createElement(TextField, { value: '' }))
         expect(inputTag(markup)).toContain('pointer-coarse:text-[16px]')
         expect(inputTag(markup)).toContain('pointer-coarse:py-3.5')
-        expect(markup).toContain('h-0.5 bg-primary origin-center scale-x-0 group-focus-within/field:scale-x-100')
+        // Lit by the input's own focus, so a focused clear × or password toggle in the frame doesn't sweep it.
+        expect(markup).toContain('h-0.5 bg-primary origin-center scale-x-0 group-has-[:is(input,textarea,select):focus]/field:scale-x-100')
+        expect(markup).not.toContain('focus-within')
         expect(markup).toContain('duration-(--t-flow)')
     })
 

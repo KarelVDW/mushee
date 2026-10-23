@@ -28,8 +28,15 @@ type PrimaryButtonProps = {
 // The capsule's height is a token (theme.css: 40px md, 48px lg; 44/52px on coarse pointers),
 // never padding plus line-height, so an icon never changes it and neighbours line up.
 const CAPSULE_HEIGHT: Record<ButtonSize, string> = {
-    md: 'h-(--control-md) px-5 text-[13px]',
-    lg: 'h-(--control-lg) px-6.5 text-[14px]',
+    md: 'h-(--control-md) text-[13px]',
+    lg: 'h-(--control-lg) text-[14px]',
+}
+
+// A label's side padding. Kept out of an icon-only capsule: Tailwind emits px-5 / px-6.5 after
+// px-0, so the padding would win and widen the circle (to 52px at lg).
+const CAPSULE_PADDING: Record<ButtonSize, string> = {
+    md: 'px-5',
+    lg: 'px-6.5',
 }
 
 // Icon-only: a true circle of the same height.
@@ -81,7 +88,7 @@ function primaryClasses({
         'inline-flex items-center justify-center gap-2 whitespace-nowrap shrink-0 cursor-pointer',
         'border-0 rounded-full font-label font-semibold tracking-[0.01em]',
         CAPSULE_HEIGHT[size],
-        iconOnly ? CAPSULE_ICON_ONLY[size] : '',
+        iconOnly ? CAPSULE_ICON_ONLY[size] : CAPSULE_PADDING[size],
         'leading-none',
         PRESS_TRANSITION,
         PRESS_SCALE,
@@ -164,6 +171,7 @@ function secondaryClasses({ fullWidth, size, tone }: { fullWidth: boolean; size:
         'text-on-surface',
         SECONDARY_TONES[tone],
         CAPSULE_HEIGHT[size],
+        CAPSULE_PADDING[size],
         'leading-none',
         PRESS_TRANSITION,
         PRESS_SCALE,
@@ -280,7 +288,7 @@ export function IconButton({ icon, onClick, hoverTone = 'cyan', size, ariaLabel,
                 size == null ? 'size-(--control-sm)' : '',
                 idleClassName ?? 'bg-(--control-fill)',
                 ICON_BUTTON_HOVER[hoverTone],
-                'transition-[transform,translate,scale,background-color,color,opacity] duration-150 ease-solkey',
+                'transition-[transform,translate,scale,background-color,color,opacity] duration-(--t-press) ease-solkey',
                 PRESS_SCALE,
                 'focus-ring',
                 'disabled:opacity-40 disabled:cursor-not-allowed',

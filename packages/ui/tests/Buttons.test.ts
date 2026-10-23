@@ -51,6 +51,7 @@ describe('capsule buttons', () => {
         expect(classesOf(html(createElement(SecondaryButton, { children: 'Cancel' })))).toContain(press)
         expect(classesOf(html(createElement(IconButton, { icon: 'play' })))).toContain(press)
         expect(classesOf(html(createElement(PrimaryButton, { children: 'Save' })))).toContain('duration-(--t-press)')
+        expect(classesOf(html(createElement(IconButton, { icon: 'play' })))).toContain('duration-(--t-press)')
     })
 
     it('lifts a pop button on hover and sinks it onto its plate on press', () => {
@@ -111,6 +112,11 @@ describe('capsule heights', () => {
     it('render an icon-only primary as a true circle', () => {
         const classes = classesOf(html(createElement(PrimaryButton, { icon: 'plus', ariaLabel: 'New score', emphasis: 'pop' })))
         expect(classes).toEqual(expect.arrayContaining(['px-0', 'aspect-square', 'size-(--control-md)', 'shadow-(--shadow-offset-3)']))
+        // No label padding beside px-0: Tailwind emits px-5 after px-0, so it would widen the circle.
+        expect(classes).not.toContain('px-5')
+        const large = classesOf(html(createElement(PrimaryButton, { icon: 'plus', ariaLabel: 'New score', size: 'lg' })))
+        expect(large).toEqual(expect.arrayContaining(['px-0', 'aspect-square', 'size-(--control-lg)']))
+        expect(large).not.toContain('px-6.5')
         expect(classesOf(html(createElement(PrimaryButton, { children: 'New score', icon: 'plus' })))).not.toContain('aspect-square')
     })
 })
