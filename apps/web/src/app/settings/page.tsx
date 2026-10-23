@@ -1,5 +1,6 @@
 'use client'
 
+import { Skeleton } from '@mushee/ui'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { type KeyboardEvent, useEffect, useLayoutEffect, useRef, useState } from 'react'
@@ -8,7 +9,7 @@ import { TakesList } from '@/components/TakesList'
 import {
     Alert,
     Avatar,
-    Eyebrow,
+    Container,
     Footer,
     Icon,
     type IconName,
@@ -144,99 +145,105 @@ export default function SettingsPage() {
             {/* ?new=1 has the library open its new-score dialog. */}
             <TopNav user={session?.user?.name ?? undefined} onCreate={() => router.push('/scores?new=1')} />
 
-            <main className="flex-1 max-w-5xl mx-auto px-4 sm:px-8 py-6 sm:py-10 flex flex-col gap-6 sm:gap-8 w-full box-border">
-                <PageHeader title="Settings" subtitle="Tweak your profile and account." />
+            {/* On the app frame the nav and the library share, so the title never jumps between pages;
+                the column stays a reading width, left-aligned beside the rail. */}
+            <main className="flex-1 w-full">
+                <Container width="app" className="py-6 sm:py-10 flex flex-col gap-6 sm:gap-8">
+                    <PageHeader title="Settings" subtitle="Tweak your profile and account." />
 
-                <div className="grid grid-cols-1 md:grid-cols-[220px_1fr] gap-4 md:gap-8 items-start">
-                    <SettingsTabs tab={tab} onTab={switchTab} />
-                    <div role="tabpanel" id={panelId(tab)} aria-labelledby={tabId(tab)} className="flex flex-col gap-4 min-w-0">
-                        {tab === 'profile' && (
-                            <>
-                                <SettingsSection title="Profile" subtitle="How you appear across Solkey.">
-                                    <div className="flex items-center gap-4">
-                                        <Avatar name={name || 'You'} size="lg" />
-                                    </div>
-                                    <TextField
-                                        label="Your name"
-                                        value={name}
-                                        onChange={setName}
-                                        autoComplete="name"
-                                        enterKeyHint="done"
-                                        onKeyDown={(e) => {
-                                            if (e.key === 'Enter') handleSaveProfile()
-                                        }}
+                    <div className="grid grid-cols-1 md:grid-cols-[220px_minmax(0,46rem)] gap-4 md:gap-8 items-start">
+                        <SettingsTabs tab={tab} onTab={switchTab} />
+                        <div role="tabpanel" id={panelId(tab)} aria-labelledby={tabId(tab)} className="flex flex-col gap-4 min-w-0">
+                            {tab === 'profile' && (
+                                <>
+                                    <SettingsSection title="Profile" subtitle="How you appear across Solkey.">
+                                        <div className="flex items-center gap-4 min-w-0">
+                                            <Avatar name={name || 'You'} size="lg" />
+                                            <div className="flex flex-col gap-1 min-w-0">
+                                                <span className="type-heading text-[18px] text-on-surface truncate">
+                                                    {trimmedName || sessionName}
+                                                </span>
+                                                <span className="font-body font-normal text-[14px] leading-[1.3] text-on-surface truncate">
+                                                    {session?.user?.email ?? '—'}
+                                                </span>
+                                                <span className="font-body font-normal text-[12px] leading-[1.4] text-on-surface-variant">
+                                                    Your sign-in email. Contact support to change it.
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <TextField
+                                            label="Your name"
+                                            value={name}
+                                            onChange={setName}
+                                            autoComplete="name"
+                                            enterKeyHint="done"
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter') handleSaveProfile()
+                                            }}
+                                        />
+                                        <div className="flex justify-end">
+                                            <PrimaryButton onClick={handleSaveProfile} disabled={!canSaveProfile}>
+                                                {updateProfile.isPending ? 'Saving…' : 'Save changes'}
+                                            </PrimaryButton>
+                                        </div>
+                                    </SettingsSection>
+                                    <SettingsSection
+                                        title="Password"
+                                        subtitle="Update the password you use to sign in."
+                                        action={<SecondaryButton onClick={() => setChangePwOpen(true)}>Change password</SecondaryButton>}
                                     />
-                                    <div className="flex flex-col gap-1.5">
-                                        <Eyebrow>Email</Eyebrow>
-                                        <span className="font-body font-normal text-[14px] leading-none text-on-surface py-1">
-                                            {session?.user?.email ?? '—'}
-                                        </span>
-                                        <span className="font-body font-normal text-[12px] leading-[1.4] text-on-surface-variant">
-                                            Your sign-in email. Contact support to change it.
-                                        </span>
-                                    </div>
-                                    <div className="flex justify-end">
-                                        <PrimaryButton onClick={handleSaveProfile} disabled={!canSaveProfile}>
-                                            {updateProfile.isPending ? 'Saving…' : 'Save changes'}
-                                        </PrimaryButton>
-                                    </div>
-                                </SettingsSection>
-                                <SettingsSection title="Password" subtitle="Update the password you use to sign in.">
-                                    <div>
-                                        <SecondaryButton onClick={() => setChangePwOpen(true)}>Change password</SecondaryButton>
-                                    </div>
-                                </SettingsSection>
-                            </>
-                        )}
+                                </>
+                            )}
 
-                        {tab === 'plan' && <BillingSection requestedPlan={requestedPlan} requestedPacks={requestedPacks} />}
+                            {tab === 'plan' && <BillingSection requestedPlan={requestedPlan} requestedPacks={requestedPacks} />}
 
-                        {tab === 'recordings' && <RecordingsSection />}
+                            {tab === 'recordings' && <RecordingsSection />}
 
-                        {tab === 'account' && (
-                            <>
-                                <SettingsSection
-                                    title="Your data"
-                                    subtitle="Download everything Solkey holds for you: your profile, your settings and every score, in files other music apps can open.">
-                                    <div>
-                                        <SecondaryButton onClick={handleExport} disabled={exportData.isPending}>
-                                            {exportData.isPending ? 'Preparing your download…' : 'Download my data'}
-                                        </SecondaryButton>
-                                    </div>
-                                </SettingsSection>
-                                <SettingsSection title="Support" subtitle="Stuck, found a bug, or want to say hi? We read everything.">
-                                    <div className="flex items-center gap-4 flex-wrap">
-                                        <a
-                                            href="mailto:support@solkey.io"
-                                            className="inline-flex items-center gap-2 font-body font-medium text-[14px] text-primary no-underline">
-                                            <Icon name="mail" size={16} />
-                                            support@solkey.io
-                                        </a>
-                                        <Link
-                                            href="/contact"
-                                            className="font-body font-normal text-[13px] text-on-surface-variant underline">
-                                            All contact options
-                                        </Link>
-                                    </div>
-                                </SettingsSection>
-                                <SettingsSection
-                                    title="Sign out"
-                                    subtitle="Sign out of Solkey on this browser."
-                                    action={<TertiaryButton onClick={() => void signOut('/login')}>Sign out</TertiaryButton>}
-                                />
-                                <SettingsSection
-                                    title="Delete account"
-                                    subtitle="Deactivates your account today; after 7 days everything is permanently deleted.">
-                                    <div>
-                                        <TertiaryButton danger onClick={() => setDeleteOpen(true)}>
-                                            Delete my account
-                                        </TertiaryButton>
-                                    </div>
-                                </SettingsSection>
-                            </>
-                        )}
+                            {tab === 'account' && (
+                                <>
+                                    <SettingsSection
+                                        title="Your data"
+                                        subtitle="Download everything Solkey holds for you: your profile, your settings and every score, in files other music apps can open."
+                                        action={
+                                            <SecondaryButton onClick={handleExport} disabled={exportData.isPending}>
+                                                {exportData.isPending ? 'Preparing your download…' : 'Download my data'}
+                                            </SecondaryButton>
+                                        }
+                                    />
+                                    <SettingsSection title="Support" subtitle="Stuck, found a bug, or want to say hi? We read everything.">
+                                        <div className="flex items-center gap-4 flex-wrap">
+                                            <a
+                                                href="mailto:support@solkey.io"
+                                                className="inline-flex items-center gap-2 font-body font-medium text-[14px] text-primary no-underline">
+                                                <Icon name="mail" size={16} />
+                                                support@solkey.io
+                                            </a>
+                                            <Link
+                                                href="/contact"
+                                                className="font-body font-normal text-[13px] text-on-surface-variant underline">
+                                                All contact options
+                                            </Link>
+                                        </div>
+                                    </SettingsSection>
+                                    <SettingsSection
+                                        title="Sign out"
+                                        subtitle="Sign out of Solkey on this browser."
+                                        action={<SecondaryButton onClick={() => void signOut('/login')}>Sign out</SecondaryButton>}
+                                    />
+                                    <SettingsSection
+                                        title="Delete account"
+                                        subtitle="Deactivates your account today; after 7 days everything is permanently deleted."
+                                        action={
+                                            <TertiaryButton danger onClick={() => setDeleteOpen(true)}>
+                                                Delete my account
+                                            </TertiaryButton>
+                                        }
+                                    />
+                                </>
+                            )}
+                        </div>
                     </div>
-                </div>
+                </Container>
             </main>
 
             <Footer />
@@ -276,7 +283,7 @@ function RecordingsSection() {
             title="Recordings"
             subtitle="Every recording you make is kept here, audio included, so you can listen back. ‘Download my data’ covers your scores, not the audio.">
             {takes.isPending || scores.isPending ? (
-                <div className="h-12 bg-surface-container-low rounded-md animate-pulse" />
+                <RecordingsSkeleton />
             ) : takes.isError ? (
                 <Alert onRetry={() => void takes.refetch()}>Couldn&apos;t load your recordings.</Alert>
             ) : takes.data.length === 0 ? (
@@ -291,6 +298,23 @@ function RecordingsSection() {
                 />
             )}
         </SettingsSection>
+    )
+}
+
+/** Two placeholder rows in TakesList's own geometry: the play well, a title and a meta line. */
+function RecordingsSkeleton() {
+    return (
+        <div aria-hidden="true" className="flex flex-col gap-1.5">
+            {['', '[animation-delay:120ms]'].map((delay) => (
+                <div key={delay} className="flex items-center gap-3 rounded-md px-3 py-2.5 bg-surface-container-low">
+                    <Skeleton className={`size-9 rounded-full bg-surface-container-lowest ${delay}`} />
+                    <div className="flex flex-col gap-1 flex-1 min-w-0 py-0.5">
+                        <Skeleton className={`h-3.5 w-32 rounded-sm ${delay}`} />
+                        <Skeleton className={`h-3 w-48 max-w-full rounded-sm ${delay}`} />
+                    </div>
+                </div>
+            ))}
+        </div>
     )
 }
 

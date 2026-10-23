@@ -9,6 +9,8 @@ import { ScoreAllowance } from '@/lib/ScoreAllowance'
 export interface RecordingMeter {
     /** How much of today's allowance is used, 0–100. */
     readonly percent: number
+    /** How much of it is left, 0–100: what the gauge fills with and reports as its value. */
+    readonly percentLeft: number
     /** Time left in words: "2 min 36 sec left of 3 min" — also the progressbar's spoken value. */
     readonly value: string
     /** When it refills, in the viewer's clock: "Refills tonight at 8:00 PM." */
@@ -82,8 +84,10 @@ export class PlanCardCopy {
         const used = this.billing.credits.usedSeconds
         const left = Math.max(0, limit - used)
         const when = formatResetWhen(this.billing.credits.resetsAt, this.clock.now, this.clock.locale, this.clock.timeZone)
+        const percent = limit > 0 ? Math.min(100, (used / limit) * 100) : 100
         return {
-            percent: limit > 0 ? Math.min(100, (used / limit) * 100) : 100,
+            percent,
+            percentLeft: 100 - percent,
             value: `${formatAllowanceShort(left)} left of ${formatAllowanceShort(limit)}`,
             helper: left > 0 ? `Refills ${when}.` : `All used today — refills ${when}.`,
         }

@@ -71,6 +71,8 @@ describe('PlanCardCopy', () => {
         const meter = copyFor(SKETCH).meter
         expect(meter?.value).toBe('2 min 36 sec left of 3 min')
         expect(meter?.percent).toBeCloseTo(13.33, 1)
+        // The gauge fills with what is left, agreeing with the words.
+        expect(meter?.percentLeft).toBeCloseTo(86.67, 1)
         const studio = copyFor({ ...SKETCH, credits: { ...SKETCH.credits, limitSeconds: 10800, usedSeconds: 24 } }).meter
         expect(studio?.value).toBe('2 h 59 min left of 3 h')
     })
@@ -91,6 +93,7 @@ describe('PlanCardCopy', () => {
     it('says when all of today is used, and caps the meter', () => {
         const meter = copyFor({ ...SKETCH, credits: { ...SKETCH.credits, usedSeconds: 200, remainingSeconds: 0 } }).meter
         expect(meter?.percent).toBe(100)
+        expect(meter?.percentLeft).toBe(0)
         expect(meter?.value).toBe('0 sec left of 3 min')
         expect(meter?.helper).toBe('All used today — refills tonight at 8:00 PM.')
         expect(copyFor({ ...SKETCH, credits: { ...SKETCH.credits, limitSeconds: 0, usedSeconds: 0 } }).meter?.percent).toBe(100)
