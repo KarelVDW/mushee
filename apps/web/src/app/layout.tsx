@@ -71,8 +71,11 @@ export const metadata: Metadata = {
     },
 }
 
+// Edge to edge: the page runs under the notch and the home indicator (an installed app no
+// longer letterboxes), and the chrome bars pad themselves by env(safe-area-inset-*).
 export const viewport: Viewport = {
     themeColor: BRAND.surface,
+    viewportFit: 'cover',
 }
 
 export default function RootLayout({

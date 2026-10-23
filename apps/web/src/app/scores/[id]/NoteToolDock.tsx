@@ -118,6 +118,17 @@ const HINT_LINE = [
     'transition-opacity duration-150 ease-solkey motion-reduce:transition-none group-has-[[role=dialog]]/dock:opacity-0',
 ].join(' ')
 
+/**
+ * The dock's side padding against the safe-area insets (a landscape phone's notch), like the
+ * header's: 8px on phones, 12px (16px from sm) on the desktop layout, or the inset where larger.
+ * Its bottom pads the home indicator, and its chrome layer runs to the screen's edges.
+ */
+const PHONE_DOCK_SIDES = 'pl-[max(0.5rem,env(safe-area-inset-left))] pr-[max(0.5rem,env(safe-area-inset-right))]'
+const DESKTOP_DOCK_SIDES = [
+    'pl-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))]',
+    'sm:pl-[max(1rem,env(safe-area-inset-left))] sm:pr-[max(1rem,env(safe-area-inset-right))]',
+].join(' ')
+
 /** Slack around the phone dock's height animation, so focus rings at its edges aren't clipped (px). */
 const RING_SLACK_PX = 4
 
@@ -212,7 +223,7 @@ export function NoteToolDock({
 
     return (
         <div
-            className={`group/dock relative z-20 shrink-0 py-2.5 pb-[max(0.625rem,env(safe-area-inset-bottom))] ${compact ? 'px-2' : 'px-3 sm:px-4'}`}>
+            className={`group/dock relative z-20 shrink-0 py-2.5 pb-[max(0.625rem,env(safe-area-inset-bottom))] ${compact ? PHONE_DOCK_SIDES : DESKTOP_DOCK_SIDES}`}>
             {/* The chrome tone and its blur sit on a layer of their own: a bar with a backdrop-filter
                 would become the backdrop root of every popover and tooltip opened inside it. */}
             <span

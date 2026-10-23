@@ -71,6 +71,16 @@ interface EditorHeaderProps {
     getSvg: () => SVGSVGElement | null
 }
 
+/**
+ * The header's padding against the safe-area insets: 8px (20px from sm) at the sides and 8px on
+ * top, or the inset where it is larger — the notch, the status bar, a landscape phone's sides.
+ */
+const HEADER_INSETS = [
+    'pt-[max(0.5rem,env(safe-area-inset-top))]',
+    'pl-[max(0.5rem,env(safe-area-inset-left))] pr-[max(0.5rem,env(safe-area-inset-right))]',
+    'sm:pl-[max(1.25rem,env(safe-area-inset-left))] sm:pr-[max(1.25rem,env(safe-area-inset-right))]',
+].join(' ')
+
 /** The fade the phone header's chips make while the title is being edited (instant under reduced motion). */
 const EDIT_FADE = 'transition-opacity duration-150 ease-solkey motion-reduce:transition-none'
 
@@ -115,7 +125,9 @@ export function EditorHeader({
     const narrow = !compact && fit === 'narrow'
 
     return (
-        <header className="relative z-10 flex items-center gap-2 sm:gap-4 px-2 sm:px-5 py-2">
+        // Edge to edge on an installed phone (viewport-fit=cover): the bar's tone runs under the
+        // notch and the status bar, its content padded clear of them and of the side insets.
+        <header className={`relative z-10 flex items-center gap-2 sm:gap-4 pb-2 ${HEADER_INSETS}`}>
             <span
                 aria-hidden
                 className="pointer-events-none absolute inset-0 -z-10 bg-surface-container-low/85 backdrop-blur-xl tonal-layer-glow"
