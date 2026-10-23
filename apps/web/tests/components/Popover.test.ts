@@ -124,7 +124,7 @@ describe('Popover surfaces', () => {
         })
         const panel = host.querySelector<HTMLElement>('[role="dialog"]') as HTMLElement
         expect(panel.className).toContain('bg-surface-container-lowest')
-        expect(panel.className).toContain('editorial-shadow')
+        expect(panel.className).toContain('shadow-overlay')
         expect(panel.className).not.toContain('glass-panel')
         const [eyebrow, hint] = Array.from(panel.children)
         expect(eyebrow.textContent).toBe('Clef')

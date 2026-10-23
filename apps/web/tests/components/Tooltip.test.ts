@@ -446,7 +446,7 @@ describe('TooltipCard', () => {
 
     it('draws "Name — hint · key" on the opaque card, decorative for assistive tech', () => {
         const html = markup({ label: 'Quarter note', hint: '1 beat', keys: 'Q' })
-        expect(html).toMatch(/^<span aria-hidden="true" class="tooltip-enter [^"]*rounded-md bg-surface-container-lowest editorial-shadow/)
+        expect(html).toMatch(/^<span aria-hidden="true" class="tooltip-enter [^"]*rounded-md bg-surface-container-lowest shadow-overlay/)
         expect(html).toContain('<span class="font-label font-semibold">Quarter note</span>')
         expect(html).toContain('<span class="text-on-surface-variant"> — </span><span class="text-on-surface-variant">1 beat</span>')
         expect(html).toContain('>Q</kbd>')

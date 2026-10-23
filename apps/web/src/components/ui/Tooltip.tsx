@@ -417,7 +417,7 @@ function FloatingTooltipCard({ anchor, side, touch, label, hint, keys }: Floatin
 }
 
 const CARD_CLASS =
-    'max-w-60 rounded-md bg-surface-container-lowest editorial-shadow px-2.5 py-1.5 font-body text-[13px] leading-[1.35] text-on-surface'
+    'max-w-60 rounded-md bg-surface-container-lowest shadow-overlay px-2.5 py-1.5 font-body text-[13px] leading-[1.35] text-on-surface'
 const TOUCH_BUBBLE_CLASS =
     'max-w-[min(20rem,calc(100vw-1rem))] rounded-full bg-surface-container-high px-3 py-1.5 font-label font-semibold text-[13px] leading-[1.3] text-on-surface'
 

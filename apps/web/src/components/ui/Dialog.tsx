@@ -35,7 +35,7 @@ export function DialogPanel({ title, subtitle, children, footer, onClose, width 
                 aria-modal="true"
                 aria-labelledby={titleId}
                 aria-describedby={subtitle ? subtitleId : undefined}
-                className="glass-panel rounded-lg editorial-shadow max-w-[90vw] max-h-[90dvh] flex flex-col"
+                className="glass-panel rounded-lg shadow-overlay max-w-[90vw] max-h-[90dvh] flex flex-col"
                 style={{ width }}>
                 <header className="px-7 pt-6 pb-4 flex items-start justify-between">
                     <div className="flex flex-col gap-1.5">

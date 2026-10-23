@@ -138,8 +138,9 @@ interface PopoverProps {
 /**
  * Anchored transient panel: dialog role + eyebrow heading on an opaque card, dismissed by
  * Escape or clicking outside. The chrome mirror of `DialogPanel` for non-modal surfaces.
- * Opaque (surface-container-lowest + editorial shadow), never glass: it opens inside blurred
- * chrome, where a glass panel would show the staff lines straight through its text.
+ * Opaque (surface-container-lowest + the overlay shadow, whose hairline edge keeps the panel
+ * distinct over the white canvas), never glass: it opens inside blurred chrome, where a glass
+ * panel would show the staff lines straight through its text.
  */
 export function Popover({
     ariaLabel,
@@ -228,7 +229,7 @@ export function Popover({
                 ref={popRef}
                 role="dialog"
                 aria-label={ariaLabel}
-                className={`popover-sheet-enter pointer-events-auto flex flex-col min-h-0 ${leaveRoomAbove ? SHEET_SYSTEM_ROOM.maxHeight : 'max-h-full'} rounded-xl bg-surface-container-lowest editorial-shadow`}
+                className={`popover-sheet-enter pointer-events-auto flex flex-col min-h-0 ${leaveRoomAbove ? SHEET_SYSTEM_ROOM.maxHeight : 'max-h-full'} rounded-xl bg-surface-container-lowest shadow-overlay`}
                 onMouseDown={(e) => e.stopPropagation()}>
                 <div className="shrink-0 flex items-start gap-3 pl-4 pr-1.5 pt-1.5 pb-2">
                     <div className={`flex-1 min-w-0 flex flex-col gap-1 ${lead ? '' : 'pt-2.5'}`}>
@@ -262,7 +263,7 @@ export function Popover({
             role="dialog"
             aria-label={ariaLabel}
             style={shift}
-            className={`bg-surface-container-lowest editorial-shadow absolute z-(--z-popover) flex flex-col p-4 rounded-lg${className ? ` ${className}` : ''}`}
+            className={`bg-surface-container-lowest shadow-overlay absolute z-(--z-popover) flex flex-col p-4 rounded-lg${className ? ` ${className}` : ''}`}
             onMouseDown={(e) => e.stopPropagation()}>
             {headerRight ? (
                 <div className="flex justify-between items-center">
