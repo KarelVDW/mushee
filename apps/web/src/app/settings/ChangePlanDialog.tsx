@@ -126,7 +126,7 @@ export function ChangePlanDialog({ billing: state, initialTier, onClose, onShowP
             }
             subtitle={phase === 'choose' ? "Pick how much you'd like to record each day. Switch or cancel any time." : undefined}
             onClose={locked ? undefined : onClose}
-            width={720}
+            width={800}
             footer={
                 phase === 'choose' ? (
                     canApply ? (

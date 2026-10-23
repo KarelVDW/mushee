@@ -1,5 +1,6 @@
 'use client'
 
+import { SelectedMark } from '@mushee/ui'
 import { useState } from 'react'
 
 import { BusyNotice, DialogPanel, PrimaryButton, TertiaryButton } from '@/components/ui'
@@ -103,13 +104,15 @@ export function PacksDialog({ billing, onClose, onSeePlans }: PacksDialogProps) 
                                     aria-checked={active}
                                     onClick={() => setSelected(p.id)}
                                     className={[
-                                        'text-left border-0 rounded-lg p-4 cursor-pointer',
+                                        // Nested in the white dialog: no glow, a tonal step down at rest.
+                                        'relative text-left border-0 rounded-lg p-4 pr-9 cursor-pointer',
                                         'flex flex-col gap-2',
-                                        'focus-ring',
+                                        'transition-colors duration-150 ease-solkey focus-ring',
                                         active
-                                            ? 'bg-primary-soft text-on-primary-soft'
-                                            : 'bg-surface-container-lowest text-on-surface tonal-layer-glow',
+                                            ? 'bg-(--color-selected) text-(--color-on-selected)'
+                                            : 'bg-surface-container-low text-on-surface hover:bg-surface-container-high',
                                     ].join(' ')}>
+                                    {active && <SelectedMark className="absolute top-4 right-4" />}
                                     <span className="font-mono font-semibold text-[22px] leading-none tracking-[-0.01em]">
                                         {p.minutes} min
                                     </span>

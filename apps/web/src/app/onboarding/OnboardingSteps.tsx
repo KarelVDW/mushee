@@ -15,7 +15,6 @@ import { isIPhone, markMicModeGuideConfirmed } from '@/lib/micMode'
 import { Microphone } from '@/lib/Microphone'
 import type { PlanTier } from '@/lib/plans'
 import { formatAllowance } from '@/lib/recordingTime'
-import { useMediaQuery } from '@/lib/useMediaQuery'
 import { type RadioProps, useRadioGroup } from '@/lib/useRadioGroup'
 
 import { BACKGROUNDS, GOALS, REFERRAL_SOURCES } from './onboarding-data'
@@ -696,18 +695,11 @@ export function PlanStep({
     tier: PlanTier['id']
     onTierChange: (id: PlanTier['id']) => void
 }) {
-    // Phones get radio rows, so the chosen plan and the button that acts on it share one screen.
-    const phone = useMediaQuery('(max-width: 767px)')
+    // Radio rows at every width: the chosen plan and the button that acts on it share one screen,
+    // and the white card never holds a pricing page's cards (those are for /pricing and Settings).
     return (
         <StepShell titleRef={titleRef} title="Start free, or pick a plan." subtitle={freePlanSummary(freePlan)}>
-            <PlanPicker
-                plans={plans}
-                billing={billing}
-                onBillingChange={onBillingChange}
-                selected={tier}
-                onSelect={onTierChange}
-                compact={phone}
-            />
+            <PlanPicker plans={plans} billing={billing} onBillingChange={onBillingChange} selected={tier} onSelect={onTierChange} compact />
         </StepShell>
     )
 }

@@ -362,7 +362,7 @@ test.describe('onboarding', () => {
         await expect(page.getByText("You'll confirm on the next page. Cancel any time.")).toBeVisible()
 
         // The free plan: nothing to pay, and the button says so.
-        await page.getByRole('button', { name: /^Sketch/ }).click()
+        await page.getByRole('radio', { name: /^Sketch/ }).click()
         await expect(page.getByRole('button', { name: 'Start free' })).toBeVisible()
         await expect(page.getByText("You'll confirm on the next page. Cancel any time.")).toHaveCount(0)
     })
