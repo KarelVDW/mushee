@@ -149,7 +149,8 @@ function WideSpectrumSteps() {
                 number={3}
                 scene={
                     <span className="inline-flex items-center gap-1 bg-primary-soft text-on-primary-soft rounded-sm px-1.5 py-1">
-                        <span className="font-body font-semibold text-[11px] leading-tight text-center max-w-18">Wide Spectrum</span>
+                        {/* Two lines, as narrow as its longer word, so the chip sits inside its tile. */}
+                        <span className="font-body font-semibold text-[11px] leading-tight text-center w-min max-w-18">Wide Spectrum</span>
                         <Icon name="check" size={11} />
                     </span>
                 }>
