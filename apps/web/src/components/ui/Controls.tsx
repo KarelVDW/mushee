@@ -312,8 +312,11 @@ type TransportTone = 'neutral' | 'play' | 'record'
 
 /**
  * Each tone's border (and padding), transition list and timing, hover effect and
- * active/idle palette. Neutral stays borderless with a quick colour-only fade;
- * play and record carry the 3px ring and grow slightly on hover (not under reduced motion).
+ * active/idle palette. Neutral stays borderless with a quick colour-only fade. Play is a
+ * white disc with the card lift — no ring, so it never competes with the record ring beside
+ * it — and fills with the primary while playing. Record carries the 3px recording-red ring
+ * round a flat red dot, and fills red while live. Both grow slightly on hover and sink a little
+ * when pressed (not under reduced motion).
  */
 const TONE_CLASSES: Record<TransportTone, { look: string; hover: string; active: string; idle: string }> = {
     neutral: {
@@ -323,16 +326,16 @@ const TONE_CLASSES: Record<TransportTone, { look: string; hover: string; active:
         idle: 'bg-surface-container-lowest text-on-surface-variant',
     },
     play: {
-        look: 'p-0 border-[3px] border-primary-container transition-[transform,background-color,color] duration-200 ease-solkey',
-        hover: 'motion-safe:hover:scale-105',
+        look: 'p-0 border-0 transition-[transform,scale,background-color,color] duration-200 ease-solkey',
+        hover: 'motion-safe:hover:scale-105 motion-safe:active:scale-[0.96]',
         active: 'bg-primary-container text-on-primary-container',
-        idle: 'bg-surface-container-lowest text-primary',
+        idle: 'bg-surface-container-lowest tonal-layer-glow text-primary',
     },
     record: {
-        look: 'p-0 border-[3px] transition-[transform,background-color,border-color] duration-200 ease-solkey',
-        hover: 'motion-safe:hover:scale-105',
-        active: 'bg-error border-error',
-        idle: 'bg-surface-container-lowest border-error-container',
+        look: 'p-0 border-[3px] transition-[transform,scale,background-color,border-color] duration-200 ease-solkey',
+        hover: 'motion-safe:hover:scale-105 motion-safe:active:scale-[0.96]',
+        active: 'bg-record border-record',
+        idle: 'bg-surface-container-lowest border-record',
     },
 }
 
@@ -419,27 +422,20 @@ export function TransportBtn({
 }
 
 /**
- * The record button's glyph, sized to the button so it follows the coarse size too: a dot (42%
- * of the diameter) at rest, and while a take runs a white rounded stop square (36%) — the
- * universal stop sign, so the live state reads by shape, not colour alone. The two crossfade
- * over 150ms; under reduced motion they swap at once.
+ * The record button's glyph, sized to the button so it follows the coarse size too: a flat
+ * recording-red dot (42% of the diameter) at rest, and while a take runs a white rounded stop
+ * square (36%) on the red fill — the universal stop sign, so the live state reads by shape, not
+ * colour alone. The two crossfade over 150ms; under reduced motion they swap at once.
  */
 function RecordGlyph({ active }: { active?: boolean }) {
     const fade = 'absolute transition-opacity duration-150 ease-solkey motion-reduce:transition-none'
     return (
         <>
-            <span
-                aria-hidden
-                className={[
-                    fade,
-                    'size-[42%] rounded-full bg-error-container shadow-[inset_0_-2px_4px_rgba(0,0,0,0.18)]',
-                    active ? 'opacity-0' : 'opacity-100',
-                ].join(' ')}
-            />
+            <span aria-hidden className={[fade, 'size-[42%] rounded-full bg-record', active ? 'opacity-0' : 'opacity-100'].join(' ')} />
             <span
                 aria-hidden
                 data-stop-glyph
-                className={[fade, 'size-[36%] rounded-[22%] bg-on-error', active ? 'opacity-100' : 'opacity-0'].join(' ')}
+                className={[fade, 'size-[36%] rounded-[22%] bg-on-record', active ? 'opacity-100' : 'opacity-0'].join(' ')}
             />
         </>
     )
@@ -451,21 +447,27 @@ interface SwitchProps {
     label: ReactNode
     /** One plain line under the label saying what the switch does; also its aria-describedby. */
     hint?: string
+    /** Set the label in semibold — for a switch that heads its own section. */
+    labelEmphasis?: boolean
 }
 
 /**
  * An on/off switch with its label (and optional hint) on the left. The whole row is a
  * `<label>`, so a press anywhere toggles it; the switch is named by the label alone and
- * described by the hint.
+ * described by the hint. Off is a grey track with a small outline-grey knob (the knob carries
+ * the 3:1 contrast); on, the track fills with the primary and the knob grows white and slides
+ * across — the position and size say on, no check glyph.
  */
-export function Switch({ checked, onChange, label, hint }: SwitchProps) {
+export function Switch({ checked, onChange, label, hint, labelEmphasis = false }: SwitchProps) {
     const id = useId()
     const labelId = `${id}-label`
     const hintId = `${id}-hint`
     return (
         <label className="flex justify-between items-center gap-4 cursor-pointer">
             <span className="flex flex-col gap-0.5 min-w-0">
-                <span id={labelId} className="font-body font-normal text-[14px] leading-[1.4] text-on-surface">
+                <span
+                    id={labelId}
+                    className={`font-body ${labelEmphasis ? 'font-semibold' : 'font-normal'} text-[14px] leading-[1.4] text-on-surface`}>
                     {label}
                 </span>
                 {hint && (
@@ -482,15 +484,17 @@ export function Switch({ checked, onChange, label, hint }: SwitchProps) {
                 aria-describedby={hint ? hintId : undefined}
                 onClick={() => onChange(!checked)}
                 className={[
-                    'w-10 h-5.5 rounded-full border-0 p-0.5 cursor-pointer relative shrink-0',
+                    'w-10 h-5.5 rounded-full border-0 p-0.5 cursor-pointer relative shrink-0 inline-flex items-center',
                     'transition-colors duration-150 ease-solkey',
                     'focus-ring',
-                    checked ? 'bg-primary-container' : 'bg-surface-container-high',
+                    checked ? 'bg-primary-container' : 'bg-surface-container-highest',
                 ].join(' ')}>
                 <span
+                    aria-hidden="true"
                     className={[
-                        'block w-4.5 h-4.5 rounded-full bg-white shadow-[0_1px_2px_rgba(0,0,0,0.2)] transition-transform duration-200 ease-solkey',
-                        checked ? 'translate-x-4.5' : 'translate-x-0',
+                        'block rounded-full shadow-[0_1px_2px_rgb(45_47_47/0.24)]',
+                        'transition-[translate,width,height,background-color] duration-200 ease-solkey',
+                        checked ? 'size-4.5 translate-x-4.5 bg-surface-container-lowest' : 'size-3.5 translate-x-0.5 bg-outline',
                     ].join(' ')}
                 />
             </button>

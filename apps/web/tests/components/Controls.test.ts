@@ -296,10 +296,34 @@ describe('TransportBtn', () => {
         expect(live.square).toContain('motion-reduce:transition-none')
     })
 
-    it('grows on hover only when motion is welcome', () => {
+    it('grows on hover and sinks when pressed, only when motion is welcome', () => {
         const play = html(createElement(TransportBtn, { size: 40, ariaLabel: 'Play', tone: 'play' }))
         expect(play).toContain('motion-safe:hover:scale-105')
+        expect(play).toContain('motion-safe:active:scale-[0.96]')
         expect(play).not.toMatch(/ hover:scale-105/)
+        expect(html(createElement(TransportBtn, { size: 46, ariaLabel: 'Record', tone: 'record' }))).toContain(
+            'motion-safe:active:scale-[0.96]',
+        )
+    })
+
+    it('play is a ringless white disc that fills while playing; record is one recording red', () => {
+        const play = html(createElement(TransportBtn, { size: 40, ariaLabel: 'Play', tone: 'play' }))
+        expect(play).toContain('border-0')
+        expect(play).not.toContain('border-primary-container')
+        expect(play).toContain('bg-surface-container-lowest tonal-layer-glow text-primary')
+        expect(html(createElement(TransportBtn, { size: 40, ariaLabel: 'Pause', tone: 'play', active: true }))).toContain(
+            'bg-primary-container text-on-primary-container',
+        )
+        const idle = html(createElement(TransportBtn, { size: 46, ariaLabel: 'Record', tone: 'record' }))
+        expect(idle).toContain('border-[3px]')
+        expect(idle).toContain('border-record')
+        // A flat dot: no glossy inset shadow.
+        expect(idle).toContain('rounded-full bg-record')
+        expect(idle).not.toContain('inset_')
+        const live = html(createElement(TransportBtn, { size: 46, ariaLabel: 'Stop recording', tone: 'record', active: true }))
+        expect(live).toContain('bg-record border-record')
+        expect(live).toContain('bg-on-record')
+        expect(live).not.toContain('bg-error')
     })
 })
 
@@ -393,6 +417,30 @@ describe('Switch', () => {
         expect(hint.hidden).toBe(false)
         expect(hint.className).toContain('text-[12px]')
         expect(hint.className).toContain('text-on-surface-variant')
+        box.remove()
+    })
+
+    it('off: a grey track and a small outline knob; on: the primary track and a bigger white knob, no check', () => {
+        const knob = (checked: boolean) => {
+            const { box, button } = mount({ checked })
+            const classes = { track: button.className, knob: (button.firstElementChild as HTMLElement).className, svg: button.querySelector('svg') }
+            box.remove()
+            return classes
+        }
+        const off = knob(false)
+        expect(off.track).toContain('bg-surface-container-highest')
+        expect(off.knob).toContain('size-3.5')
+        expect(off.knob).toContain('bg-outline')
+        const on = knob(true)
+        expect(on.track).toContain('bg-primary-container')
+        expect(on.knob).toContain('size-4.5 translate-x-4.5 bg-surface-container-lowest')
+        expect(on.knob).toContain('shadow-[0_1px_2px_rgb(45_47_47/0.24)]')
+        expect(on.svg).toBeNull()
+    })
+
+    it('can set its label in semibold', () => {
+        const { box, button } = mount({ labelEmphasis: true })
+        expect(document.getElementById(button.getAttribute('aria-labelledby') as string)?.className).toContain('font-semibold')
         box.remove()
     })
 
