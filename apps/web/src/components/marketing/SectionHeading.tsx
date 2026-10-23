@@ -5,7 +5,12 @@ import { Eyebrow } from '@/components/ui'
 interface SectionHeadingProps {
     /** The small-caps label over the title ('How it works'); a closing statement goes without. */
     eyebrow?: string
-    /** The h2. An italic Newsreader clause in it always starts its own line (a `<br />` before the `<em>`). */
+    /**
+     * The h2. An italic Newsreader clause in it always starts its own line (a `<br />` before the
+     * `<em>`); the heading sets that clause as a block of its own, so it balances its own lines
+     * when it wraps and never leaves one word alone (the base balance doesn't rebalance after a
+     * forced break).
+     */
     title: ReactNode
     /** One line or two under the title, at the lede size. */
     sub?: ReactNode
@@ -28,7 +33,7 @@ export function SectionHeading({ eyebrow, title, sub, align = 'start', id, class
     return (
         <div className={[className ?? 'mb-12 sm:mb-14', centred ? 'text-center' : ''].join(' ')}>
             {eyebrow && <Eyebrow className="text-primary">{eyebrow}</Eyebrow>}
-            <h2 id={id} className={`${eyebrow ? 'mt-3' : 'mt-0'} mb-0 type-page text-on-surface`}>
+            <h2 id={id} className={`${eyebrow ? 'mt-3' : 'mt-0'} mb-0 type-page text-on-surface [&_em]:block [&_em]:text-balance`}>
                 {title}
             </h2>
             {sub && (
