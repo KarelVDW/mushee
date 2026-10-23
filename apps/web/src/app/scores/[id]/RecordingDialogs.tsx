@@ -102,13 +102,16 @@ export function RecordingLimitDialog({ info, onUpgrade, onClose }: RecordingLimi
     )
 }
 
-/** One step of the Wide Spectrum walkthrough: its number, a small schematic, and what to do. */
+/**
+ * One step of the Wide Spectrum walkthrough: its number, a small schematic, and what to do.
+ * Every schematic sits in the same 96×56 white tile, so the three scenes line up as a column.
+ */
 function WalkthroughStep({ number, scene, children }: { number: number; scene: ReactNode; children: ReactNode }) {
     return (
-        <li className="flex items-center gap-3.5 rounded-md bg-surface-container-low px-3.5 py-3">
+        <li className="flex items-center gap-4 rounded-md bg-surface-container-low px-3.5 py-3">
             <span className="font-mono font-medium text-[13px] leading-none text-primary w-3 shrink-0">{number}</span>
-            <span aria-hidden className="w-20 shrink-0 inline-flex justify-center">
-                {scene}
+            <span aria-hidden className="w-24 shrink-0">
+                <span className="relative h-14 w-24 rounded-md bg-surface-container-lowest tonal-layer-glow grid place-items-center">{scene}</span>
             </span>
             <span className="font-body font-normal text-[15px] leading-snug text-on-surface">{children}</span>
         </li>
@@ -122,21 +125,22 @@ function WideSpectrumSteps() {
             <WalkthroughStep
                 number={1}
                 scene={
-                    <span className="relative w-12 h-14 rounded-md bg-surface-container-lowest tonal-layer-glow">
-                        <span className="absolute top-1.5 right-2 h-8 w-0.5 rounded-full bg-primary/30" />
-                        <span className="absolute top-1 right-1 w-3 h-3 rounded-full bg-primary" />
-                    </span>
+                    // The swipe: a finger at the top-right corner, its trail running down.
+                    <>
+                        <span className="absolute top-1.5 right-3 h-8 w-0.5 rounded-full bg-primary/30" />
+                        <span className="absolute top-1 right-2 size-3 rounded-full bg-primary" />
+                    </>
                 }>
                 Swipe down from the top-right corner to open Control Center.
             </WalkthroughStep>
             <WalkthroughStep
                 number={2}
                 scene={
-                    <span className="inline-flex items-center gap-1.5 bg-surface-container-lowest tonal-layer-glow rounded-md px-2 py-1.5">
-                        <span className="w-5 h-5 rounded-full bg-primary-soft text-on-primary-soft inline-flex items-center justify-center">
+                    <span className="inline-flex items-center gap-1.5">
+                        <span className="size-5 rounded-full bg-primary-soft text-on-primary-soft inline-flex items-center justify-center">
                             <Icon name="mic" size={11} />
                         </span>
-                        <span className="font-body font-semibold text-[10px] text-on-surface whitespace-nowrap">Mic Mode</span>
+                        <span className="font-body font-semibold text-[11px] leading-none text-on-surface whitespace-nowrap">Mic Mode</span>
                     </span>
                 }>
                 Tap Mic Mode.
@@ -145,8 +149,8 @@ function WideSpectrumSteps() {
                 number={3}
                 scene={
                     <span className="inline-flex items-center gap-1 bg-primary-soft text-on-primary-soft rounded-sm px-1.5 py-1">
-                        <span className="font-body font-semibold text-[10px] whitespace-nowrap">Wide Spectrum</span>
-                        <Icon name="check" size={10} />
+                        <span className="font-body font-semibold text-[11px] leading-tight text-center max-w-18">Wide Spectrum</span>
+                        <Icon name="check" size={11} />
                     </span>
                 }>
                 Choose Wide Spectrum, then come back here.
