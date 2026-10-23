@@ -285,10 +285,10 @@ export function TakesList({ takes, scoreTitleFor, scroll = true, numbered = fals
                                             <span className="font-body font-medium text-[14px] leading-[1.3] text-on-surface truncate">
                                                 Recording {number}
                                             </span>
+                                            {/* While it plays, the line is its clock alone: '0:02 / 0:42'. */}
                                             <span className="truncate font-body font-normal text-[12px] leading-[1.35] text-on-surface-variant">
                                                 {clock}
-                                                {' · '}
-                                                {formatTakeDate(take.startedAt)}
+                                                {!isPlaying && ` · ${formatTakeDate(take.startedAt)}`}
                                             </span>
                                         </>
                                     ) : (
