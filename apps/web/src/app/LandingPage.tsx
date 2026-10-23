@@ -1,7 +1,7 @@
 import { FaqList } from '@/components/marketing/FaqList'
 import { GetStartedButton, GetStartedNote } from '@/components/marketing/GetStartedButton'
 import { MarketingNav } from '@/components/marketing/MarketingNav'
-import { Eyebrow, Footer, Icon, type IconName } from '@/components/ui'
+import { Container, Eyebrow, Footer, Icon, type IconName } from '@/components/ui'
 import { BETA_MODE } from '@/lib/plans'
 
 import { HeroDemo } from './HeroDemo'
@@ -12,7 +12,7 @@ import { BetaPricing, Pricing } from './PricingSection'
 export function LandingPage() {
     return (
         <div className="bg-surface min-h-dvh flex flex-col">
-            <MarketingNav sectionLinks />
+            <MarketingNav sectionLinks="landing" />
             <main id="content" className="flex-1">
                 <Hero />
                 <HowItWorks />
@@ -30,7 +30,7 @@ function Hero() {
     return (
         <section className="relative overflow-hidden pt-10 pb-14 sm:pt-16 sm:pb-20">
             <div className="absolute -top-[10%] -right-[5%] w-120 h-120 bg-primary-container/[0.18] rounded-full blur-[120px] pointer-events-none" />
-            <div className="max-w-320 mx-auto px-5 sm:px-8 relative z-2 grid grid-cols-1 lg:grid-cols-[1.05fr_1fr] gap-10 lg:gap-12 items-center">
+            <Container width="marketing" className="relative z-2 grid grid-cols-1 lg:grid-cols-[1.05fr_1fr] gap-10 lg:gap-12 items-center">
                 <div className="flex flex-col gap-6">
                     <Eyebrow className="text-primary">{BETA_MODE ? 'Now in closed beta' : 'Melody to sheet music'}</Eyebrow>
                     <h1 className="font-display font-bold text-[40px] sm:text-[56px] lg:text-[72px] leading-[0.95] tracking-[-0.04em] text-on-surface m-0">
@@ -58,7 +58,7 @@ function Hero() {
                     </GetStartedNote>
                 </div>
                 <HeroDemo />
-            </div>
+            </Container>
         </section>
     )
 }
@@ -117,8 +117,8 @@ const FEATURES: readonly { readonly icon: IconName; readonly title: string; read
 
 function HowItWorks() {
     return (
-        <section id="how" className="py-14 sm:py-22 px-5 sm:px-8">
-            <div className="max-w-320 mx-auto">
+        <section id="how" className="py-14 sm:py-22">
+            <Container width="marketing">
                 <div className="mb-12">
                     <Eyebrow className="text-primary">How it works</Eyebrow>
                     <h2 className="font-display font-bold text-[32px] sm:text-[48px] leading-none tracking-[-0.03em] text-on-surface mt-3 mb-0 max-w-160">
@@ -136,15 +136,15 @@ function HowItWorks() {
                         </div>
                     ))}
                 </div>
-            </div>
+            </Container>
         </section>
     )
 }
 
 function FeatureGrid() {
     return (
-        <section id="features" className="py-14 sm:py-22 px-5 sm:px-8 bg-surface-container-lowest">
-            <div className="max-w-320 mx-auto">
+        <section id="features" className="py-14 sm:py-22 bg-surface-container-lowest">
+            <Container width="marketing">
                 <h2 className="font-display font-bold text-[32px] sm:text-[48px] leading-none tracking-[-0.03em] text-on-surface m-0 mb-3">
                     Simple tools, real notation.
                 </h2>
@@ -169,7 +169,7 @@ function FeatureGrid() {
                         </div>
                     ))}
                 </div>
-            </div>
+            </Container>
         </section>
     )
 }
@@ -177,36 +177,40 @@ function FeatureGrid() {
 /** The questions a newcomer asks before trying Solkey — the same list the page's FAQPage structured data reads. */
 function GoodToKnow() {
     return (
-        <section id="faq" aria-labelledby="faq-title" className="py-14 sm:py-22 px-5 sm:px-8">
-            <div className="max-w-190 mx-auto">
-                <h2
-                    id="faq-title"
-                    className="font-display font-bold text-[32px] sm:text-[48px] leading-none tracking-[-0.03em] text-on-surface m-0 mb-10">
-                    Good to know.
-                </h2>
-                <FaqList items={LANDING_FAQ_SHOWN} />
-            </div>
+        <section id="faq" aria-labelledby="faq-title" className="py-14 sm:py-22">
+            <Container width="marketing">
+                <div className="max-w-190">
+                    <h2
+                        id="faq-title"
+                        className="font-display font-bold text-[32px] sm:text-[48px] leading-none tracking-[-0.03em] text-on-surface m-0 mb-10">
+                        Good to know.
+                    </h2>
+                    <FaqList items={LANDING_FAQ_SHOWN} />
+                </div>
+            </Container>
         </section>
     )
 }
 
 function FinalCTA() {
     return (
-        <section className="py-16 sm:py-24 px-5 sm:px-8 relative overflow-hidden">
+        <section className="py-16 sm:py-24 relative overflow-hidden">
             <div className="absolute -bottom-[30%] -right-[5%] w-[540px] h-[540px] rounded-full bg-primary-container/[0.18] blur-[120px] pointer-events-none" />
-            <div className="max-w-190 mx-auto text-center relative z-2 flex flex-col gap-5 items-center">
-                <h2 className="font-display font-bold text-[32px] sm:text-[48px] leading-none tracking-[-0.03em] text-on-surface m-0">
-                    That melody in your head?
-                    <br />
-                    <em className="font-serif font-normal">One recording is all it takes.</em>
-                </h2>
-                <p className="font-body font-normal text-[17px] leading-normal text-on-surface-variant m-0 max-w-130">
-                    Sign up now and get it on paper before it slips away.
-                </p>
-                <div className="mt-2">
-                    <GetStartedButton location="footer" size="lg" emphasis="pop" />
+            <Container width="marketing" className="relative z-2">
+                <div className="max-w-190 mx-auto text-center flex flex-col gap-5 items-center">
+                    <h2 className="font-display font-bold text-[32px] sm:text-[48px] leading-none tracking-[-0.03em] text-on-surface m-0">
+                        That melody in your head?
+                        <br />
+                        <em className="font-serif font-normal">One recording is all it takes.</em>
+                    </h2>
+                    <p className="font-body font-normal text-[17px] leading-normal text-on-surface-variant m-0 max-w-130">
+                        Sign up now and get it on paper before it slips away.
+                    </p>
+                    <div className="mt-2">
+                        <GetStartedButton location="footer" size="lg" emphasis="pop" />
+                    </div>
                 </div>
-            </div>
+            </Container>
         </section>
     )
 }

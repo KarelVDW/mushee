@@ -11,7 +11,7 @@ import { settingsTabPath } from '@/app/settings/settingsTabs'
 import { ExportMenu } from '@/components/ExportMenu'
 import { GetStartedButton } from '@/components/marketing/GetStartedButton'
 import { ScoreLimitDialog } from '@/components/ScoreLimitDialog'
-import { Footer, Icon, PrimaryButton, SecondaryButton, showToast, SkipLink, TertiaryButton, Wordmark } from '@/components/ui'
+import { Container, Footer, Icon, PrimaryButton, SecondaryButton, showToast, SkipLink, TertiaryButton, Wordmark } from '@/components/ui'
 import { track } from '@/lib/analytics'
 import { ApiError } from '@/lib/api'
 import { useSession } from '@/lib/auth-client'
@@ -102,7 +102,7 @@ export function SharedScorePage({ token }: { token: string }) {
         <div className="bg-surface min-h-dvh flex flex-col">
             <header className="sticky top-0 z-(--z-sticky) bg-surface-container-low/85 backdrop-blur-xl">
                 <SkipLink />
-                <div className="max-w-320 mx-auto px-4 sm:px-8 py-3 sm:py-4 flex items-center justify-between gap-3 sm:gap-4">
+                <Container width="marketing" className="py-3 sm:py-4 flex items-center justify-between gap-3 sm:gap-4">
                     <Link
                         href="/"
                         className="no-underline shrink-0 inline-flex items-center pointer-coarse:min-h-10"
@@ -115,89 +115,95 @@ export function SharedScorePage({ token }: { token: string }) {
                     ) : (
                         <GetStartedButton location="shared-score" next={backHere} />
                     )}
-                </div>
+                </Container>
             </header>
 
-            <main id="content" className="flex-1 w-full max-w-320 mx-auto px-4 sm:px-8 py-6 sm:py-10 flex flex-col gap-6">
-                {shared.data && (
-                    <h1 className="font-display font-bold text-[26px] sm:text-[34px] leading-[1.05] tracking-[-0.03em] text-on-surface m-0 w-full max-w-240 mx-auto">
-                        {shared.data.title}
-                    </h1>
-                )}
-                {shared.isPending && <div className="h-64 rounded-lg bg-surface-container-low animate-pulse" aria-label="Loading score" />}
-                {(shared.isError || unreadable) && (
-                    <LoadProblem
-                        notFound={notFound}
-                        headingLevel={shared.data ? 2 : 1}
-                        onRetry={notFound ? undefined : () => void shared.refetch()}
-                    />
-                )}
-                {score && shared.data && (
-                    <>
-                        {/* The recipient's main actions, labelled, above the score; on phones the bar wraps and keeps every label. */}
-                        <div className="w-full max-w-240 mx-auto flex flex-wrap items-center gap-3">
-                            <div ref={transportGroupRef} className="flex items-center gap-2">
-                                <PrimaryButton
-                                    size="lg"
-                                    onClick={() => {
-                                        if (playback.state === 'stopped') track('shared_score_played')
-                                        playback.toggle(null)
-                                    }}
-                                    disabled={!playback.ready}>
-                                    <span className="inline-flex items-center gap-2">
-                                        <Icon name={playing ? 'pause' : 'play'} size={18} />
-                                        {playing ? 'Pause' : 'Play'}
-                                    </span>
-                                </PrimaryButton>
-                                {playback.state !== 'stopped' && (
-                                    <span className="contents" onFocus={() => (stopHasFocus.current = true)}>
-                                        <SecondaryButton
-                                            onClick={() => {
-                                                playback.stop()
-                                                focusPlay()
-                                            }}>
-                                            Stop
-                                        </SecondaryButton>
-                                    </span>
-                                )}
+            <main id="content" className="flex-1 w-full py-6 sm:py-10">
+                <Container width="marketing" className="flex flex-col gap-6">
+                    {shared.data && (
+                        <h1 className="font-display font-bold text-[26px] sm:text-[34px] leading-[1.05] tracking-[-0.03em] text-on-surface m-0 w-full max-w-240 mx-auto">
+                            {shared.data.title}
+                        </h1>
+                    )}
+                    {shared.isPending && (
+                        <div className="h-64 rounded-lg bg-surface-container-low animate-pulse" aria-label="Loading score" />
+                    )}
+                    {(shared.isError || unreadable) && (
+                        <LoadProblem
+                            notFound={notFound}
+                            headingLevel={shared.data ? 2 : 1}
+                            onRetry={notFound ? undefined : () => void shared.refetch()}
+                        />
+                    )}
+                    {score && shared.data && (
+                        <>
+                            {/* The recipient's main actions, labelled, above the score; on phones the bar wraps and keeps every label. */}
+                            <div className="w-full max-w-240 mx-auto flex flex-wrap items-center gap-3">
+                                <div ref={transportGroupRef} className="flex items-center gap-2">
+                                    <PrimaryButton
+                                        size="lg"
+                                        onClick={() => {
+                                            if (playback.state === 'stopped') track('shared_score_played')
+                                            playback.toggle(null)
+                                        }}
+                                        disabled={!playback.ready}>
+                                        <span className="inline-flex items-center gap-2">
+                                            <Icon name={playing ? 'pause' : 'play'} size={18} />
+                                            {playing ? 'Pause' : 'Play'}
+                                        </span>
+                                    </PrimaryButton>
+                                    {playback.state !== 'stopped' && (
+                                        <span className="contents" onFocus={() => (stopHasFocus.current = true)}>
+                                            <SecondaryButton
+                                                onClick={() => {
+                                                    playback.stop()
+                                                    focusPlay()
+                                                }}>
+                                                Stop
+                                            </SecondaryButton>
+                                        </span>
+                                    )}
+                                </div>
+                                <span className="flex-1" />
+                                <div className="flex items-center gap-2">
+                                    <ExportMenu
+                                        score={score}
+                                        title={shared.data.title}
+                                        getSvg={() => scoreAreaRef.current?.querySelector('svg') ?? null}
+                                        label="Download"
+                                        ariaLabel="Download score"
+                                    />
+                                    {authed && (
+                                        <SecondaryButton onClick={saveCopy}>{create.isPending ? 'Saving…' : 'Save a copy'}</SecondaryButton>
+                                    )}
+                                </div>
                             </div>
-                            <span className="flex-1" />
-                            <div className="flex items-center gap-2">
-                                <ExportMenu
-                                    score={score}
-                                    title={shared.data.title}
-                                    getSvg={() => scoreAreaRef.current?.querySelector('svg') ?? null}
-                                    label="Download"
-                                    ariaLabel="Download score"
-                                />
-                                {authed && (
-                                    <SecondaryButton onClick={saveCopy}>{create.isPending ? 'Saving…' : 'Save a copy'}</SecondaryButton>
-                                )}
+                            <div
+                                ref={scoreAreaRef}
+                                className="bg-white rounded-lg tonal-layer-glow p-4 sm:p-8 overflow-hidden w-full max-w-240 mx-auto"
+                                data-testid="shared-score">
+                                <ScoreView score={score} layoutId={score.layout.id} playbackCursorRef={playback.playbackCursorRef} />
                             </div>
-                        </div>
-                        <div
-                            ref={scoreAreaRef}
-                            className="bg-white rounded-lg tonal-layer-glow p-4 sm:p-8 overflow-hidden w-full max-w-240 mx-auto"
-                            data-testid="shared-score">
-                            <ScoreView score={score} layoutId={score.layout.id} playbackCursorRef={playback.playbackCursorRef} />
-                        </div>
-                        <p className="m-0 text-center font-body font-normal text-[13px] leading-normal text-on-surface-variant">
-                            {authed ? (
-                                'Want to change it? Save a copy to your library.'
-                            ) : (
-                                <>
-                                    Made with Solkey — hum, sing or play a melody and get sheet music like this.{' '}
-                                    <Link
-                                        href={withNext('/signup', backHere)}
-                                        onClick={() => track('landing_cta_clicked', { location: 'shared-score-footer', beta: BETA_MODE })}
-                                        className="text-primary underline">
-                                        {BETA_MODE ? 'Request access' : 'Try it free'}
-                                    </Link>
-                                </>
-                            )}
-                        </p>
-                    </>
-                )}
+                            <p className="m-0 text-center font-body font-normal text-[13px] leading-normal text-on-surface-variant">
+                                {authed ? (
+                                    'Want to change it? Save a copy to your library.'
+                                ) : (
+                                    <>
+                                        Made with Solkey — hum, sing or play a melody and get sheet music like this.{' '}
+                                        <Link
+                                            href={withNext('/signup', backHere)}
+                                            onClick={() =>
+                                                track('landing_cta_clicked', { location: 'shared-score-footer', beta: BETA_MODE })
+                                            }
+                                            className="text-primary underline">
+                                            {BETA_MODE ? 'Request access' : 'Try it free'}
+                                        </Link>
+                                    </>
+                                )}
+                            </p>
+                        </>
+                    )}
+                </Container>
             </main>
 
             <Footer width="marketing" />

@@ -4,7 +4,7 @@ import { useState } from 'react'
 
 import { settingsTabPath } from '@/app/settings/settingsTabs'
 import { GetStartedButton } from '@/components/marketing/GetStartedButton'
-import { Badge, Eyebrow, Icon, PrimaryButton, SecondaryButton } from '@/components/ui'
+import { Badge, Container, Eyebrow, Icon, PrimaryButton, SecondaryButton } from '@/components/ui'
 import { useSession } from '@/lib/auth-client'
 import { type Currency, formatMoney } from '@/lib/currency'
 import {
@@ -40,8 +40,8 @@ interface PricingProps {
 export function Pricing({ ctaLocation, intro = true }: PricingProps) {
     const currency = useDisplayCurrency()
     return (
-        <section id="pricing" className={intro ? 'py-14 sm:py-22 px-5 sm:px-8' : 'pt-10 pb-14 sm:pt-12 sm:pb-22 px-5 sm:px-8'}>
-            <div className="max-w-320 mx-auto">
+        <section id="pricing" className={intro ? 'py-14 sm:py-22' : 'pt-10 pb-14 sm:pt-12 sm:pb-22'}>
+            <Container width="marketing">
                 {intro && (
                     <div className="mb-12 text-center">
                         <Eyebrow className="text-primary">Pricing</Eyebrow>
@@ -64,7 +64,7 @@ export function Pricing({ ctaLocation, intro = true }: PricingProps) {
                         ? 'Euro prices include VAT — the amount you see is the total you pay.'
                         : 'Prices are shown before local sales tax, which is added at checkout.'}
                 </p>
-            </div>
+            </Container>
         </section>
     )
 }
@@ -76,8 +76,8 @@ export function Pricing({ ctaLocation, intro = true }: PricingProps) {
  *  lands on it (the site's own links go to /pricing). */
 export function BetaPricing() {
     return (
-        <section id="pricing" className="py-14 sm:py-22 px-5 sm:px-8">
-            <div className="max-w-190 mx-auto text-center">
+        <section id="pricing" className="py-14 sm:py-22">
+            <Container width="marketing" className="text-center">
                 <Eyebrow className="text-primary">Pricing</Eyebrow>
                 <h2 className="font-display font-bold text-[32px] sm:text-[48px] leading-none tracking-[-0.03em] text-on-surface mt-3 mb-0">
                     Free while the beta runs.
@@ -86,7 +86,7 @@ export function BetaPricing() {
                     Every beta account gets the same plan: the full editor, recording that writes the notes for you, playback, and 30
                     minutes of recording a day — no card, no charge. Paid plans arrive at launch.
                 </p>
-            </div>
+            </Container>
         </section>
     )
 }
