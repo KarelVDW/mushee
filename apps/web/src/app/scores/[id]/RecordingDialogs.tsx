@@ -111,7 +111,9 @@ function WalkthroughStep({ number, scene, children }: { number: number; scene: R
         <li className="flex items-center gap-4 rounded-md bg-surface-container-low px-3.5 py-3">
             <span className="font-mono font-medium text-[13px] leading-none text-primary w-3 shrink-0">{number}</span>
             <span aria-hidden className="w-24 shrink-0">
-                <span className="relative h-14 w-24 rounded-md bg-surface-container-lowest tonal-layer-glow grid place-items-center">{scene}</span>
+                <span className="relative h-14 w-24 rounded-md bg-surface-container-lowest tonal-layer-glow grid place-items-center">
+                    {scene}
+                </span>
             </span>
             <span className="font-body font-normal text-[15px] leading-snug text-on-surface">{children}</span>
         </li>

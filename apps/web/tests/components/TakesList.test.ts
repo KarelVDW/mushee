@@ -308,7 +308,9 @@ describe('TakesList score names', () => {
                 })
                 expect(tooltipText()).toContain(name)
                 act(() => {
-                    button?.dispatchEvent(new PointerEvent('pointerout', { bubbles: true, pointerType: 'mouse', relatedTarget: document.body }))
+                    button?.dispatchEvent(
+                        new PointerEvent('pointerout', { bubbles: true, pointerType: 'mouse', relatedTarget: document.body }),
+                    )
                 })
                 expect(tooltipText()).not.toContain(name)
             }

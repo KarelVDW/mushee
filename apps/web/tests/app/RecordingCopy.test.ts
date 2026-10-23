@@ -131,7 +131,11 @@ describe('MicFailure', () => {
     })
 
     it('lists the same path as numbered steps, one action each', () => {
-        expect(MicFailure.permissionSteps(ua.iPhone)).toEqual(['Tap aA in the address bar.', 'Tap Website Settings.', 'Set Microphone to Allow.'])
+        expect(MicFailure.permissionSteps(ua.iPhone)).toEqual([
+            'Tap aA in the address bar.',
+            'Tap Website Settings.',
+            'Set Microphone to Allow.',
+        ])
         expect(MicFailure.permissionSteps(ua.chromeMac)).toEqual(['Click the icon left of the web address.', 'Set Microphone to Allow.'])
         expect(MicFailure.permissionSteps(ua.edge)).toEqual(['Click the icon left of the web address.', 'Set Microphone to Allow.'])
         expect(MicFailure.permissionSteps(ua.android)).toEqual(['Tap the icon left of the web address.', 'Set Microphone to Allow.'])

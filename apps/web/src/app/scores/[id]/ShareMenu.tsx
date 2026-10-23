@@ -171,11 +171,7 @@ function SharePanel({ scoreId, shareToken }: { scoreId: string; shareToken: stri
                             </SecondaryButton>
                         </span>
                     </div>
-                    {copyMissed && (
-                        <p className={PANEL_PARAGRAPH}>
-                            Link ready — press Copy.
-                        </p>
-                    )}
+                    {copyMissed && <p className={PANEL_PARAGRAPH}>Link ready — press Copy.</p>}
                     {confirmingOff ? (
                         <InlineConfirm
                             question="Turn off? The link stops working for everyone who has it."
