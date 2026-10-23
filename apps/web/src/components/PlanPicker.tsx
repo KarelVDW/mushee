@@ -349,13 +349,15 @@ function PriceBlock({
     return (
         <div className="flex flex-col gap-1">
             <PriceTag amount={price.amount} cadence={price.cadence} note={price.note || null} size="md" />
-            {/* On monthly the line stays as invisible placeholder, so the card
-                keeps its height when the billing toggle flips. */}
-            {price.savings > 0 && (
-                <Eyebrow className={billing === 'yearly' ? (active ? '' : 'text-primary') : 'invisible'}>
-                    Saving {formatMoney(price.savings, currency)}/yr
-                </Eyebrow>
-            )}
+            {/* On monthly the line stays as an invisible placeholder, so the card keeps its height
+                when the billing toggle flips; on a plan with nothing to save it holds the line from
+                sm, where the cards sit side by side, so every feature list starts level. */}
+            <Eyebrow
+                className={
+                    price.savings <= 0 ? 'invisible max-sm:hidden' : billing === 'yearly' ? (active ? '' : 'text-primary') : 'invisible'
+                }>
+                {price.savings > 0 ? `Saving ${formatMoney(price.savings, currency)}/yr` : ' '}
+            </Eyebrow>
         </div>
     )
 }
