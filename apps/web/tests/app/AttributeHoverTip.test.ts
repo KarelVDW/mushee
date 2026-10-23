@@ -52,7 +52,7 @@ describe('AttributeHoverTip', () => {
         advance(TOOLTIP_HOVER_DELAY_MS)
         const tip = host.firstElementChild as HTMLElement
         expect(tip.className).toContain('tooltip-enter absolute z-(--z-popover) -translate-x-1/2 -translate-y-full')
-        expect(tip.className).toContain('rounded-md bg-surface-container-lowest editorial-shadow')
+        expect(tip.className).toContain('rounded-md bg-surface-container-lowest shadow-overlay')
         expect(tip.querySelector('.font-label.font-semibold')?.textContent).toBe('Change key')
     })
 
