@@ -48,8 +48,12 @@ const PREVIEW_MAX_ZOOM = 1.2
  * ledger lines while dropping the mostly-empty tail.
  */
 const PREVIEW_CROP_HEIGHT = 128
-/** On a phone sheet the preview leaves the room to the controls: never taller than this (px). */
-const SHEET_PREVIEW_MAX_HEIGHT = 96
+/**
+ * On a phone sheet the preview leaves the room to the controls: never taller than this (px). It
+ * scales the cropped staff down rather than cutting it, so the clef stays whole; the simple
+ * mode's readout, moves and preview fit a 390×664 sheet without scrolling.
+ */
+const SHEET_PREVIEW_MAX_HEIGHT = 84
 
 /**
  * What a transposition does, in plain words: "2 half steps higher", plus the key the score
@@ -210,7 +214,8 @@ export function TransposePopover({
             anchorRef={anchorRef}
             variant={variant}
             lead={lead}
-            className={sheet ? 'gap-3' : `w-90 gap-3${className ? ` ${className}` : ''}`}
+            // A sheet sets its controls 2px closer, so the simple mode fits a phone without scrolling.
+            className={sheet ? 'gap-2.5' : `w-90 gap-3${className ? ` ${className}` : ''}`}
             // On a phone sheet this row stays pinned under the scrolling controls: however far
             // "More options" grows them, Apply is in view.
             footer={
@@ -229,17 +234,25 @@ export function TransposePopover({
 
             {!advanced && (
                 // The four moves as one set of like capsules: half steps above, whole octaves below.
-                <div className="grid grid-cols-2 gap-2">
-                    <StepButton icon="chevron-down" disabled={semitones <= -MAX_SEMITONES} onClick={() => nudge(-1)}>
+                <div className={`grid grid-cols-2 ${sheet ? 'gap-1.5' : 'gap-2'}`}>
+                    <StepButton icon="chevron-down" compact={sheet} disabled={semitones <= -MAX_SEMITONES} onClick={() => nudge(-1)}>
                         Half step lower
                     </StepButton>
-                    <StepButton icon="chevron-up" disabled={semitones >= MAX_SEMITONES} onClick={() => nudge(1)}>
+                    <StepButton icon="chevron-up" compact={sheet} disabled={semitones >= MAX_SEMITONES} onClick={() => nudge(1)}>
                         Half step higher
                     </StepButton>
-                    <StepButton icon="chevron-down" disabled={semitones - OCTAVE < -MAX_SEMITONES} onClick={() => nudge(-OCTAVE)}>
+                    <StepButton
+                        icon="chevron-down"
+                        compact={sheet}
+                        disabled={semitones - OCTAVE < -MAX_SEMITONES}
+                        onClick={() => nudge(-OCTAVE)}>
                         Down an octave
                     </StepButton>
-                    <StepButton icon="chevron-up" disabled={semitones + OCTAVE > MAX_SEMITONES} onClick={() => nudge(OCTAVE)}>
+                    <StepButton
+                        icon="chevron-up"
+                        compact={sheet}
+                        disabled={semitones + OCTAVE > MAX_SEMITONES}
+                        onClick={() => nudge(OCTAVE)}>
                         Up an octave
                     </StepButton>
                 </div>
@@ -351,7 +364,7 @@ export function TransposePopover({
             {/* The preview on white paper, as the score itself is, its edge a hairline inset. */}
             <div
                 aria-hidden
-                className="shrink-0 bg-surface-container-lowest rounded-md shadow-[inset_0_0_0_1px_rgb(172_173_173/0.15)] px-3 py-2 flex justify-center overflow-hidden pointer-events-none select-none">
+                className={`shrink-0 bg-surface-container-lowest rounded-md shadow-[inset_0_0_0_1px_rgb(172_173_173/0.15)] px-3 ${sheet ? 'py-1.5' : 'py-2'} flex justify-center overflow-hidden pointer-events-none select-none`}>
                 <div className="overflow-hidden" style={{ width: previewZoom.width, height: previewZoom.height }}>
                     <div style={{ width: PREVIEW_LAYOUT_WIDTH, transform: `scale(${previewZoom.scale})`, transformOrigin: 'top left' }}>
                         <ScoreView score={preview} layoutId={preview.layout.id} />
@@ -376,16 +389,23 @@ const TONAL_CONTROL = [
 ].join(' ')
 
 /**
- * The simple mode's four 44px moves ("Half step lower", "Up an octave" — a whole octave the most
- * common fix for a whistled or high-voice take): one tonal capsule each, its 16px chevron saying which way.
+ * The simple mode's four moves ("Half step lower", "Up an octave" — a whole octave the most
+ * common fix for a whistled or high-voice take): one tonal capsule each, its 16px chevron saying
+ * which way. 44px tall; `compact` (the phone sheet) 40px, the phone dock's control height.
  */
-function StepButton({ icon, disabled, onClick, children }: StepControlProps & { icon: 'chevron-up' | 'chevron-down' }) {
+function StepButton({
+    icon,
+    compact = false,
+    disabled,
+    onClick,
+    children,
+}: StepControlProps & { icon: 'chevron-up' | 'chevron-down'; compact?: boolean }) {
     return (
         <button
             type="button"
             disabled={disabled}
             onClick={onClick}
-            className={`h-11 px-3 rounded-full font-label font-semibold text-[13px] leading-none whitespace-nowrap ${TONAL_CONTROL}`}>
+            className={`${compact ? 'h-10' : 'h-11'} px-3 rounded-full font-label font-semibold text-[13px] leading-none whitespace-nowrap ${TONAL_CONTROL}`}>
             <span className="inline-flex items-center justify-center gap-1.5">
                 <Icon name={icon} size={16} />
                 {children}

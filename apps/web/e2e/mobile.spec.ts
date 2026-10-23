@@ -336,6 +336,19 @@ test('pitch actions live in the More sheet and the transpose sheet swaps in with
     await expect(page.getByRole('dialog')).toHaveCount(0)
 })
 
+test('at 390×664 the simple transpose sheet shows its four moves and the whole preview without scrolling', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 664 })
+    const sheet = await openMore(page)
+    await sheet.getByRole('button', { name: 'Transpose' }).tap()
+    const transpose = page.getByRole('dialog', { name: 'Transpose' })
+    await expect(transpose.getByRole('button', { name: 'Up an octave' })).toBeVisible()
+    await transpose.evaluate((el) => Promise.all(el.getAnimations({ subtree: true }).map((a) => a.finished)))
+    // Nothing scrolls, so no fade washes over the preview's foot.
+    await expect(transpose.locator('[data-sheet-fade="bottom"]')).toHaveCount(0)
+    const fits = await transpose.locator('[data-popover-body]').evaluate((body) => body.scrollHeight <= body.clientHeight + 1)
+    expect(fits).toBe(true)
+})
+
 test('transpose’s More options keeps Apply pinned in view, the interval row whole, and fades the clipped body', async ({ page }) => {
     await page.setViewportSize({ width: 360, height: 740 })
     const sheet = await openMore(page)
