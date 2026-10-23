@@ -236,11 +236,7 @@ export function NoteToolDock({
                         <div className="flex items-center gap-2">{recording}</div>
                     ) : (
                         <>
-                            {line && (
-                                <p className={HINT_LINE}>
-                                    {line}
-                                </p>
-                            )}
+                            {line && <p className={HINT_LINE}>{line}</p>}
                             {/* The row spans the dock, so its edges are the action row's: Undo, the note
                                 values filling the room between, and the More capsule as tall as their well. */}
                             <div role="group" aria-label="Note tools" className={`flex w-full items-center gap-2 ${FILLED_TRACK_OPTIONS}`}>
@@ -264,11 +260,7 @@ export function NoteToolDock({
                 <div className="flex justify-center">{recording}</div>
             ) : (
                 <>
-                    {line && (
-                        <p className={HINT_LINE}>
-                            {line}
-                        </p>
-                    )}
+                    {line && <p className={HINT_LINE}>{line}</p>}
                     <div
                         role="group"
                         aria-label="Note tools"

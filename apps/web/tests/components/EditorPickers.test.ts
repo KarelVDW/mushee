@@ -68,8 +68,7 @@ describe('ClefPopover', () => {
 })
 
 describe('KeySignaturePopover', () => {
-    const render = (active: number) =>
-        renderToStaticMarkup(createElement(KeySignaturePopover, { active, onSelect: noop, onDismiss: noop }))
+    const render = (active: number) => renderToStaticMarkup(createElement(KeySignaturePopover, { active, onSelect: noop, onDismiss: noop }))
     /** The markup's visible text: tags and attributes (names, titles) dropped. */
     const visibleText = (markup: string) => markup.replace(/<[^>]*>/g, ' ')
 

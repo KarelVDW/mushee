@@ -38,7 +38,7 @@ function prefersReducedMotion(): boolean {
     return typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
 }
 
-const COUNT_WORDS =['', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve']
+const COUNT_WORDS = ['', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve']
 
 /** How many beats a bar holds, in words: "two per bar in 6/8". */
 function beatsPerBarLabel(timeSignature: TimeSignature): string {
@@ -149,7 +149,13 @@ export function TempoPopover({
                     className="relative overflow-hidden w-full flex flex-col gap-1.5 px-4 py-5.5 rounded-md text-left cursor-pointer border-0 bg-primary-soft text-on-primary-soft focus-ring">
                     {/* Each tap flashes the pad (primary_container fading back to primary_soft), re-keyed so
                         every tap replays it; the global reduced-motion rule makes it a no-op there. */}
-                    {pulse > 0 && <span key={pulse} aria-hidden className="pointer-events-none absolute inset-0 animate-tap-flash motion-reduce:hidden" />}
+                    {pulse > 0 && (
+                        <span
+                            key={pulse}
+                            aria-hidden
+                            className="pointer-events-none absolute inset-0 animate-tap-flash motion-reduce:hidden"
+                        />
+                    )}
                     <span className="relative flex items-center gap-2 font-label font-semibold text-[11px] leading-none uppercase tracking-[0.14em] text-on-surface-variant">
                         <span ref={dotRef} className="block w-2 h-2 rounded-full bg-primary-container" />
                         Tap along
