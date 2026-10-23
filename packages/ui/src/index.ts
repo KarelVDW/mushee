@@ -1,4 +1,4 @@
-export { Avatar, Eyebrow, ModalTitle, PageTitle, Pill, SubHeadline, Wordmark } from './Brand'
+export { Avatar, Eyebrow, ModalTitle, PageTitle, Pill, PriceTag, SubHeadline, Wordmark } from './Brand'
 export { CloseButton, IconButton, PrimaryButton, SecondaryButton, TertiaryButton, TEXT_LINK_CLASS, TextLink, ToggleButton } from './Buttons'
 export {
     Alert,

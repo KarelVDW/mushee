@@ -267,6 +267,121 @@ body {
     }
 }
 
+/* Type roles: one utility per job, each a complete text style (family, weight, size, leading,
+   tracking), stepping up at sm/lg where the role does. A call site picks the role, never a raw
+   size; a plain size, leading or tracking utility after it still adjusts that one property.
+   Colour stays the caller's. */
+@utility type-hero {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 40px;
+    line-height: 0.95;
+    letter-spacing: -0.04em;
+    @variant sm {
+        font-size: 56px;
+    }
+    @variant lg {
+        font-size: 72px;
+    }
+}
+@utility type-page {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 34px;
+    line-height: 1;
+    letter-spacing: -0.03em;
+    @variant sm {
+        font-size: 48px;
+    }
+}
+@utility type-title {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 26px;
+    line-height: 1.05;
+    letter-spacing: -0.03em;
+    @variant sm {
+        font-size: 32px;
+    }
+}
+@utility type-heading {
+    font-family: var(--font-headline);
+    font-weight: 600;
+    font-size: 20px;
+    line-height: 1.25;
+    letter-spacing: -0.01em;
+}
+@utility type-subheading {
+    font-family: var(--font-headline);
+    font-weight: 600;
+    font-size: 17px;
+    line-height: 1.3;
+}
+@utility type-label {
+    font-family: var(--font-label);
+    font-weight: 600;
+    font-size: 15px;
+    line-height: 1.25;
+}
+@utility type-lede {
+    font-family: var(--font-body);
+    font-weight: 400;
+    font-size: 17px;
+    line-height: 1.5;
+    @variant sm {
+        font-size: 18px;
+    }
+}
+@utility type-body {
+    font-family: var(--font-body);
+    font-weight: 400;
+    font-size: 14px;
+    line-height: 1.5;
+}
+@utility type-body-lg {
+    font-family: var(--font-body);
+    font-weight: 400;
+    font-size: 16px;
+    line-height: 1.6;
+}
+@utility type-hint {
+    font-family: var(--font-body);
+    font-weight: 400;
+    font-size: 13px;
+    line-height: 1.4;
+}
+@utility type-caption {
+    font-family: var(--font-body);
+    font-weight: 400;
+    font-size: 12px;
+    line-height: 1.4;
+}
+@utility type-eyebrow {
+    font-family: var(--font-label);
+    font-weight: 600;
+    font-size: 11px;
+    line-height: 1;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+@utility type-button {
+    font-family: var(--font-label);
+    font-weight: 600;
+    font-size: 13px;
+    line-height: 1;
+}
+@utility type-button-lg {
+    font-family: var(--font-label);
+    font-weight: 600;
+    font-size: 14px;
+    line-height: 1;
+}
+@utility type-numeral {
+    font-family: var(--font-mono);
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+}
+
 /* Transition recipes on the duration scale and the solkey ease: tint (colour and opacity
    changes, 150ms), lift (a press or hover that moves or casts a shadow, 200ms), sweep (strokes
    and progress fills, 300ms). */
