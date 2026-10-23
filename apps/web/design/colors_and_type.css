@@ -9,29 +9,30 @@
  * ── Color usage rule for primary / secondary ───────────────────────
  * Three intensities per accent — pick by SIZE and INTERACTIVITY of the surface.
  *
- *   *-container (#00DBE9 / #FF2079)  — LOUD fill. Reserved for interactive
- *     surfaces that should read as "the action": primary buttons, focus
- *     indicators, active-tab underline, the magenta drop-shadow.
+ *   *-container (#00DBE9 / #FF2079)  — LOUD fill. Reserved for a pressed toggle
+ *     that rests transparent inside a well or track, a toggled-on transport or
+ *     metronome control, primary buttons and focus (plus the active-tab
+ *     underline and the magenta drop-shadow). A disabled control never shows
+ *     cyan; loud cyan is never a status.
  *
- *   *-soft (#A6F2F7 / #FFADBF)        — QUIET fill. Use when the loud fill
- *     would dominate the page:
- *       • small NON-clickable identity tags — avatar initials, instrument
- *         pills, status badges, "you" markers
- *       • large selectable/focusable surfaces where the full neon would
- *         shout — onboarding option cards, feature-icon circles on the
- *         marketing surface, the BPM tap pad, multi-select chips at rest
+ *   *-soft (#A6F2F7 / #FFADBF)        — QUIET fill.
+ *       • primary-soft + a check (SelectedMark) — a picked option: tiles,
+ *         chips, popover options, plan and pack cards (--color-selected)
+ *       • primary-soft — success marks, feature-icon circles, the tap pad
+ *       • secondary-soft — identity only: avatars, the instrument pill,
+ *         "Best value", "you"
  *     Pair with --color-on-primary-soft / --color-on-secondary-soft for
  *     text + iconography (both clear WCAG AA on the soft fill).
  *
  *   bare primary / secondary (#00666d / #b60052) — ACCENT TEXT. Used as
- *     foreground only — link text, eyebrow accents, destructive copy,
- *     hover-darkened state on a cyan/magenta-fill button. The neons
- *     themselves do not pass WCAG AA as text on white.
+ *     foreground only — link text, eyebrow accents, step numbers,
+ *     destructive copy. The neons themselves do not pass WCAG AA as text on
+ *     white.
  *
  * Rule of thumb:
- *   *-container  → loud fill (one or two per surface — the action)
- *   *-soft       → quiet fill (identity tags, big selectable areas)
- *   bare         → accent text / icon on a light surface
+ *   *-container        → loud fill (one or two per surface — the action)
+ *   primary-soft + ✓   → picked;  secondary-soft → identity
+ *   bare               → accent text / icon on a light surface
  * ──────────────────────────────────────────────────────────────────
  */
 
@@ -63,17 +64,20 @@
     --color-on-primary: #cffbff;
     --color-primary-container: #00dbe9; /* the loud one — interactive fill */
     --color-on-primary-container: #005359;
-    --color-primary-soft: #a6f2f7; /* the quiet one — non-clickable tags + big selectable areas */
+    --color-primary-soft: #a6f2f7; /* the quiet one — a picked option (+ a check), success marks */
     --color-on-primary-soft: #003f43;
     --color-primary-dim: #00595f;
     --color-inverse-primary: #00dbe9;
+    /* The filled CTA's hover and press: a deeper neon that keeps its hue (label on-primary-soft). */
+    --color-primary-container-hover: #00c8d5;
+    --color-primary-container-pressed: #00b8c4;
 
     /* The Accent — Secondary (Neon Magenta) */
     --color-secondary: #b60052;
     --color-on-secondary: #ffeff0;
     --color-secondary-container: #ff2079; /* the loud one — the rebellion */
     --color-on-secondary-container: #91003f;
-    --color-secondary-soft: #ffadbf; /* the quiet one — avatars, identity tags */
+    --color-secondary-soft: #ffadbf; /* the quiet one — identity only: avatars, the instrument pill */
     --color-on-secondary-soft: #6d002e;
     --color-secondary-dim: #a00047;
 
@@ -88,10 +92,33 @@
     --color-on-error: #ffefee;
     --color-error-container: #fb5151;
     --color-on-error-container: #570008;
+    --color-error-soft: #fdecec; /* the quiet tier: form-level messages */
+
+    /* Recording red — the record button, the live dot, the count-in dots and the
+       recording cursor (RECORDING_CURSOR_RED). Never used for errors. */
+    --color-record: #ef4444;
+    --color-on-record: #ffffff;
+
+    /* A picked option: the soft primary, always paired with a check (SelectedMark). */
+    --color-selected: var(--color-primary-soft);
+    --color-on-selected: var(--color-on-primary-soft);
 
     /* Outlines (ghost borders ONLY — see DESIGN.md §4) */
     --color-outline: #767777;
     --color-outline-variant: #acadad;
+
+    /* ───────────────── Control fills ─────────────────
+       Every quiet control steps through the same three tones; fields and large tiles
+       sit one step lighter. A container whose own tone is the field fill sets it a
+       step up, so an empty field keeps its edge by tone, never a resting stroke. */
+
+    --field-fill: var(--color-surface-container-low);
+    --control-fill: var(--color-surface-container); /* secondary buttons, icon buttons, chips */
+    --control-fill-hover: var(--color-surface-container-high);
+    --control-fill-press: var(--color-surface-container-highest);
+    --tile-fill: var(--color-surface-container-low); /* large option tiles */
+    --tile-fill-hover: var(--color-surface-container);
+    --tile-fill-press: var(--color-surface-container-high);
 
     /* ───────────────── Semantic foreground aliases ───────────────── */
 
