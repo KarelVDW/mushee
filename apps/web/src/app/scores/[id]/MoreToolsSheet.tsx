@@ -378,47 +378,83 @@ function BackLink({ onClick }: { onClick: () => void }) {
 
 /**
  * A section label in the More sheet's body ('This note', 'Whole score'): it pins to the top of the
- * scrolling body on the sheet's white, so a scrolled sheet always names its section.
+ * scrolling body on the sheet's white, so a scrolled sheet always names its section. A flex row,
+ * so the label's box is its own 11px line, not a 24px body line box.
  */
-const STICKY_EYEBROW = 'sticky top-0 z-1 -mx-4 px-4 py-2 bg-surface-container-lowest'
-
-/** How far the folded menu shows past its fold row: the top of the next row, under the 16px fade. */
-const FOLD_PEEK_PX = 20
+const STICKY_EYEBROW = 'sticky top-0 z-1 flex -mx-4 px-4 py-1.5 bg-surface-container-lowest'
 
 /**
- * The More sheet's own fit, set on its panel (the Popover's dialog) as the body's content
- * changes size:
+ * A place the folded menu may end: `peek` px past `row`'s bottom — room in which the 16px bottom
+ * fade falls on blank space or on the next row's bare top, never across a filled control (the
+ * sharp-or-flat track) or a label.
+ */
+interface MenuFold {
+    row: Element | null
+    peek: number
+}
+
+/** Past Redo: the top of the next row (Clef), under the fade. */
+const PEEK_NEXT_ROW_PX = 20
+/** Past 'This note': the gap before 'Whole score' (the body's gap-5), blank under the fade. */
+const PEEK_SECTION_GAP_PX = 20
+/** Past the tile grid: the 16px gap above the sharp-or-flat row (gap-2.5 plus its mt-1.5), blank under the fade. */
+const PEEK_TRACK_GAP_PX = 16
+/** Past the first tile row: the 8px grid gap and the next tiles' bare 8px top padding, under the fade. */
+const PEEK_TILE_TOP_PX = 16
+
+/**
+ * The More sheet's own fit, set on its panel (the Popover's dialog) as the body's content and
+ * its frame change size:
  * - the top fade sits under the pinned section label (`--sheet-fade-top`, its height), so the
  *   label is never washed out;
- * - with a note selected the sheet folds just past `foldRow` — Redo, the first 'Whole score'
- *   row, kept in reach without scrolling (`--sheet-peek-h`: that row's bottom plus
- *   {@link FOLD_PEEK_PX}), never taller than the one-system room above it allows. The bottom
- *   fade then falls on the next row's bare top, which says there is more below, and never
- *   across a filled control such as the sharp-or-flat track.
+ * - with a note selected the sheet folds at the deepest of these that the room under the
+ *   one-system strip ({@link SHEET_SYSTEM_ROOM}) actually holds: past `redo`, the first 'Whole
+ *   score' row; past the end of 'This note' (`section`); past its `tileGrid`; past the grid's
+ *   first row (`--sheet-peek-h`: that row's bottom plus its {@link MenuFold} peek). So the sheet
+ *   ends on a whole row on any phone, never partway through one, and the body scrolls to the rest.
  */
-function useMenuSheetFold(section: HTMLElement | null, foldRow: Element | null, eyebrow: HTMLElement | null, fold: boolean) {
+function useMenuSheetFold(
+    section: HTMLElement | null,
+    tileGrid: HTMLElement | null,
+    redo: Element | null,
+    eyebrow: HTMLElement | null,
+    fold: boolean,
+) {
     useLayoutEffect(() => {
         const panel = section?.closest<HTMLElement>('[role="dialog"]')
         if (!section || !panel) return
         const body = section.closest<HTMLElement>('[data-popover-body]')
+        const frame = panel.parentElement
+        const folds: MenuFold[] = [
+            { row: redo, peek: PEEK_NEXT_ROW_PX },
+            { row: section, peek: PEEK_SECTION_GAP_PX },
+            { row: tileGrid, peek: PEEK_TRACK_GAP_PX },
+            { row: tileGrid?.firstElementChild ?? null, peek: PEEK_TILE_TOP_PX },
+        ]
         const measure = () => {
             if (eyebrow) panel.style.setProperty('--sheet-fade-top', `${eyebrow.offsetHeight}px`)
-            if (!fold || !foldRow) {
+            if (!fold || !redo) {
                 panel.style.removeProperty('--sheet-peek-h')
                 panel.style.removeProperty('max-height')
                 return
             }
-            const bottom = foldRow.getBoundingClientRect().bottom + (body?.scrollTop ?? 0) - panel.getBoundingClientRect().top
-            panel.style.setProperty('--sheet-peek-h', `${Math.ceil(bottom + FOLD_PEEK_PX)}px`)
+            const top = panel.getBoundingClientRect().top - (body?.scrollTop ?? 0)
+            const room = (frame?.getBoundingClientRect().height ?? Infinity) - SHEET_SYSTEM_ROOM.px
+            const heights = folds.flatMap(({ row, peek }) => (row ? [Math.ceil(row.getBoundingClientRect().bottom - top + peek)] : []))
+            // The deepest fold that fits; on a phone too short for any, the shallowest.
+            const height = heights.find((h) => h <= room) ?? heights[heights.length - 1]
+            panel.style.setProperty('--sheet-peek-h', `${height}px`)
             panel.style.maxHeight = `min(100% - ${SHEET_SYSTEM_ROOM.px}px, var(--sheet-peek-h))`
         }
         measure()
-        // 'This note' changing height (a reason line coming and going) moves the fold row.
+        // 'This note' changing height (a reason line coming and going) moves the fold rows; the
+        // frame changing height (the viewport, the dock) changes which of them fits.
         const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(measure)
         observer?.observe(section)
+        if (frame) observer?.observe(frame)
         // The fit stays on the panel as it closes: its leaving copy keeps the same height.
         return () => observer?.disconnect()
-    }, [section, foldRow, eyebrow, fold])
+    }, [section, tileGrid, redo, eyebrow, fold])
 }
 
 interface MoreToolsMenuProps {
@@ -436,14 +472,16 @@ interface MoreToolsMenuProps {
 function MoreToolsMenu({ manipulator, words, anchorRef, metronome, onMetronomeToggle, onOpen, onTranspose, onClose }: MoreToolsMenuProps) {
     const [thisNote, setThisNote] = useState<HTMLElement | null>(null)
     const [eyebrow, setEyebrow] = useState<HTMLElement | null>(null)
+    const [tileGrid, setTileGrid] = useState<HTMLElement | null>(null)
     const [wholeScoreRows, setWholeScoreRows] = useState<HTMLElement | null>(null)
     const tools = new NoteToolStates(manipulator)
     const accidental = tools.accidental
     // The clef / key / time / tempo rows: off while a recording writes into the score, saying so.
     const settingsState = tools.scoreSettings
     const nothingSelected = !manipulator.selectedNote
-    // Folded after Redo, the first 'Whole score' row.
-    useMenuSheetFold(thisNote, wholeScoreRows?.firstElementChild ?? null, eyebrow, !nothingSelected)
+    // Folded after Redo, the first 'Whole score' row, where the room allows; else at the deepest
+    // whole part of 'This note' that fits.
+    useMenuSheetFold(thisNote, tileGrid, wholeScoreRows?.firstElementChild ?? null, eyebrow, !nothingSelected)
     // A score of rests has nothing to transpose yet.
     const emptyScore = !manipulator.score?.hasPitchedNotes
 
@@ -464,7 +502,7 @@ function MoreToolsMenu({ manipulator, words, anchorRef, metronome, onMetronomeTo
                         <span className="font-body text-[12px] leading-tight text-on-surface-variant">Select a note first.</span>
                     )}
                 </div>
-                <div className="grid grid-cols-2 gap-2">
+                <div ref={setTileGrid} className="grid grid-cols-2 gap-2">
                     <NoteTile
                         icon={<DottedIcon />}
                         label="Dotted"
@@ -494,7 +532,8 @@ function MoreToolsMenu({ manipulator, words, anchorRef, metronome, onMetronomeTo
                         onClick={() => manipulator.run(TOGGLE_TIE)}
                     />
                 </div>
-                <div className="flex items-center justify-between gap-3">
+                {/* 16px under the tiles, so a sheet folded at the tiles ends in blank space, not across the track. */}
+                <div className="mt-1.5 flex items-center justify-between gap-3">
                     <span className="flex flex-col gap-0.5 min-w-0">
                         <span className="font-label font-semibold text-[15px] leading-tight text-on-surface">Sharp or flat</span>
                         {/* On touch a reason is said inline; "Select a note first" is the section's caption already. */}
@@ -643,7 +682,7 @@ function NoteTile({ icon, label, caption, state, onClick }: NoteTileProps) {
             aria-describedby={captionId}
             onClick={state.disabled ? undefined : onClick}
             className={[
-                'min-h-17 flex items-start gap-2.5 px-3 py-2 rounded-lg border-0 text-left',
+                'min-h-16 flex items-start gap-2.5 px-3 py-2 rounded-lg border-0 text-left',
                 'transition-colors duration-150 ease-solkey focus-ring select-none',
                 state.active
                     ? 'bg-primary-container text-on-primary-container'

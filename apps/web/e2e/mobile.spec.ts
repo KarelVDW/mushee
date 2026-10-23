@@ -384,6 +384,42 @@ test('with a note selected the More sheet leaves its row in view, even from the 
     expect((selected?.y ?? Infinity) + (selected?.height ?? 0)).toBeLessThanOrEqual(sheetBox?.y ?? 0)
 })
 
+for (const viewport of [
+    { width: 390, height: 664 },
+    { width: 360, height: 640 },
+]) {
+    test(`at ${viewport.width}×${viewport.height} the folded More sheet ends on a whole row, never across the sharp-or-flat track`, async ({
+        page,
+    }) => {
+        await page.setViewportSize(viewport)
+        const sheet = await openMore(page)
+        const track = sheet.getByRole('group', { name: 'Sharp or flat' })
+        await expect(track).toBeAttached()
+        // Measured once the sheet has risen in: its parts are read one by one.
+        await sheet.evaluate((el) => Promise.all(el.getAnimations({ subtree: true }).map((a) => a.finished)))
+        // The bottom 16px of the sheet is its fade: what lies there may only be blank, or a tile's
+        // bare 8px top padding — never any of the filled track, nor a tile's label.
+        const sheetBox = await sheet.boundingBox()
+        if (!sheetBox) throw new Error('expected the sheet')
+        const bottom = sheetBox.y + sheetBox.height
+        const parts = [
+            { part: track, bare: 0 },
+            ...['Dotted', 'Triplet', 'Rest', 'Tie'].map((name) => ({ part: sheet.getByRole('button', { name, exact: true }), bare: 8 })),
+        ]
+        for (const { part, bare } of parts) {
+            const box = await part.boundingBox()
+            if (!box) throw new Error('expected the part laid out')
+            const whole = box.y + box.height <= bottom - 16 + 1
+            const hidden = box.y + bare >= bottom - 1
+            expect(
+                whole || hidden,
+                `a part spans ${Math.round(box.y)}–${Math.round(box.y + box.height)}; the sheet ends at ${Math.round(bottom)}`,
+            ).toBe(true)
+        }
+        await expect(sheet.getByRole('button', { name: 'Dotted' })).toBeInViewport({ ratio: 1 })
+    })
+}
+
 test('one Undo too many is taken back from the top of the More sheet’s Whole score rows', async ({ page }) => {
     await page.getByRole('button', { name: 'Higher', exact: true }).tap()
     await page.getByRole('button', { name: 'Undo' }).tap()
