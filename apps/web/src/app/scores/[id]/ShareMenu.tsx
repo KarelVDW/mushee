@@ -1,7 +1,9 @@
 'use client'
 
+import { FieldFrame } from '@mushee/ui'
 import { useEffect, useRef, useState } from 'react'
 
+import { InlineConfirm } from '@/components/InlineConfirm'
 import { HeaderMenu, Icon, PrimaryButton, SecondaryButton, showToast, TertiaryButton } from '@/components/ui'
 import { track } from '@/lib/analytics'
 import { useShareScore, useUnshareScore } from '@/lib/queries'
@@ -11,6 +13,9 @@ const COPIED_MS = 2000
 
 /** What a share link lets people do — said the same way before and after the link exists, file formats left to Download. */
 const SHARE_PROMISE = "Anyone with the link can see, play and download this score. They can't change it. No account needed."
+
+/** The panel's body copy: 13px, 15px on phones, wrapped without a one-word last line. */
+const PANEL_PARAGRAPH = 'm-0 font-body font-normal text-[13px] max-sm:text-[15px] leading-normal text-on-surface-variant text-pretty'
 
 /** The public address of a shared score, on whatever host the app is served from. */
 function shareLinkFor(token: string): string {
@@ -140,15 +145,19 @@ function SharePanel({ scoreId, shareToken }: { scoreId: string; shareToken: stri
         <div ref={panelRef} className="contents">
             {link ? (
                 <>
-                    <p className="m-0 font-body font-normal text-[13px] leading-normal text-on-surface-variant">{SHARE_PROMISE}</p>
+                    <p className={PANEL_PARAGRAPH}>{SHARE_PROMISE}</p>
                     <div className="flex items-center gap-2">
-                        <input
-                            readOnly
-                            aria-label="Share link"
-                            value={link}
-                            onFocus={(e) => e.currentTarget.select()}
-                            className="flex-1 min-w-0 rounded-sm bg-surface-container-low px-3 py-2 border-0 font-mono text-[12px] text-on-surface"
-                        />
+                        {/* The read-only link on the shared field frame (its focus stroke included):
+                            Geist Mono, 16px on touch so iOS never zooms the page into it. */}
+                        <FieldFrame className="flex flex-1 min-w-0 items-center px-2.5">
+                            <input
+                                readOnly
+                                aria-label="Share link"
+                                value={link}
+                                onFocus={(e) => e.currentTarget.select()}
+                                className="flex-1 min-w-0 bg-transparent border-0 outline-0 px-0.5 py-2 font-mono font-normal text-[13px] pointer-coarse:text-[16px] leading-none text-on-surface"
+                            />
+                        </FieldFrame>
                         <span data-share-focus="copy" className="contents">
                             <SecondaryButton onClick={() => void copy()}>
                                 {copied ? (
@@ -163,30 +172,22 @@ function SharePanel({ scoreId, shareToken }: { scoreId: string; shareToken: stri
                         </span>
                     </div>
                     {copyMissed && (
-                        <p className="m-0 font-body font-normal text-[13px] leading-normal text-on-surface-variant">
+                        <p className={PANEL_PARAGRAPH}>
                             Link ready — press Copy.
                         </p>
                     )}
                     {confirmingOff ? (
-                        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
-                            <span className="font-body font-medium text-[13px] leading-snug text-on-surface">
-                                Turn off? The link stops working for everyone who has it.
-                            </span>
-                            <span className="inline-flex items-center gap-3">
-                                <TertiaryButton danger onClick={turnOff}>
-                                    {unshare.isPending ? 'Turning off…' : 'Turn off'}
-                                </TertiaryButton>
-                                <span data-share-focus="keep" className="contents">
-                                    <TertiaryButton
-                                        onClick={() => {
-                                            setConfirmingOff(false)
-                                            focusNext.current = 'off'
-                                        }}>
-                                        Keep it on
-                                    </TertiaryButton>
-                                </span>
-                            </span>
-                        </div>
+                        <InlineConfirm
+                            question="Turn off? The link stops working for everyone who has it."
+                            confirmLabel={unshare.isPending ? 'Turning off…' : 'Turn off'}
+                            keepLabel="Keep it on"
+                            onConfirm={turnOff}
+                            onKeep={() => {
+                                setConfirmingOff(false)
+                                focusNext.current = 'off'
+                            }}
+                            keepData={{ 'data-share-focus': 'keep' }}
+                        />
                     ) : (
                         <div className="flex justify-end">
                             <span data-share-focus="off" className="contents">
@@ -204,7 +205,7 @@ function SharePanel({ scoreId, shareToken }: { scoreId: string; shareToken: stri
                 </>
             ) : (
                 <>
-                    <p className="m-0 font-body font-normal text-[13px] leading-normal text-on-surface-variant">{SHARE_PROMISE}</p>
+                    <p className={PANEL_PARAGRAPH}>{SHARE_PROMISE}</p>
                     <span data-share-focus="create" className="contents">
                         <PrimaryButton onClick={createAndCopy} fullWidth>
                             {share.isPending ? 'Creating link…' : 'Create link and copy'}

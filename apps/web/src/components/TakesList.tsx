@@ -3,7 +3,8 @@
 import Link from 'next/link'
 import { useEffect, useRef, useState } from 'react'
 
-import { focusWithoutTooltip, Icon, IconButton, showToast, TertiaryButton, Tooltip } from '@/components/ui'
+import { InlineConfirm } from '@/components/InlineConfirm'
+import { focusWithoutTooltip, Icon, IconButton, showToast, Tooltip } from '@/components/ui'
 import { track } from '@/lib/analytics'
 import { recordingAudioUrl, type RecordingSummary } from '@/lib/api'
 import { formatTakeDate } from '@/lib/dates'
@@ -267,21 +268,14 @@ export function TakesList({ takes, scoreTitleFor, scroll = true, numbered = fals
                         )}
                         <PlayButton take={take} playing={isPlaying} onToggle={() => player.toggle(take)} />
                         {confirming === take.id ? (
-                            // The question takes the row's text over; on a narrow panel its buttons
-                            // wrap under it rather than squeezing it.
-                            <div className="flex flex-1 min-w-0 flex-wrap items-center justify-between gap-x-2 gap-y-1">
-                                <span className="font-body font-medium text-[13px] leading-snug text-on-surface">
-                                    Delete this recording? Your notes stay.
-                                </span>
-                                <span className="inline-flex items-center gap-1">
-                                    <TertiaryButton danger onClick={() => confirmDelete(take)}>
-                                        {remove.isPending ? 'Deleting…' : 'Delete'}
-                                    </TertiaryButton>
-                                    <span data-keep className="contents">
-                                        <TertiaryButton onClick={() => keep(take)}>Keep</TertiaryButton>
-                                    </span>
-                                </span>
-                            </div>
+                            // The question takes the row's text over.
+                            <InlineConfirm
+                                question="Delete this recording? Your notes stay."
+                                confirmLabel={remove.isPending ? 'Deleting…' : 'Delete'}
+                                keepLabel="Keep"
+                                onConfirm={() => confirmDelete(take)}
+                                onKeep={() => keep(take)}
+                            />
                         ) : (
                             <>
                                 {/* Line heights with room for descenders: the title's 'g' is never clipped. */}
