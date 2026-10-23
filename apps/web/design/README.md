@@ -270,14 +270,24 @@ Call sites move to the roles as their files are touched; new code starts on them
 
 ### Spacing & layout
 
-- 8px base grid; `0.4rem` (~6.4px) is the smallest meaningful step.
-- Page max width `1280px` for marketing; `1536px` for app chrome; modal max `42rem`.
-- Page-edge gutters: `2rem` (32px) on desktop, `1.2rem` on mobile.
-- Sections breathe — `88px` vertical padding on marketing rows, `64px` between major content groups.
+- **Spacing:** 4px grid, ramp 2/4/6/8/12/16/20/24/32/40/48/64/88px; the half-steps 10/14/18 are allowed only inside control padding (for optical centring).
+- **Control heights** are tokens in `packages/ui/src/theme.css`, never padding plus line-height, so neighbours line up. Coarse pointers step each one up for the touch floor:
+
+    | Token          | Fine | Coarse | For                                                                               |
+    | -------------- | ---- | ------ | --------------------------------------------------------------------------------- |
+    | `--control-sm` | 32px | 40px   | Chips, icon buttons, segmented options, header chips, the tertiary button's floor |
+    | `--control-md` | 40px | 44px   | Buttons and fields, dock controls. A button beside a field is md.                 |
+    | `--control-lg` | 48px | 52px   | The big CTA: funnel primaries, marketing card CTAs                                |
+
+    `--well-pad` (3px) is a tool well's padding: desktop dock units are 46px (md + 2 × 3px; 50px on coarse pointers). An icon-only capsule is a circle of its height. The phone dock keeps its own sizes (§4b in `../DESIGN.md`): 40px buttons (44px from 400px wide), play 46px, record 56px.
+
+- **Three containers** (`Container`, `src/components/ui/Container.tsx`): app 1536, marketing 1280, reading 760. Padding always sits outside the max width, so content is exactly as wide as its grid says at every viewport. Gutters: app 16px on phones; marketing and reading 20px; 32px from sm. App pages share the app width, so the title never moves between tabs; narrow content (Settings) left-aligns inside it rather than centring a narrower frame.
+- **Dialogs** set their own width (`DialogPanel width`), at most 90vw; below `sm` a dialog is a full-width bottom sheet.
+- Sections breathe — 56px (88px from `sm`) vertical padding on marketing rows (`py-14 sm:py-22`), `64px` between major content groups.
 
 ### Mobile (< 768px)
 
-Phones get the same design language, restructured — never a shrunken desktop. The full rulebook is `../DESIGN.md` §4b; the headlines: the score **reflows** against the container width (it never scales down); the dock is **two rows** — a tool row (Undo, note length, a labelled More) and the action row ("Note" and "Pitch" wells, then stop / play / record, with record the largest control on screen) — and everything else lives in the labelled **More tools** sheet, each item with a text label and its current value; during a take the dock collapses to the recording strip and the record-as-stop. Sheets are opaque, sit between the header and the dock, and carry a Close. Toasts stack above the dock. Full-height surfaces use `dvh` (never `100vh`) and the dock pads `env(safe-area-inset-bottom)`; text inputs are 16px on coarse pointers; touch targets grow via `pointer-coarse:` bumps on the shared controls rather than per-screen hand-sizing.
+Phones get the same design language, restructured — never a shrunken desktop. The full rulebook is `../DESIGN.md` §4b; the headlines: the score **reflows** against the container width (it never scales down); the dock is **two rows** — a tool row (Undo, note length, a labelled More) and the action row ("Note" and "Pitch" wells, then stop / play / record, with record the largest control on screen) — and everything else lives in the labelled **More tools** sheet, each item with a text label and its current value; during a take the dock collapses to the recording strip and the record-as-stop. Sheets are opaque, sit between the header and the dock, and carry a Close. Toasts stack above the dock. Full-height surfaces use `dvh` (never `100vh`); the editor runs edge to edge (`viewport-fit=cover`), its header and dock padding the safe-area insets; text inputs are 16px on coarse pointers; touch targets grow via `pointer-coarse:` bumps on the shared controls rather than per-screen hand-sizing.
 
 ### Backgrounds
 
