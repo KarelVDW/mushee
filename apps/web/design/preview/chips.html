@@ -2,7 +2,7 @@
 <html lang="en">
     <head>
         <meta charset="utf-8" />
-        <title>Chips — instrument & genre</title>
+        <title>Chips and tiles — rest, hover, picked</title>
         <link rel="stylesheet" href="../colors_and_type.css" />
         <style>
             html,
@@ -20,6 +20,9 @@
                 align-items: flex-start;
             }
             .chip {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
                 border-radius: 9999px;
                 padding: 6px 14px;
                 font: 700 11px/1 var(--font-label);
@@ -33,15 +36,55 @@
                 background: var(--color-surface-container-high);
                 color: var(--color-on-surface);
             }
+            /* Picked: the selected fill (primary_soft) and a leading check — never colour alone. */
             .active {
-                background: var(--color-secondary-soft);
-                color: var(--color-on-secondary-soft);
+                background: var(--color-selected);
+                color: var(--color-on-selected);
+                padding-left: 12px;
+            }
+            .tiles {
+                flex-basis: 100%;
+                display: grid;
+                grid-template-columns: repeat(4, 1fr);
+                gap: 8px;
+                margin-top: 12px;
+            }
+            /* Large option tiles rest on the tile fill; picked, the selected fill plus SelectedMark top-right. */
+            .tile {
+                position: relative;
+                min-height: 56px;
+                box-sizing: border-box;
+                padding: 12px 32px 10px 12px;
+                border-radius: 8px;
+                background: var(--tile-fill);
+                color: var(--color-on-surface);
+                font: 600 14px/1.25 var(--font-label);
+            }
+            .tile.picked {
+                background: var(--color-selected);
+                color: var(--color-on-selected);
+            }
+            .mark {
+                position: absolute;
+                top: 8px;
+                right: 8px;
+                width: 18px;
+                height: 18px;
+                border-radius: 9999px;
+                background: var(--color-primary-container);
+                color: var(--color-on-primary-container);
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
             }
         </style>
     </head>
     <body>
         <div class="card">
-            <span class="chip active">Piano</span>
+            <span class="chip active"
+                ><svg class="ico-glyph" viewBox="0 0 24 24" width="12" height="12" style="stroke-width: 3"><path d="m5 12.5 4.5 4.5L19 7" /></svg
+                >Piano</span
+            >
             <span class="chip default">Violin</span>
             <span class="chip default">Cello</span>
             <span class="chip default">Flute</span>
@@ -57,6 +100,15 @@
             <span class="chip default">Bagpipe</span>
             <span class="chip default">Recorder</span>
             <span class="chip default">Tin Whistle</span>
+            <div class="tiles">
+                <span class="tile picked"
+                    >Voice<span class="mark"
+                        ><svg class="ico-glyph" viewBox="0 0 24 24" width="12" height="12" style="stroke-width: 3"><path d="m5 12.5 4.5 4.5L19 7" /></svg></span
+                ></span>
+                <span class="tile">Piano</span>
+                <span class="tile">Guitar</span>
+                <span class="tile">Violin</span>
+            </div>
         </div>
     </body>
 </html>

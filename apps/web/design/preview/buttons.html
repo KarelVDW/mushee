@@ -27,17 +27,37 @@
                 flex-wrap: wrap;
             }
 
-            /* Primary — capsule, cyan tonal */
+            /* Primary — capsule, loud cyan, 40px (--control-md). Hover and press deepen the neon a
+               step each (label on_primary_soft); press also shrinks to 97%. */
             .btn-primary {
                 background: var(--color-primary-container);
                 color: var(--color-on-primary-container);
                 border: 0;
                 border-radius: 9999px;
-                padding: 9px 18px;
-                font: 600 13px/1 var(--font-label);
+                height: 40px;
+                padding: 0 20px;
+                font: var(--type-button);
                 letter-spacing: 0.01em;
                 cursor: pointer;
                 white-space: nowrap;
+            }
+            .btn-primary.hover {
+                background: var(--color-primary-container-hover);
+                color: var(--color-on-primary-soft);
+            }
+            .btn-primary.press {
+                background: var(--color-primary-container-pressed);
+                color: var(--color-on-primary-soft);
+                transform: scale(0.97);
+            }
+            /* Disabled — the tonal capsule: surface_container, on_surface_variant, no shadow. Never a faded neon. */
+            .btn-primary.disabled,
+            .btn-pop.disabled {
+                background: var(--color-surface-container);
+                color: var(--color-on-surface-variant);
+                box-shadow: none;
+                transform: none;
+                cursor: not-allowed;
             }
             /* Hero CTA — opt-in magenta-shadow pop. Reserved for one button per surface. */
             .btn-pop {
@@ -45,8 +65,9 @@
                 color: var(--color-on-primary-container);
                 border: 0;
                 border-radius: 9999px;
-                padding: 9px 18px;
-                font: 600 13px/1 var(--font-label);
+                height: 40px;
+                padding: 0 20px;
+                font: var(--type-button);
                 letter-spacing: 0.01em;
                 box-shadow: 3px 3px 0 0 var(--color-secondary-container);
                 cursor: pointer;
@@ -56,25 +77,34 @@
                 transform: translateY(-2px);
                 box-shadow: 5px 5px 0 0 var(--color-secondary-container);
             }
+            /* Pressed, the pop sinks onto its plate: 3px right and down, the shadow gone. */
+            .btn-pop.press {
+                transform: translate(3px, 3px);
+                box-shadow: none;
+            }
 
-            /* Secondary — soft fill */
+            /* Secondary — the tonal control fill: surface_container → high (hover) → highest (press) */
             .btn-secondary {
-                background: var(--color-surface-container-low);
+                background: var(--control-fill);
                 color: var(--color-on-surface);
                 border: 0;
                 border-radius: 9999px;
-                padding: 9px 18px;
-                font: 600 13px/1 var(--font-label);
+                height: 40px;
+                padding: 0 20px;
+                font: var(--type-button);
                 cursor: pointer;
                 white-space: nowrap;
             }
-            /* Tertiary — text only */
+            .btn-secondary.hover {
+                background: var(--control-fill-hover);
+            }
+            /* Tertiary — bare Space Grotesk 600 text in on_surface (hover primary) */
             .btn-tertiary {
                 background: transparent;
-                color: var(--color-on-surface-variant);
+                color: var(--color-on-surface);
                 border: 0;
                 padding: 8px 0;
-                font: 500 13px/1 var(--font-body);
+                font: var(--type-button);
                 cursor: pointer;
                 white-space: nowrap;
             }
@@ -118,14 +148,23 @@
             <div class="row">
                 <span class="lbl">Primary</span>
                 <button class="btn-primary">New score</button>
-                <button class="btn-pop">Start composing</button>
-                <button class="btn-pop hover">Start composing</button>
+                <button class="btn-primary hover">Hover</button>
+                <button class="btn-primary press">Pressed</button>
+                <button class="btn-primary disabled" disabled>Disabled</button>
+            </div>
+            <div class="row">
+                <span class="lbl">Pop</span>
+                <button class="btn-pop">Start free</button>
+                <button class="btn-pop hover">Start free</button>
+                <button class="btn-pop press">Start free</button>
+                <button class="btn-pop disabled" disabled>Start free</button>
             </div>
             <div class="row">
                 <span class="lbl">Secondary</span>
-                <button class="btn-secondary">Library</button>
+                <button class="btn-secondary">Import file</button>
+                <button class="btn-secondary hover">Hover</button>
                 <button class="btn-tertiary">Sign in</button>
-                <button class="btn-tertiary dest">Sign out</button>
+                <button class="btn-tertiary dest">Delete</button>
             </div>
             <div class="row">
                 <span class="lbl">Icon</span>

@@ -23,25 +23,24 @@
                 background: var(--color-surface-container-lowest);
                 border-radius: 8px;
                 padding: 16px;
-                box-shadow: 0 0 24px 0 rgba(45, 47, 47, 0.06);
+                box-shadow: var(--shadow-raised);
                 display: flex;
                 flex-direction: column;
                 gap: 6px;
             }
-            .glass {
-                background: rgba(255, 255, 255, 0.85);
-                backdrop-filter: blur(12px);
+            .overlay {
+                background: var(--color-surface-container-lowest);
                 border-radius: 12px;
                 padding: 16px;
-                box-shadow: 0 0 24px 0 rgba(45, 47, 47, 0.06);
+                box-shadow: var(--shadow-overlay);
             }
             .ttl {
                 font: 700 14px/1 var(--font-display);
                 color: var(--color-on-surface);
             }
             .lbl {
-                font: 700 9.6px/1 var(--font-label);
-                letter-spacing: 0.18em;
+                font: 600 11px/1 var(--font-label);
+                letter-spacing: 0.12em;
                 text-transform: uppercase;
                 color: var(--color-on-surface-variant);
             }
@@ -56,13 +55,11 @@
                 margin-top: 4px;
             }
             .pill {
-                background: var(--color-secondary-container);
-                color: var(--color-on-secondary-container);
+                background: var(--color-secondary-soft);
+                color: var(--color-on-secondary-soft);
                 border-radius: 9999px;
                 padding: 4px 10px;
-                font: 700 9px/1 var(--font-label);
-                letter-spacing: 0.18em;
-                text-transform: uppercase;
+                font: 600 12px/1 var(--font-label);
             }
         </style>
     </head>
@@ -72,12 +69,12 @@
                 <span class="lbl">Score</span>
                 <span class="ttl">Allegro in C Minor</span>
                 <span class="body">Updated 2h ago · 32 bars</span>
-                <div class="footer"><span class="lbl">Piano</span><span class="pill">Solo</span></div>
+                <div class="footer"><span class="lbl">Melody</span><span class="pill">Piano</span></div>
             </div>
-            <div class="glass">
-                <span class="lbl">Glass panel — dialogs · popovers · menus</span>
+            <div class="overlay">
+                <span class="lbl">Floating card — dialogs · popovers · menus · toasts</span>
                 <div class="ttl" style="margin-top: 6px">120 bpm</div>
-                <span class="body">surface_lowest @ 85% · blur 12px. The editor tool dock is a docked bar on surface-container-low @ 85% instead, and its tool groups sit in white capsule wells (surface_container_lowest + tonal glow).</span>
+                <span class="body">surface_container_lowest · overlay shadow (an 18% ghost ring over a soft fall-off). Opaque — glass is retired. The editor tool dock is a docked bar on surface-container-low @ 85% + blur, its tool groups in white capsule wells (surface_container_lowest + the raised glow).</span>
             </div>
         </div>
     </body>

@@ -9,29 +9,30 @@
  * ── Color usage rule for primary / secondary ───────────────────────
  * Three intensities per accent — pick by SIZE and INTERACTIVITY of the surface.
  *
- *   *-container (#00DBE9 / #FF2079)  — LOUD fill. Reserved for interactive
- *     surfaces that should read as "the action": primary buttons, focus
- *     indicators, active-tab underline, the magenta drop-shadow.
+ *   *-container (#00DBE9 / #FF2079)  — LOUD fill. Reserved for a pressed toggle
+ *     that rests transparent inside a well or track, a toggled-on transport or
+ *     metronome control, primary buttons and focus (plus the active-tab
+ *     underline and the magenta drop-shadow). A disabled control never shows
+ *     cyan; loud cyan is never a status.
  *
- *   *-soft (#A6F2F7 / #FFADBF)        — QUIET fill. Use when the loud fill
- *     would dominate the page:
- *       • small NON-clickable identity tags — avatar initials, instrument
- *         pills, status badges, "you" markers
- *       • large selectable/focusable surfaces where the full neon would
- *         shout — onboarding option cards, feature-icon circles on the
- *         marketing surface, the BPM tap pad, multi-select chips at rest
+ *   *-soft (#A6F2F7 / #FFADBF)        — QUIET fill.
+ *       • primary-soft + a check (SelectedMark) — a picked option: tiles,
+ *         chips, popover options, plan and pack cards (--color-selected)
+ *       • primary-soft — success marks, feature-icon circles, the tap pad
+ *       • secondary-soft — identity only: avatars, the instrument pill,
+ *         "Best value", "you"
  *     Pair with --color-on-primary-soft / --color-on-secondary-soft for
  *     text + iconography (both clear WCAG AA on the soft fill).
  *
  *   bare primary / secondary (#00666d / #b60052) — ACCENT TEXT. Used as
- *     foreground only — link text, eyebrow accents, destructive copy,
- *     hover-darkened state on a cyan/magenta-fill button. The neons
- *     themselves do not pass WCAG AA as text on white.
+ *     foreground only — link text, eyebrow accents, step numbers,
+ *     destructive copy. The neons themselves do not pass WCAG AA as text on
+ *     white.
  *
  * Rule of thumb:
- *   *-container  → loud fill (one or two per surface — the action)
- *   *-soft       → quiet fill (identity tags, big selectable areas)
- *   bare         → accent text / icon on a light surface
+ *   *-container        → loud fill (one or two per surface — the action)
+ *   primary-soft + ✓   → picked;  secondary-soft → identity
+ *   bare               → accent text / icon on a light surface
  * ──────────────────────────────────────────────────────────────────
  */
 
@@ -63,17 +64,20 @@
     --color-on-primary: #cffbff;
     --color-primary-container: #00dbe9; /* the loud one — interactive fill */
     --color-on-primary-container: #005359;
-    --color-primary-soft: #a6f2f7; /* the quiet one — non-clickable tags + big selectable areas */
+    --color-primary-soft: #a6f2f7; /* the quiet one — a picked option (+ a check), success marks */
     --color-on-primary-soft: #003f43;
     --color-primary-dim: #00595f;
     --color-inverse-primary: #00dbe9;
+    /* The filled CTA's hover and press: a deeper neon that keeps its hue (label on-primary-soft). */
+    --color-primary-container-hover: #00c8d5;
+    --color-primary-container-pressed: #00b8c4;
 
     /* The Accent — Secondary (Neon Magenta) */
     --color-secondary: #b60052;
     --color-on-secondary: #ffeff0;
     --color-secondary-container: #ff2079; /* the loud one — the rebellion */
     --color-on-secondary-container: #91003f;
-    --color-secondary-soft: #ffadbf; /* the quiet one — avatars, identity tags */
+    --color-secondary-soft: #ffadbf; /* the quiet one — identity only: avatars, the instrument pill */
     --color-on-secondary-soft: #6d002e;
     --color-secondary-dim: #a00047;
 
@@ -88,10 +92,33 @@
     --color-on-error: #ffefee;
     --color-error-container: #fb5151;
     --color-on-error-container: #570008;
+    --color-error-soft: #fdecec; /* the quiet tier: form-level messages */
+
+    /* Recording red — the record button, the live dot, the count-in dots and the
+       recording cursor (RECORDING_CURSOR_RED). Never used for errors. */
+    --color-record: #ef4444;
+    --color-on-record: #ffffff;
+
+    /* A picked option: the soft primary, always paired with a check (SelectedMark). */
+    --color-selected: var(--color-primary-soft);
+    --color-on-selected: var(--color-on-primary-soft);
 
     /* Outlines (ghost borders ONLY — see DESIGN.md §4) */
     --color-outline: #767777;
     --color-outline-variant: #acadad;
+
+    /* ───────────────── Control fills ─────────────────
+       Every quiet control steps through the same three tones; fields and large tiles
+       sit one step lighter. A container whose own tone is the field fill sets it a
+       step up, so an empty field keeps its edge by tone, never a resting stroke. */
+
+    --field-fill: var(--color-surface-container-low);
+    --control-fill: var(--color-surface-container); /* secondary buttons, icon buttons, chips */
+    --control-fill-hover: var(--color-surface-container-high);
+    --control-fill-press: var(--color-surface-container-highest);
+    --tile-fill: var(--color-surface-container-low); /* large option tiles */
+    --tile-fill-hover: var(--color-surface-container);
+    --tile-fill-press: var(--color-surface-container-high);
 
     /* ───────────────── Semantic foreground aliases ───────────────── */
 
@@ -103,10 +130,11 @@
     --fg-rebel: #b60052; /* secondary — destructive / sign-out */
 
     /* ───────────────── Type ─────────────────
-     Space Grotesk — display + UI default
-     Manrope — body copy at long-reading sizes
-     Newsreader — serif italic for warm/literary moments
-     Geist Mono — code, tempo, schematic numbers */
+     Space Grotesk — display + UI default, every button
+     Manrope — body copy at reading sizes
+     Newsreader — serif italic clause in display headlines (marketing + auth only)
+     Geist Mono — readouts only: bpm, clocks, time signatures, step numbers,
+                  the code field, file extensions (never prices) */
 
     --font-display: 'Space Grotesk', system-ui, sans-serif;
     --font-headline: 'Space Grotesk', system-ui, sans-serif;
@@ -116,19 +144,24 @@
     --font-serif: 'Newsreader', Georgia, serif;
     --font-mono: 'Geist Mono', 'JetBrains Mono', ui-monospace, monospace;
 
-    /* Type scale */
-    --type-display-lg: 700 4rem/0.95 var(--font-display); /* 64px hero */
-    --type-display-md: 700 3rem/1 var(--font-display); /* 48px page title */
-    --type-display-sm: 700 2rem/1.05 var(--font-display); /* 32px modal title */
-    --type-headline-lg: 600 1.5rem/1.2 var(--font-headline); /* 24px */
-    --type-headline-md: 600 1.25rem/1.3 var(--font-headline); /* 20px */
-    --type-title-lg: 600 1rem/1.4 var(--font-headline); /* 16px card title */
-    --type-body-lg: 400 0.95rem/1.5 var(--font-body);
-    --type-body-md: 400 0.9rem/1.55 var(--font-body);
-    --type-body-sm: 400 0.75rem/1.45 var(--font-body);
-    --type-label-lg: 600 0.75rem/1 var(--font-label);
-    --type-label-md: 600 0.6875rem/1 var(--font-label);
-    --type-mono-md: 500 0.85rem/1.45 var(--font-mono);
+    /* Type roles — the type-* utilities in packages/ui/src/theme.css, whose class names
+       are the API. Each token is the role's base step as a font shorthand; the .type-*
+       classes below add its tracking, caps and sm/lg steps. type-numeral has no size of its
+       own (it takes the context's), so it is a class only. */
+    --type-hero: 700 40px/0.95 var(--font-display); /* → 56px sm, 72px lg */
+    --type-page: 700 34px/1 var(--font-display); /* → 48px sm */
+    --type-title: 700 26px/1.05 var(--font-display); /* → 32px sm */
+    --type-heading: 600 20px/1.25 var(--font-headline);
+    --type-subheading: 600 17px/1.3 var(--font-headline);
+    --type-label: 600 15px/1.25 var(--font-label);
+    --type-lede: 400 17px/1.5 var(--font-body); /* → 18px sm */
+    --type-body: 400 14px/1.5 var(--font-body);
+    --type-body-lg: 400 16px/1.6 var(--font-body);
+    --type-hint: 400 13px/1.4 var(--font-body);
+    --type-caption: 400 12px/1.4 var(--font-body);
+    --type-eyebrow: 600 11px/1 var(--font-label);
+    --type-button: 600 13px/1 var(--font-label);
+    --type-button-lg: 600 14px/1 var(--font-label);
 
     --tracking-display: -0.03em;
     --tracking-tight: -0.015em;
@@ -145,8 +178,13 @@
 
     /* ───────────────── Shadows — atmospheric, never black ───────────────── */
 
-    --shadow-tonal: 0 0 24px 0 rgba(45, 47, 47, 0.06); /* The standard "lift" */
-    --shadow-editorial: 0 0 19px 0 rgba(45, 47, 47, 0.06); /* Auth panels */
+    /* Three tiers: raised (resting cards and wells), overlay (anything that floats:
+       popovers, menus, tooltips, sheets, toasts, dialogs, the selection bar — its first
+       layer is the ghost border drawn as a ring) and pop (the magenta offset). */
+    --shadow-raised: 0 0 24px 0 rgb(45 47 47 / 0.06);
+    --shadow-overlay: 0 0 0 1px rgb(172 173 173 / 0.18), 0 1px 2px rgb(45 47 47 / 0.05), 0 6px 28px -4px rgb(45 47 47 / 0.12);
+    --shadow-tonal: var(--shadow-raised); /* alias */
+    --shadow-editorial: 0 0 19px 0 rgba(45, 47, 47, 0.06); /* a few resting cards: library rows, the auth card */
     --shadow-offset-3: 3px 3px 0 0 var(--color-secondary-container); /* Default pop */
     --shadow-offset-5: 5px 5px 0 0 var(--color-secondary-container); /* Hover pop */
     --shadow-cyan-3: 3px 3px 0 0 var(--color-primary-container);
@@ -157,9 +195,10 @@
        name here stays `--ease` for drop-in HTML. */
 
     --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
-    --t-quick: 150ms; /* hover color */
-    --t-snap: 200ms; /* shadow / transform lift */
-    --t-flow: 300ms; /* tab + stroke sweeps */
+    --t-press: 100ms; /* a press: the 0.97 shrink and its tonal step */
+    --t-quick: 150ms; /* tints, small entrances (popovers, the pick check) */
+    --t-snap: 200ms; /* lifts, dialogs, toasts */
+    --t-flow: 300ms; /* strokes and sweeps */
 }
 
 /* ───────────────── Semantic element styles ───────────────── */
@@ -167,46 +206,110 @@
 body {
     background: var(--color-background);
     color: var(--color-on-background);
-    font: var(--type-body-md);
+    font: var(--type-body);
     -webkit-font-smoothing: antialiased;
 }
 
-/* Display headlines — serif, mixed case, tight-but-not-extreme tracking */
-.h-display,
-.h1 {
-    font: var(--type-display-md);
-    letter-spacing: var(--tracking-display);
-    color: var(--color-on-surface);
-    margin: 0;
+/* No stranded words: headings balance their lines, running text avoids a lone last word
+   (the base layer in theme.css does the same). */
+h1,
+h2,
+h3,
+h4,
+summary {
+    text-wrap: balance;
 }
-.h-mega {
-    font: var(--type-display-lg);
-    letter-spacing: var(--tracking-display);
-    color: var(--color-on-surface);
-}
-.h2 {
-    font: var(--type-display-sm);
-    letter-spacing: var(--tracking-display);
-    color: var(--color-on-surface);
-}
-.h3 {
-    font: var(--type-headline-md);
-    letter-spacing: var(--tracking-tight);
-    color: var(--color-on-surface);
+p,
+li,
+dd,
+figcaption,
+label {
+    text-wrap: pretty;
 }
 
-/* Eyebrow / micro-label — caps, but understated */
-.label,
-.eyebrow {
-    font: var(--type-label-md);
+/* Type roles — one class per job, the same names as the app's type-* utilities. Colour
+   stays the caller's (it inherits on_surface), save the eyebrow, which carries the
+   Eyebrow component's on_surface_variant. */
+.type-hero {
+    font: var(--type-hero);
+    letter-spacing: -0.04em;
+}
+.type-page {
+    font: var(--type-page);
+    letter-spacing: var(--tracking-display);
+}
+.type-title {
+    font: var(--type-title);
+    letter-spacing: var(--tracking-display);
+}
+.type-heading {
+    font: var(--type-heading);
+    letter-spacing: -0.01em;
+}
+.type-subheading {
+    font: var(--type-subheading);
+}
+.type-label {
+    font: var(--type-label);
+}
+.type-lede {
+    font: var(--type-lede);
+}
+.type-body {
+    font: var(--type-body);
+}
+.type-body-lg {
+    font: var(--type-body-lg);
+}
+.type-hint {
+    font: var(--type-hint);
+}
+.type-caption {
+    font: var(--type-caption);
+}
+.type-eyebrow {
+    font: var(--type-eyebrow);
     letter-spacing: var(--tracking-widest);
     text-transform: uppercase;
     color: var(--color-on-surface-variant);
 }
+.type-button {
+    font: var(--type-button);
+}
+.type-button-lg {
+    font: var(--type-button-lg);
+}
+/* Readouts — bpm, clocks, time signatures, step numbers; the size is the context's. */
+.type-numeral,
+code,
+.mono {
+    font-family: var(--font-mono);
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+}
+@media (min-width: 640px) {
+    .type-hero {
+        font-size: 56px;
+    }
+    .type-page {
+        font-size: 48px;
+    }
+    .type-title {
+        font-size: 32px;
+    }
+    .type-lede {
+        font-size: 18px;
+    }
+}
+@media (min-width: 1024px) {
+    .type-hero {
+        font-size: 72px;
+    }
+}
 
 /* Body text */
 p {
-    font: var(--type-body-md);
+    font: var(--type-body);
     color: var(--color-on-surface);
     margin: 0;
 }
@@ -223,12 +326,6 @@ p {
     letter-spacing: -0.04em;
     color: var(--color-on-surface);
     line-height: 1;
-}
-
-/* Mono — for technical / code-ish moments */
-code,
-.mono {
-    font: var(--type-mono-md);
 }
 
 /* Selection — neon cyan */
@@ -251,15 +348,14 @@ code,
 
 /* Effect utilities — see DESIGN.md */
 .tonal-layer-glow {
-    box-shadow: var(--shadow-tonal);
+    box-shadow: var(--shadow-raised);
 }
 .editorial-shadow {
     box-shadow: var(--shadow-editorial);
 }
-.glass-panel {
-    background: rgba(255, 255, 255, 0.85);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
+/* Floating surfaces: the opaque card. Glass is retired — no translucent panels. */
+.overlay-shadow {
+    box-shadow: var(--shadow-overlay);
 }
 .ghost-border {
     border: var(--ghost-border);

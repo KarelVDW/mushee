@@ -14,7 +14,7 @@
 //                            and wrap onto extra rows. Controls inside a well are transparent
 //                            at rest; standalone chrome controls carry the white fill
 //                            themselves. Popovers open UPWARD, away from the dock, on the
-//                            opaque card (never glass).
+//                            opaque card (never glass) with the overlay shadow.
 //   Both chrome surfaces are the same tonal mirror: surface-container-low @ 85% +
 //   backdrop blur + tonal shadow. Saving is autosave with a quiet status — no Save button.
 //
@@ -22,7 +22,7 @@
 // Recordings chips, tooltips, the dock's hint line, the recording strip that replaces
 // the tool wells during a take, the editor empty state, and the phone layout (a tool row
 // — Undo · lengths · More — over the action row: Note ◀ ▶, Pitch ▼ ▲, stop 40 / play 46 /
-// record 54, with everything else in the "More tools" sheet).
+// record 56, with everything else in the "More tools" sheet).
 
 // Chrome mirror surface — shared by the header and the dock.
 const CHROME_SURFACE = {
@@ -157,9 +157,10 @@ function TransportBtn({ size, tone = 'neutral', active, onClick, ariaLabel, disa
     const hovering = hover && !disabled
 
     if (tone === 'record') {
-        // Concentric "rec light": white shell, thick red ring, solid red core.
-        // Active state fills the whole button, and the core becomes a white stop
-        // square — while a take runs, Record is the stop ("Stop recording").
+        // The only ringed transport control: a white shell in a 3px record-red ring
+        // round a flat record-red dot. Live, the whole button fills record red and the
+        // core becomes a white stop square — while a take runs, Record is the stop
+        // ("Stop recording"). One red, --color-record (#ef4444), never the error tones.
         const dotSize = Math.round(size * (active ? 0.36 : 0.42))
         return (
             <button
@@ -174,8 +175,8 @@ function TransportBtn({ size, tone = 'neutral', active, onClick, ariaLabel, disa
                     height: size,
                     borderRadius: 9999,
                     padding: 0,
-                    background: active ? 'var(--color-error)' : 'var(--color-surface-container-lowest)',
-                    border: `3px solid ${active ? 'var(--color-error)' : 'var(--color-error-container)'}`,
+                    background: active ? 'var(--color-record)' : 'var(--color-surface-container-lowest)',
+                    border: '3px solid var(--color-record)',
                     display: 'inline-flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -190,9 +191,8 @@ function TransportBtn({ size, tone = 'neutral', active, onClick, ariaLabel, disa
                         width: dotSize,
                         height: dotSize,
                         borderRadius: active ? '22%' : 9999,
-                        background: active ? 'var(--color-on-error)' : 'var(--color-error-container)',
+                        background: active ? 'var(--color-on-record)' : 'var(--color-record)',
                         transition: 'background 200ms var(--ease)',
-                        boxShadow: active ? 'none' : 'inset 0 -2px 4px rgba(0,0,0,0.18)',
                     }}
                 />
             </button>
@@ -200,7 +200,8 @@ function TransportBtn({ size, tone = 'neutral', active, onClick, ariaLabel, disa
     }
 
     if (tone === 'play') {
-        // Same concentric language, cyan, with a triangle/pause glyph.
+        // A white circle with the raised glow and a primary glyph — no ring, so it never
+        // competes with Record's — that fills primary-container while playing.
         return (
             <button
                 type="button"
@@ -215,7 +216,8 @@ function TransportBtn({ size, tone = 'neutral', active, onClick, ariaLabel, disa
                     borderRadius: 9999,
                     padding: 0,
                     background: active ? 'var(--color-primary-container)' : 'var(--color-surface-container-lowest)',
-                    border: `3px solid var(--color-primary-container)`,
+                    boxShadow: active ? 'none' : 'var(--shadow-raised)',
+                    border: 0,
                     color: active ? 'var(--color-on-primary-container)' : 'var(--color-primary)',
                     display: 'inline-flex',
                     alignItems: 'center',
@@ -360,7 +362,7 @@ function RestIcon() {
 }
 
 // Upward popover shared by the dock's clef / key / tempo / More controls — on the
-// opaque card (surface-container-lowest + editorial shadow), never glass: blur
+// opaque card (surface-container-lowest + overlay shadow), never glass: blur
 // doesn't nest inside the dock's own backdrop blur. Production positions these
 // `bottom-[calc(100%+0.75rem)] right-0` so they can never hang over the dock; on
 // mobile they become sheets instead.
@@ -396,7 +398,7 @@ function DockPopover({ ariaLabel, onDismiss, width = 280, children }) {
                 width,
                 zIndex: 50,
                 background: 'var(--color-surface-container-lowest)',
-                boxShadow: 'var(--shadow-editorial)',
+                boxShadow: 'var(--shadow-overlay)',
                 display: 'flex',
                 flexDirection: 'column',
                 gap: 12,
@@ -738,7 +740,7 @@ function ExportMenu() {
                         padding: 16,
                         zIndex: 50,
                         background: 'var(--color-surface-container-lowest)',
-                        boxShadow: 'var(--shadow-editorial)',
+                        boxShadow: 'var(--shadow-overlay)',
                         display: 'flex',
                         flexDirection: 'column',
                         gap: 8,
@@ -1143,7 +1145,7 @@ function MicModeGuideDialog({ onConfirm, onClose, onSkip = onClose }) {
 }
 
 // Reminder toast for returning iPhone users — fired at take start (production:
-// Toaster + showToast with a per-toast `icon`). Auto-dismisses; glass surface.
+// Toaster + showToast with a per-toast `icon`). Auto-dismisses; an opaque card.
 function MicReminderToast({ onDone }) {
     React.useEffect(() => {
         const t = setTimeout(onDone, 5200)
@@ -1152,8 +1154,8 @@ function MicReminderToast({ onDone }) {
     return (
         <div
             role="status"
-            className="glass-panel"
             style={{
+                background: 'var(--color-surface-container-lowest)',
                 position: 'absolute',
                 bottom: 96,
                 left: '50%',
@@ -1163,12 +1165,23 @@ function MicReminderToast({ onDone }) {
                 display: 'flex',
                 alignItems: 'flex-start',
                 gap: 12,
-                padding: '12px 16px',
+                padding: '10px 16px 10px 12px',
                 borderRadius: 12,
-                boxShadow: 'var(--shadow-tonal)',
+                boxShadow: 'var(--shadow-overlay)',
             }}>
-            <span style={{ color: 'var(--color-primary)', flexShrink: 0, marginTop: 1 }}>
-                <Icon name="mic" size={18} />
+            <span
+                style={{
+                    width: 28,
+                    height: 28,
+                    borderRadius: 9999,
+                    flexShrink: 0,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    background: 'var(--color-primary-soft)',
+                    color: 'var(--color-on-primary-soft)',
+                }}>
+                <Icon name="mic" size={16} />
             </span>
             <span style={{ font: '400 13px/1.45 var(--font-body)', color: 'var(--color-on-surface)' }}>
                 Recording on iPhone: keep Mic Mode on Wide Spectrum (Control Center) so every note comes through.

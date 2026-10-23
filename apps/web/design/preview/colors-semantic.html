@@ -35,8 +35,8 @@
                 gap: 2px;
             }
             .name {
-                font: var(--type-label-md);
-                letter-spacing: 0.18em;
+                font: var(--type-eyebrow);
+                letter-spacing: 0.12em;
                 text-transform: uppercase;
             }
             .hex {
@@ -62,7 +62,7 @@
             <div class="row">
                 <div class="chip" style="background: #767777"></div>
                 <div class="stack">
-                    <span class="name" style="color: #767777">outline · fg-3</span><span class="hex">#767777 · placeholder</span>
+                    <span class="name" style="color: #767777">outline · fg-3</span><span class="hex">#767777 · field icons</span>
                 </div>
             </div>
             <div class="row">
@@ -89,7 +89,19 @@
             </div>
             <div class="row">
                 <div class="chip" style="background: #fb5151"></div>
-                <div class="stack"><span class="name" style="color: #b31b25">error-container</span><span class="hex">#FB5151</span></div>
+                <div class="stack"><span class="name" style="color: #b31b25">error-container</span><span class="hex">#FB5151 · real faults</span></div>
+            </div>
+            <div class="row">
+                <div class="chip" style="background: var(--color-error-soft)"></div>
+                <div class="stack">
+                    <span class="name" style="color: #b31b25">error-soft</span><span class="hex">#FDECEC · form-level messages</span>
+                </div>
+            </div>
+            <div class="row">
+                <div class="chip" style="background: var(--color-record)"></div>
+                <div class="stack">
+                    <span class="name" style="color: #2d2f2f">record</span><span class="hex">#EF4444 · the recording signal, never errors</span>
+                </div>
             </div>
         </div>
     </body>

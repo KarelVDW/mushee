@@ -194,18 +194,16 @@ function Pill({ children, tone = 'neutral', bg, fg }) {
     )
 }
 
-// Chip — instrument / genre tag. Identity by default, soft-magenta when active.
-// Use for selectable identity tags (instruments, genres). Loud actions belong on a button.
+// Chip — a choice chip (instruments, survey answers). At rest on the tonal control
+// fill; picked, the selected fill (primary-soft) and a leading check, so the choice
+// never rides on colour alone. secondary-soft is identity only (avatars, the
+// instrument pill), never a pick. Loud actions belong on a button.
 // `size`: 'sm' (default — list/row identity) | 'md' (form context, matches body text)
 function Chip({ active, onClick, children, ariaLabel, size = 'sm' }) {
     const [hover, setHover] = useState(false)
     const interactive = !!onClick
-    const bg = active
-        ? 'var(--color-secondary-soft)'
-        : hover && interactive
-          ? 'var(--color-surface-container-high)'
-          : 'var(--color-surface-container)'
-    const fg = active ? 'var(--color-on-secondary-soft)' : 'var(--color-on-surface)'
+    const bg = active ? 'var(--color-selected)' : hover && interactive ? 'var(--control-fill-hover)' : 'var(--control-fill)'
+    const fg = active ? 'var(--color-on-selected)' : 'var(--color-on-surface)'
     const sizing =
         size === 'md'
             ? { padding: '10px 18px', font: '500 14px/1 var(--font-body)', letterSpacing: 'normal' }
@@ -231,6 +229,7 @@ function Chip({ active, onClick, children, ariaLabel, size = 'sm' }) {
                 transition: 'background 150ms var(--ease), color 150ms var(--ease)',
                 ...sizing,
             }}>
+            {active && <Icon name="check" size={12} />}
             {children}
         </button>
     )
