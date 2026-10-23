@@ -1,4 +1,6 @@
 import {
+    INPUT_CURSOR_GAP,
+    INPUT_CURSOR_TAIL,
     MAX_MEASURES_PER_ROW,
     MEASURE_BUTTON_GAP,
     MEASURE_BUTTON_OFFSET,
@@ -16,7 +18,7 @@ import { Note } from '@mushee/notation/model/Note'
 import { Pitch } from '@mushee/notation/model/Pitch'
 import { Score } from '@mushee/notation/model/Score'
 import { TimeSignature } from '@mushee/notation/model/TimeSignature'
-import { makeScore, pitched } from '@mushee/notation/testing'
+import { fill, makeScore, pitched } from '@mushee/notation/testing'
 import { describe, expect, it } from 'vitest'
 
 /**
@@ -497,6 +499,45 @@ describe('ScoreLayout', () => {
             score.measures[1].setEndBarline('none')
             expect(score.layout.measureButtons).toBeNull()
             expect(new Score().layout.measureButtons).toBeNull()
+        })
+
+        describe('inkBottom', () => {
+            const STAFF_BOTTOM = Staff.TOP_Y + Staff.HEIGHT
+            /** The input cursor's room under the point it hangs from. */
+            const CURSOR_ROOM = INPUT_CURSOR_GAP + INPUT_CURSOR_TAIL
+            const inkBottom = (score: Score) => {
+                const buttons = score.layout.measureButtons
+                if (!buttons) throw new Error('expected measure buttons')
+                return buttons.inkBottom
+            }
+
+            it('keeps the input cursor’s room under the staff when nothing reaches below it', () => {
+                expect(inkBottom(makeScore(1))).toBe(STAFF_BOTTOM + CURSOR_ROOM)
+            })
+
+            it('drops below a ledger-line low note, by the room the cursor takes under it', () => {
+                const score = makeScore(1)
+                const [low] = fill(score, 0, [pitched('A', 3), pitched('C', 5), pitched('E', 5), pitched('G', 4)]).notes
+                const lowLayout = score.layout.measureLayoutFor(score.measures[0]).noteLayoutFor(low)
+                expect(lowLayout.ledgerLines.length).toBeGreaterThan(0)
+                expect(lowLayout.noteY).toBeGreaterThan(STAFF_BOTTOM)
+                expect(inkBottom(score)).toBe(lowLayout.noteY + CURSOR_ROOM)
+            })
+
+            it('drops below a down-stem that reaches under the staff', () => {
+                const score = makeScore(1)
+                const [high] = fill(score, 0, [pitched('B', 4, 'h'), pitched('E', 4, 'h')]).notes
+                const stem = score.layout.measureLayoutFor(score.measures[0]).stemFor(high)
+                if (!stem) throw new Error('expected a stem')
+                expect(stem.y2).toBeGreaterThan(STAFF_BOTTOM)
+                expect(inkBottom(score)).toBe(stem.y2 + CURSOR_ROOM)
+            })
+
+            it('reads the last row only', () => {
+                const score = makeScore(5) // rows of 4 + 1
+                fill(score, 0, [pitched('A', 3, 'w')])
+                expect(inkBottom(score)).toBe(STAFF_BOTTOM + CURSOR_ROOM)
+            })
         })
     })
 })

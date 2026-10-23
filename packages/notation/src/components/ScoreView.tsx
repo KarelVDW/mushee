@@ -2,7 +2,7 @@
 
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
-import { MEASURE_BUTTON_OFFSET, SCORE_WIDTH } from '../engraving/constants'
+import { INPUT_CURSOR_GAP, MEASURE_BUTTON_OFFSET, SCORE_WIDTH } from '../engraving/constants'
 import type { RecordingWaveformStore } from '../lib/RecordingWaveformStore'
 import { useObservedWidth } from '../lib/useObservedWidth'
 import { useScrollFollow } from '../lib/useScrollFollow'
@@ -20,8 +20,6 @@ import { RecordingWaveform } from './RecordingWaveform'
 import { StaffLines } from './StaffLines'
 import { Tie } from './Tie'
 
-/** Vertical offset from the staff bottom (or the selected note's lowest ink, when lower) to the input cursor's teardrop. */
-const INPUT_CURSOR_GAP = 15
 /** The hover-to-pitch ghost: its notehead's opacity, and its letter label's on-screen size and gap (CSS px). */
 const GHOST_OPACITY = 0.5
 const GHOST_LABEL_PX = 11
@@ -113,6 +111,12 @@ export interface MeasureButtonsRect {
     /** The last row's top and bottom staff lines. */
     staffTop: number
     staffBottom: number
+    /**
+     * The last row's lowest ink: its bottom staff line, or whatever reaches below it — a low
+     * note's ledger lines, a down-stem, the input cursor's room under a note
+     * (ScoreLayout.measureButtons). Controls placed under the row keep clear of it.
+     */
+    inkBottom: number
     /** The two squares the layout reserves after the final barline (ScoreLayout.measureButtons): add above, remove below. */
     add: PixelSquare
     remove: PixelSquare
@@ -287,6 +291,7 @@ export const ScoreView = memo(function ScoreView({
             barlineX: (measureButtonsLayout.x - MEASURE_BUTTON_OFFSET) * scale,
             staffTop: (rowY + Staff.TOP_Y) * scale,
             staffBottom: (rowY + Staff.TOP_Y + Staff.HEIGHT) * scale,
+            inkBottom: (rowY + measureButtonsLayout.inkBottom) * scale,
             add: square(measureButtonsLayout.addY),
             remove: square(measureButtonsLayout.removeY),
         })

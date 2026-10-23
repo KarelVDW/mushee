@@ -91,3 +91,9 @@ export const MEASURE_BUTTON_SIZE = 18
 
 /** Vertical gap between the add and the remove button */
 export const MEASURE_BUTTON_GAP = 3
+
+/** Offset from the staff bottom (or the selected note's lowest point, when lower) down to the input cursor's teardrop */
+export const INPUT_CURSOR_GAP = 15
+
+/** How far the input cursor's teardrop reaches below that point: its round end */
+export const INPUT_CURSOR_TAIL = 7
