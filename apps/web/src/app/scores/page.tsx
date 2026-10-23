@@ -13,6 +13,7 @@ import {
     Alert,
     Container,
     ErrorScreen,
+    Eyebrow,
     Footer,
     Icon,
     LoadingStatus,
@@ -417,13 +418,7 @@ function LibraryBody({
     return (
         <div role="table" aria-label="Your scores" className="flex flex-col">
             <div role="rowgroup">
-                {/* The rows read as a library, not an admin table: the column headers stay for screen readers only. */}
-                <div role="row" className="sr-only">
-                    <span role="columnheader">Title</span>
-                    <span role="columnheader">Created</span>
-                    <span role="columnheader">Updated</span>
-                    <span role="columnheader" aria-label="Actions" />
-                </div>
+                <ScoreListHeader />
             </div>
             <div role="rowgroup" className={SCORE_LIST_CLASS}>
                 {scores.map((score) => (
@@ -452,6 +447,32 @@ function EmptyCard({ children }: { children: React.ReactNode }) {
 /** The score list's stack: the rows and the skeleton rows that stand in for them. */
 const SCORE_LIST_CLASS = 'flex flex-col gap-3'
 
+/** The desktop columns every row, the header and the skeleton share: Title · Created · Updated · More. */
+const SCORE_COLUMNS = 'md:grid-cols-[minmax(0,1fr)_9rem_9rem_2.5rem] md:gap-4'
+
+/**
+ * The list's column header. From md up the two date columns need their names (a bare 'Oct 23,
+ * 2026' beside 'Just now' says neither is which), so it shows as schematic eyebrow labels over
+ * the rows' own columns, outside the cards. On phones, where a row carries one 'updated' line,
+ * it stays for screen readers only.
+ */
+function ScoreListHeader() {
+    return (
+        <div role="row" className={`max-md:sr-only md:grid ${SCORE_COLUMNS} md:px-6 md:pb-3`}>
+            <span role="columnheader">
+                <Eyebrow>Title</Eyebrow>
+            </span>
+            <span role="columnheader">
+                <Eyebrow>Created</Eyebrow>
+            </span>
+            <span role="columnheader">
+                <Eyebrow>Updated</Eyebrow>
+            </span>
+            <span role="columnheader" aria-label="Actions" />
+        </div>
+    )
+}
+
 /**
  * A score row's frame — the white card, its padding and its grid (Title · Created · Updated ·
  * More from md; title and More on phones) — shared by the real rows and the loading skeleton,
@@ -463,7 +484,7 @@ function ScoreRowShell({ className, children, ...rest }: React.HTMLAttributes<HT
             {...rest}
             className={[
                 'bg-surface-container-lowest rounded-md px-4 sm:px-6 py-4 editorial-shadow',
-                'grid grid-cols-[minmax(0,1fr)_auto] md:grid-cols-[minmax(0,1fr)_9rem_9rem_2.5rem] gap-3 md:gap-4 items-center',
+                `grid grid-cols-[minmax(0,1fr)_auto] gap-3 ${SCORE_COLUMNS} items-center`,
                 className ?? '',
             ].join(' ')}>
             {children}
@@ -474,22 +495,28 @@ function ScoreRowShell({ className, children, ...rest }: React.HTMLAttributes<HT
 // The skeleton rows breathe in a 120ms stagger, top to bottom.
 const SKELETON_ROW_DELAYS = ['', '[animation-delay:120ms]', '[animation-delay:240ms]']
 
-/** Three placeholder rows in the score rows' own shell, breathing slowly while the list loads. */
+/**
+ * Three placeholder rows in the score rows' own shell, breathing slowly while the list loads,
+ * under the list's own column header — so the first row never moves when the scores arrive.
+ */
 function LibrarySkeleton() {
     return (
-        <div aria-hidden="true" className={`w-full ${SCORE_LIST_CLASS}`}>
-            {SKELETON_ROW_DELAYS.map((delay) => (
-                <ScoreRowShell key={delay}>
-                    <div className="min-w-0 flex flex-col">
-                        <Skeleton className={`h-4 w-2/5 rounded-sm bg-surface-container-low ${delay}`} />
-                        <Skeleton className={`md:hidden h-3 w-16 mt-1.5 rounded-sm bg-surface-container-low ${delay}`} />
-                    </div>
-                    <Skeleton className={`max-md:hidden h-3 w-20 rounded-sm bg-surface-container-low ${delay}`} />
-                    <Skeleton className={`max-md:hidden h-3 w-20 rounded-sm bg-surface-container-low ${delay}`} />
-                    {/* The More circle: tonal on touch, where the real one rests tonal too; transparent under a mouse. */}
-                    <Skeleton className={`justify-self-end size-10 rounded-full pointer-fine:bg-transparent ${delay}`} />
-                </ScoreRowShell>
-            ))}
+        <div aria-hidden="true" className="w-full flex flex-col">
+            <ScoreListHeader />
+            <div className={SCORE_LIST_CLASS}>
+                {SKELETON_ROW_DELAYS.map((delay) => (
+                    <ScoreRowShell key={delay}>
+                        <div className="min-w-0 flex flex-col">
+                            <Skeleton className={`h-4 w-2/5 rounded-sm bg-surface-container-low ${delay}`} />
+                            <Skeleton className={`md:hidden h-3 w-16 mt-1.5 rounded-sm bg-surface-container-low ${delay}`} />
+                        </div>
+                        <Skeleton className={`max-md:hidden h-3 w-20 rounded-sm bg-surface-container-low ${delay}`} />
+                        <Skeleton className={`max-md:hidden h-3 w-20 rounded-sm bg-surface-container-low ${delay}`} />
+                        {/* The More circle: tonal on touch, where the real one rests tonal too; transparent under a mouse. */}
+                        <Skeleton className={`justify-self-end size-10 rounded-full pointer-fine:bg-transparent ${delay}`} />
+                    </ScoreRowShell>
+                ))}
+            </div>
         </div>
     )
 }
