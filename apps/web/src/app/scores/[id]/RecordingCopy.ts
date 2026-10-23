@@ -12,7 +12,7 @@ import { formatAllowance, formatResetWhen, formatTimeLeftToday } from '@/lib/rec
 /** A take as the recording strip shows it, from the count-in to the stop. */
 export interface RecordingStatus {
     phase: 'countoff' | 'recording'
-    /** The count-in click last heard (0-based) and how many the bar has; null before the first. */
+    /** The count-in click last heard (0-based; -1 before the first) and how many the bar has; null when not known. */
     countoff: { beat: number; total: number } | null
     /** `performance.now()` when capture began; null during the count-in. */
     captureStartedAt: number | null

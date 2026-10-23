@@ -301,7 +301,9 @@ export function useRecording({
         skipMicModeReminder.current = false
         setStatus({
             phase: 'countoff',
-            countoff: null,
+            // The count-in's dots are there, hollow, from the first frame: one per felt pulse of the
+            // take's first bar (2 in 6/8, 4 in 4/4, 5 in 5/4) — the clicks the engine counts in with.
+            countoff: { beat: -1, total: Math.max(1, take.measures[0]?.timeSignature.pulsesPerMeasure ?? 1) },
             captureStartedAt: null,
             health: 'ok',
             micModeReminder: reminder,
