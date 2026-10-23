@@ -117,7 +117,7 @@
        toast-in / toast-out — a toast arriving and leaving (the Toaster's ghost copy);
        solkey-step-in — a multi-step flow's next step; note-land — a note written by a take
        (see .note-land); tap-flash — a pad's tap feedback; row-arrive — a list row that just
-       arrived. */
+       arrived; pick-in — the check of a picked option (SelectedMark, Chip). */
     --animate-overlay-in: overlay-in var(--t-quick) var(--ease-solkey);
     --animate-dialog-in: dialog-in var(--t-snap) var(--ease-solkey);
     --animate-scrim-in: scrim-in var(--t-quick) linear;
@@ -128,6 +128,7 @@
     --animate-note-land: note-land var(--t-snap) var(--ease-solkey);
     --animate-tap-flash: tap-flash var(--t-snap) var(--ease-solkey);
     --animate-row-arrive: row-arrive 900ms var(--ease-solkey);
+    --animate-pick-in: pick-in var(--t-quick) var(--ease-solkey);
 
     /* Type families — exposed as Tailwind utilities (font-display, font-body, …).
      next/font sets the family variables on <html> so the :root theme variables can
@@ -216,7 +217,17 @@ body {
        keeps the specificity at zero, so the fields' and the canvas's outline-0 still win, and
        tabindex=-1 targets (headings that take focus on a step change) draw nothing. A dark
        surface sets --focus-ring-color (e.g. primary-container on charcoal). */
-    :where(a, button, summary, select, [role='button'], [role='tab'], [role='switch'], [role='radio'], [tabindex]:not([tabindex='-1'])):focus-visible {
+    :where(
+        a,
+        button,
+        summary,
+        select,
+        [role='button'],
+        [role='tab'],
+        [role='switch'],
+        [role='radio'],
+        [tabindex]:not([tabindex='-1'])
+    ):focus-visible {
         outline: 2px solid var(--focus-ring-color, var(--color-primary));
         outline-offset: 2px;
     }
@@ -393,12 +404,18 @@ body {
         background-color: var(--color-surface-container-lowest);
     }
 }
+@keyframes pick-in {
+    from {
+        opacity: 0;
+        transform: scale(0.6);
+    }
+}
 
 /* Reduced motion, for every app at once: animations and transitions collapse to an instant
    (0.01ms rather than `none`, so exit animations still fire animationend and clear their
    element) and smooth scrolling jumps. Motion driven from JS (scroll follow, tickers) checks
    the media query itself. That covers every keyframe above: the entrances (overlay-in,
-   dialog-in, scrim-in, solkey-step-in) show their end state at once, the flashes
+   dialog-in, scrim-in, solkey-step-in, pick-in) show their end state at once, the flashes
    (tap-flash, row-arrive) don't show, and toast-in/out, sheet-out and note-land still fire the
    animationend their elements wait on — so none of them is gated with motion-safe:. */
 @media (prefers-reduced-motion: reduce) {
