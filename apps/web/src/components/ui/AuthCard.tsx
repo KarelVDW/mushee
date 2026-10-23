@@ -113,7 +113,8 @@ function BrandPanel({ headline, tagline, mobileTagline }: Omit<AuthFrameProps, '
                 className="no-underline inline-flex items-center rounded-sm focus-ring pointer-coarse:min-h-10 md:self-start">
                 <Wordmark size={32} />
             </Link>
-            <div className="max-lg:hidden my-auto py-8">
+            {/* Decoration with its caption: the sheet is aria-hidden, so the line that captions it is too. */}
+            <div aria-hidden="true" className="max-lg:hidden my-auto py-8">
                 <DemoSheetStill />
                 <p className="m-0 mt-3 font-body text-[12px] leading-[1.4] text-on-surface-variant">Someone humming Frère Jacques.</p>
             </div>

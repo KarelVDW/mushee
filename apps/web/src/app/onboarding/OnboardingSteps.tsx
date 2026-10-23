@@ -812,8 +812,9 @@ export function FirstScorePreview({ instrument }: { instrument: Instrument }) {
                         {instrument.displayName}
                     </span>
                 </div>
-                {/* One staff, the notation grid's 10px spacing, the G clef on its line. */}
-                <svg viewBox="0 0 336 60" width="100%" className="block">
+                {/* One staff, the notation grid's 10px spacing, the G clef on its line. The clef reaches
+                    about 44px above its line and 27px below, so the box leaves it that room. */}
+                <svg viewBox="0 0 336 80" width="100%" className="block">
                     {PREVIEW_STAFF_LINES.map((y) => (
                         <line key={y} x1={0} x2={336} y1={y} y2={y} stroke={NOTATION_INK} strokeWidth={1} />
                     ))}
@@ -828,8 +829,8 @@ export function FirstScorePreview({ instrument }: { instrument: Instrument }) {
     )
 }
 
-/** The preview staff's five lines, 10px apart. */
-const PREVIEW_STAFF_LINES = [10, 20, 30, 40, 50]
+/** The preview staff's five lines, 10px apart, centred in the 80px box (the clef spans about 6 to 77). */
+const PREVIEW_STAFF_LINES = [20, 30, 40, 50, 60]
 
 // Building blocks of the steps above
 

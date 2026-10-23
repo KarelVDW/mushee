@@ -276,15 +276,30 @@ export default function OnboardingPage() {
             </div>
 
             {/*
-             * Phones stack the footer: the primary full width on top (its price-bearing label wraps
-             * rather than run past the card), the payment note under it, Back last. There the wrapper
-             * dissolves (display: contents), so the Continue block is the card's own child and can
-             * stick to the screen's bottom edge, over a fade, while a long step scrolls under it; Back
-             * stays in flow after the content. From sm up it is one row: Back left, the primary right,
-             * the note under the primary. Only the closing CTA pops: every step's button is flat.
+             * Back comes first in the DOM, as it sits first (left) in the single row from sm up, so
+             * Tab follows what the eye reads there. On phones the footer stacks: the primary full
+             * width (its price-bearing label wraps rather than run past the card), the payment note
+             * under it, Back last (order-last). There the wrapper dissolves (display: contents), so
+             * the Continue block is the card's own child and can stick to the screen's bottom edge,
+             * over a fade, while a long step scrolls under it; Back stays in flow after the content.
+             * From sm up the row is top-aligned and Back's box is the primary's height, so the two
+             * stay level when the note hangs under the primary. Only the closing CTA pops: every
+             * step's button is flat.
              */}
             {!done && (showBack || showContinue) && (
-                <div className="max-sm:contents sm:grid sm:grid-cols-[auto_1fr] sm:items-center sm:gap-x-4 sm:pt-3">
+                <div className="max-sm:contents sm:grid sm:grid-cols-[auto_1fr] sm:items-start sm:gap-x-4 sm:pt-3">
+                    {showBack && (
+                        // On phones it tucks up under the Continue block's own bottom padding.
+                        <div
+                            className={`flex justify-center items-center max-sm:order-last sm:col-start-1 sm:row-start-1 sm:justify-start sm:h-(--control-lg) ${showContinue ? 'max-sm:-mt-5' : ''}`}>
+                            <TertiaryButton onClick={back}>
+                                <span className="inline-flex items-center gap-1.5">
+                                    <Icon name="arrow-left" size={13} />
+                                    Back
+                                </span>
+                            </TertiaryButton>
+                        </div>
+                    )}
                     {showContinue && (
                         <div
                             className={[
@@ -300,18 +315,6 @@ export default function OnboardingPage() {
                                     You&apos;ll confirm on the next page. Cancel any time.
                                 </p>
                             )}
-                        </div>
-                    )}
-                    {showBack && (
-                        // On phones it tucks up under the Continue block's own bottom padding.
-                        <div
-                            className={`flex justify-center sm:col-start-1 sm:row-start-1 sm:justify-start ${showContinue ? 'max-sm:-mt-5' : ''}`}>
-                            <TertiaryButton onClick={back}>
-                                <span className="inline-flex items-center gap-1.5">
-                                    <Icon name="arrow-left" size={13} />
-                                    Back
-                                </span>
-                            </TertiaryButton>
                         </div>
                     )}
                 </div>

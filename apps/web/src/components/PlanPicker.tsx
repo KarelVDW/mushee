@@ -428,7 +428,10 @@ function ProfessionalTierCard({ plan, billing, currency, active, current, bestVa
                 </span>
             </div>
             <PriceBlock plan={plan} billing={billing} currency={currency} active={active} />
-            {active && <SelectedMark className="self-start" />}
+            {/* The mark's 18px slot is always there, so picking the card never re-wraps its text. */}
+            <span aria-hidden="true" className="size-4.5 shrink-0 self-start">
+                {active && <SelectedMark />}
+            </span>
         </button>
     )
 }

@@ -11,6 +11,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ScoreLimitDialog, useScoreAllowance } from '@/components/ScoreLimitDialog'
 import {
     Alert,
+    Container,
     ErrorScreen,
     Footer,
     Icon,
@@ -211,69 +212,72 @@ export default function ScoresPage() {
             {/* An empty library's one pop is the first-score card's CTA, where the eye lands. */}
             <TopNav user={session?.user?.name ?? undefined} onCreate={openCreate} createEmphasis={emptyLibrary ? 'flat' : 'pop'} />
 
-            <main className="flex-1 max-w-384 mx-auto px-4 sm:px-8 py-6 sm:py-10 flex flex-col gap-6 w-full box-border">
-                <PageHeader
-                    title="Your scores"
-                    subtitle={allowance?.line && <AllowanceLine allowance={allowance} />}
-                    titleAction={!emptyLibrary && !phoneSearch && phoneImport}
-                    right={
-                        !emptyLibrary && (
-                            <div className={`flex items-center gap-3 w-full md:w-auto ${phoneSearch ? '' : 'max-md:hidden'}`}>
-                                <span className="max-md:hidden">
-                                    <SecondaryButton size="md" onClick={openImport} disabled={readingFile}>
-                                        {readingFile ? 'Reading file…' : 'Import file'}
-                                    </SecondaryButton>
-                                </span>
-                                <div className="flex-1 md:flex-none md:w-64">
-                                    <TextField
-                                        value={search}
-                                        onChange={setSearch}
-                                        size="compact"
-                                        leftIcon="search"
-                                        placeholder="Find a score…"
-                                        ariaLabel="Search your scores"
-                                        clearLabel="Clear search"
-                                        inputRef={searchInputRef}
-                                        enterKeyHint="search"
-                                    />
+            {/* The app grid, as Settings and the nav use it: gutters outside the 1536px cap, so nothing shifts between pages. */}
+            <main className="flex-1 w-full">
+                <Container width="app" className="py-6 sm:py-10 flex flex-col gap-6">
+                    <PageHeader
+                        title="Your scores"
+                        subtitle={allowance?.line && <AllowanceLine allowance={allowance} />}
+                        titleAction={!emptyLibrary && !phoneSearch && phoneImport}
+                        right={
+                            !emptyLibrary && (
+                                <div className={`flex items-center gap-3 w-full md:w-auto ${phoneSearch ? '' : 'max-md:hidden'}`}>
+                                    <span className="max-md:hidden">
+                                        <SecondaryButton size="md" onClick={openImport} disabled={readingFile}>
+                                            {readingFile ? 'Reading file…' : 'Import file'}
+                                        </SecondaryButton>
+                                    </span>
+                                    <div className="flex-1 md:flex-none md:w-64">
+                                        <TextField
+                                            value={search}
+                                            onChange={setSearch}
+                                            size="compact"
+                                            leftIcon="search"
+                                            placeholder="Find a score…"
+                                            ariaLabel="Search your scores"
+                                            clearLabel="Clear search"
+                                            inputRef={searchInputRef}
+                                            enterKeyHint="search"
+                                        />
+                                    </div>
+                                    {phoneSearch && phoneImport}
                                 </div>
-                                {phoneSearch && phoneImport}
-                            </div>
-                        )
-                    }
-                />
-                {/* Outside the header: the empty card's import link still needs it once the header controls are gone. */}
-                <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept={ScoreFileImporter.ACCEPT}
-                    aria-label="Import a score file"
-                    className="sr-only"
-                    tabIndex={-1}
-                    onChange={(e) => {
-                        const file = e.target.files?.[0]
-                        if (file) void handleImportFile(file)
-                    }}
-                />
+                            )
+                        }
+                    />
+                    {/* Outside the header: the empty card's import link still needs it once the header controls are gone. */}
+                    <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept={ScoreFileImporter.ACCEPT}
+                        aria-label="Import a score file"
+                        className="sr-only"
+                        tabIndex={-1}
+                        onChange={(e) => {
+                            const file = e.target.files?.[0]
+                            if (file) void handleImportFile(file)
+                        }}
+                    />
 
-                {/* Stale results may still be on screen below (keepPreviousData) — say so rather than fail silently. */}
-                {error && <Alert onRetry={() => void refetch()}>Your scores couldn&apos;t be loaded.</Alert>}
-                <LibraryBody
-                    scores={scores}
-                    isPending={isPending}
-                    error={error}
-                    query={debouncedSearch}
-                    isPlaceholderData={isPlaceholderData}
-                    readingFile={readingFile}
-                    onRetry={() => void refetch()}
-                    onCreate={openCreate}
-                    onImport={openImport}
-                    onClearSearch={clearSearch}
-                    onOpen={(score) => router.push(`/scores/${score.id}`)}
-                    onRename={setRenameTarget}
-                    onDuplicate={handleDuplicate}
-                    onDelete={setDeleteTarget}
-                />
+                    {/* Stale results may still be on screen below (keepPreviousData) — say so rather than fail silently. */}
+                    {error && <Alert onRetry={() => void refetch()}>Your scores couldn&apos;t be loaded.</Alert>}
+                    <LibraryBody
+                        scores={scores}
+                        isPending={isPending}
+                        error={error}
+                        query={debouncedSearch}
+                        isPlaceholderData={isPlaceholderData}
+                        readingFile={readingFile}
+                        onRetry={() => void refetch()}
+                        onCreate={openCreate}
+                        onImport={openImport}
+                        onClearSearch={clearSearch}
+                        onOpen={(score) => router.push(`/scores/${score.id}`)}
+                        onRename={setRenameTarget}
+                        onDuplicate={handleDuplicate}
+                        onDelete={setDeleteTarget}
+                    />
+                </Container>
             </main>
 
             {createDialogOpen && (

@@ -90,8 +90,9 @@ function ApprovedWelcome() {
     const firstMelody = useStartFirstMelody()
     const { data: onboarding } = useOnboarding()
     const count = library.data?.length
-    // The instrument a first score starts on — the saved onboarding pick useStartFirstMelody
-    // falls back to — else the voice.
+    // The instrument a first score starts on: the saved onboarding pick (percussion skipped),
+    // else the voice. The button hands this same one to useStartFirstMelody, so the preview's
+    // pill always names the instrument the new score starts on.
     const instrument =
         onboarding?.instruments
             ?.map((name) => Instrument.findByDisplayName(name))
@@ -118,7 +119,7 @@ function ApprovedWelcome() {
                             size="lg"
                             emphasis="pop"
                             icon="arrow-right"
-                            onClick={() => firstMelody.start()}
+                            onClick={() => firstMelody.start(instrument)}
                             disabled={firstMelody.creating}>
                             {firstMelody.creating ? 'Getting it ready…' : 'Record my first melody'}
                         </PrimaryButton>
