@@ -90,9 +90,8 @@
     --animate-solkey-pulse: solkey-pulse 1.6s ease-in-out infinite;
 
     /* Type families — exposed as Tailwind utilities (font-display, font-body, …).
-     Values reference the next/font CSS variables that each app's layout.tsx sets
-     on <body>. `var(--font-space-grotesk)` resolves at use-site, where <body> is
-     in scope. */
+     next/font sets the family variables on <html> so the :root theme variables can
+     reference them; hand-written CSS may use var(--font-body) etc. */
     --font-display: var(--font-space-grotesk), system-ui, sans-serif;
     --font-headline: var(--font-space-grotesk), system-ui, sans-serif;
     --font-body: var(--font-manrope), var(--font-space-grotesk), system-ui, sans-serif;
