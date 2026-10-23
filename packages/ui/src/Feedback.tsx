@@ -1,10 +1,13 @@
 'use client'
 
+import Link from 'next/link'
 import { type ReactNode, useEffect, useRef, useState, useSyncExternalStore } from 'react'
 
 import { Eyebrow, Wordmark } from './Brand'
 import { PrimaryButton, SecondaryButton } from './Buttons'
 import { Icon } from './Icon'
+
+type AlertTone = 'fault' | 'form'
 
 interface AlertProps {
     children: ReactNode
@@ -12,24 +15,46 @@ interface AlertProps {
     onRetry?: () => void
     /** Its label. */
     retryLabel?: string
+    /**
+     * `fault` (default): something really failed (a load, a save, the network) — the loud
+     * error_container slab. `form`: the user can fix it (credentials don't match, an account
+     * exists) — the quiet error_soft tier, the icon and inline links in `error`.
+     */
+    tone?: AlertTone
+}
+
+const ALERT_TONES: Record<AlertTone, { box: string; icon: string; retry: string }> = {
+    fault: {
+        box: 'bg-error-container text-on-error-container rounded-md px-3.5 py-3',
+        icon: '',
+        retry: 'text-on-error-container',
+    },
+    form: {
+        // Body 11.8:1 and links 5.9:1 on error_soft.
+        box: 'bg-error-soft text-on-surface rounded-md px-4 py-3 [&_a]:text-error [&_a]:font-medium [&_a]:underline',
+        icon: 'text-error',
+        retry: 'text-error',
+    },
 }
 
 /**
- * Inline error banner for content that failed to load or save in place.
- * Tonal fill, no border — per the design system's no-line rule.
+ * Inline error banner for content that failed to load or save in place (`fault`), or for a
+ * form-level message the user can act on (`form`). Tonal fill, no border — per the design
+ * system's no-line rule.
  */
-export function Alert({ children, onRetry, retryLabel = 'Try again' }: AlertProps) {
+export function Alert({ children, onRetry, retryLabel = 'Try again', tone = 'fault' }: AlertProps) {
+    const palette = ALERT_TONES[tone]
     return (
-        <div className="bg-error-container text-on-error-container rounded-md px-3.5 py-3 flex items-center gap-3" role="alert">
-            <Icon name="error" size={18} className="shrink-0" />
-            <span className="font-body font-normal text-[13px] leading-normal flex-1">{children}</span>
+        <div className={`${palette.box} flex items-center gap-3`} role="alert">
+            <Icon name="error" size={18} className={`shrink-0 ${palette.icon}`} />
+            <span className="font-body font-normal text-[13px] leading-normal flex-1 text-pretty">{children}</span>
             {onRetry && (
                 <button
                     type="button"
                     onClick={onRetry}
                     className={[
                         'bg-transparent border-0 cursor-pointer shrink-0 inline-flex items-center gap-1.5 p-1',
-                        'font-label font-semibold text-[12px] tracking-[0.01em] text-on-error-container',
+                        `font-label font-semibold text-[12px] tracking-[0.01em] ${palette.retry}`,
                         'underline underline-offset-2 hover:no-underline',
                     ].join(' ')}>
                     <Icon name="refresh-cw" size={14} />
@@ -40,15 +65,23 @@ export function Alert({ children, onRetry, retryLabel = 'Try again' }: AlertProp
     )
 }
 
+/** A secondary action ErrorScreen renders itself, as a SecondaryButton (a link with `href`). */
+interface ErrorScreenAction {
+    label: string
+    href?: string
+    onClick?: () => void
+}
+
 interface ErrorScreenProps {
     title: string
     message: string
     /**
      * `fault` (default): something really broke — the red error well. `unreachable`: the
      * app can't connect — a neutral well, the offline copy when the device has no network,
-     * and a retry the moment the connection comes back.
+     * and a retry the moment the connection comes back. `missing`: what was asked for isn't
+     * there (a deleted score, a 404) — no fault, so no well: pass an `illustration`.
      */
-    tone?: 'fault' | 'unreachable'
+    tone?: 'fault' | 'unreachable' | 'missing'
     /** Primary action, e.g. retry. */
     onRetry?: () => void
     /** A retry is in flight — shows a quiet 'Trying again…' line. */
@@ -58,8 +91,17 @@ interface ErrorScreenProps {
     /** Renders the escape hatch as a link (e.g. the 404's 'Go to the home page' → '/'). */
     backHref?: string
     backLabel?: string
-    /** One more quiet action after the buttons, e.g. a TertiaryButton 'Go home' or 'Sign in'. */
-    secondaryAction?: ReactNode
+    /**
+     * One more action after the buttons. Pass `{ label, href | onClick }` and it renders as the
+     * screen's SecondaryButton (the second action is always one); a node renders as given.
+     */
+    secondaryAction?: ReactNode | ErrorScreenAction
+    /** What fills the 64px slot above the title in place of the tone's well (e.g. the missing tone's mark). */
+    illustration?: ReactNode
+}
+
+function isScreenAction(action: ErrorScreenProps['secondaryAction']): action is ErrorScreenAction {
+    return typeof action === 'object' && action !== null && 'label' in action && typeof action.label === 'string'
 }
 
 export const OFFLINE_TITLE = "You're offline"
@@ -97,6 +139,7 @@ export function ErrorScreen({
     backHref,
     backLabel = 'Go back',
     secondaryAction,
+    illustration,
 }: ErrorScreenProps) {
     const online = useOnline()
     const unreachable = tone === 'unreachable'
@@ -116,47 +159,103 @@ export function ErrorScreen({
 
     const hasBack = onBack != null || backHref != null
     const BackButton = onRetry ? SecondaryButton : PrimaryButton
+    // The 56px well a fault or an unreachable server shows; a missing page has none.
+    const well =
+        tone === 'missing' ? null : (
+            <span
+                className={[
+                    'size-14 rounded-full inline-flex items-center justify-center',
+                    unreachable ? 'bg-surface-container-high text-on-surface-variant' : 'bg-error-container text-on-error-container',
+                ].join(' ')}>
+                <Icon name={unreachable ? (offline ? 'wifi-off' : 'globe') : 'error'} size={28} />
+            </span>
+        )
+    const art = illustration ?? well
     return (
-        <div className="min-h-dvh bg-surface flex items-center justify-center">
-            <div className="text-center flex flex-col items-center gap-4 max-w-md px-8">
-                <Wordmark size={28} />
-                <span
-                    className={[
-                        'w-11 h-11 rounded-full inline-flex items-center justify-center',
-                        unreachable ? 'bg-surface-container-high text-on-surface-variant' : 'bg-error-container text-on-error-container',
-                    ].join(' ')}>
-                    <Icon name={unreachable ? (offline ? 'wifi-off' : 'globe') : 'error'} size={22} />
-                </span>
-                <h1 className="font-headline font-bold text-[1.75rem] leading-tight text-on-surface m-0">
-                    {offline ? OFFLINE_TITLE : title}
-                </h1>
-                <p className="font-body font-normal text-[14px] leading-normal text-on-surface-variant m-0">
-                    {offline ? OFFLINE_MESSAGE : message}
-                </p>
-                <div className="flex flex-wrap items-center justify-center gap-3 mt-2">
-                    {onRetry && (
-                        <PrimaryButton icon="refresh-cw" onClick={onRetry}>
-                            Try again
-                        </PrimaryButton>
-                    )}
-                    {hasBack &&
-                        (backHref != null ? (
-                            <BackButton href={backHref} onClick={onBack}>
-                                {backLabel}
-                            </BackButton>
-                        ) : (
-                            <BackButton onClick={onBack}>{backLabel}</BackButton>
-                        ))}
-                    {secondaryAction}
-                </div>
-                {onRetry && (
-                    <p role="status" className="font-body font-normal text-[13px] leading-[1.4] min-h-[1.4em] text-on-surface-variant m-0">
-                        {retrying ? 'Trying again…' : ''}
+        <div className="min-h-dvh bg-surface">
+            {/* The wordmark where TopNav puts it, linking home — not inside the stack. */}
+            <div className="h-16 px-5 sm:px-8 flex items-center">
+                <Link
+                    href="/"
+                    aria-label="Solkey home"
+                    className="no-underline inline-flex items-center rounded-sm pointer-coarse:min-h-10 focus-ring">
+                    <Wordmark size={24} />
+                </Link>
+            </div>
+            {/* Optically centred: 8vh of extra room below. */}
+            <div className="grid place-items-center min-h-[calc(100dvh-4rem)] pb-[8vh] px-6">
+                <div className="text-center flex flex-col items-center max-w-md">
+                    {art != null && <div className="h-16 mb-6 flex items-center justify-center">{art}</div>}
+                    <h1 className="font-headline font-bold text-[28px] leading-[1.15] text-on-surface m-0 text-balance">
+                        {offline ? OFFLINE_TITLE : title}
+                    </h1>
+                    <p className="mt-3 font-body font-normal text-[15px] leading-normal text-pretty max-w-[36ch] text-on-surface-variant m-0">
+                        {offline ? OFFLINE_MESSAGE : message}
                     </p>
-                )}
+                    <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
+                        {onRetry && (
+                            <PrimaryButton icon="refresh-cw" onClick={onRetry}>
+                                Try again
+                            </PrimaryButton>
+                        )}
+                        {hasBack &&
+                            (backHref != null ? (
+                                <BackButton href={backHref} onClick={onBack}>
+                                    {backLabel}
+                                </BackButton>
+                            ) : (
+                                <BackButton onClick={onBack}>{backLabel}</BackButton>
+                            ))}
+                        {isScreenAction(secondaryAction) ? (
+                            secondaryAction.href != null ? (
+                                <SecondaryButton href={secondaryAction.href} onClick={secondaryAction.onClick}>
+                                    {secondaryAction.label}
+                                </SecondaryButton>
+                            ) : (
+                                <SecondaryButton onClick={secondaryAction.onClick}>{secondaryAction.label}</SecondaryButton>
+                            )
+                        ) : (
+                            secondaryAction
+                        )}
+                    </div>
+                    {onRetry && (
+                        <p
+                            role="status"
+                            className="mt-3 font-body font-normal text-[13px] leading-[1.4] min-h-[1.4em] text-on-surface-variant m-0">
+                            {retrying ? 'Trying again…' : ''}
+                        </p>
+                    )}
+                </div>
             </div>
         </div>
     )
+}
+
+/**
+ * The quiet success mark: a check in a primary_soft disc (40px inline, 56px for a screen's
+ * headline moment). Loud primary_container stays for actions, never a status. Decorative.
+ */
+export function SuccessMark({ size = 56 }: { size?: 40 | 56 }) {
+    return (
+        <span
+            aria-hidden="true"
+            className={`${size === 40 ? 'size-10' : 'size-14'} shrink-0 rounded-full bg-primary-soft text-on-primary-soft inline-flex items-center justify-center`}>
+            <Icon name="check" size={size / 2} />
+        </span>
+    )
+}
+
+/**
+ * A loading placeholder in the shape of what's coming: a surface_container block on the slow
+ * 1.6s pulse (static under reduced motion), hidden from assistive tech. Size, shape and tone
+ * come from `className` (e.g. `h-3 w-40`, `size-11 rounded-full`, `bg-surface-container-low`).
+ */
+export function Skeleton({ className }: { className?: string }) {
+    const classes = className ?? ''
+    // Defaults the caller can override with its own corner or fill.
+    const shape = /(^|\s)rounded(-|\s|$)/.test(classes) ? '' : 'rounded-md'
+    const fill = /(^|\s)bg-/.test(classes) ? '' : 'bg-surface-container'
+    return <span aria-hidden="true" className={['block animate-solkey-pulse motion-reduce:animate-none', shape, fill, classes].join(' ')} />
 }
 
 export const SLOW_LOADING_MS = 10_000
@@ -198,9 +297,11 @@ export function LoadingStatus({ message, skeleton = <StaffSkeleton />, slowActio
         <div className="flex flex-col items-center gap-4 w-full">
             {skeleton}
             <div role="status" aria-live="polite" className="flex flex-col items-center gap-1.5 text-center">
-                <span className="font-body font-normal text-[14px] leading-normal text-on-surface-variant">{message}</span>
+                <span className="font-body font-normal text-[14px] leading-normal text-on-surface-variant text-pretty">{message}</span>
                 {slow && (
-                    <span className="font-body font-normal text-[13px] leading-normal text-on-surface-variant">{SLOW_LOADING_MESSAGE}</span>
+                    <span className="font-body font-normal text-[13px] leading-normal text-on-surface-variant text-pretty">
+                        {SLOW_LOADING_MESSAGE}
+                    </span>
                 )}
             </div>
             {slow && slowAction}
@@ -237,8 +338,10 @@ export function BusyNotice({ children }: { children: ReactNode }) {
 
 /**
  * A multi-step flow's position: one segment per step, filled up to the
- * current one, and an "n of total" label. Segments cap at 48px so a long flow
- * stays compact; `fill` stretches them across the row instead.
+ * current one, and an "n of total" label. A newly reached segment's fill sweeps in
+ * from the left (300ms, like the input stroke; at once under reduced motion).
+ * Segments cap at 48px so a long flow stays compact; `fill` stretches them across
+ * the row instead.
  */
 export function StepProgress({ step, total, fill = false }: { step: number; total: number; fill?: boolean }) {
     const current = Math.min(step + 1, total)
@@ -251,14 +354,14 @@ export function StepProgress({ step, total, fill = false }: { step: number; tota
             aria-valuetext={`Step ${current} of ${total}`}
             className={`flex items-center ${fill ? 'gap-2' : 'gap-1.5'}`}>
             {Array.from({ length: total }).map((_, i) => (
-                <div
-                    key={i}
-                    className={[
-                        'h-1 rounded-sm flex-1 transition-colors duration-200 ease-solkey',
-                        fill ? '' : 'max-w-12',
-                        i <= step ? 'bg-primary-container' : 'bg-surface-container',
-                    ].join(' ')}
-                />
+                <div key={i} className={['h-1 rounded-sm flex-1 overflow-hidden bg-surface-container', fill ? '' : 'max-w-12'].join(' ')}>
+                    <div
+                        className={[
+                            'bg-primary-container h-full origin-left transition-transform duration-(--t-flow) ease-solkey',
+                            i <= step ? 'scale-x-100' : 'scale-x-0',
+                        ].join(' ')}
+                    />
+                </div>
             ))}
             <Eyebrow className="ml-2">
                 {current} of {total}
