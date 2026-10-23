@@ -10,19 +10,21 @@ const TONE_FILL = { playback: INTERACTION_BLUE, recording: RECORDING_CURSOR_RED 
 export type PlaybackCursorTone = keyof typeof TONE_FILL
 
 /**
- * The score's playback cursor — the one writer of its SVG rect, for playback
- * and recording alike. Positions come from the score's layout
- * (`ScoreLayout.pointAtBeat`); the rect's `x`, `transform` and `display` are
+ * The score's playback cursor — the one writer of its SVG playhead group (a
+ * line with a round head, centred on x = 0; see ScoreView), for playback and
+ * recording alike. Positions come from the score's layout
+ * (`ScoreLayout.pointAtBeat`); the group's `transform` and `display` are
  * written in exactly the form the scroll-follow observer parses — the
  * MutationObserver in @mushee/notation's lib/useScrollFollow.ts, used by
- * ScoreView — to keep the cursor scrolled into view.
+ * ScoreView — to keep the cursor scrolled into view. Its `fill` and
+ * `fill-opacity` go on the group too, and both parts inherit them.
  *
  * As a Tickable it follows a playback pass: each frame it moves to the
  * scheduler's position on the shared clock, and hides once the pass has
  * played out.
  */
 export class PlaybackCursor implements Tickable {
-    private el: SVGRectElement | null = null
+    private el: SVGGElement | null = null
     /** The score the playback pass in flight plays; see follow(). */
     private followed: Score | null = null
 
@@ -32,7 +34,7 @@ export class PlaybackCursor implements Tickable {
     ) {}
 
     /** Draw into `el` from now on (null detaches: every write becomes a no-op). */
-    attach(el: SVGRectElement | null): void {
+    attach(el: SVGGElement | null): void {
         this.el = el
     }
 
@@ -49,9 +51,8 @@ export class PlaybackCursor implements Tickable {
             return
         }
         const { x, rowY } = score.layout.pointAtBeat(measure, beat)
-        // The rect is 3 units wide; centre it on the beat.
-        this.el?.setAttribute('x', String(x - 1.5))
-        this.el?.setAttribute('transform', `translate(0, ${rowY})`)
+        // The playhead is drawn centred on its own x = 0: the translate puts it on the beat.
+        this.el?.setAttribute('transform', `translate(${x}, ${rowY})`)
         this.el?.setAttribute('display', '')
     }
 

@@ -20,8 +20,8 @@ export interface PlayScoreOptions {
     score: Score
     /** Note to start from; null = top of the score. */
     startNote: Note | null
-    /** The score's cursor rect; the pass's PlaybackCursor draws into it. */
-    cursorEl: SVGRectElement
+    /** The score's playhead (cursor group); the pass's PlaybackCursor draws into it. */
+    cursorEl: SVGGElement
 }
 
 /**

@@ -130,8 +130,8 @@ function fakePlayer(currentTime = 0) {
     return { player, raw: player }
 }
 
-function svgRect(): SVGRectElement {
-    return document.createElementNS('http://www.w3.org/2000/svg', 'rect')
+function svgPlayhead(): SVGGElement {
+    return document.createElementNS('http://www.w3.org/2000/svg', 'g')
 }
 
 /**
@@ -147,7 +147,7 @@ let cursor: PlaybackCursor
 function makeOptions(over: Partial<RecordingOptions> & { measureCount?: number } = {}) {
     const measureCount = over.measureCount ?? 4
     const score: Score = (over.score as Score) ?? makeScore(measureCount)
-    const cursorEl = svgRect()
+    const cursorEl = svgPlayhead()
     cursor.attach(cursorEl)
     const onStateChange = vi.fn()
     const onNeedNewMeasure = vi.fn()
@@ -284,8 +284,7 @@ describe('RecordingEngine', () => {
         expect(sample.measureIndex).toBe(0)
         // The cursor sits at the layout point of the position the sample is anchored to.
         const point = score.layout.pointAtBeat(score.measures[sample.measureIndex], sample.beat)
-        expect(cursorEl.getAttribute('x')).toBe(String(point.x - 1.5))
-        expect(cursorEl.getAttribute('transform')).toBe(`translate(0, ${point.rowY})`)
+        expect(cursorEl.getAttribute('transform')).toBe(`translate(${point.x}, ${point.rowY})`)
         expect(sample.amp).toBeGreaterThan(0)
         expect(sample.amp).toBeLessThanOrEqual(1)
         expect(sample.timeMs).toBeGreaterThanOrEqual(0)

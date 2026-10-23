@@ -51,7 +51,8 @@ interface ScoreViewProps {
     selectedNotes?: Note[]
     /** Transient magenta emphasis over part of the score (see {@link ScoreHighlight}); null/omitted renders nothing. */
     highlight?: ScoreHighlight | null
-    playbackCursorRef?: React.RefObject<SVGRectElement | null>
+    /** The playhead group (drawn below); the host's transport moves and paints it through this ref. */
+    playbackCursorRef?: React.RefObject<SVGGElement | null>
     /** Live recording waveform bars; the layer subscribes to it directly. */
     waveformStore?: RecordingWaveformStore
     /** Begin a selection on `note` (plain click / drag start). */
@@ -447,18 +448,16 @@ export const ScoreView = memo(function ScoreView({
                         sample-rate updates never re-render the score itself */}
                     {waveformStore && <RecordingWaveform store={waveformStore} score={score} />}
 
-                    {/* Playback cursor — the host's transport writes its x, transform and display
-                        straight through the ref, outside React (the scroll-follow observes those writes) */}
-                    <rect
-                        ref={playbackCursorRef}
-                        data-export-exclude
-                        display="none"
-                        y={Staff.TOP_Y - 5}
-                        width={3}
-                        height={Staff.HEIGHT + 10}
-                        fill={INTERACTION_BLUE}
-                        rx={1.5}
-                    />
+                    {/* Playback cursor — a playhead: a 2.5-unit line overhanging the staff by 9 units
+                        at either end (taller than any waveform bar, which tops out at the staff's
+                        height) under a round head, so it never reads as one more bar. The host's
+                        transport writes the group's transform, display, fill and fill-opacity
+                        straight through the ref, outside React (the scroll-follow observes those
+                        writes); both parts inherit the paint. */}
+                    <g ref={playbackCursorRef} data-export-exclude display="none" fill={INTERACTION_BLUE}>
+                        <rect x={-1.25} width={2.5} y={Staff.TOP_Y - 9} height={Staff.HEIGHT + 18} rx={1.25} />
+                        <circle cx={0} cy={Staff.TOP_Y - 9} r={3.5} />
+                    </g>
 
                     {rows.map((row) =>
                         row.measures.map((measure) => (

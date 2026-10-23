@@ -58,8 +58,8 @@ export interface RecordingOptions {
      * clicks at that measure's meter and tempo, before beat 1.
      */
     startMeasureIndex: number
-    /** The score's cursor rect; Transport attaches the take's PlaybackCursor to it. */
-    cursorEl: SVGRectElement
+    /** The score's playhead (cursor group); Transport attaches the take's PlaybackCursor to it. */
+    cursorEl: SVGGElement
     wsUrl: string
     onStateChange: (state: RecordingState) => void
     /**
