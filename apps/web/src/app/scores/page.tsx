@@ -3,6 +3,7 @@
 import { Glyph } from '@mushee/notation/components'
 import { Instrument, Score } from '@mushee/notation/model'
 import { ScoreSerializer } from '@mushee/notation/model/io/ScoreSerializer'
+import { Skeleton } from '@mushee/ui'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
@@ -206,7 +207,8 @@ export default function ScoresPage() {
 
     return (
         <div className="bg-surface text-on-surface min-h-dvh flex flex-col">
-            <TopNav user={session?.user?.name ?? undefined} onCreate={openCreate} />
+            {/* An empty library's one pop is the first-score card's CTA, where the eye lands. */}
+            <TopNav user={session?.user?.name ?? undefined} onCreate={openCreate} createEmphasis={emptyLibrary ? 'flat' : 'pop'} />
 
             <main className="flex-1 max-w-384 mx-auto px-4 sm:px-8 py-6 sm:py-10 flex flex-col gap-6 w-full box-border">
                 <PageHeader
@@ -217,7 +219,7 @@ export default function ScoresPage() {
                         !emptyLibrary && (
                             <div className={`flex items-center gap-3 w-full md:w-auto ${phoneSearch ? '' : 'max-md:hidden'}`}>
                                 <span className="max-md:hidden">
-                                    <SecondaryButton onClick={openImport} disabled={readingFile}>
+                                    <SecondaryButton size="md" onClick={openImport} disabled={readingFile}>
                                         {readingFile ? 'Reading file…' : 'Import file'}
                                     </SecondaryButton>
                                 </span>
@@ -225,6 +227,7 @@ export default function ScoresPage() {
                                     <TextField
                                         value={search}
                                         onChange={setSearch}
+                                        size="compact"
                                         leftIcon="search"
                                         placeholder="Find a score…"
                                         ariaLabel="Search your scores"
@@ -403,23 +406,17 @@ function LibraryBody({
         )
     }
     return (
-        <div role="table" aria-label="Your scores" className="flex flex-col md:gap-4">
+        <div role="table" aria-label="Your scores" className="flex flex-col">
             <div role="rowgroup">
-                {/* Phones show cards: the column headers stay for screen readers only. */}
-                <div
-                    role="row"
-                    className="max-md:sr-only grid grid-cols-[1fr_auto] md:grid-cols-[5fr_2fr_2fr_1fr] gap-4 px-4 sm:px-6 py-2 font-label font-semibold text-[11px] leading-none tracking-[0.12em] uppercase text-on-surface-variant">
+                {/* The rows read as a library, not an admin table: the column headers stay for screen readers only. */}
+                <div role="row" className="sr-only">
                     <span role="columnheader">Title</span>
-                    <span role="columnheader" className="max-md:hidden">
-                        Created
-                    </span>
-                    <span role="columnheader" className="max-md:hidden">
-                        Updated
-                    </span>
+                    <span role="columnheader">Created</span>
+                    <span role="columnheader">Updated</span>
                     <span role="columnheader" aria-label="Actions" />
                 </div>
             </div>
-            <div role="rowgroup" className="flex flex-col gap-3">
+            <div role="rowgroup" className={SCORE_LIST_CLASS}>
                 {scores.map((score) => (
                     <ScoreRow
                         key={score.id}
@@ -443,51 +440,91 @@ function EmptyCard({ children }: { children: React.ReactNode }) {
     )
 }
 
-const SKELETON_BAR = 'block h-3.5 rounded-sm bg-surface-container-low animate-solkey-pulse motion-reduce:animate-none'
+/** The score list's stack: the rows and the skeleton rows that stand in for them. */
+const SCORE_LIST_CLASS = 'flex flex-col gap-3'
 
-/** Three placeholder rows in the shape of the score table, breathing slowly while the list loads. */
+/**
+ * A score row's frame — the white card, its padding and its grid (Title · Created · Updated ·
+ * More from md; title and More on phones) — shared by the real rows and the loading skeleton,
+ * so the list never moves when the scores arrive.
+ */
+function ScoreRowShell({ className, children, ...rest }: React.HTMLAttributes<HTMLDivElement>) {
+    return (
+        <div
+            {...rest}
+            className={[
+                'bg-surface-container-lowest rounded-md px-4 sm:px-6 py-4 editorial-shadow',
+                'grid grid-cols-[minmax(0,1fr)_auto] md:grid-cols-[minmax(0,1fr)_9rem_9rem_2.5rem] gap-3 md:gap-4 items-center',
+                className ?? '',
+            ].join(' ')}>
+            {children}
+        </div>
+    )
+}
+
+// The skeleton rows breathe in a 120ms stagger, top to bottom.
+const SKELETON_ROW_DELAYS = ['', '[animation-delay:120ms]', '[animation-delay:240ms]']
+
+/** Three placeholder rows in the score rows' own shell, breathing slowly while the list loads. */
 function LibrarySkeleton() {
     return (
-        <div aria-hidden="true" className="w-full flex flex-col gap-3 pt-10">
-            {[0, 1, 2].map((row) => (
-                <div
-                    key={row}
-                    className="bg-surface-container-lowest rounded-md px-4 sm:px-6 py-5.5 editorial-shadow flex items-center justify-between gap-4">
-                    <span className={`${SKELETON_BAR} w-2/5`} />
-                    <span className={`${SKELETON_BAR} w-[15%]`} />
-                </div>
+        <div aria-hidden="true" className={`w-full ${SCORE_LIST_CLASS}`}>
+            {SKELETON_ROW_DELAYS.map((delay) => (
+                <ScoreRowShell key={delay}>
+                    <div className="min-w-0 flex flex-col">
+                        <Skeleton className={`h-4 w-2/5 rounded-sm bg-surface-container-low ${delay}`} />
+                        <Skeleton className={`md:hidden h-3 w-16 mt-1.5 rounded-sm bg-surface-container-low ${delay}`} />
+                    </div>
+                    <Skeleton className={`max-md:hidden h-3 w-20 rounded-sm bg-surface-container-low ${delay}`} />
+                    <Skeleton className={`max-md:hidden h-3 w-20 rounded-sm bg-surface-container-low ${delay}`} />
+                    {/* The More circle: tonal on touch, where the real one rests tonal too; transparent under a mouse. */}
+                    <Skeleton className={`justify-self-end size-10 rounded-full pointer-fine:bg-transparent ${delay}`} />
+                </ScoreRowShell>
             ))}
         </div>
     )
 }
 
+// The first-score staff: five lines 10px apart (the notation grid), the G line second from the bottom.
+const FIRST_STAFF_TOP = 24
+const FIRST_STAFF_LINES = [0, 1, 2, 3, 4].map((i) => FIRST_STAFF_TOP + i * 10)
+// Three ghost noteheads rising through the spaces: 'your melody goes here'.
+const FIRST_STAFF_GHOSTS = [
+    { x: 84, y: 59 },
+    { x: 122, y: 49 },
+    { x: 160, y: 39 },
+]
+
 function FirstScoreEmpty({ readingFile, onCreate, onImport }: { readingFile: boolean; onCreate: () => void; onImport: () => void }) {
     return (
-        <div className="bg-surface-container-lowest rounded-md px-6 sm:px-8 py-8 sm:py-10 editorial-shadow flex flex-col sm:flex-row items-start gap-5 sm:gap-7">
-            <svg viewBox="0 0 120 80" width="96" height="64" aria-hidden className="shrink-0">
-                {[0, 1, 2, 3, 4].map((i) => (
-                    <line key={i} x1={8} x2={112} y1={20 + i * 10} y2={20 + i * 10} stroke="var(--color-outline-variant)" strokeWidth={1} />
+        <div className="bg-surface-container-lowest rounded-md editorial-shadow flex flex-col items-center text-center gap-5 py-14 sm:py-20 px-6">
+            <svg viewBox="0 0 192 88" width="192" height="88" aria-hidden className="shrink-0 max-w-full">
+                {FIRST_STAFF_LINES.map((y) => (
+                    <line key={y} x1={4} x2={188} y1={y} y2={y} stroke="var(--color-outline-variant)" strokeWidth={1} />
                 ))}
-                {/* Real Bravura clef — the staff spacing above matches the notation grid (10px). */}
-                <Glyph name="gClef" x={16} y={50} fill="var(--color-outline)" />
+                {/* Real Bravura glyphs — the staff spacing above matches the notation grid (10px). */}
+                <Glyph name="gClef" x={12} y={FIRST_STAFF_TOP + 30} fill="var(--color-outline)" />
+                <g opacity={0.6}>
+                    {FIRST_STAFF_GHOSTS.map(({ x, y }) => (
+                        <Glyph key={x} name="noteheadBlack" x={x} y={y} fill="var(--color-outline-variant)" />
+                    ))}
+                </g>
             </svg>
-            <div className="flex-1 flex flex-col gap-5 min-w-0 w-full">
-                <div className="flex flex-col gap-1.5">
-                    <h2 className="m-0 font-body font-semibold text-[18px] leading-[1.3] text-on-surface">No scores yet.</h2>
-                    <p className="m-0 font-body font-normal text-[15px] leading-normal text-on-surface-variant">
-                        Start a score, press record, and hum, sing or play — Solkey writes your melody down.
-                    </p>
+            <div className="max-w-xl mx-auto flex flex-col items-center gap-2">
+                <h2 className="m-0 type-heading text-[24px] sm:text-[28px] leading-tight tracking-[-0.02em] text-on-surface">
+                    No scores yet.
+                </h2>
+                <p className="m-0 max-w-md font-body font-normal text-[16px] leading-normal text-on-surface-variant text-pretty">
+                    Start a score, press record, and hum, sing or play — Solkey writes your melody down.
+                </p>
+            </div>
+            <div className="w-full max-w-xl mx-auto flex flex-col items-center gap-1.5">
+                <div className="w-full sm:w-auto">
+                    <PrimaryButton size="lg" emphasis="pop" icon="plus" fullWidth onClick={onCreate}>
+                        New score
+                    </PrimaryButton>
                 </div>
-                <div className="flex flex-col items-start gap-1.5">
-                    <div className="w-full sm:w-auto">
-                        <PrimaryButton size="lg" icon="plus" fullWidth onClick={onCreate}>
-                            New score
-                        </PrimaryButton>
-                    </div>
-                    <TertiaryButton onClick={onImport}>
-                        {readingFile ? 'Reading file…' : 'Or import a MusicXML or MIDI file'}
-                    </TertiaryButton>
-                </div>
+                <TertiaryButton onClick={onImport}>{readingFile ? 'Reading file…' : 'Or import a MusicXML or MIDI file'}</TertiaryButton>
             </div>
         </div>
     )
@@ -507,14 +544,12 @@ function ScoreRow({
     onDelete: () => void
 }) {
     return (
-        <div
+        <ScoreRowShell
             role="row"
             className={[
-                'group relative',
-                'bg-surface-container-lowest hover:bg-surface-container-high',
-                'rounded-md px-4 sm:px-6 py-4.5 editorial-shadow',
-                'grid grid-cols-[1fr_auto] md:grid-cols-[5fr_2fr_2fr_1fr] gap-3 md:gap-4 items-center',
-                'transition-colors duration-150 ease-solkey',
+                'group relative hover:bg-surface-container-high transition-colors duration-150 ease-solkey',
+                // The More button's resting fill under a mouse (see ScoreRowMenu).
+                '[--more-fill:transparent] hover:[--more-fill:var(--color-surface-container-lowest)] focus-within:[--more-fill:var(--color-surface-container-lowest)]',
             ].join(' ')}>
             <div className="absolute left-0 top-0 bottom-0 w-1 rounded-l-md bg-primary-container origin-left scale-x-0 opacity-0 group-hover:scale-x-100 group-hover:opacity-100 transition-[opacity,transform] duration-150 ease-solkey motion-reduce:transition-none" />
             <div role="cell" className="min-w-0 flex flex-col gap-1">
@@ -525,7 +560,7 @@ function ScoreRow({
                     className={[
                         'text-left bg-transparent border-0 p-0 cursor-pointer',
                         "after:absolute after:inset-0 after:rounded-md after:content-['']",
-                        'font-body font-medium text-[16px] leading-[1.3]',
+                        'font-label font-medium text-[17px] leading-[1.3] tracking-[-0.01em]',
                         'text-on-surface group-hover:text-primary',
                         'transition-colors duration-150 ease-solkey',
                         'focus-ring rounded-sm',
@@ -544,22 +579,25 @@ function ScoreRow({
                     {formatRelativeTime(score.updatedAt)}
                 </span>
             </div>
-            <span role="cell" className="max-md:hidden font-body font-normal text-[13px] leading-none text-on-surface-variant">
+            <span role="cell" className={DATE_CELL_CLASS}>
                 {formatShortDate(score.createdAt)}
             </span>
-            <span role="cell" className="max-md:hidden font-body font-normal text-[13px] leading-none text-on-surface-variant">
+            <span role="cell" className={DATE_CELL_CLASS}>
                 {formatRelativeTime(score.updatedAt)}
             </span>
             {/* Positioned after the title, so it sits above the stretched link; its empty space lets clicks through to it. */}
             <div role="cell" className="relative flex justify-end pointer-events-none">
                 <ScoreRowMenu score={score} onRename={onRename} onDuplicate={onDuplicate} onDelete={onDelete} />
             </div>
-        </div>
+        </ScoreRowShell>
     )
 }
 
+const DATE_CELL_CLASS = 'max-md:hidden font-body font-normal text-[13px] leading-none tabular-nums text-on-surface-variant'
+
+// Rows sit on the popover's 16px text column; the hover fill reaches 8px past it.
 const MENU_ITEM_CLASS =
-    'flex items-center w-full min-h-10 px-3 rounded-md border-0 bg-transparent cursor-pointer text-left font-label font-semibold text-[14px] leading-none hover:bg-surface-container-high transition-colors duration-150 ease-solkey focus-ring'
+    'flex items-center gap-2.5 w-full min-h-10 px-2 rounded-md border-0 bg-transparent cursor-pointer text-left font-label font-semibold text-[14px] leading-none hover:bg-surface-container-high transition-colors duration-150 ease-solkey focus-ring'
 
 /** A row's secondary actions behind one labelled 'More' button: rename, duplicate, delete (still confirmed). */
 function ScoreRowMenu({
@@ -593,10 +631,14 @@ function ScoreRowMenu({
                     onClick={() => setOpen((o) => !o)}
                     className={[
                         'inline-flex items-center justify-center size-10 shrink-0 rounded-full border-0 cursor-pointer',
-                        open
-                            ? 'bg-primary-container text-on-primary-container'
-                            : 'bg-surface-container group-hover:bg-surface-container-lowest text-on-surface',
-                        'hover:bg-primary-container hover:text-on-primary-container',
+                        // Touch: the tonal fill at rest, so the control shows without a hover.
+                        'bg-surface-container text-on-surface',
+                        // A mouse: the row's --more-fill — clear at rest, white while the row is hovered or
+                        // focused — then a step darker under the pointer and while open; never the loud
+                        // cyan, so the nav's New score stays the viewport's one accent.
+                        'pointer-fine:bg-(--more-fill) pointer-fine:text-on-surface-variant',
+                        'hover:bg-surface-container-highest hover:text-on-surface',
+                        'aria-expanded:bg-surface-container-highest aria-expanded:text-on-surface',
                         'transition-colors duration-150 ease-solkey focus-ring',
                     ].join(' ')}>
                     <Icon name="more-horizontal" size={18} />
@@ -610,15 +652,18 @@ function ScoreRowMenu({
                     onDismiss={close}
                     manageFocus
                     viewportGutter={16}
-                    className="right-0 top-[calc(100%+0.5rem)] w-56 max-w-[calc(100vw-2rem)] gap-2">
-                    <div className="flex flex-col -mx-1.5">
+                    className="right-0 top-[calc(100%+0.5rem)] w-56 max-w-[calc(100vw-2rem)] pb-2 gap-2">
+                    <div className="flex flex-col -mx-2">
                         <button type="button" onClick={act(onRename)} className={`${MENU_ITEM_CLASS} text-on-surface`}>
+                            <Icon name="pencil" size={16} className="text-on-surface-variant" />
                             Rename…
                         </button>
                         <button type="button" onClick={act(onDuplicate)} className={`${MENU_ITEM_CLASS} text-on-surface`}>
+                            <Icon name="copy" size={16} className="text-on-surface-variant" />
                             Duplicate
                         </button>
                         <button type="button" onClick={act(onDelete)} className={`${MENU_ITEM_CLASS} text-secondary`}>
+                            <Icon name="trash-2" size={16} />
                             Delete…
                         </button>
                     </div>
