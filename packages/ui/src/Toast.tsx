@@ -1,11 +1,17 @@
 'use client'
 
-import { type FocusEvent, type PointerEvent, useEffect, useState } from 'react'
+import { type AnimationEvent, type FocusEvent, type PointerEvent, useCallback, useEffect, useState } from 'react'
 
 import { CloseButton } from './Buttons'
 import { Icon, type IconName } from './Icon'
 
-export type ToastTone = 'error' | 'info'
+/**
+ * `error`: something failed (the alert region, a red well). `info`: something happened as
+ * asked (Saved, Copied — a cyan-soft well). `notice`: worth knowing, neither a success nor a
+ * fault (a dropped connection, a hint — a neutral well). info and notice share the polite
+ * region and the info duration.
+ */
+export type ToastTone = 'error' | 'info' | 'notice'
 
 /** A button inside the toast; clicking it runs `onClick` and dismisses the toast. */
 export interface ToastAction {
@@ -16,7 +22,11 @@ export interface ToastAction {
 }
 
 export interface ToastOptions {
-    /** Overrides the tone's default glyph (e.g. 'mic' for recording hints). */
+    /**
+     * Overrides the tone's default glyph ('error' for errors, 'info' otherwise) so the well says
+     * what happened: 'check' for a done action (Saved, Copied), 'info' for news, 'mic' for
+     * recording hints, 'globe' when Solkey can't be reached, 'wifi-off' when the device is offline.
+     */
     icon?: IconName
     /** Milliseconds before the toast dismisses itself; overrides the tone's default. */
     duration?: number
@@ -116,7 +126,7 @@ export class ToastQueue {
     static durationFor(message: string, tone: ToastTone, options: ToastOptions = {}): number | null {
         if (options.persist) return null
         if (options.duration != null) return options.duration
-        if (tone === 'info') return ToastQueue.INFO_MS
+        if (tone !== 'error') return ToastQueue.INFO_MS
         const words = message.trim().split(/\s+/).filter(Boolean).length
         return Math.max(ToastQueue.ERROR_MIN_MS, words * ToastQueue.ERROR_MS_PER_WORD)
     }
@@ -202,6 +212,40 @@ export class ToastQueue {
 /** The app-wide stack the Toaster renders. */
 export const toasts = new ToastQueue()
 
+/** A toast as the Toaster draws it: still showing, or a ghost of one that just left. */
+export interface StagedToast {
+    toast: ToastItem
+    /** Gone from the queue: drawn inert while it plays toast-out, then dropped. */
+    leaving: boolean
+}
+
+/**
+ * The Toaster's render list. The queue drops a toast the moment it is dismissed or expires, so
+ * its caps, dedupe and timers stay exact; the stage keeps a just-removed toast on screen as a
+ * ghost, in its place, until its exit animation ends. Pure: each method returns a new list.
+ */
+export class ToastStage {
+    /** A ghost leaves after this long even if its animationend never fires. */
+    static readonly GHOST_MAX_MS = 300
+
+    /** The next render list: toasts still visible keep their place (with their latest content), toasts that left become ghosts, new ones join the end. */
+    static next(staged: StagedToast[], visible: ToastItem[]): StagedToast[] {
+        const current = new Map(visible.map((t) => [t.id, t]))
+        const next: StagedToast[] = staged.map(({ toast, leaving }) => {
+            const live = current.get(toast.id)
+            return live && !leaving ? { toast: live, leaving: false } : { toast, leaving: true }
+        })
+        const placed = new Set(staged.map((s) => s.toast.id))
+        for (const toast of visible) if (!placed.has(toast.id)) next.push({ toast, leaving: false })
+        return next
+    }
+
+    /** Drops a ghost whose exit has played. */
+    static drop(staged: StagedToast[], id: number): StagedToast[] {
+        return staged.filter((s) => !(s.leaving && s.toast.id === id))
+    }
+}
+
 /**
  * Raises a toast. The third argument is either the glyph (the original signature)
  * or the options object. Returns the toast's id, for `dismissToast`.
@@ -218,43 +262,70 @@ export function dismissToast(id: number) {
 const REGION_CLASS = 'flex flex-col items-center gap-3 max-w-full empty:-mt-3'
 
 /**
- * Floating glass stack that surfaces toast messages. Mount once, in the root layout.
+ * The stack of opaque toast cards that surfaces toast messages. Mount once, in the root layout.
  * Both live regions are always in the DOM (screen readers miss messages in a region
- * that appears together with them): info toasts in a polite `status` region, errors
- * in an `alert` region. The stack sits `--toast-bottom` above the viewport's bottom
- * edge (1.5rem by default; the editor raises it above its dock), never under the
- * safe-area inset.
+ * that appears together with them): info and notice toasts in a polite `status` region,
+ * errors in an `alert` region. A toast rises in over 200ms; one that leaves plays a 150ms
+ * exit as an inert ghost (see ToastStage). The stack sits `--toast-bottom` above the
+ * viewport's bottom edge (1.5rem by default; the editor raises it above its dock, a phone
+ * sheet dialog above its footer), never under the safe-area inset.
  */
 export function Toaster() {
-    const [visible, setVisible] = useState<ToastItem[]>(toasts.visible)
+    const [staged, setStaged] = useState<StagedToast[]>(() => ToastStage.next([], toasts.visible))
 
     useEffect(() => {
-        setVisible(toasts.visible)
-        return toasts.subscribe(setVisible)
+        const sync = (items: ToastItem[]) => setStaged((prev) => ToastStage.next(prev, items))
+        sync(toasts.visible)
+        return toasts.subscribe(sync)
     }, [])
+
+    // Stable, so a ghost's fallback timer isn't restarted by every render of the stack.
+    const drop = useCallback((id: number) => setStaged((prev) => ToastStage.drop(prev, id)), [])
+    const region = (errors: boolean) =>
+        staged
+            .filter((s) => (s.toast.tone === 'error') === errors)
+            .map((s) => <ToastCard key={s.toast.id} toast={s.toast} leaving={s.leaving} onLeft={drop} />)
 
     return (
         <div className="fixed bottom-[max(var(--toast-bottom,1.5rem),env(safe-area-inset-bottom))] left-1/2 -translate-x-1/2 z-(--z-toast) w-max max-w-[calc(100vw-2rem)] flex flex-col items-center gap-3 pointer-events-none">
             <div role="status" aria-live="polite" className={REGION_CLASS}>
-                {visible
-                    .filter((t) => t.tone !== 'error')
-                    .map((t) => (
-                        <ToastCard key={t.id} toast={t} />
-                    ))}
+                {region(false)}
             </div>
             <div role="alert" className={REGION_CLASS}>
-                {visible
-                    .filter((t) => t.tone === 'error')
-                    .map((t) => (
-                        <ToastCard key={t.id} toast={t} />
-                    ))}
+                {region(true)}
             </div>
         </div>
     )
 }
 
-function ToastCard({ toast }: { toast: ToastItem }) {
+// The glyph well says what kind of news it is.
+const TONE_WELL: Record<ToastTone, string> = {
+    error: 'bg-error-container text-on-error-container',
+    info: 'bg-primary-soft text-on-primary-soft',
+    notice: 'bg-surface-container-high text-on-surface-variant',
+}
+
+interface ToastCardProps {
+    toast: ToastItem
+    /** A ghost: inert and hidden from assistive tech, it plays toast-out and then reports `onLeft`. */
+    leaving?: boolean
+    onLeft?: (id: number) => void
+}
+
+function ToastCard({ toast, leaving = false, onLeft }: ToastCardProps) {
     const { id, actions } = toast
+
+    // The ghost goes on its animationend — never gated by motion-safe, so it also fires under
+    // reduced motion (the global 0.01ms rule) — or after GHOST_MAX_MS, whichever comes first.
+    useEffect(() => {
+        if (!leaving) return
+        const timer = setTimeout(() => onLeft?.(id), ToastStage.GHOST_MAX_MS)
+        return () => clearTimeout(timer)
+    }, [leaving, id, onLeft])
+    const onAnimationEnd = (e: AnimationEvent) => {
+        if (leaving && e.target === e.currentTarget) onLeft?.(id)
+    }
+
     // Mouse hover pauses while the pointer is over the toast; a finger pauses only while it
     // is down (touch has no "leave", so a hover-style pause would hold forever).
     const reasonOf = (e: PointerEvent): 'hover' | 'touch' => (e.pointerType === 'mouse' ? 'hover' : 'touch')
@@ -274,11 +345,15 @@ function ToastCard({ toast }: { toast: ToastItem }) {
         if (!e.currentTarget.contains(e.relatedTarget as Node | null)) toasts.resume(id, 'focus')
     }
     // Two buttons beside the message leave a phone almost no room for it (at 320px about
-    // 12px), so below `sm` such a toast wraps: the message keeps the first line and the
-    // buttons, then the ×, sit under it at the end — reading and tab order unchanged.
+    // 12px), so below `sm` such a toast becomes a two-row grid: the icon and message on the
+    // first row with the × at its end, the buttons under them, their text lined up with the
+    // message's (pl-7). The × stays last in the DOM — reading and tab order unchanged.
     const stacked = actions.length > 1
     return (
         <div
+            inert={leaving || undefined}
+            aria-hidden={leaving || undefined}
+            onAnimationEnd={onAnimationEnd}
             onPointerEnter={onPointerEnter}
             onPointerLeave={onPointerLeave}
             onPointerDown={onPointerDown}
@@ -287,19 +362,19 @@ function ToastCard({ toast }: { toast: ToastItem }) {
             onFocus={() => toasts.pause(id, 'focus')}
             onBlur={onBlur}
             className={[
-                'pointer-events-auto flex items-center gap-3 max-w-full sm:max-w-xl',
-                stacked ? 'max-sm:flex-wrap max-sm:gap-y-2' : '',
-                'bg-surface-container-lowest/85 backdrop-blur-[12px] rounded-lg editorial-shadow',
+                'flex items-center gap-3 max-w-full sm:max-w-xl',
+                stacked ? 'max-sm:grid max-sm:grid-cols-[1fr_auto] max-sm:gap-y-1' : '',
+                // Opaque: a card over the page, never glass.
+                'bg-surface-container-lowest shadow-overlay rounded-lg',
                 'pl-3 pr-2 py-2.5',
+                leaving
+                    ? 'pointer-events-none animate-[toast-out_150ms_var(--ease-solkey)_forwards]'
+                    : 'pointer-events-auto animate-[toast-in_200ms_var(--ease-solkey)]',
             ].join(' ')}>
-            <span className={['min-w-0 flex-auto flex items-center gap-3', stacked ? 'max-sm:basis-full' : ''].join(' ')}>
+            <span
+                className={['min-w-0 flex-auto flex items-center gap-3', stacked ? 'max-sm:col-start-1 max-sm:row-start-1' : ''].join(' ')}>
                 <span
-                    className={[
-                        'w-7 h-7 rounded-full shrink-0 inline-flex items-center justify-center',
-                        toast.tone === 'error'
-                            ? 'bg-error-container text-on-error-container'
-                            : 'bg-primary-container text-on-primary-container',
-                    ].join(' ')}>
+                    className={['w-7 h-7 rounded-full shrink-0 inline-flex items-center justify-center', TONE_WELL[toast.tone]].join(' ')}>
                     <Icon name={toast.icon ?? (toast.tone === 'error' ? 'error' : 'info')} size={16} />
                 </span>
                 {/* Wraps between words, and inside a word too long for its line, never past the card. */}
@@ -307,11 +382,15 @@ function ToastCard({ toast }: { toast: ToastItem }) {
                     {toast.message}
                 </span>
             </span>
-            <span className="shrink-0 ml-auto flex items-center gap-3">
+            <span className={['shrink-0 ml-auto flex items-center gap-3', stacked ? 'max-sm:contents' : ''].join(' ')}>
                 {actions.length > 0 && (
                     // Text (tertiary) buttons in reading order; 40px tall, the negative margin keeps
                     // the toast itself at its usual height.
-                    <span className="-my-1.5 flex items-center">
+                    <span
+                        className={[
+                            '-my-1.5 flex items-center',
+                            stacked ? 'max-sm:col-span-2 max-sm:row-start-2 max-sm:justify-start max-sm:pl-7' : '',
+                        ].join(' ')}>
                         {actions.map((action, i) => (
                             <button
                                 key={i}
@@ -331,7 +410,9 @@ function ToastCard({ toast }: { toast: ToastItem }) {
                         ))}
                     </span>
                 )}
-                <CloseButton ariaLabel="Dismiss" onClick={() => toasts.dismiss(id)} />
+                <span className={['inline-flex', stacked ? 'max-sm:row-start-1 max-sm:col-start-2 max-sm:self-start' : ''].join(' ')}>
+                    <CloseButton ariaLabel="Dismiss" onClick={() => toasts.dismiss(id)} />
+                </span>
             </span>
         </div>
     )
