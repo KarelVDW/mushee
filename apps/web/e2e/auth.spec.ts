@@ -213,10 +213,15 @@ test('reset password: requesting a link reaches the sent stage and can resend', 
     await page.goto('/reset-password')
 
     const send = page.getByRole('button', { name: 'Send reset link' })
-    await expect(send).toBeDisabled()
-    await expect(page.getByLabel('Email')).toHaveAttribute('type', 'email')
-    await page.getByLabel('Email').fill('e2e@example.com')
+    const email = page.getByLabel('Email')
+    await expect(email).toHaveAttribute('type', 'email')
+    // Never disabled for an empty field: pressing it says what's missing, under the field.
     await expect(send).toBeEnabled()
+    await send.click()
+    await expect(page.getByText('Enter the email on your account.', { exact: true })).toBeVisible()
+    await expect(email).toHaveAttribute('aria-invalid', 'true')
+    await expect(email).toBeFocused()
+    await email.fill('e2e@example.com')
     await send.click()
 
     // Sent stage: the resend affordance works, and we can go back.
@@ -262,7 +267,12 @@ test('reset password: the new-password stage validates strength and match', asyn
     await expect(page.getByRole('progressbar')).toHaveCount(0)
 
     const save = page.getByRole('button', { name: 'Save new password' })
-    await expect(save).toBeDisabled()
+    // Never disabled for what's typed: pressing it names the failing rule and focuses the field.
+    await expect(save).toBeEnabled()
+    await save.click()
+    await expect(page.getByText('Use at least 8 characters.', { exact: true })).toBeVisible()
+    await expect(page.getByLabel('New password')).toBeFocused()
+    await expect(page.getByRole('heading', { name: 'Set a new password.' })).toBeVisible()
 
     await page.getByLabel('New password').fill('correct-horse-battery')
     await page.getByLabel('Confirm password').fill('correct-horse-battery')
@@ -273,9 +283,12 @@ test('reset password: the new-password stage validates strength and match', asyn
     await expect(page.getByLabel('New password')).toHaveAttribute('type', 'text')
     await expect(page.getByLabel('Confirm password')).toHaveAttribute('type', 'text')
 
-    // A mismatch disables saving again.
+    // A mismatch keeps the stage, says so under the confirmation and focuses it.
     await page.getByLabel('Confirm password').fill('different')
-    await expect(save).toBeDisabled()
+    await save.click()
+    await expect(page.getByText("Passwords don't match yet.", { exact: true })).toBeVisible()
+    await expect(page.getByLabel('Confirm password')).toBeFocused()
+    await expect(page.getByRole('heading', { name: 'Set a new password.' })).toBeVisible()
 })
 
 test('reset password: a dead link says so and asks for a new one', async ({ page }) => {
