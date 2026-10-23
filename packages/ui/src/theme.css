@@ -110,6 +110,24 @@
     --animate-solkey-spin-glyph: solkey-spin 1s linear infinite;
     /* animate-solkey-pulse — the loading skeletons' slow breath (StaffSkeleton, skeleton rows). */
     --animate-solkey-pulse: solkey-pulse 1.6s ease-in-out infinite;
+    /* Entrances and exits (keyframes below, durations from the --t-* scale in :root):
+       overlay-in — a popover or menu arriving from its anchor (see .popover-enter);
+       dialog-in / scrim-in — a dialog panel and its backdrop;
+       sheet-out — a phone sheet leaving (removed on animationend);
+       toast-in / toast-out — a toast arriving and leaving (the Toaster's ghost copy);
+       solkey-step-in — a multi-step flow's next step; note-land — a note written by a take
+       (see .note-land); tap-flash — a pad's tap feedback; row-arrive — a list row that just
+       arrived. */
+    --animate-overlay-in: overlay-in var(--t-quick) var(--ease-solkey);
+    --animate-dialog-in: dialog-in var(--t-snap) var(--ease-solkey);
+    --animate-scrim-in: scrim-in var(--t-quick) linear;
+    --animate-sheet-out: sheet-out var(--t-quick) var(--ease-solkey) forwards;
+    --animate-toast-in: toast-in var(--t-snap) var(--ease-solkey);
+    --animate-toast-out: toast-out var(--t-quick) var(--ease-solkey) forwards;
+    --animate-solkey-step-in: solkey-step-in var(--t-quick) var(--ease-solkey) both;
+    --animate-note-land: note-land var(--t-snap) var(--ease-solkey);
+    --animate-tap-flash: tap-flash var(--t-snap) var(--ease-solkey);
+    --animate-row-arrive: row-arrive 900ms var(--ease-solkey);
 
     /* Type families — exposed as Tailwind utilities (font-display, font-body, …).
      next/font sets the family variables on <html> so the :root theme variables can
@@ -121,6 +139,30 @@
     --font-sans: var(--font-space-grotesk), system-ui, sans-serif;
     --font-serif: var(--font-newsreader), Georgia, serif;
     --font-mono: var(--font-geist-mono), 'JetBrains Mono', ui-monospace, monospace;
+}
+
+/* Control heights and motion durations. A control's height is a token, never padding plus
+   line-height, so neighbours line up: sm 32px (chips, icon buttons, segmented options),
+   md 40px (buttons, fields — a button beside a field is md), lg 48px (the big CTA). Coarse
+   pointers step each one up (40/44/52px) for the touch floor. --well-pad is the gap between
+   a tool well's edge and the controls inside it. Durations: press 100ms, quick 150ms (tints,
+   small entrances), snap 200ms (lifts, dialogs), flow 300ms (strokes and sweeps). */
+:root {
+    --control-sm: 2rem;
+    --control-md: 2.5rem;
+    --control-lg: 3rem;
+    --well-pad: 3px;
+    --t-press: 100ms;
+    --t-quick: 150ms;
+    --t-snap: 200ms;
+    --t-flow: 300ms;
+}
+@media (pointer: coarse) {
+    :root {
+        --control-sm: 2.5rem;
+        --control-md: 2.75rem;
+        --control-lg: 3.25rem;
+    }
 }
 
 /* Stacking layers, lowest first (apps/web/design/README.md lists them too). Toasts sit
@@ -155,23 +197,83 @@ body {
     font-family: var(--font-body);
 }
 
-/* Placeholders in on-surface-variant (5.9:1 on the input fill), not Tailwind's 50% of the
-   text colour (about 2.8:1). In the base layer, so a utility can still override it. */
+/* Everything here sits in the base layer, so any utility still overrides it. */
 @layer base {
+    /* Placeholders in on-surface-variant (5.9:1 on the input fill), not Tailwind's 50% of
+       the text colour (about 2.8:1). */
     input::placeholder,
     textarea::placeholder {
         color: var(--color-on-surface-variant);
     }
-}
 
-/* The keyboard focus contract (DESIGN.md): a 2px primary ring, 2px out, on
-   :focus-visible only. An @utility rather than a plain class so it lands in
-   Tailwind's utilities layer and composes with variants like any utility. */
-@utility focus-ring {
-    &:focus-visible {
-        outline: 2px solid var(--color-primary);
+    /* No grey flash on tap (iOS, Android): controls give their own pressed state. */
+    body {
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    /* The keyboard focus contract (DESIGN.md) as the default for everything focusable: a 2px
+       primary ring, 2px out, on :focus-visible only, never the browser's own ring. :where()
+       keeps the specificity at zero, so the fields' and the canvas's outline-0 still win, and
+       tabindex=-1 targets (headings that take focus on a step change) draw nothing. A dark
+       surface sets --focus-ring-color (e.g. primary-container on charcoal). */
+    :where(a, button, summary, select, [role='button'], [role='tab'], [role='switch'], [role='radio'], [tabindex]:not([tabindex='-1'])):focus-visible {
+        outline: 2px solid var(--focus-ring-color, var(--color-primary));
         outline-offset: 2px;
     }
+
+    /* No stranded words: headings balance their lines, running text avoids a lone last word.
+       The mode stays inherited, so text inside a nowrap parent keeps to one line. */
+    h1,
+    h2,
+    h3,
+    h4,
+    summary {
+        text-wrap: balance;
+        text-wrap-mode: inherit;
+    }
+    p,
+    li,
+    dd,
+    figcaption,
+    label {
+        text-wrap: pretty;
+        text-wrap-mode: inherit;
+    }
+}
+
+/* The same focus ring as a utility, for call sites that spell it out (and for variants).
+   focus-ring-inset pulls it 2px inside, for full-bleed rows and menu items whose edge an
+   outer ring would clip. */
+@utility focus-ring {
+    &:focus-visible {
+        outline: 2px solid var(--focus-ring-color, var(--color-primary));
+        outline-offset: 2px;
+    }
+}
+@utility focus-ring-inset {
+    &:focus-visible {
+        outline-offset: -2px;
+    }
+}
+
+/* Transition recipes on the duration scale and the solkey ease: tint (colour and opacity
+   changes, 150ms), lift (a press or hover that moves or casts a shadow, 200ms), sweep (strokes
+   and progress fills, 300ms). */
+@utility transition-tint {
+    transition-property: color, background-color, border-color, text-decoration-color, opacity, fill, stroke;
+    transition-duration: var(--t-quick);
+    transition-timing-function: var(--ease-solkey);
+}
+@utility transition-lift {
+    transition-property:
+        transform, translate, scale, box-shadow, color, background-color, border-color, text-decoration-color, fill, stroke;
+    transition-duration: var(--t-snap);
+    transition-timing-function: var(--ease-solkey);
+}
+@utility transition-sweep {
+    transition-property: transform, translate, scale, opacity;
+    transition-duration: var(--t-flow);
+    transition-timing-function: var(--ease-solkey);
 }
 
 /* Atmospheric Shadows — tinted with on_surface, never black. .editorial-shadow stays the
@@ -216,10 +318,89 @@ body {
     }
 }
 
+/* A popover or menu arriving from its anchor: --pop-from is the offset it travels (6px down
+   by default; the popover sets it from its resolved side). The individual `translate` property,
+   never `transform`, so it composes with the popover's inline clamp transform. */
+@keyframes overlay-in {
+    from {
+        opacity: 0;
+        translate: 0 var(--pop-from, 6px);
+    }
+}
+.popover-enter {
+    animation: overlay-in var(--t-quick) var(--ease-solkey);
+}
+
+@keyframes dialog-in {
+    from {
+        opacity: 0;
+        transform: translateY(8px) scale(0.985);
+    }
+}
+@keyframes scrim-in {
+    from {
+        opacity: 0;
+    }
+}
+@keyframes sheet-out {
+    to {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+}
+@keyframes toast-in {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+}
+@keyframes toast-out {
+    to {
+        opacity: 0;
+        transform: translateY(4px);
+    }
+}
+@keyframes solkey-step-in {
+    from {
+        opacity: 0;
+    }
+}
+
+/* A note a take just wrote fades onto the staff (opacity only; it ends at full ink, so exports
+   are unchanged). NoteGroup sets the class on a newly landed note. */
+@keyframes note-land {
+    from {
+        opacity: 0;
+    }
+}
+.note-land {
+    animation: note-land var(--t-snap) var(--ease-solkey);
+}
+
+@keyframes tap-flash {
+    from {
+        background-color: var(--color-primary-container);
+    }
+    to {
+        background-color: var(--color-primary-soft);
+    }
+}
+@keyframes row-arrive {
+    from {
+        background-color: var(--color-primary-soft);
+    }
+    to {
+        background-color: var(--color-surface-container-lowest);
+    }
+}
+
 /* Reduced motion, for every app at once: animations and transitions collapse to an instant
    (0.01ms rather than `none`, so exit animations still fire animationend and clear their
    element) and smooth scrolling jumps. Motion driven from JS (scroll follow, tickers) checks
-   the media query itself. */
+   the media query itself. That covers every keyframe above: the entrances (overlay-in,
+   dialog-in, scrim-in, solkey-step-in) show their end state at once, the flashes
+   (tap-flash, row-arrive) don't show, and toast-in/out, sheet-out and note-land still fire the
+   animationend their elements wait on — so none of them is gated with motion-safe:. */
 @media (prefers-reduced-motion: reduce) {
     *,
     ::before,
