@@ -179,7 +179,8 @@ export default function OnboardingPage() {
     // The usual end: a new score on the first instrument picked, open and ready to record.
     const destination: DoneDestination = awaitingApproval ? 'beta' : nextPath !== LIBRARY_PATH ? 'next' : 'first-melody'
     // The picks made on this visit are fresher than the saved answers the hook falls back to.
-    const recordFirstMelody = () => firstMelody.start(instruments[0] ?? Instrument.VoiceLead)
+    const firstInstrument = instruments[0] ?? Instrument.VoiceLead
+    const recordFirstMelody = () => firstMelody.start(firstInstrument)
 
     // The button says what happens next: the optional survey is skipped until something in it
     // is picked, and the plan step names the price for a paid plan.
@@ -205,78 +206,106 @@ export default function OnboardingPage() {
         <FunnelShell gap={7} action={!done && step > 0 && <TertiaryButton onClick={skip}>Skip setup</TertiaryButton>}>
             {!done && <StepProgress step={step} total={steps.length} />}
 
-            {!done && stepName === 'verify' && (
-                <VerifyStep
-                    titleRef={titleRef}
-                    userEmail={userEmail}
-                    sessionEmail={sessionEmail}
-                    verified={verified}
-                    onVerified={refetch}
-                    onAdvance={next}
-                    onStartOver={startOver}
-                />
-            )}
+            {/* Keyed by screen: each step (and the done screen) fades in over 150ms, no travel. */}
+            <div key={screen} className="animate-solkey-step-in flex flex-col gap-7">
+                {!done && stepName === 'verify' && (
+                    <VerifyStep
+                        titleRef={titleRef}
+                        userEmail={userEmail}
+                        sessionEmail={sessionEmail}
+                        verified={verified}
+                        onVerified={refetch}
+                        onAdvance={next}
+                        onStartOver={startOver}
+                    />
+                )}
 
-            {!done && stepName === 'instruments' && <InstrumentsStep titleRef={titleRef} value={instruments} onChange={setInstruments} />}
+                {!done && stepName === 'instruments' && (
+                    <InstrumentsStep titleRef={titleRef} value={instruments} onChange={setInstruments} />
+                )}
 
-            {!done && stepName === 'mic' && (
-                <MicStep
-                    titleRef={titleRef}
-                    micState={micState}
-                    setMicState={setMicState}
-                    onContinueHeldChange={setMicHoldsContinue}
-                    onAdvance={next}
-                />
-            )}
+                {!done && stepName === 'mic' && (
+                    <MicStep
+                        titleRef={titleRef}
+                        micState={micState}
+                        setMicState={setMicState}
+                        onContinueHeldChange={setMicHoldsContinue}
+                        onAdvance={next}
+                    />
+                )}
 
-            {!done && stepName === 'about' && (
-                <AboutStep
-                    titleRef={titleRef}
-                    background={background}
-                    onBackgroundChange={setBackground}
-                    goal={goal}
-                    onGoalChange={setGoal}
-                    source={source}
-                    onSourceChange={setSource}
-                    sourceDetail={sourceDetail}
-                    onSourceDetailChange={setSourceDetail}
-                />
-            )}
+                {!done && stepName === 'about' && (
+                    <AboutStep
+                        titleRef={titleRef}
+                        background={background}
+                        onBackgroundChange={setBackground}
+                        goal={goal}
+                        onGoalChange={setGoal}
+                        source={source}
+                        onSourceChange={setSource}
+                        sourceDetail={sourceDetail}
+                        onSourceDetailChange={setSourceDetail}
+                    />
+                )}
 
-            {!done && stepName === 'plan' && (
-                <PlanStep
-                    titleRef={titleRef}
-                    plans={plans.sellable}
-                    freePlan={plans.byId('free') ?? plans.sellable[0]}
-                    billing={billing}
-                    onBillingChange={setBilling}
-                    tier={tier}
-                    onTierChange={setTier}
-                />
-            )}
+                {!done && stepName === 'plan' && (
+                    <PlanStep
+                        titleRef={titleRef}
+                        plans={plans.sellable}
+                        freePlan={plans.byId('free') ?? plans.sellable[0]}
+                        billing={billing}
+                        onBillingChange={setBilling}
+                        tier={tier}
+                        onTierChange={setTier}
+                    />
+                )}
 
-            {done && (
-                <DoneStep
-                    titleRef={titleRef}
-                    name={sessionName}
-                    destination={destination}
-                    betaPlanName={plans.beta.name}
-                    planLine={destination === 'beta' ? null : planLineFor(plans)}
-                    creating={firstMelody.creating}
-                    onRecordFirstMelody={recordFirstMelody}
-                    onFinish={leave}
-                />
-            )}
+                {done && (
+                    <DoneStep
+                        titleRef={titleRef}
+                        name={sessionName}
+                        destination={destination}
+                        betaPlanName={plans.beta.name}
+                        planLine={destination === 'beta' ? null : planLineFor(plans)}
+                        firstInstrument={firstInstrument}
+                        creating={firstMelody.creating}
+                        onRecordFirstMelody={recordFirstMelody}
+                        onFinish={leave}
+                    />
+                )}
+            </div>
 
             {/*
              * Phones stack the footer: the primary full width on top (its price-bearing label wraps
-             * rather than run past the card), the payment note under it, Back last. From sm up,
-             * Back sits left and the primary right, the note under the primary.
+             * rather than run past the card), the payment note under it, Back last. There the wrapper
+             * dissolves (display: contents), so the Continue block is the card's own child and can
+             * stick to the screen's bottom edge, over a fade, while a long step scrolls under it; Back
+             * stays in flow after the content. From sm up it is one row: Back left, the primary right,
+             * the note under the primary. Only the closing CTA pops: every step's button is flat.
              */}
             {!done && (showBack || showContinue) && (
-                <div className="grid grid-cols-1 gap-2 pt-3 sm:grid-cols-[auto_1fr] sm:items-center sm:gap-x-4">
+                <div className="max-sm:contents sm:grid sm:grid-cols-[auto_1fr] sm:items-center sm:gap-x-4 sm:pt-3">
+                    {showContinue && (
+                        <div
+                            className={[
+                                'flex flex-col gap-2 sm:col-start-2 sm:row-start-1 sm:items-end',
+                                'max-sm:sticky max-sm:bottom-0 max-sm:z-1 max-sm:-mx-5 max-sm:px-5 max-sm:pt-4 max-sm:pb-[max(1rem,env(safe-area-inset-bottom))] max-sm:bg-surface-container-lowest',
+                                "max-sm:before:absolute max-sm:before:inset-x-0 max-sm:before:-top-6 max-sm:before:h-6 max-sm:before:bg-linear-to-b max-sm:before:from-transparent max-sm:before:to-surface-container-lowest max-sm:before:pointer-events-none max-sm:before:content-['']",
+                            ].join(' ')}>
+                            <PrimaryButton size="lg" icon="arrow-right" emphasis="flat" onClick={next} disabled={startCheckout.isPending}>
+                                <span className="whitespace-normal text-center leading-tight">{ctaLabel}</span>
+                            </PrimaryButton>
+                            {paidChoice && (
+                                <p className="m-0 text-center font-body font-normal text-[12px] leading-[1.4] text-on-surface-variant sm:text-right">
+                                    You&apos;ll confirm on the next page. Cancel any time.
+                                </p>
+                            )}
+                        </div>
+                    )}
                     {showBack && (
-                        <div className="order-last flex justify-center sm:order-0 sm:col-start-1 sm:row-start-1 sm:justify-start">
+                        // On phones it tucks up under the Continue block's own bottom padding.
+                        <div
+                            className={`flex justify-center sm:col-start-1 sm:row-start-1 sm:justify-start ${showContinue ? 'max-sm:-mt-5' : ''}`}>
                             <TertiaryButton onClick={back}>
                                 <span className="inline-flex items-center gap-1.5">
                                     <Icon name="arrow-left" size={13} />
@@ -284,18 +313,6 @@ export default function OnboardingPage() {
                                 </span>
                             </TertiaryButton>
                         </div>
-                    )}
-                    {showContinue && (
-                        <div className="flex flex-col sm:col-start-2 sm:row-start-1 sm:items-end">
-                            <PrimaryButton icon="arrow-right" emphasis="pop" onClick={next} disabled={startCheckout.isPending}>
-                                <span className="whitespace-normal text-center leading-tight">{ctaLabel}</span>
-                            </PrimaryButton>
-                        </div>
-                    )}
-                    {paidChoice && (
-                        <p className="m-0 text-center font-body font-normal text-[12px] leading-[1.4] text-on-surface-variant sm:col-start-2 sm:text-right">
-                            You&apos;ll confirm on the next page. Cancel any time.
-                        </p>
                     )}
                 </div>
             )}

@@ -410,8 +410,9 @@ test.describe('onboarding', () => {
         await page.goto('/onboarding')
         await expect(page.getByRole('heading', { name: 'What will you record?' })).toBeFocused()
         await page.getByRole('button', { name: 'All instruments' }).click()
-        // Continue sits below the fold on a phone: reaching it scrolls the page down.
-        await page.getByRole('button', { name: 'Continue' }).scrollIntoViewIfNeeded()
+        // The step runs past the fold on a phone, and Continue sticks to the screen's bottom edge.
+        await expect(page.getByRole('button', { name: 'Continue' })).toBeInViewport()
+        await page.evaluate(() => window.scrollTo({ top: document.documentElement.scrollHeight }))
         expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(0)
         await page.getByRole('button', { name: 'Continue' }).click()
 
