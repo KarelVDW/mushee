@@ -1,14 +1,16 @@
 'use client'
 
+import { FieldFrame } from '@mushee/ui'
 import { type ReactNode, type RefObject, useId } from 'react'
 
 /**
  * Per-size spacing and type: `md` is the tempo popover's bpm field, `sm` the transpose
- * popover's ± stepper. The unit label never goes under the 11px floor.
+ * popover's ± stepper. The frame sets the height (--control-md, a button beside it the same);
+ * the unit label never goes under the 11px floor.
  */
 const FIELD_SIZES = {
-    md: { wrapper: 'gap-2', input: 'py-3 text-[16px]', unit: 'text-[13px]' },
-    sm: { wrapper: 'gap-1.5', input: 'w-8 py-2.5 text-[15px]', unit: 'text-[11px]' },
+    md: { wrapper: 'gap-2', input: 'self-stretch text-[16px]', unit: 'text-[13px]' },
+    sm: { wrapper: 'gap-1.5', input: 'w-8 self-stretch text-[15px]', unit: 'text-[11px]' },
 } as const
 
 interface UnitNumberFieldProps {
@@ -32,9 +34,11 @@ interface UnitNumberFieldProps {
 }
 
 /**
- * The editor popovers' numeric input: a filled field with its unit label and the primary
- * bottom stroke (DESIGN.md inputs), spin buttons hidden. A field that can't go negative asks
- * phones for the number pad. Presentational only.
+ * The editor popovers' numeric input, on the shared field frame (DESIGN.md inputs): the field
+ * fill with its unit label, no stroke at rest, and the primary stroke growing from the centre
+ * while it has focus. The number is set in the mono face, as every figure the editor reads out;
+ * spin buttons hidden. A field that can't go negative asks phones for the number pad.
+ * Presentational only.
  */
 export function UnitNumberField({
     value,
@@ -53,7 +57,7 @@ export function UnitNumberField({
     const sizes = FIELD_SIZES[size]
     const descriptionId = useId()
     return (
-        <div className={`relative flex items-center px-3 rounded-sm bg-surface-container-low ${sizes.wrapper} ${className ?? ''}`}>
+        <FieldFrame className={`flex items-center px-3 ${sizes.wrapper} ${className ?? ''}`}>
             {leading && (
                 <span className="flex items-center gap-1.5 text-on-surface" aria-hidden>
                     {leading}
@@ -71,7 +75,7 @@ export function UnitNumberField({
                 onBlur={onBlur}
                 aria-label={ariaLabel}
                 aria-describedby={unitDescription ? descriptionId : undefined}
-                className={`flex-1 min-w-0 ${sizes.input} bg-transparent border-0 outline-0 font-body font-medium leading-none text-on-surface [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none`}
+                className={`flex-1 min-w-0 ${sizes.input} bg-transparent border-0 outline-0 font-mono font-medium leading-none text-on-surface [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none`}
             />
             <span
                 aria-hidden={unitDescription ? true : undefined}
@@ -83,7 +87,6 @@ export function UnitNumberField({
                     {unitDescription}
                 </span>
             )}
-            <div className="absolute left-0 right-0 bottom-0 h-0.5 bg-primary-container" />
-        </div>
+        </FieldFrame>
     )
 }

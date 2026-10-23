@@ -30,7 +30,15 @@ const MAX_BPM = 300
 const TAP_RESET_MS = 2000
 const TAP_WINDOW = 8
 
-const COUNT_WORDS = ['', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve']
+/** The beat dot's kick on a tap: from half again its size back to rest, over the pad's 200ms flash. */
+const DOT_KICK: Keyframe[] = [{ transform: 'scale(1.6)' }, { transform: 'scale(1)' }]
+const DOT_KICK_TIMING: KeyframeAnimationOptions = { duration: 200, easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)' }
+
+function prefersReducedMotion(): boolean {
+    return typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+}
+
+const COUNT_WORDS =['', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve']
 
 /** How many beats a bar holds, in words: "two per bar in 6/8". */
 function beatsPerBarLabel(timeSignature: TimeSignature): string {
@@ -54,6 +62,7 @@ export function TempoPopover({
     lead,
 }: TempoPopoverProps) {
     const inputRef = useRef<HTMLInputElement>(null)
+    const dotRef = useRef<HTMLSpanElement>(null)
     const [taps, setTaps] = useState<number[]>([])
     const [draft, setDraft] = useState(String(Math.round(timeSignature.pulseBpmOf(initialBpm))))
     const [pulse, setPulse] = useState(0)
@@ -76,6 +85,9 @@ export function TempoPopover({
             return last && now - last > TAP_RESET_MS ? [now] : [...prev, now].slice(-TAP_WINDOW)
         })
         setPulse((p) => p + 1)
+        // The beat dot kicks with each tap and settles back (not under reduced motion, where the
+        // readout and its announcement carry the feedback).
+        if (!prefersReducedMotion()) dotRef.current?.animate?.(DOT_KICK, DOT_KICK_TIMING)
     }, [])
 
     const commit = useCallback(() => {
@@ -100,10 +112,19 @@ export function TempoPopover({
         if (tappedBpm) setDraft(String(tappedBpm))
     }, [tappedBpm])
 
-    // Announced as it changes (politely), and never part of the tap pad's name.
+    // Announced as it changes (politely), and never part of the tap pad's name. A sentence in the
+    // body face, the tapped number alone in the mono face.
+    const readoutText = tapReadout(tappedBpm, taps.length)
     const readout = (
-        <span aria-live="polite" className="font-mono font-medium text-[11px] leading-none text-on-surface-variant">
-            {tapReadout(tappedBpm, taps.length)}
+        <span aria-live="polite" className="font-body font-normal text-[12px] leading-none text-on-surface-variant">
+            {tappedBpm === null ? (
+                readoutText
+            ) : (
+                <>
+                    <span className="font-mono font-medium">{tappedBpm}</span>
+                    {readoutText.slice(String(tappedBpm).length)}
+                </>
+            )}
         </span>
     )
 
@@ -126,14 +147,14 @@ export function TempoPopover({
                     type="button"
                     onClick={handleTap}
                     className="relative overflow-hidden w-full flex flex-col gap-1.5 px-4 py-5.5 rounded-md text-left cursor-pointer border-0 bg-primary-soft text-on-primary-soft focus-ring">
-                    <span className="flex items-center gap-2 font-label font-semibold text-[11px] leading-none uppercase tracking-[0.14em] text-on-surface-variant">
-                        <span
-                            className="block w-2 h-2 rounded-full bg-primary-container transition-transform duration-120 ease-solkey"
-                            style={{ transform: `scale(${1 + (pulse % 2) * 0.6})` }}
-                        />
+                    {/* Each tap flashes the pad (primary_container fading back to primary_soft), re-keyed so
+                        every tap replays it; the global reduced-motion rule makes it a no-op there. */}
+                    {pulse > 0 && <span key={pulse} aria-hidden className="pointer-events-none absolute inset-0 animate-tap-flash motion-reduce:hidden" />}
+                    <span className="relative flex items-center gap-2 font-label font-semibold text-[11px] leading-none uppercase tracking-[0.14em] text-on-surface-variant">
+                        <span ref={dotRef} className="block w-2 h-2 rounded-full bg-primary-container" />
                         Tap along
                     </span>
-                    <span className="font-body font-medium text-[15px] leading-[1.3]">
+                    <span className="relative font-body font-medium text-[15px] leading-[1.3] text-balance">
                         {/* Phones have no spacebar: each pointer gets the instruction it can follow. */}
                         <span className="pointer-coarse:hidden">Click here or press the spacebar on every beat</span>
                         <span className="hidden pointer-coarse:inline">Tap here on every beat</span>
