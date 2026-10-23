@@ -429,13 +429,14 @@ describe('NoteToolStates', () => {
         const { manipulator, notes } = setup(undefined, 2)
         manipulator.select(notes[4]) // bar 2's first rest
         const lone = new NoteToolStates(manipulator)
-        expect(lone.accidental).toMatchObject({ disabled: true, reason: REST_HAS_NO_PITCH })
+        // Nothing pressed either: a rest has no accidental, natural included.
+        expect(lone.accidental).toMatchObject({ disabled: true, reason: REST_HAS_NO_PITCH, value: null })
         expect(lone.pitch).toEqual({ active: false, disabled: false })
 
         manipulator.extendSelectionTo(notes[5])
         const run = new NoteToolStates(manipulator)
         expect(run.pitch).toMatchObject({ disabled: true, reason: RESTS_HAVE_NO_PITCH })
-        expect(run.accidental).toMatchObject({ disabled: true, reason: RESTS_HAVE_NO_PITCH })
+        expect(run.accidental).toMatchObject({ disabled: true, reason: RESTS_HAVE_NO_PITCH, value: null })
         // Simplify still acts on a selection of rests (a run narrows it, there's simply nothing to respell).
         expect(run.simplify).toEqual({ active: false, disabled: false })
 

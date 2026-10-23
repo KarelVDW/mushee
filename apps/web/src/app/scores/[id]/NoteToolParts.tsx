@@ -121,10 +121,14 @@ export class NoteToolStates {
         return this.manipulator.selectedNotes.every((note) => note.isRest)
     }
 
-    /** Off on rests alone, which have no pitch to sharpen: a lone rest says how to make it a note. */
+    /**
+     * Off on rests alone, which have no pitch to sharpen: a lone rest says how to make it a note,
+     * and — like Rest on the first, empty score — presses nothing (a rest has no accidental, so
+     * a pressed natural would be a choice nobody made).
+     */
     get accidental(): PickerState<Accidental | undefined> {
-        const value = this.manipulator.selectionAccidental
         const off = this.needsNote() ?? (this.allRests ? this.restsHaveNoPitch() : null)
+        const value = this.allRests ? null : this.manipulator.selectionAccidental
         return { ...(off ?? { active: false, disabled: false }), value }
     }
 
