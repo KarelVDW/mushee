@@ -283,8 +283,9 @@ Phones get the same design language, restructured — never a shrunken desktop. 
 
 - Default: solid `surface` (#f6f6f6) — flat, never gradients.
 - The editor canvas: pure `#ffffff`, optionally with a 40px-grid `manuscript-canvas` dot texture at 15% `outline_variant`.
-- The hero and final-CTA sections may carry a single oversized soft blur — cyan or magenta at low opacity, blurred at 120px — pinned to one corner. This is the **only** place a colored haze is permitted, and it's used quietly.
-- **Marketing-emphasis surface (dark inversion).** Exactly one element per marketing surface may invert to `on-surface` (#2d2f2f) fill with `surface` text — used today for the "most picked" pricing tier. This is the only sanctioned dark surface in the system and it lives **strictly on copy / sales / advertising surfaces** (landing, pricing, in-product upsell cards). Never on app chrome or the editor.
+- **Haze** (`Haze`, `src/components/marketing/Haze.tsx`): a radial gradient (no blur filter) of `primary_container` at low opacity (20% at its centre, 8% halfway, then clear), pinned to one edge or corner, its fade completing before any edge the section shares with another band — never a visible clip line. Allowed in the hero, the final CTA and the auth form column (clipped to it). This is the **only** coloured haze, and it's used quietly.
+- The auth brand panel (lg+) carries the static demo sheet (`DemoSheetStill`, aria-hidden, no motion) between the wordmark and the headline.
+- **Marketing-emphasis surface (dark inversion).** Exactly one element per marketing surface may invert to `on-surface` (#2d2f2f) fill with `surface` text — used today for the "most picked" pricing tier. This is the only sanctioned dark surface in the system and it lives **strictly on copy / sales / advertising surfaces** (landing, pricing, in-product upsell cards). Never on app chrome or the editor. The dark marketing inversion carries no offset shadow. The pop belongs to a hero or closing CTA. On it the focus ring turns `primary_container` (`--focus-ring-color`).
 - **Forbidden:** purple/blue gradients, mesh gradients, hand-drawn illustrations, photographic full-bleeds in chrome.
 
 ### Animation
@@ -352,30 +353,29 @@ Stacking uses the named layers in `packages/ui/src/theme.css`, lowest first: `--
 Almost never. The complete border vocabulary:
 
 1. **Active-tab underline** — `border-bottom: 3px solid var(--color-primary-container)`.
-2. **Input field bottom stroke** — `2px` `primary` (`#00666d`), animates 0→100% width on focus. Not the neon cyan: it fails the 3:1 non-text contrast a focus indicator needs on the `surface_container_low` input fill.
-3. **Ghost border** — `1px solid rgba(172, 173, 173, 0.15)` on a few accessibility-critical containers (e.g. footer top edge).
+2. **Input field bottom stroke** — `2px`: `primary` on focus (over everything); `error`, full width, at rest while invalid; never a resting stroke. The focus stroke grows from the centre to full width (300ms) and is `primary` (`#00666d`), not the neon cyan: the cyan fails the 3:1 non-text contrast a focus indicator needs on the `surface_container_low` input fill.
+3. **Ghost border** — `outline_variant` at 15% (`1px solid rgba(172, 173, 173, 0.15)`) on a few accessibility-critical containers (e.g. the footer's top edge). The ghost border also forms the overlay ring (18%, drawn as the first layer of `--shadow-overlay`) and edges a score preview inside a white panel.
 4. **List-row left accent stripe** on hover — `4px` cyan, opacity 0→1.
+5. **The record ring** — a 3px `record` ring on Record (Play has no ring at rest): round the white idle button, and round the red fill while live.
 
 That's it. No 1px greys, no dashed dividers, no border-only buttons.
 
 ### Shadows — atmospheric, never black
 
-- **Tonal lift** (`--shadow-tonal`): `0 0 24px 0 rgba(45,47,47,0.06)`. Wrapping a `surface_container_lowest` card with this on a `surface` background gives the natural lift the system relies on.
-- **Editorial** (`--shadow-editorial`): `0 0 19px 0 rgba(45,47,47,0.06)`. The auth-modal lift — slightly tighter blur.
-- **Magenta offset** (`--shadow-offset-3`, `--shadow-offset-5`): `3px 3px 0 0 #ff2079` and `5px 5px 0 0 #ff2079`. Reserved for the hero CTA — the most opinionated move in the system.
-- **Cyan offset** (`--shadow-cyan-3`): variant for special "pulse" moments.
+Three tiers, each a token in `packages/ui/src/theme.css`:
 
-**Never use `#000000` for shadows.** Always tint with `on_surface` (`#2d2f2f`) at 6% opacity.
+- **Raised** (`--shadow-raised`, the `.tonal-layer-glow` class; `--shadow-tonal` is its alias): `0 0 24px 0 rgb(45 47 47 / 0.06)` — resting cards and wells: the white capsule wells of the dock and header, white chips and transport circles on the chrome, raised secondary buttons, cards on the page tone. A few resting cards (library rows, the auth card) still take its slightly tighter twin, `--shadow-editorial` (`.editorial-shadow`, `0 0 19px 0` at 6%). Never on anything that floats.
+- **Overlay** (`--shadow-overlay`, `.overlay-shadow` / `shadow-overlay`): `0 0 0 1px rgb(172 173 173 / 0.18), 0 1px 2px rgb(45 47 47 / 0.05), 0 6px 28px -4px rgb(45 47 47 / 0.12)` — anything that floats: popovers, menus, tooltips, sheets, toasts, dialogs, the selection bar (and the floating browser-support and desktop cookie cards). Its first layer is the ghost border drawn as a ring, so a white panel keeps its edge over the white canvas without taking layout space.
+- **Pop** (`--shadow-offset-3` → `--shadow-offset-5`): `3px 3px 0 0 #ff2079` growing to `5px 5px 0 0` on hover. Reserved for the hero CTA — the most opinionated move in the system (see the signature interaction). `--shadow-cyan-3` is its cyan variant, kept for special moments.
+
+Tinted rgb(45 47 47 / a), never black: raised at 6%, overlay at 5% and 12% over its 18% `outline_variant` ring. Never `#000000` or `rgba(0, 0, 0, …)`.
 
 ### Transparency & blur
 
-- **Glassmorphism** (`.glass-panel`: `surface_container_lowest` at 85% opacity + `backdrop-filter: blur(12px)`) is reserved for **dialog panels**, which float over the scrim. No other use.
-- **A glass panel never renders inside another backdrop-filtered surface — blur doesn't nest.** A panel opened inside the editor's header or dock would sample only that bar and let the staff lines run across its text. So popovers, menus, tooltips and phone sheets use the **opaque card fill** (`surface_container_lowest` + `editorial-shadow`), and anything opened from the header or dock either portals out to the page (phone sheets, tooltips) or sits on that opaque fill. The header's and dock's own blur lives on an `aria-hidden` backdrop layer behind their controls, so a panel opened from them still overlays the real page.
-- **Phone sheets are opaque white**, never glass (see `../DESIGN.md` §4b).
-- **Banners** (cookie, browser support) are solid `surface_container_lowest` with the tonal glow or editorial shadow — never glass. On phones they never cover a page's primary CTA: the cookie banner is a compact bottom sheet with the page padded underneath it, and the browser-support banner sits in the page flow under the nav rather than over it.
-- The **editor tool dock is _not_ glass and never floats**: it's a docked bar on the chrome mirror tone (`surface_container_low/85` + heavy backdrop blur), in-flow along the editor's bottom edge. Its tool groups sit in white capsule wells (see the sanctuary rule).
-- The dialog scrim is `bg-on-surface/40 backdrop-blur-xs` (4px) — soft charcoal at 40% with a light blur.
-- The sticky top nav uses `surface_container_low/85` + `backdrop-blur-xl` — a barely-there glassy version of the sidebar tone.
+- **Glass is retired.** Dialogs are opaque surface_container_lowest + overlay shadow over the scrim. No surface is a translucent panel: 85% white over the scrim rendered greyer than the page, and blur doesn't nest — a panel opened inside the editor's header or dock would sample only that bar and let the staff lines run across its text.
+- **Opaque everywhere text sits:** dialogs, popovers, menus, tooltips, phone sheets, toasts and the selection bar are the opaque card (`surface_container_lowest` + `--shadow-overlay`; the selection bar on `surface_container_high`). Anything opened from the header or dock either portals out to the page (phone sheets, tooltips) or sits on that opaque fill.
+- **Blur lives only on the scrim, the sticky navs and the editor header/dock backdrops.** The dialog scrim is `bg-on-surface/40 backdrop-blur-xs` (4px) — soft charcoal at 40% with a light blur. The sticky top nav (app and marketing) uses `surface_container_low/85` + `backdrop-blur-xl`. The editor header and the **tool dock** take the same chrome tone and blur on an `aria-hidden` backdrop layer behind their controls, so a panel opened from them still overlays the real page; the dock is _not_ glass and never floats — it's a docked bar, in-flow along the editor's bottom edge, its tool groups in white capsule wells (see the sanctuary rule).
+- **Banners** (cookie, browser support) are solid `surface_container_lowest` — never glass. They never cover a page's primary CTA: on phones the cookie banner is a compact bottom sheet with the page padded underneath it, and on desktop a 26rem card in the bottom-right corner. On document-flow pages the browser-support banner sits in the page flow above the nav; on the editor and library the browser-support banner sits above the dock on desktop and under the header on phones, never over the transport or dock.
 
 ### Corner radii
 

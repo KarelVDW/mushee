@@ -360,7 +360,7 @@ function RestIcon() {
 }
 
 // Upward popover shared by the dock's clef / key / tempo / More controls — on the
-// opaque card (surface-container-lowest + editorial shadow), never glass: blur
+// opaque card (surface-container-lowest + overlay shadow), never glass: blur
 // doesn't nest inside the dock's own backdrop blur. Production positions these
 // `bottom-[calc(100%+0.75rem)] right-0` so they can never hang over the dock; on
 // mobile they become sheets instead.
@@ -396,7 +396,7 @@ function DockPopover({ ariaLabel, onDismiss, width = 280, children }) {
                 width,
                 zIndex: 50,
                 background: 'var(--color-surface-container-lowest)',
-                boxShadow: 'var(--shadow-editorial)',
+                boxShadow: 'var(--shadow-overlay)',
                 display: 'flex',
                 flexDirection: 'column',
                 gap: 12,
@@ -738,7 +738,7 @@ function ExportMenu() {
                         padding: 16,
                         zIndex: 50,
                         background: 'var(--color-surface-container-lowest)',
-                        boxShadow: 'var(--shadow-editorial)',
+                        boxShadow: 'var(--shadow-overlay)',
                         display: 'flex',
                         flexDirection: 'column',
                         gap: 8,
@@ -1143,7 +1143,7 @@ function MicModeGuideDialog({ onConfirm, onClose, onSkip = onClose }) {
 }
 
 // Reminder toast for returning iPhone users — fired at take start (production:
-// Toaster + showToast with a per-toast `icon`). Auto-dismisses; glass surface.
+// Toaster + showToast with a per-toast `icon`). Auto-dismisses; an opaque card.
 function MicReminderToast({ onDone }) {
     React.useEffect(() => {
         const t = setTimeout(onDone, 5200)
@@ -1152,8 +1152,8 @@ function MicReminderToast({ onDone }) {
     return (
         <div
             role="status"
-            className="glass-panel"
             style={{
+                background: 'var(--color-surface-container-lowest)',
                 position: 'absolute',
                 bottom: 96,
                 left: '50%',
@@ -1163,12 +1163,23 @@ function MicReminderToast({ onDone }) {
                 display: 'flex',
                 alignItems: 'flex-start',
                 gap: 12,
-                padding: '12px 16px',
+                padding: '10px 16px 10px 12px',
                 borderRadius: 12,
-                boxShadow: 'var(--shadow-tonal)',
+                boxShadow: 'var(--shadow-overlay)',
             }}>
-            <span style={{ color: 'var(--color-primary)', flexShrink: 0, marginTop: 1 }}>
-                <Icon name="mic" size={18} />
+            <span
+                style={{
+                    width: 28,
+                    height: 28,
+                    borderRadius: 9999,
+                    flexShrink: 0,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    background: 'var(--color-primary-soft)',
+                    color: 'var(--color-on-primary-soft)',
+                }}>
+                <Icon name="mic" size={16} />
             </span>
             <span style={{ font: '400 13px/1.45 var(--font-body)', color: 'var(--color-on-surface)' }}>
                 Recording on iPhone: keep Mic Mode on Wide Spectrum (Control Center) so every note comes through.

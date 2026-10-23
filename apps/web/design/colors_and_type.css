@@ -178,8 +178,13 @@
 
     /* ───────────────── Shadows — atmospheric, never black ───────────────── */
 
-    --shadow-tonal: 0 0 24px 0 rgba(45, 47, 47, 0.06); /* The standard "lift" */
-    --shadow-editorial: 0 0 19px 0 rgba(45, 47, 47, 0.06); /* Auth panels */
+    /* Three tiers: raised (resting cards and wells), overlay (anything that floats:
+       popovers, menus, tooltips, sheets, toasts, dialogs, the selection bar — its first
+       layer is the ghost border drawn as a ring) and pop (the magenta offset). */
+    --shadow-raised: 0 0 24px 0 rgb(45 47 47 / 0.06);
+    --shadow-overlay: 0 0 0 1px rgb(172 173 173 / 0.18), 0 1px 2px rgb(45 47 47 / 0.05), 0 6px 28px -4px rgb(45 47 47 / 0.12);
+    --shadow-tonal: var(--shadow-raised); /* alias */
+    --shadow-editorial: 0 0 19px 0 rgba(45, 47, 47, 0.06); /* a few resting cards: library rows, the auth card */
     --shadow-offset-3: 3px 3px 0 0 var(--color-secondary-container); /* Default pop */
     --shadow-offset-5: 5px 5px 0 0 var(--color-secondary-container); /* Hover pop */
     --shadow-cyan-3: 3px 3px 0 0 var(--color-primary-container);
@@ -342,15 +347,14 @@ p {
 
 /* Effect utilities — see DESIGN.md */
 .tonal-layer-glow {
-    box-shadow: var(--shadow-tonal);
+    box-shadow: var(--shadow-raised);
 }
 .editorial-shadow {
     box-shadow: var(--shadow-editorial);
 }
-.glass-panel {
-    background: rgba(255, 255, 255, 0.85);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
+/* Floating surfaces: the opaque card. Glass is retired — no translucent panels. */
+.overlay-shadow {
+    box-shadow: var(--shadow-overlay);
 }
 .ghost-border {
     border: var(--ghost-border);

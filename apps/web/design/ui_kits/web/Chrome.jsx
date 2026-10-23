@@ -178,10 +178,10 @@ function DialogPanel({ title, subtitle, eyebrow, children, footer, onClose, widt
             <div
                 role="dialog"
                 aria-modal="true"
-                className="glass-panel"
                 style={{
+                    background: 'var(--color-surface-container-lowest)',
                     borderRadius: 12,
-                    boxShadow: 'var(--shadow-tonal)',
+                    boxShadow: 'var(--shadow-overlay)',
                     width,
                     maxWidth: '90vw',
                     maxHeight: '90vh',
