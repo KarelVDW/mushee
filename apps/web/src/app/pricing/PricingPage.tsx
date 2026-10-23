@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { FaqList } from '@/components/marketing/FaqList'
 import { GetStartedButton } from '@/components/marketing/GetStartedButton'
 import { MarketingNav } from '@/components/marketing/MarketingNav'
+import { SectionHeading } from '@/components/marketing/SectionHeading'
 import { Container, Eyebrow, Footer } from '@/components/ui'
 import { BETA_MODE } from '@/lib/plans'
 
@@ -40,21 +41,29 @@ export function PricingPage() {
                 <PricingFaq />
                 <section className="py-16 sm:py-20">
                     <Container width="marketing">
-                        <div className="max-w-190 mx-auto text-center flex flex-col gap-5 items-center">
-                            <h2 className="font-display font-bold text-[32px] sm:text-[44px] leading-none tracking-[-0.03em] text-on-surface m-0">
-                                {/* Sketch and upgrades aren't on offer in the beta; the closing line names neither. */}
-                                {BETA_MODE ? (
-                                    <>
-                                        Join the beta. <em className="font-serif font-normal">Get that melody on the page.</em>
-                                    </>
-                                ) : (
-                                    <>
-                                        Start with Sketch. <em className="font-serif font-normal">Upgrade when your ideas do.</em>
-                                    </>
-                                )}
-                            </h2>
+                        <div className="max-w-190 mx-auto flex flex-col items-center">
+                            {/* Sketch and upgrades aren't on offer in the beta; the closing line names neither. The italic clause starts its own line. */}
+                            <SectionHeading
+                                align="center"
+                                className="mb-9"
+                                title={
+                                    BETA_MODE ? (
+                                        <>
+                                            Join the beta.
+                                            <br />
+                                            <em className="font-serif font-normal">Get that melody on the page.</em>
+                                        </>
+                                    ) : (
+                                        <>
+                                            Start with Sketch.
+                                            <br />
+                                            <em className="font-serif font-normal">Upgrade when your ideas do.</em>
+                                        </>
+                                    )
+                                }
+                            />
                             <GetStartedButton location="pricing-footer" size="lg" emphasis="pop" />
-                            <Link href="/contact" className="font-body font-normal text-[14px] text-on-surface-variant underline">
+                            <Link href="/contact" className="mt-5 font-body font-normal text-[14px] text-on-surface-variant underline">
                                 Questions about a plan? Talk to us.
                             </Link>
                         </div>
@@ -71,12 +80,8 @@ function PricingFaq() {
     return (
         <section aria-labelledby="pricing-faq" className="py-14 sm:py-20 bg-surface-container-lowest">
             <Container width="marketing">
+                <SectionHeading eyebrow="Questions" title="Questions, answered." id="pricing-faq" />
                 <div className="max-w-190">
-                    <h2
-                        id="pricing-faq"
-                        className="font-display font-bold text-[28px] sm:text-[36px] leading-none tracking-[-0.03em] text-on-surface m-0 mb-10">
-                        Questions, answered.
-                    </h2>
                     <FaqList items={PRICING_FAQ_SHOWN} tone="low" />
                 </div>
             </Container>

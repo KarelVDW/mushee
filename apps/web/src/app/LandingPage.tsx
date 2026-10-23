@@ -1,6 +1,7 @@
 import { FaqList } from '@/components/marketing/FaqList'
 import { GetStartedButton, GetStartedNote } from '@/components/marketing/GetStartedButton'
 import { MarketingNav } from '@/components/marketing/MarketingNav'
+import { SectionHeading } from '@/components/marketing/SectionHeading'
 import { Container, Eyebrow, Footer, Icon, type IconName } from '@/components/ui'
 import { BETA_MODE } from '@/lib/plans'
 
@@ -119,12 +120,7 @@ function HowItWorks() {
     return (
         <section id="how" className="py-14 sm:py-22">
             <Container width="marketing">
-                <div className="mb-12">
-                    <Eyebrow className="text-primary">How it works</Eyebrow>
-                    <h2 className="font-display font-bold text-[32px] sm:text-[48px] leading-none tracking-[-0.03em] text-on-surface mt-3 mb-0 max-w-160">
-                        From melody to sheet music in one go.
-                    </h2>
-                </div>
+                <SectionHeading eyebrow="How it works" title="From melody to sheet music in one go." />
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                     {HOW_STEPS.map(({ num, title, body }) => (
                         <div key={num} className="flex flex-col gap-3">
@@ -145,12 +141,11 @@ function FeatureGrid() {
     return (
         <section id="features" className="py-14 sm:py-22 bg-surface-container-lowest">
             <Container width="marketing">
-                <h2 className="font-display font-bold text-[32px] sm:text-[48px] leading-none tracking-[-0.03em] text-on-surface m-0 mb-3">
-                    Simple tools, real notation.
-                </h2>
-                <p className="font-body font-normal text-[16px] leading-normal text-on-surface-variant max-w-140 m-0 mb-12">
-                    Everything you need to catch an idea before it evaporates.
-                </p>
+                <SectionHeading
+                    eyebrow="Features"
+                    title="Simple tools, real notation."
+                    sub="Everything you need to catch an idea before it evaporates."
+                />
                 {/* Phones: icon-left rows, so the six features stay a short scroll; from sm up, stacked cards. */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                     {FEATURES.map(({ icon, title, body }) => (
@@ -179,12 +174,8 @@ function GoodToKnow() {
     return (
         <section id="faq" aria-labelledby="faq-title" className="py-14 sm:py-22">
             <Container width="marketing">
+                <SectionHeading eyebrow="Questions" title="Good to know." id="faq-title" />
                 <div className="max-w-190">
-                    <h2
-                        id="faq-title"
-                        className="font-display font-bold text-[32px] sm:text-[48px] leading-none tracking-[-0.03em] text-on-surface m-0 mb-10">
-                        Good to know.
-                    </h2>
                     <FaqList items={LANDING_FAQ_SHOWN} />
                 </div>
             </Container>
@@ -197,18 +188,21 @@ function FinalCTA() {
         <section className="py-16 sm:py-24 relative overflow-hidden">
             <div className="absolute -bottom-[30%] -right-[5%] w-[540px] h-[540px] rounded-full bg-primary-container/[0.18] blur-[120px] pointer-events-none" />
             <Container width="marketing" className="relative z-2">
-                <div className="max-w-190 mx-auto text-center flex flex-col gap-5 items-center">
-                    <h2 className="font-display font-bold text-[32px] sm:text-[48px] leading-none tracking-[-0.03em] text-on-surface m-0">
-                        That melody in your head?
-                        <br />
-                        <em className="font-serif font-normal">One recording is all it takes.</em>
-                    </h2>
-                    <p className="font-body font-normal text-[17px] leading-normal text-on-surface-variant m-0 max-w-130">
-                        Sign up now and get it on paper before it slips away.
-                    </p>
-                    <div className="mt-2">
-                        <GetStartedButton location="footer" size="lg" emphasis="pop" />
-                    </div>
+                {/* The closing statement: no eyebrow, and its CTA follows at the hero's 36px. */}
+                <div className="max-w-190 mx-auto flex flex-col items-center">
+                    <SectionHeading
+                        align="center"
+                        className="mb-9"
+                        title={
+                            <>
+                                That melody in your head?
+                                <br />
+                                <em className="font-serif font-normal">One recording is all it takes.</em>
+                            </>
+                        }
+                        sub="Sign up now and get it on paper before it slips away."
+                    />
+                    <GetStartedButton location="footer" size="lg" emphasis="pop" />
                 </div>
             </Container>
         </section>

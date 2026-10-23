@@ -4,7 +4,8 @@ import { useState } from 'react'
 
 import { settingsTabPath } from '@/app/settings/settingsTabs'
 import { GetStartedButton } from '@/components/marketing/GetStartedButton'
-import { Badge, Container, Eyebrow, Icon, PrimaryButton, SecondaryButton } from '@/components/ui'
+import { SectionHeading } from '@/components/marketing/SectionHeading'
+import { Badge, Container, Icon, PrimaryButton, SecondaryButton } from '@/components/ui'
 import { useSession } from '@/lib/auth-client'
 import { type Currency, formatMoney } from '@/lib/currency'
 import {
@@ -43,16 +44,12 @@ export function Pricing({ ctaLocation, intro = true }: PricingProps) {
         <section id="pricing" className={intro ? 'py-14 sm:py-22' : 'pt-10 pb-14 sm:pt-12 sm:pb-22'}>
             <Container width="marketing">
                 {intro && (
-                    <div className="mb-12 text-center">
-                        <Eyebrow className="text-primary">Pricing</Eyebrow>
-                        <h2 className="font-display font-bold text-[32px] sm:text-[48px] leading-none tracking-[-0.03em] text-on-surface mt-3 mx-auto mb-0">
-                            Free to start. Pay only for more recording time.
-                        </h2>
-                        <p className="font-body font-normal text-[15px] leading-normal text-on-surface-variant mt-4 max-w-140 mx-auto">
-                            Every plan gets the full editor, recording that writes the notes for you, and playback. The plans differ in how
-                            much you can record each day — and Sketch holds up to five scores.
-                        </p>
-                    </div>
+                    <SectionHeading
+                        eyebrow="Pricing"
+                        align="center"
+                        title="Free to start. Pay only for more recording time."
+                        sub="Every plan gets the full editor, recording that writes the notes for you, and playback. The plans differ in how much you can record each day — and Sketch holds up to five scores."
+                    />
                 )}
 
                 <TierCards currency={currency} ctaLocation={ctaLocation} />
@@ -77,15 +74,15 @@ export function Pricing({ ctaLocation, intro = true }: PricingProps) {
 export function BetaPricing() {
     return (
         <section id="pricing" className="py-14 sm:py-22">
-            <Container width="marketing" className="text-center">
-                <Eyebrow className="text-primary">Pricing</Eyebrow>
-                <h2 className="font-display font-bold text-[32px] sm:text-[48px] leading-none tracking-[-0.03em] text-on-surface mt-3 mb-0">
-                    Free while the beta runs.
-                </h2>
-                <p className="font-body font-normal text-[15px] leading-normal text-on-surface-variant mt-4 mb-0 max-w-140 mx-auto">
-                    Every beta account gets the same plan: the full editor, recording that writes the notes for you, playback, and 30
-                    minutes of recording a day — no card, no charge. Paid plans arrive at launch.
-                </p>
+            <Container width="marketing">
+                {/* Nothing follows the heading, so it takes no space under it. */}
+                <SectionHeading
+                    eyebrow="Pricing"
+                    align="center"
+                    className="mb-0"
+                    title="Free while the beta runs."
+                    sub="Every beta account gets the same plan: the full editor, recording that writes the notes for you, playback, and 30 minutes of recording a day — no card, no charge. Paid plans arrive at launch."
+                />
             </Container>
         </section>
     )
