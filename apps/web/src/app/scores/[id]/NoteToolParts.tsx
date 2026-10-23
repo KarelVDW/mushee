@@ -3,6 +3,7 @@
 import { Glyph } from '@mushee/notation/components'
 import { Bravura } from '@mushee/notation/engraving/Bravura'
 import { TUPLET_NUMBER_SCALE } from '@mushee/notation/engraving/constants'
+import { GLYPH_SCALE } from '@mushee/notation/engraving/GlyphScale'
 import { type Accidental, CLEF_DEFS, Duration, type DurationType } from '@mushee/notation/model'
 
 import { LENGTH_NEEDS_ONE_NOTE } from './commands'
@@ -219,10 +220,15 @@ export class ScoreSettingsWords {
 
 // --- Note-value glyphs ---
 
-const ICON_STEM_HEIGHT = 22
-/** Baseline of the notehead in the icon's 30-unit-tall view box. */
-const ICON_NOTE_Y = 26
-const ICON_VIEW_HEIGHT = 30
+export const ICON_STEM_HEIGHT = 22
+/** Baseline of the notehead in the icon's view box, before the glyph is centred on its ink. */
+export const ICON_NOTE_Y = 26
+/** The icon's view-box height: room under the notehead at ICON_NOTE_Y, so no head is sliced flat. */
+export const ICON_VIEW_HEIGHT = 32
+/** Half a notehead's height: Bravura's heads span ±180 outline units, GLYPH_SCALE layout units each (≈ 5.05). */
+export const ICON_HEAD_HALF = 180 * GLYPH_SCALE
+/** CSS px per view-box unit: the 30-unit view drew at 28px, and the taller view keeps that scale. */
+const ICON_PX_PER_UNIT = 28 / 30
 
 /** How far a duration's glyph reaches to the right of its notehead's left edge (layout units). */
 function glyphExtent(type: DurationType): number {
@@ -238,25 +244,78 @@ function glyphExtent(type: DurationType): number {
  */
 const ICON_VIEW_WIDTH = Math.ceil(Math.max(...DURATION_TYPES.map(glyphExtent)) + 2)
 
-/** A note value drawn as notation — notehead, stem and flag — 28px tall, centred in its box. */
+/**
+ * Where a note value's icon draws in its view box: the head, stem and flag laid out from the
+ * notehead's baseline, then moved as one so their ink box — stem top (or, for the stemless
+ * whole note, head top) to head bottom — sits centred in the view. The whole note lifts to the
+ * middle; the stemmed values move by a unit or two.
+ */
+export class DurationIconLayout {
+    constructor(
+        readonly type: DurationType,
+        readonly dotted = false,
+    ) {}
+
+    get hasStem(): boolean {
+        return this.type !== 'w'
+    }
+
+    /** The ink's top before centring: the stem's tip, or the whole note's head. */
+    get inkTop(): number {
+        return this.hasStem ? ICON_NOTE_Y - ICON_STEM_HEIGHT : ICON_NOTE_Y - ICON_HEAD_HALF
+    }
+
+    /** The ink's bottom before centring: the notehead's lowest point. */
+    get inkBottom(): number {
+        return ICON_NOTE_Y + ICON_HEAD_HALF
+    }
+
+    /** How far the drawing moves down (negative: up) to centre its ink in the view. */
+    get offsetY(): number {
+        return ICON_VIEW_HEIGHT / 2 - (this.inkTop + this.inkBottom) / 2
+    }
+
+    /** The gap between the stem and the augmentation dot. */
+    get dotGap(): number {
+        return this.dotted ? 6 : 0
+    }
+
+    get viewWidth(): number {
+        return ICON_VIEW_WIDTH + this.dotGap
+    }
+
+    /** The notehead's left edge, so the head and flag sit centred across the view. */
+    get noteX(): number {
+        return (this.viewWidth - glyphExtent(this.type) - this.dotGap) / 2
+    }
+}
+
+/**
+ * A note value drawn as notation — notehead, stem and flag — at 28px per 30 view units,
+ * centred in its box on its ink.
+ */
 export function DurationIcon({ dur, dotted = false }: { dur: DurationType; dotted?: boolean }) {
+    const layout = new DurationIconLayout(dur, dotted)
     const duration = new Duration({ type: dur })
     const noteGlyph = duration.noteheadGlyph
     const flagName = duration.flagGlyph('up')
-    const hasStem = dur !== 'w'
-    const nhWidth = Bravura.width(noteGlyph)
-    const dotGap = dotted ? 6 : 0
-    const viewWidth = ICON_VIEW_WIDTH + dotGap
-    const noteX = (viewWidth - glyphExtent(dur) - dotGap) / 2
-    const stemX = noteX + nhWidth
+    const { noteX, viewWidth, dotGap } = layout
+    const stemX = noteX + Bravura.width(noteGlyph)
     const stemY2 = ICON_NOTE_Y - ICON_STEM_HEIGHT
     return (
-        <svg width={(28 * viewWidth) / ICON_VIEW_HEIGHT} height={28} viewBox={`0 0 ${viewWidth} ${ICON_VIEW_HEIGHT}`} aria-hidden>
-            {hasStem && <line x1={stemX} y1={ICON_NOTE_Y} x2={stemX} y2={stemY2} stroke="currentColor" strokeWidth={1.2} />}
-            {flagName && <Glyph name={flagName} x={stemX} y={stemY2} fill="currentColor" />}
-            <Glyph name={noteGlyph} x={noteX} y={ICON_NOTE_Y} fill="currentColor" />
-            {/* The augmentation dot: a drawn mark beside the head, never a "·" character. */}
-            {dotted && <circle cx={stemX + dotGap} cy={ICON_NOTE_Y - 2} r={1.9} fill="currentColor" />}
+        <svg
+            width={viewWidth * ICON_PX_PER_UNIT}
+            height={ICON_VIEW_HEIGHT * ICON_PX_PER_UNIT}
+            viewBox={`0 0 ${viewWidth} ${ICON_VIEW_HEIGHT}`}
+            overflow="visible"
+            aria-hidden>
+            <g transform={`translate(0 ${layout.offsetY})`}>
+                {layout.hasStem && <line x1={stemX} y1={ICON_NOTE_Y} x2={stemX} y2={stemY2} stroke="currentColor" strokeWidth={1.2} />}
+                {flagName && <Glyph name={flagName} x={stemX} y={stemY2} fill="currentColor" />}
+                <Glyph name={noteGlyph} x={noteX} y={ICON_NOTE_Y} fill="currentColor" />
+                {/* The augmentation dot: a drawn mark beside the head, never a "·" character. */}
+                {dotted && <circle cx={stemX + dotGap} cy={ICON_NOTE_Y - 2} r={1.9} fill="currentColor" />}
+            </g>
         </svg>
     )
 }
