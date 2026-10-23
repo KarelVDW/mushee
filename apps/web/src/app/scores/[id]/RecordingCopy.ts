@@ -12,7 +12,7 @@ import { formatAllowance, formatResetWhen, formatTimeLeftToday } from '@/lib/rec
 /** A take as the recording strip shows it, from the count-in to the stop. */
 export interface RecordingStatus {
     phase: 'countoff' | 'recording'
-    /** The count-in click last heard (0-based) and how many the bar has; null before the first. */
+    /** The count-in click last heard (0-based; -1 before the first) and how many the bar has; null when not known. */
     countoff: { beat: number; total: number } | null
     /** `performance.now()` when capture began; null during the count-in. */
     captureStartedAt: number | null
@@ -145,6 +145,9 @@ export class TakeSummaryCopy {
 /** What a microphone that wouldn't open becomes: the blocked-mic dialog, or a toast saying what to try. */
 export type MicProblem = { kind: 'blocked' } | { kind: 'toast'; message: string }
 
+/** The browsers whose microphone permission has a reliable path to name. */
+type PermissionBrowser = 'iphone-safari' | 'chromium' | 'mac-safari'
+
 /** Reads why the microphone failed to open (the take's own, or the Mic Mode guide's warm-up stream). */
 export class MicFailure {
     static readonly UNSUPPORTED = "This browser can't record. Try a recent Chrome, Edge, Firefox or Safari."
@@ -157,21 +160,52 @@ export class MicFailure {
     }
 
     /**
-     * The one line that says where this browser keeps the microphone permission, or null where
-     * there is no reliable path to name (Firefox, the other iPhone browsers).
+     * The one line that says where this browser keeps the microphone permission (the editor's
+     * blocked-mic dialog), or null where there is no reliable path to name (Firefox, the other
+     * iPhone browsers).
      */
     static permissionStep(userAgent: string): string | null {
-        if (/iPhone/.test(userAgent)) {
-            return /CriOS|FxiOS|EdgiOS/.test(userAgent) ? null : 'Tap aA in the address bar → Website Settings → Microphone → Allow.'
+        switch (MicFailure.permissionBrowser(userAgent)) {
+            case 'iphone-safari':
+                return 'Tap aA in the address bar → Website Settings → Microphone → Allow.'
+            case 'chromium':
+                return `${MicFailure.tapOrClick(userAgent)} the icon left of the web address, then set Microphone to Allow.`
+            case 'mac-safari':
+                return 'Safari menu → Settings for this website → Microphone → Allow.'
+            case null:
+                return null
         }
+    }
+
+    /**
+     * The same path as numbered steps, one action each (onboarding's blocked-mic state lists
+     * them), or null wherever {@link permissionStep} is.
+     */
+    static permissionSteps(userAgent: string): string[] | null {
+        switch (MicFailure.permissionBrowser(userAgent)) {
+            case 'iphone-safari':
+                return ['Tap aA in the address bar.', 'Tap Website Settings.', 'Set Microphone to Allow.']
+            case 'chromium':
+                return [`${MicFailure.tapOrClick(userAgent)} the icon left of the web address.`, 'Set Microphone to Allow.']
+            case 'mac-safari':
+                return ['Open the Safari menu.', 'Choose Settings for this website.', 'Set Microphone to Allow.']
+            case null:
+                return null
+        }
+    }
+
+    /** Which browser's permission path to name, or null where there is none to rely on. */
+    private static permissionBrowser(userAgent: string): PermissionBrowser | null {
+        if (/iPhone/.test(userAgent)) return /CriOS|FxiOS|EdgiOS/.test(userAgent) ? null : 'iphone-safari'
         if (/Firefox/.test(userAgent)) return null
-        if (/Chrome\/|Edg\//.test(userAgent)) {
-            const verb = /Android/.test(userAgent) ? 'Tap' : 'Click'
-            return `${verb} the icon left of the web address, then set Microphone to Allow.`
-        }
-        if (/Macintosh/.test(userAgent) && /Safari\//.test(userAgent))
-            return 'Safari menu → Settings for this website → Microphone → Allow.'
+        if (/Chrome\/|Edg\//.test(userAgent)) return 'chromium'
+        if (/Macintosh/.test(userAgent) && /Safari\//.test(userAgent)) return 'mac-safari'
         return null
+    }
+
+    /** "Tap" on Android, "Click" elsewhere. */
+    private static tapOrClick(userAgent: string): 'Tap' | 'Click' {
+        return /Android/.test(userAgent) ? 'Tap' : 'Click'
     }
 }
 

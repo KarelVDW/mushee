@@ -14,7 +14,8 @@ import { useParams, useRouter } from 'next/navigation'
 import { useCallback, useEffect, useId, useRef, useState, useSyncExternalStore } from 'react'
 
 import { SelectionPopover } from '@/components/editor/SelectionPopover'
-import { dismissToast, ErrorScreen, focusWithoutTooltip, LoadingScreen, PopoverSheetHost, showToast, TertiaryButton } from '@/components/ui'
+import { RestBarMark } from '@/components/RestBarMark'
+import { dismissToast, ErrorScreen, focusWithoutTooltip, PopoverSheetHost, showToast } from '@/components/ui'
 import { ApiError, NetworkError } from '@/lib/api'
 import { withPlan } from '@/lib/plans'
 import { useScoreDocument } from '@/lib/queries'
@@ -28,6 +29,7 @@ import { PLAY_PAUSE_COMMAND, RECORD_COMMAND } from './commands'
 import { EditorAnnouncer, KeyboardHelp } from './EditorAnnouncer'
 import { EditorEmptyState } from './EditorEmptyState'
 import { EditorHeader, HEADER_FIT_QUERIES, type HeaderFit, UNTITLED_SCORE } from './EditorHeader'
+import { EditorSkeleton } from './EditorSkeleton'
 import { KeyboardShortcutsDialog } from './KeyboardShortcutsDialog'
 import { MeasureControls } from './MeasureControls'
 import { NoteToolDock } from './NoteToolDock'
@@ -152,7 +154,10 @@ export default function ScoreEditorPage() {
     const showSelectionTip = useCallback(() => {
         if (!selectionTip.pending) return
         selectionTip.markSeen()
-        selectionTipToast.current = showToast('Tap the note again to copy or delete it.', 'info', { duration: SELECTION_TIP_MS })
+        selectionTipToast.current = showToast('Tap the note again to copy or delete it.', 'info', {
+            icon: 'info',
+            duration: SELECTION_TIP_MS,
+        })
         setSelectionTipUp(true)
         // The tap that selected the note is still in flight: listen from the next one on.
         setTimeout(() => document.addEventListener('pointerdown', dismissSelectionTip, { once: true }), 0)
@@ -223,6 +228,16 @@ export default function ScoreEditorPage() {
         focusCanvas()
     }, [focusCanvas])
     const handleSelectionMenu = useCallback((_event: SelectionMenuEvent) => openSelectionMenu('pointer'), [openSelectionMenu])
+    // One transient surface at a time: an in-score glyph's sheet or popover closes the selection
+    // bar. A tap on the selected note that lands on its glyph (the tempo mark above it) releases
+    // into the tap-again menu first and the glyph's click right after — so the glyph wins.
+    const openAttributePopover = useCallback(
+        (event: AttributeClickEvent) => {
+            closeSelectionMenu()
+            setAttributePopover(event)
+        },
+        [closeSelectionMenu],
+    )
     useEffect(() => {
         manipulator.onSelectionMenuRequest = () => openSelectionMenu('keyboard')
         return () => {
@@ -333,7 +348,9 @@ export default function ScoreEditorPage() {
         }
         manipulator.onUndoOffer = (offer) => {
             retire()
+            // A done edit: the check, like every other "that happened" toast.
             const toast = showToast(offer.message, 'info', {
+                icon: 'check',
                 duration: UNDO_TOAST_MS,
                 action: { label: 'Undo', ariaLabel: offer.undoLabel, onClick: () => manipulator.undoStep(offer.step) },
             })
@@ -495,10 +512,15 @@ export default function ScoreEditorPage() {
         const header = root?.querySelector('header')
         const dock = dockRef.current
         if (!root || !header || !dock) return
+        // The bar heights are published on the document too, for the app-wide surfaces mounted
+        // outside the editor (the browser-support banner keeps clear of both bars).
+        const page = document.documentElement.style
         const measure = () => {
             root.style.setProperty('--app-header-h', `${header.offsetHeight}px`)
             root.style.setProperty('--dock-h', `${dock.offsetHeight}px`)
-            document.documentElement.style.setProperty('--toast-bottom', `${dock.offsetHeight + TOAST_GAP_PX}px`)
+            page.setProperty('--app-header-h', `${header.offsetHeight}px`)
+            page.setProperty('--dock-h', `${dock.offsetHeight}px`)
+            page.setProperty('--toast-bottom', `${dock.offsetHeight + TOAST_GAP_PX}px`)
         }
         measure()
         const observer = new ResizeObserver(measure)
@@ -506,13 +528,14 @@ export default function ScoreEditorPage() {
         observer.observe(dock)
         return () => {
             observer.disconnect()
-            document.documentElement.style.removeProperty('--toast-bottom')
+            for (const name of ['--app-header-h', '--dock-h', '--toast-bottom']) page.removeProperty(name)
         }
     }, [editorReady])
 
     // Unreachable (offline, or the server down) is no fault: a neutral screen that keeps trying
-    // by itself (the query polls, and coming back online retries). A missing score, or one that
-    // can't be read, is a real fault — with a way back to the library.
+    // by itself (the query polls, and coming back online retries). Nor is a missing score (the
+    // empty bar below). A score that fails to load, or can't be read, is a real fault — with a
+    // way back to the library.
     if (loadError instanceof NetworkError && !scoreDocument) {
         return (
             <ErrorScreen
@@ -526,31 +549,39 @@ export default function ScoreEditorPage() {
             />
         )
     }
+    // A missing score is no fault: an empty bar for a mark, and the way back as the quiet button.
+    if (scoreMissing) {
+        return (
+            <ErrorScreen
+                tone="missing"
+                illustration={<RestBarMark />}
+                title="Score not found"
+                message="This score doesn’t exist (anymore), or it belongs to a different account."
+                secondaryAction={{ label: 'Back to library', onClick: () => router.push('/scores') }}
+            />
+        )
+    }
     if (loadError || unreadable) {
         return (
             <ErrorScreen
-                title={scoreMissing ? 'Score not found' : "This score couldn't be loaded"}
-                message={
-                    scoreMissing
-                        ? 'This score doesn’t exist (anymore), or it belongs to a different account.'
-                        : 'Something went wrong while loading this score. Try again, and if it keeps happening, come back in a few minutes.'
-                }
-                onRetry={scoreMissing ? undefined : () => void refetch()}
+                title="This score couldn't be loaded"
+                message="Something went wrong while loading this score. Try again, and if it keeps happening, come back in a few minutes."
+                onRetry={() => void refetch()}
                 onBack={() => router.push('/scores')}
                 backLabel="Back to library"
             />
         )
     }
 
-    // Hold the loading screen until the playback samples (score instrument + metronome
+    // Hold the editor's skeleton until the playback samples (score instrument + metronome
     // woodblock) are in memory: pressing record must click instantly, and a half-ready
-    // editor whose transport buttons play nothing reads as broken. It says which wait it is.
+    // editor whose transport buttons play nothing reads as broken. It says which wait it is,
+    // in the editor's own shape, so the real chrome lands where the skeleton drew it.
     if (!score || !instrumentsReady) {
         return (
-            <LoadingScreen
-                testId="editor-loading"
+            <EditorSkeleton
                 message={score ? `Getting the ${score.instrument.displayName.toLowerCase()} sound ready…` : 'Opening your score…'}
-                slowAction={<TertiaryButton onClick={() => window.location.reload()}>Try again</TertiaryButton>}
+                onRetry={() => window.location.reload()}
             />
         )
     }
@@ -648,7 +679,7 @@ export default function ScoreEditorPage() {
                                     onSelectionMenu={handleSelectionMenu}
                                     onNoteChange={handleNoteChange}
                                     onMeasureButtonsLayout={setMeasureButtonsRect}
-                                    onAttributeClick={setAttributePopover}
+                                    onAttributeClick={openAttributePopover}
                                     onAttributeHover={setAttributeHover}
                                 />
                             </div>

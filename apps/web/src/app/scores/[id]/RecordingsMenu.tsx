@@ -1,5 +1,7 @@
 'use client'
 
+import { Skeleton } from '@mushee/ui'
+
 import { TakesList } from '@/components/TakesList'
 import { Alert, HeaderMenu } from '@/components/ui'
 import { useRecordings } from '@/lib/queries'
@@ -37,15 +39,30 @@ function RecordingsPanel({ scoreId }: { scoreId: string }) {
 
     return (
         <>
-            {recordings.isPending && <div className="h-12 rounded-md bg-surface-container-low animate-pulse" />}
+            {/* A recording row's shape while the list loads, on the slow pulse: the real row's padding,
+                its 36px play well (40px on touch) and a bar on each of its two lines, each line at the
+                row's own line height — so the panel doesn't move when the list arrives. */}
+            {recordings.isPending && (
+                <div aria-hidden className="rounded-md bg-surface-container-low flex items-center gap-3 px-3 py-2.5">
+                    <Skeleton className="size-9 pointer-coarse:size-10 shrink-0 rounded-full" />
+                    <span className="flex flex-col gap-1">
+                        <span className="flex h-[calc(14px*1.3)] items-center">
+                            <Skeleton className="h-3 w-24 rounded-sm" />
+                        </span>
+                        <span className="flex h-[calc(12px*1.35)] items-center">
+                            <Skeleton className="h-2.5 w-36 rounded-sm" />
+                        </span>
+                    </span>
+                </div>
+            )}
             {recordings.isError && <Alert onRetry={() => void recordings.refetch()}>Couldn&apos;t load your recordings.</Alert>}
             {recordings.data && recordings.data.length === 0 && (
-                <p className="m-0 font-body font-normal text-[13px] leading-normal text-on-surface-variant">
+                <p className="m-0 font-body font-normal text-[13px] max-sm:text-[15px] leading-normal text-on-surface-variant text-pretty">
                     Nothing recorded yet. Each time you record, the audio is kept here so you can listen back.
                 </p>
             )}
             {recordings.data && recordings.data.length > 0 && <TakesList takes={recordings.data} numbered />}
-            <p className="m-0 font-body font-normal text-[11px] leading-normal text-on-surface-variant">
+            <p className="m-0 font-body font-normal text-[11px] leading-normal text-on-surface-variant text-pretty">
                 Only you can hear these. Deleting this score deletes them too.
             </p>
         </>

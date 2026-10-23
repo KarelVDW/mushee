@@ -106,26 +106,51 @@ describe('MicFailure', () => {
         })
     })
 
+    const ua = {
+        chromeMac: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36',
+        edge: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36 Edg/130.0',
+        android: 'Mozilla/5.0 (Linux; Android 14; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Mobile Safari/537.36',
+        safariMac: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15',
+        iPhone: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Mobile/15E148 Safari/604.1',
+        iPhoneChrome:
+            'Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/130.0 Mobile/15E148 Safari/604.1',
+        iPhoneFirefox:
+            'Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) FxiOS/131.0 Mobile/15E148 Safari/605.1.15',
+        iPhoneEdge:
+            'Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) EdgiOS/130.0 Mobile/15E148 Safari/605.1.15',
+        firefox: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:131.0) Gecko/20100101 Firefox/131.0',
+        firefoxAndroid: 'Mozilla/5.0 (Android 14; Mobile; rv:131.0) Gecko/131.0 Firefox/131.0',
+    }
+
     it('names where this browser keeps the microphone permission', () => {
-        const ua = {
-            chromeMac: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36',
-            edge: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36 Edg/130.0',
-            android: 'Mozilla/5.0 (Linux; Android 14; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Mobile Safari/537.36',
-            safariMac:
-                'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15',
-            iPhone: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Mobile/15E148 Safari/604.1',
-            iPhoneChrome:
-                'Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/130.0 Mobile/15E148 Safari/604.1',
-            firefox: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:131.0) Gecko/20100101 Firefox/131.0',
-        }
         expect(MicFailure.permissionStep(ua.chromeMac)).toBe('Click the icon left of the web address, then set Microphone to Allow.')
         expect(MicFailure.permissionStep(ua.edge)).toBe('Click the icon left of the web address, then set Microphone to Allow.')
         expect(MicFailure.permissionStep(ua.android)).toBe('Tap the icon left of the web address, then set Microphone to Allow.')
         expect(MicFailure.permissionStep(ua.safariMac)).toBe('Safari menu → Settings for this website → Microphone → Allow.')
         expect(MicFailure.permissionStep(ua.iPhone)).toBe('Tap aA in the address bar → Website Settings → Microphone → Allow.')
-        expect(MicFailure.permissionStep(ua.iPhoneChrome)).toBeNull()
-        expect(MicFailure.permissionStep(ua.firefox)).toBeNull()
-        expect(MicFailure.permissionStep('curl/8')).toBeNull()
+    })
+
+    it('lists the same path as numbered steps, one action each', () => {
+        expect(MicFailure.permissionSteps(ua.iPhone)).toEqual([
+            'Tap aA in the address bar.',
+            'Tap Website Settings.',
+            'Set Microphone to Allow.',
+        ])
+        expect(MicFailure.permissionSteps(ua.chromeMac)).toEqual(['Click the icon left of the web address.', 'Set Microphone to Allow.'])
+        expect(MicFailure.permissionSteps(ua.edge)).toEqual(['Click the icon left of the web address.', 'Set Microphone to Allow.'])
+        expect(MicFailure.permissionSteps(ua.android)).toEqual(['Tap the icon left of the web address.', 'Set Microphone to Allow.'])
+        expect(MicFailure.permissionSteps(ua.safariMac)).toEqual([
+            'Open the Safari menu.',
+            'Choose Settings for this website.',
+            'Set Microphone to Allow.',
+        ])
+    })
+
+    it('has no steps wherever it has no line to name', () => {
+        for (const agent of [ua.iPhoneChrome, ua.iPhoneFirefox, ua.iPhoneEdge, ua.firefox, ua.firefoxAndroid, 'curl/8']) {
+            expect(MicFailure.permissionStep(agent)).toBeNull()
+            expect(MicFailure.permissionSteps(agent)).toBeNull()
+        }
     })
 })
 

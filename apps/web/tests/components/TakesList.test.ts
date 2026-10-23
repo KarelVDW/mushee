@@ -15,6 +15,7 @@ vi.mock('@/lib/analytics', () => ({ track: vi.fn() }))
 vi.mock('@/lib/queries', () => ({ useDeleteRecording: () => ({ isPending: false, mutate }) }))
 
 import { TakesList } from '@/components/TakesList'
+import { TOOLTIP_HOVER_DELAY_MS } from '@/components/ui/Tooltip'
 
 // React's act() refuses to run outside a test-aware environment.
 ;(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
@@ -27,6 +28,10 @@ class FakeAudio {
     static instances: FakeAudio[] = []
     onended: (() => void) | null = null
     onerror: (() => void) | null = null
+    onplaying: (() => void) | null = null
+    onpause: (() => void) | null = null
+    currentTime = 0
+    duration = Number.NaN
     private rejectPlay: ((err: unknown) => void) | null = null
 
     constructor(readonly src: string) {
@@ -61,11 +66,21 @@ const take = (id: string): RecordingSummary => ({
 describe('TakesList playback', () => {
     let container: HTMLElement
     let root: Root
+    /** Animation frames waiting to run, by id — the frame loop's whole state. */
+    let frames: Map<number, FrameRequestCallback>
 
     beforeEach(() => {
         FakeAudio.instances = []
         showToast.mockClear()
         vi.stubGlobal('Audio', FakeAudio)
+        frames = new Map()
+        let nextFrame = 1
+        vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => {
+            const id = nextFrame++
+            frames.set(id, callback)
+            return id
+        })
+        vi.stubGlobal('cancelAnimationFrame', (id: number) => frames.delete(id))
         container = document.createElement('div')
         document.body.appendChild(container)
         root = createRoot(container)
@@ -127,6 +142,70 @@ describe('TakesList playback', () => {
         await click(0)
         await settle(() => FakeAudio.instances[0]?.onended?.())
         expect(labels()).toEqual(['Play recording', 'Play recording'])
+    })
+
+    /** Runs the frames now queued (each may queue the next). */
+    const runFrame = () =>
+        act(() => {
+            const due = [...frames.values()]
+            frames.clear()
+            for (const callback of due) callback(0)
+        })
+    const row = (index: number) => container.querySelectorAll('li')[index]
+    const progressLayer = (index: number) => row(index)?.querySelector<HTMLElement>('.origin-left') ?? null
+
+    it("shows the replay's progress while it plays: a sweep behind the row and the clock '0:02 / 0:05'", async () => {
+        await click(0)
+        const audio = FakeAudio.instances[0]
+        expect(audio).toBeDefined()
+        if (!audio) return
+        // Nothing heard yet: the row is the playing one, the clock at its start out of the take's
+        // recorded length (the element doesn't know its duration yet), no frame loop yet.
+        expect(row(0)?.textContent).toContain('0:00 / 0:12')
+        expect(progressLayer(0)?.style.transform).toBe('scaleX(0)')
+        expect(frames.size).toBe(0)
+
+        audio.duration = 5
+        await settle(() => audio.onplaying?.())
+        expect(frames.size).toBe(1)
+        audio.currentTime = 2
+        runFrame()
+        expect(progressLayer(0)?.style.transform).toBe('scaleX(0.4)')
+        expect(progressLayer(0)?.getAttribute('aria-hidden')).toBe('true')
+        // The clock counts out of the same length the sweep measures: the audio's own 5 seconds.
+        expect(row(0)?.textContent).toContain('0:02 / 0:05')
+        // Only the playing row sweeps.
+        expect(progressLayer(1)).toBeNull()
+        expect(row(1)?.textContent).not.toContain(' / ')
+    })
+
+    it('runs the frame loop only while the audio plays: a pause, the end, a stop and unmounting each cancel it', async () => {
+        await click(0)
+        const first = FakeAudio.instances[0]
+        await settle(() => first?.onplaying?.())
+        expect(frames.size).toBe(1)
+        await settle(() => first?.onpause?.())
+        expect(frames.size).toBe(0)
+
+        await settle(() => first?.onplaying?.())
+        await settle(() => first?.onended?.())
+        expect(frames.size).toBe(0)
+        expect(progressLayer(0)).toBeNull()
+        expect(row(0)?.textContent).not.toContain(' / ')
+
+        await click(1)
+        await settle(() => FakeAudio.instances[1]?.onplaying?.())
+        expect(frames.size).toBe(1)
+        await click(1)
+        expect(frames.size).toBe(0)
+
+        await click(0)
+        await settle(() => FakeAudio.instances[2]?.onplaying?.())
+        expect(frames.size).toBe(1)
+        act(() => root.unmount())
+        expect(frames.size).toBe(0)
+        // afterEach unmounts again: give it a fresh root.
+        root = createRoot(container)
     })
 })
 
@@ -196,11 +275,50 @@ describe('TakesList score names', () => {
         expect(names.join(' ')).not.toMatch(/\btakes?\b/i)
     })
 
-    it('titles an audio-less row in the same words', () => {
-        act(() => root.render(createElement(TakesList, { takes: [{ ...take('a'), hasAudio: false }] })))
-        const play = container.querySelector<HTMLButtonElement>('[aria-label="Play recording"]')
-        expect(play?.disabled).toBe(true)
-        expect(play?.getAttribute('title')).toBe('No audio was kept for this recording')
+    it('keeps an audio-less row focusable and says why it cannot play, in the same words', () => {
+        vi.stubGlobal('Audio', FakeAudio)
+        FakeAudio.instances = []
+        try {
+            act(() => root.render(createElement(TakesList, { takes: [{ ...take('a'), hasAudio: false }] })))
+            const play = container.querySelector<HTMLButtonElement>('[aria-label="Play recording"]')
+            expect(play?.disabled).toBe(false)
+            expect(play?.getAttribute('aria-disabled')).toBe('true')
+            expect(play?.hasAttribute('title')).toBe(false)
+            const description = play?.getAttribute('aria-describedby')
+            expect(description && document.getElementById(description)?.textContent).toBe('No audio was kept for this recording')
+            // Its click does nothing.
+            act(() => play?.click())
+            expect(FakeAudio.instances).toHaveLength(0)
+        } finally {
+            vi.unstubAllGlobals()
+        }
+    })
+
+    it('names play and delete in a tooltip on hover', () => {
+        vi.useFakeTimers()
+        try {
+            act(() => root.render(createElement(TakesList, { takes: [take('a')] })))
+            /** What the portalled tooltip card says: <body>'s children other than the list's own host. */
+            const tooltipText = () => [...document.body.children].filter((el) => el !== container).map((el) => el.textContent)
+            for (const name of ['Play recording', 'Delete recording']) {
+                const button = container.querySelector<HTMLButtonElement>(`[aria-label="${name}"]`)
+                act(() => {
+                    button?.dispatchEvent(new PointerEvent('pointerover', { bubbles: true, pointerType: 'mouse' }))
+                })
+                act(() => {
+                    vi.advanceTimersByTime(TOOLTIP_HOVER_DELAY_MS)
+                })
+                expect(tooltipText()).toContain(name)
+                act(() => {
+                    button?.dispatchEvent(
+                        new PointerEvent('pointerout', { bubbles: true, pointerType: 'mouse', relatedTarget: document.body }),
+                    )
+                })
+                expect(tooltipText()).not.toContain(name)
+            }
+        } finally {
+            vi.useRealTimers()
+        }
     })
 
     it('shows no score name on a per-score list', () => {

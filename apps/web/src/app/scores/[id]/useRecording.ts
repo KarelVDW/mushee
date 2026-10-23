@@ -153,7 +153,12 @@ export function useRecording({
             retireSummary.current?.()
             const undo = { label: 'Undo', ariaLabel: UNDO_RECORDING_LABEL, onClick: () => manipulator.undo() }
             const actions = take.wrotePitchedNotes ? [{ label: 'Hear it back', onClick: () => playFrom(first.firstNote) }, undo] : [undo]
-            const toast = flushSync(() => showToast(copy.toast, 'info', { duration: SUMMARY_MS, actions }))
+            // Its glyph says what happened: notes written (a check), or a recording hint (the mic).
+            const icon = take.wrotePitchedNotes ? 'check' : 'mic'
+            const toast = flushSync(() => showToast(copy.toast, 'info', { icon, duration: SUMMARY_MS, actions }))
+            // The canvas points at what the toast names: the take's bars flash (the magenta wash,
+            // fading over 900ms; static for as long under reduced motion) as the toast goes up.
+            if (take.wrotePitchedNotes) manipulator.flashRange(measures.flatMap((measure) => measure.notes))
             const scroller = scrollAreaRef.current
             const marker = [...document.querySelectorAll(`[role="status"] button[aria-label="${UNDO_RECORDING_LABEL}"]`)].at(-1)
             const clearance = scroller && marker ? new ToastClearance(scroller) : null
@@ -279,8 +284,14 @@ export function useRecording({
         /** Once nothing more can reach the score: what follows this take. */
         const finish = () => {
             void refreshBilling()
+            // A dropped connection is news, not a fault: the neutral tone, with the glyph of what
+            // is missing — Solkey (the globe) or the device's own network.
             if (end === 'connection-lost') {
-                showToast('The connection dropped, so recording stopped. Your notes so far are saved — press record to carry on.')
+                showToast(
+                    'The connection dropped, so recording stopped. Your notes so far are saved — press record to carry on.',
+                    'notice',
+                    { icon: navigator.onLine ? 'globe' : 'wifi-off' },
+                )
             }
             // Refused, or cut off (limit, a dropped connection) before a single note: nothing to keep.
             if (end === 'refused' || (end !== 'stopped' && !take.wrotePitchedNotes)) return abandon()
@@ -301,7 +312,9 @@ export function useRecording({
         skipMicModeReminder.current = false
         setStatus({
             phase: 'countoff',
-            countoff: null,
+            // The count-in's dots are there, hollow, from the first frame: one per felt pulse of the
+            // take's first bar (2 in 6/8, 4 in 4/4, 5 in 5/4) — the clicks the engine counts in with.
+            countoff: { beat: -1, total: Math.max(1, take.measures[0]?.timeSignature.pulsesPerMeasure ?? 1) },
             captureStartedAt: null,
             health: 'ok',
             micModeReminder: reminder,
@@ -387,7 +400,7 @@ export function useRecording({
                     // Belt-and-braces: AuthGate keeps unapproved beta users off
                     // this page, but the gateway enforces it too.
                     if (code === 'beta-pending') {
-                        showToast('Your beta access is still awaiting approval.')
+                        showToast('Your beta access is still awaiting approval.', 'info')
                         router.push('/beta')
                     }
                 },
