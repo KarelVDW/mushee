@@ -773,7 +773,7 @@ describe('ScoreManipulator pitch operations (transpose / minimize accidentals)',
     it('flashes the whole score after a whole-score operation, the selection after a selection-scoped one', () => {
         const { manipulator } = setupPitched()
         const flashes: Array<Note[] | 'all'> = []
-        manipulator.onPitchHighlight = (notes) => flashes.push(notes)
+        manipulator.onRangeFlash = (notes) => flashes.push(notes)
 
         manipulator.minimizeAccidentals() // single-note selection → whole score
         expect(flashes).toEqual(['all'])
@@ -797,9 +797,24 @@ describe('ScoreManipulator pitch operations (transpose / minimize accidentals)',
     it('minimize-accidentals via the manipulator method needs a selection to act on', () => {
         const manipulator = new ScoreManipulator()
         let fired = 0
-        manipulator.onPitchHighlight = () => fired++
+        manipulator.onRangeFlash = () => fired++
         manipulator.minimizeAccidentals() // no score attached
         expect(fired).toBe(0)
+    })
+
+    it('flashRange flashes the notes an edit from outside just wrote (a take’s bars), through the same hook', () => {
+        const { manipulator } = setupPitched()
+        const flashes: Array<Note[] | 'all'> = []
+        // Unregistered (editor not mounted): a no-op, not a throw.
+        expect(() => manipulator.flashRange(allNotes(manipulator))).not.toThrow()
+
+        manipulator.onRangeFlash = (notes) => flashes.push(notes)
+        const written = allNotes(manipulator).slice(1, 3)
+        manipulator.flashRange(written)
+        expect(flashes).toEqual([written])
+        // Nothing written, nothing to flash.
+        manipulator.flashRange([])
+        expect(flashes).toHaveLength(1)
     })
 
     it('the transpose command defers to the registered popover opener and declines without one', () => {

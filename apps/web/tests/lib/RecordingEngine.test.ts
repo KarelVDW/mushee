@@ -130,8 +130,8 @@ function fakePlayer(currentTime = 0) {
     return { player, raw: player }
 }
 
-function svgRect(): SVGRectElement {
-    return document.createElementNS('http://www.w3.org/2000/svg', 'rect')
+function svgPlayhead(): SVGGElement {
+    return document.createElementNS('http://www.w3.org/2000/svg', 'g')
 }
 
 /**
@@ -147,7 +147,7 @@ let cursor: PlaybackCursor
 function makeOptions(over: Partial<RecordingOptions> & { measureCount?: number } = {}) {
     const measureCount = over.measureCount ?? 4
     const score: Score = (over.score as Score) ?? makeScore(measureCount)
-    const cursorEl = svgRect()
+    const cursorEl = svgPlayhead()
     cursor.attach(cursorEl)
     const onStateChange = vi.fn()
     const onNeedNewMeasure = vi.fn()
@@ -284,8 +284,7 @@ describe('RecordingEngine', () => {
         expect(sample.measureIndex).toBe(0)
         // The cursor sits at the layout point of the position the sample is anchored to.
         const point = score.layout.pointAtBeat(score.measures[sample.measureIndex], sample.beat)
-        expect(cursorEl.getAttribute('x')).toBe(String(point.x - 1.5))
-        expect(cursorEl.getAttribute('transform')).toBe(`translate(0, ${point.rowY})`)
+        expect(cursorEl.getAttribute('transform')).toBe(`translate(${point.x}, ${point.rowY})`)
         expect(sample.amp).toBeGreaterThan(0)
         expect(sample.amp).toBeLessThanOrEqual(1)
         expect(sample.timeMs).toBeGreaterThanOrEqual(0)
@@ -613,6 +612,63 @@ describe('RecordingEngine', () => {
 
         engine.stop()
         expect(cursorEl.hasAttribute('fill-opacity')).toBe(false)
+    })
+
+    describe('the count-off blink under prefers-reduced-motion', () => {
+        /** Answer the reduced-motion query with `reduce` (every other query: no match). */
+        function prefersReducedMotion(reduce: boolean) {
+            vi.spyOn(window, 'matchMedia').mockImplementation(
+                (query: string) => ({ matches: reduce && query === '(prefers-reduced-motion: reduce)', media: query }) as MediaQueryList,
+            )
+        }
+
+        it('stands the cursor steady at the start bar, while the count still reaches the strip', async () => {
+            prefersReducedMotion(true)
+            const { player, raw } = fakePlayer()
+            const engine = new RecordingEngine(player, cursor)
+            const onCountoffBeat = vi.fn()
+            const { options, cursorEl } = makeOptions({ onCountoffBeat })
+            // A fade left over from before the take is cleared as it starts.
+            cursor.setOpacity(0.5)
+            await engine.start(options)
+            expect(cursorEl.hasAttribute('fill-opacity')).toBe(false)
+            expect(cursorEl.getAttribute('display')).toBe('')
+
+            for (const t of [0, 0.3, 2 / 3, 1, 4 / 3, 2, 2.5]) {
+                raw.currentTime = t
+                engine.tick()
+                expect(cursorEl.hasAttribute('fill-opacity')).toBe(false)
+            }
+            expect(onCountoffBeat).toHaveBeenCalledTimes(4)
+        })
+
+        it('keeps the beat blink when the viewer has not asked for reduced motion', async () => {
+            prefersReducedMotion(false)
+            const { player, raw } = fakePlayer()
+            const engine = new RecordingEngine(player, cursor)
+            const { options, cursorEl } = makeOptions()
+            await engine.start(options)
+
+            raw.currentTime = 1 / 3
+            engine.tick()
+            expect(Number(cursorEl.getAttribute('fill-opacity'))).toBeCloseTo(0.431, 3)
+        })
+
+        it('reads the setting afresh for every take', async () => {
+            prefersReducedMotion(true)
+            const { player, raw } = fakePlayer()
+            const engine = new RecordingEngine(player, cursor)
+            await engine.start(makeOptions().options)
+            engine.stop()
+
+            prefersReducedMotion(false)
+            const { options, cursorEl } = makeOptions()
+            raw.currentTime = 0
+            await engine.start(options)
+            raw.currentTime = 1 / 3
+            engine.tick()
+            expect(cursorEl.hasAttribute('fill-opacity')).toBe(true)
+        })
     })
 
     it('stop() tears down recorder, stream, socket and analyser and returns to idle', async () => {

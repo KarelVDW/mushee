@@ -17,7 +17,7 @@ import { type PlaybackState, Transport } from './Transport'
  */
 export function useTransport(score: Score | null, { metronome }: { metronome: boolean }) {
     const transportRef = useRef<Transport | null>(null)
-    const playbackCursorRef = useRef<SVGRectElement | null>(null)
+    const playbackCursorRef = useRef<SVGGElement | null>(null)
     const [state, setState] = useState<PlaybackState>('stopped')
     const [ready, setReady] = useState(false)
 

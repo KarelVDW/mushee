@@ -636,6 +636,8 @@ export default function ScoreEditorPage() {
                                     // View-only while a take runs: a stray tap can't select a note (which
                                     // would end the take) or open a popover; scrolling stays native.
                                     interactive={!taking}
+                                    // The notes a take writes fade in as they land.
+                                    recording={taking}
                                     selectedNote={activeNote}
                                     selectedNotes={manipulator.selectedNotes}
                                     highlight={pitchHighlight}

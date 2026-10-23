@@ -1,4 +1,10 @@
-import { DOTTED_FLAG_SCALE, LEDGER_LINE_EXTENSION, STAVE_LINE_DISTANCE, STEM_HEIGHT } from '@mushee/notation/engraving/constants'
+import {
+    DOTTED_FLAG_SCALE,
+    INPUT_CURSOR_GAP,
+    LEDGER_LINE_EXTENSION,
+    STAVE_LINE_DISTANCE,
+    STEM_HEIGHT,
+} from '@mushee/notation/engraving/constants'
 import { Duration } from '@mushee/notation/model/Duration'
 import { NoteLayout } from '@mushee/notation/model/layout/NoteLayout'
 import { NoteWidth } from '@mushee/notation/model/layout/NoteWidth'
@@ -182,5 +188,32 @@ describe('NoteLayout', () => {
         // G4 is at line 2 (inside the staff) → no ledger lines.
         const n = new Note({ duration: new Duration({ type: 'q' }), pitch: new Pitch({ name: 'G', octave: 4 }) })
         expect(layoutOf(n).ledgerLines).toHaveLength(0)
+    })
+
+    describe('inputCursor', () => {
+        const STAFF_BOTTOM = Staff.TOP_Y + Staff.HEIGHT
+        const note = (name: 'A' | 'B' | 'G', octave: number, type: 'q' | 'w' = 'q') =>
+            layoutOf(new Note({ duration: new Duration({ type }), pitch: new Pitch({ name, octave }) }))
+
+        it('hangs under the notehead’s centre, below the staff for a note inside it', () => {
+            const layout = note('G', 4, 'w')
+            expect(layout.stem).toBeUndefined()
+            expect(layout.inputCursor).toEqual({ x: layout.noteX + layout.width.noteHeadWidth / 2, y: STAFF_BOTTOM + INPUT_CURSOR_GAP })
+            // A stem pointing up never pulls it above the staff.
+            expect(note('G', 4).inputCursor.y).toBe(STAFF_BOTTOM + INPUT_CURSOR_GAP)
+        })
+
+        it('drops under a notehead below the staff', () => {
+            const low = note('A', 3)
+            expect(low.noteY).toBeGreaterThan(STAFF_BOTTOM)
+            expect(low.inputCursor.y).toBe(low.noteY + INPUT_CURSOR_GAP)
+        })
+
+        it('drops under a down-stem that reaches below the staff', () => {
+            const high = note('B', 4)
+            const stemEnd = high.stem?.y2 ?? 0
+            expect(stemEnd).toBeGreaterThan(STAFF_BOTTOM)
+            expect(high.inputCursor.y).toBe(stemEnd + INPUT_CURSOR_GAP)
+        })
     })
 })

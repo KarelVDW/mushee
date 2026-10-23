@@ -1,4 +1,5 @@
 import {
+    INPUT_CURSOR_TAIL,
     MAX_MEASURES_PER_ROW,
     MEASURE_BUTTON_GAP,
     MEASURE_BUTTON_OFFSET,
@@ -6,6 +7,7 @@ import {
     MEASURE_BUTTON_SPACING,
     ROW_GAP,
     ROW_HEIGHT,
+    STAVE_LINE_DISTANCE,
     TEMPO_MARKING_Y,
 } from '../../engraving/constants'
 import type { Measure } from '../Measure'
@@ -39,8 +41,13 @@ export class ScoreLayout {
      * The add/remove-measure buttons after the final barline, stacked around the staff's
      * middle line, in the last row's coordinates (inside the MEASURE_BUTTON_SPACING
      * reserve). Null for a score with no measures or one ending without a barline.
+     *
+     * `inkBottom` is the last row's lowest ink, in the same coordinates — what a host's own bar
+     * controls under the row keep clear of: the bottom staff line, or whatever reaches below
+     * it (a low notehead and its ledger lines, a down-stem as drawn), and the input cursor's
+     * room under every note, since any of them can be selected.
      */
-    readonly measureButtons: { x: number; addY: number; removeY: number; size: number } | null
+    readonly measureButtons: { x: number; addY: number; removeY: number; size: number; inkBottom: number } | null
 
     private readonly _measureLayouts = new Map<Measure, MeasureLayout>()
     private readonly _rowByMeasure = new Map<Measure, RowLayout>()
@@ -105,12 +112,36 @@ export class ScoreLayout {
         const layout = this.measureLayoutFor(lastMeasure)
         if (!layout.barline) return null
         const top = Staff.MIDDLE_Y - (MEASURE_BUTTON_SIZE * 2 + MEASURE_BUTTON_GAP) / 2
+        const row = this.rowFor(lastMeasure)
         return {
-            x: this.rowFor(lastMeasure).getMeasureX(lastMeasure) + layout.measureWidth + MEASURE_BUTTON_OFFSET,
+            x: row.getMeasureX(lastMeasure) + layout.measureWidth + MEASURE_BUTTON_OFFSET,
             addY: top,
             removeY: top + MEASURE_BUTTON_SIZE + MEASURE_BUTTON_GAP,
             size: MEASURE_BUTTON_SIZE,
+            inkBottom: this.inkBottomOf(row),
         }
+    }
+
+    /** The lowest ink on `row`, row-local: see {@link measureButtons}' `inkBottom`. */
+    private inkBottomOf(row: RowLayout): number {
+        let bottom = Staff.TOP_Y + Staff.HEIGHT // the bottom staff line
+        for (const measure of row.measures) {
+            const layout = this.measureLayoutFor(measure)
+            for (const note of measure.notes) {
+                const noteLayout = layout.noteLayoutFor(note)
+                const { noteY, ledgerLines } = noteLayout
+                const drawn = layout.stemFor(note)
+                bottom = Math.max(
+                    bottom,
+                    noteY + STAVE_LINE_DISTANCE / 2, // the notehead's lower edge
+                    ...ledgerLines.map((line) => line.y1),
+                    drawn ? Math.max(drawn.y1, drawn.y2) : noteY,
+                    // The input cursor's teardrop, hung where ScoreView draws it when the note is selected.
+                    noteLayout.inputCursor.y + INPUT_CURSOR_TAIL,
+                )
+            }
+        }
+        return bottom
     }
 
     /** Ties: the semantic pairing from the score, geometry from the endpoint layouts (reusing unchanged ones). */

@@ -426,9 +426,15 @@ test('Add bar and Remove last bar are named buttons under the final barline', as
     const add = page.getByRole('button', { name: 'Add bar' })
     const remove = page.getByRole('button', { name: 'Remove last bar' })
     await expect(add).toHaveAccessibleDescription('Add an empty bar at the end')
-    // Right-aligned under the last row's final barline, the remove 16px clear of the add.
+    // Right-aligned under the last row's final barline — hugging the row, at least 24px under its
+    // bottom staff line rather than after the svg's empty room below it — the remove 16px clear of the add.
     const [addBox, removeBox, svgBox] = await Promise.all([add.boundingBox(), remove.boundingBox(), svg.boundingBox()])
-    expect(addBox?.y ?? 0).toBeGreaterThanOrEqual((svgBox?.y ?? 0) + (svgBox?.height ?? Infinity))
+    // The lowest staff line, of any row.
+    const staffBottom = await svg.evaluate((el) =>
+        Math.max(...Array.from(el.querySelectorAll('[data-staff-lines] line'), (line) => line.getBoundingClientRect().bottom)),
+    )
+    expect(addBox?.y ?? 0).toBeGreaterThanOrEqual(staffBottom + 24 - 1)
+    expect(addBox?.y ?? Infinity).toBeLessThan((svgBox?.y ?? 0) + (svgBox?.height ?? 0))
     expect((removeBox?.x ?? 0) - ((addBox?.x ?? 0) + (addBox?.width ?? 0))).toBeGreaterThanOrEqual(16)
 
     const noteheadsBefore = await svg.locator('path').count()

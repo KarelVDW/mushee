@@ -34,6 +34,17 @@ export function scrollPaddingOf(scroller: HTMLElement): { top: number; bottom: n
     return { top: parseFloat(style.scrollPaddingTop) || 0, bottom: parseFloat(style.scrollPaddingBottom) || 0 }
 }
 
+/**
+ * The layout y of the row the playback cursor is on, read off the attributes the host's
+ * transport writes on it — `transform="translate(x, rowY)"` and `display` — or null while it
+ * is hidden or not yet placed.
+ */
+export function cursorRowY(cursor: Element): number | null {
+    if (cursor.getAttribute('display') === 'none') return null
+    const match = /translate\(\s*[^,\s)]+\s*[,\s]\s*([\d.]+)\s*\)/.exec(cursor.getAttribute('transform') ?? '')
+    return match ? Number(match[1]) : null
+}
+
 interface ScrollFollowOptions {
     /** The rendered score svg, in layout coordinates scaled to its on-screen width. */
     svgRef: React.RefObject<SVGSVGElement | null>
@@ -42,9 +53,9 @@ interface ScrollFollowOptions {
     score: Score
     /** The note whose row stays in view as the selection moves. */
     selectedNote?: Note | null
-    /** The playback cursor rect the host's transport moves; its row stays in view while it is shown. */
-    playbackCursorRef?: React.RefObject<SVGRectElement | null>
-    /** Whether the svg (and with it the cursor rect) is rendered — the cursor can only be observed once it is. */
+    /** The playback cursor group the host's transport moves; its row stays in view while it is shown. */
+    playbackCursorRef?: React.RefObject<SVGGElement | null>
+    /** Whether the svg (and with it the cursor) is rendered — the cursor can only be observed once it is. */
     mounted: boolean
 }
 
@@ -91,15 +102,14 @@ export function useScrollFollow({ svgRef, containerRef, score, selectedNote, pla
         }
     }, [selectedNote, score, scrollRowIntoView])
 
-    // Follow playback/recording: the engines drive the cursor rect's transform
+    // Follow playback/recording: the engines drive the cursor's transform
     // directly, so a row change surfaces here as an attribute mutation.
     useEffect(() => {
         const cursor = playbackCursorRef?.current
         if (!cursor || !mounted) return
         const observer = new MutationObserver(() => {
-            if (cursor.getAttribute('display') === 'none') return
-            const match = /translate\(\s*0\s*[,\s]\s*([\d.]+)\s*\)/.exec(cursor.getAttribute('transform') ?? '')
-            if (match) scrollRowIntoView(Number(match[1]))
+            const rowY = cursorRowY(cursor)
+            if (rowY !== null) scrollRowIntoView(rowY)
         })
         observer.observe(cursor, { attributes: true, attributeFilter: ['transform', 'display'] })
         return () => observer.disconnect()

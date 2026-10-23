@@ -58,8 +58,8 @@ export interface RecordingOptions {
      * clicks at that measure's meter and tempo, before beat 1.
      */
     startMeasureIndex: number
-    /** The score's cursor rect; Transport attaches the take's PlaybackCursor to it. */
-    cursorEl: SVGRectElement
+    /** The score's playhead (cursor group); Transport attaches the take's PlaybackCursor to it. */
+    cursorEl: SVGGElement
     wsUrl: string
     onStateChange: (state: RecordingState) => void
     /**
@@ -130,6 +130,13 @@ export class RecordingEngine implements Tickable {
     /** The count-off click last reported through {@link RecordingOptions.onCountoffBeat}; -1 before the first. */
     private lastCountoffBeat = -1
     private countoffEndTime = 0
+    /**
+     * Whether the count-off blinks the cursor ({@link pulseCursor}) — read as each take starts.
+     * Not under prefers-reduced-motion: a beat-rate flash written from JS is out of the global
+     * CSS rule's reach, so the engine honours the setting itself; the cursor then stands
+     * steady at the start bar and the strip's dots carry the count.
+     */
+    private pulsesCountoff = true
     /** The take's first measure; the recording's beat 0 is its downbeat. */
     private startMeasure: Measure | null = null
     private lastNewMeasureTriggeredFor: number | null = null
@@ -234,6 +241,8 @@ export class RecordingEngine implements Tickable {
 
         this.cursor.setTone('recording')
         this.cursor.moveTo(options.score, options.startMeasureIndex, 0)
+        this.pulsesCountoff = !RecordingEngine.prefersReducedMotion()
+        if (!this.pulsesCountoff) this.cursor.setOpacity(null)
 
         this._state = 'countoff'
         options.onStateChange(this._state)
@@ -323,7 +332,7 @@ export class RecordingEngine implements Tickable {
                 this.startCapture()
                 this.options.onCaptureStart?.()
             } else {
-                this.pulseCursor(elapsed)
+                if (this.pulsesCountoff) this.pulseCursor(elapsed)
                 this.reportCountoffBeat(elapsed)
             }
             return false
@@ -471,6 +480,11 @@ export class RecordingEngine implements Tickable {
         return MIME_TYPE_CANDIDATES.find((type) => MediaRecorder.isTypeSupported(type)) ?? null
     }
 
+    /** Whether the viewer asked for reduced motion (false where the query can't be asked). */
+    private static prefersReducedMotion(): boolean {
+        return typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true
+    }
+
     /**
      * Report the count-off click `elapsed` falls on, once per click — read off the clock the
      * clicks are scheduled on (like {@link pulseCursor}), so the strip's count can't drift
@@ -487,7 +501,7 @@ export class RecordingEngine implements Tickable {
      * Blink the cursor in time with the count-off clicks: full opacity on each
      * beat, decaying to a trough — a visual count-in while the cursor has no
      * motion to show yet. Reads the same clock the clicks are scheduled on, so
-     * the two can't drift.
+     * the two can't drift. Never under reduced motion ({@link pulsesCountoff}).
      */
     private pulseCursor(elapsed: number): void {
         const beatPhase = ((elapsed * this.bpm) / 60 / this.pulseBeats) % 1

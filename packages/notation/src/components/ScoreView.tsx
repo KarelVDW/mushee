@@ -3,6 +3,7 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { MEASURE_BUTTON_OFFSET, SCORE_WIDTH } from '../engraving/constants'
+import { NoteLanding } from '../lib/NoteLanding'
 import type { RecordingWaveformStore } from '../lib/RecordingWaveformStore'
 import { useObservedWidth } from '../lib/useObservedWidth'
 import { useScrollFollow } from '../lib/useScrollFollow'
@@ -20,8 +21,6 @@ import { RecordingWaveform } from './RecordingWaveform'
 import { StaffLines } from './StaffLines'
 import { Tie } from './Tie'
 
-/** Vertical offset from the staff bottom (or the selected note's lowest ink, when lower) to the input cursor's teardrop. */
-const INPUT_CURSOR_GAP = 15
 /** The hover-to-pitch ghost: its notehead's opacity, and its letter label's on-screen size and gap (CSS px). */
 const GHOST_OPACITY = 0.5
 const GHOST_LABEL_PX = 11
@@ -51,7 +50,8 @@ interface ScoreViewProps {
     selectedNotes?: Note[]
     /** Transient magenta emphasis over part of the score (see {@link ScoreHighlight}); null/omitted renders nothing. */
     highlight?: ScoreHighlight | null
-    playbackCursorRef?: React.RefObject<SVGRectElement | null>
+    /** The playhead group (drawn below); the host's transport moves and paints it through this ref. */
+    playbackCursorRef?: React.RefObject<SVGGElement | null>
     /** Live recording waveform bars; the layer subscribes to it directly. */
     waveformStore?: RecordingWaveformStore
     /** Begin a selection on `note` (plain click / drag start). */
@@ -80,6 +80,12 @@ interface ScoreViewProps {
      * and glyphs do nothing, nothing hovers, and native scrolling still works. Default true.
      */
     interactive?: boolean
+    /**
+     * A take is live (the host's recording state isn't idle): each note it writes fades in once
+     * as it lands, opacity only, and a measure the server re-sends unchanged doesn't replay (see
+     * NoteLanding). Beams, ties and brackets appear at once. Default false.
+     */
+    recording?: boolean
     /**
      * A tempo marking, clef, key or time signature was clicked. The score only reports the
      * event — what happens next (the editor opens its popover) is the parent's call; omit the
@@ -112,6 +118,12 @@ export interface MeasureButtonsRect {
     /** The last row's top and bottom staff lines. */
     staffTop: number
     staffBottom: number
+    /**
+     * The last row's lowest ink: its bottom staff line, or whatever reaches below it — a low
+     * note's ledger lines, a down-stem, the input cursor's room under a note
+     * (ScoreLayout.measureButtons). Controls placed under the row keep clear of it.
+     */
+    inkBottom: number
     /** The two squares the layout reserves after the final barline (ScoreLayout.measureButtons): add above, remove below. */
     add: PixelSquare
     remove: PixelSquare
@@ -143,6 +155,7 @@ export const ScoreView = memo(function ScoreView({
     onNoteChange,
     onMeasureButtonsLayout,
     interactive = true,
+    recording = false,
     onAttributeClick,
     onAttributeHover,
     role,
@@ -185,17 +198,14 @@ export const ScoreView = memo(function ScoreView({
     // The svg renders once the container has been measured (and there is a row to draw).
     const svgMounted = containerWidth > 0 && totalHeight > 0
 
-    // Input-cursor position: note-local x, row-local y
-    const inputCursorPos = useMemo(() => {
-        if (!selectedNote) return null
-        const x = selectedNote.layout.noteX + selectedNote.layout.width.noteHeadWidth / 2
-        let lowestY = selectedNote.layout.noteY
-        const stem = selectedNote.layout.stem
-        if (stem) lowestY = Math.max(lowestY, stem.y1, stem.y2)
-        const bottomStaffY = Staff.TOP_Y + Staff.HEIGHT
-        const y = Math.max(bottomStaffY, lowestY) + INPUT_CURSOR_GAP
-        return { x, y }
-    }, [selectedNote, selectedNote?.layout.id])
+    // Which notes fade in as they land during a take. Taken in on every render — the answer
+    // for a repeated render of the same score is the same, and it forgets everything once the
+    // take ends — so each measure's prop below stays the same Set while nothing in it is new.
+    const [noteLanding] = useState(() => new NoteLanding())
+    noteLanding.update(score, recording)
+
+    // Input-cursor position: note-local x, row-local y (the note's layout owns the rule)
+    const inputCursorPos = useMemo(() => selectedNote?.layout.inputCursor ?? null, [selectedNote, selectedNote?.layout.id])
 
     // Client to SVG coordinate conversion
     const clientToSvg = useCallback(
@@ -286,6 +296,7 @@ export const ScoreView = memo(function ScoreView({
             barlineX: (measureButtonsLayout.x - MEASURE_BUTTON_OFFSET) * scale,
             staffTop: (rowY + Staff.TOP_Y) * scale,
             staffBottom: (rowY + Staff.TOP_Y + Staff.HEIGHT) * scale,
+            inkBottom: (rowY + measureButtonsLayout.inkBottom) * scale,
             add: square(measureButtonsLayout.addY),
             remove: square(measureButtonsLayout.removeY),
         })
@@ -447,18 +458,16 @@ export const ScoreView = memo(function ScoreView({
                         sample-rate updates never re-render the score itself */}
                     {waveformStore && <RecordingWaveform store={waveformStore} score={score} />}
 
-                    {/* Playback cursor — the host's transport writes its x, transform and display
-                        straight through the ref, outside React (the scroll-follow observes those writes) */}
-                    <rect
-                        ref={playbackCursorRef}
-                        data-export-exclude
-                        display="none"
-                        y={Staff.TOP_Y - 5}
-                        width={3}
-                        height={Staff.HEIGHT + 10}
-                        fill={INTERACTION_BLUE}
-                        rx={1.5}
-                    />
+                    {/* Playback cursor — a playhead: a 2.5-unit line overhanging the staff by 9 units
+                        at either end (taller than any waveform bar, which tops out at the staff's
+                        height) under a round head, so it never reads as one more bar. The host's
+                        transport writes the group's transform, display, fill and fill-opacity
+                        straight through the ref, outside React (the scroll-follow observes those
+                        writes); both parts inherit the paint. */}
+                    <g ref={playbackCursorRef} data-export-exclude display="none" fill={INTERACTION_BLUE}>
+                        <rect x={-1.25} width={2.5} y={Staff.TOP_Y - 9} height={Staff.HEIGHT + 18} rx={1.25} />
+                        <circle cx={0} cy={Staff.TOP_Y - 9} r={3.5} />
+                    </g>
 
                     {rows.map((row) =>
                         row.measures.map((measure) => (
@@ -468,6 +477,7 @@ export const ScoreView = memo(function ScoreView({
                                     layout={layout.measureLayoutFor(measure)}
                                     selectedNoteIds={selectedIds}
                                     hoveredNoteId={hoveredNote && hoveredMeasure === measure ? hoveredNote.id : undefined}
+                                    landingNoteIds={noteLanding.landingIn(measure)}
                                     onAttributeClick={interactive && onAttributeClick ? handleAttributeClick : undefined}
                                     // Reported whenever the glyphs are clickable — the ghost needs it even
                                     // when the host doesn't listen.

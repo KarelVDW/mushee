@@ -19,12 +19,12 @@ import { TimeSignature } from './TimeSignature'
 import { TupletBracket } from './TupletBracket'
 
 // The full staff band, with a little air above and below: the vertical extent of both the
-// selection highlight (a soft, rounded blue strip behind selected noteheads, matching the
-// playback cursor's height) and the click targets of clefs, keys and time signatures.
-// Adjacent selected notes' bands abut into a continuous run because each spans the full gap
-// to the next note.
+// selection highlight (a soft blue strip behind selected noteheads) and the click targets of
+// clefs, keys and time signatures.
 const STAFF_BAND_Y = Staff.TOP_Y - 6
 const STAFF_BAND_HEIGHT = Staff.HEIGHT + 12
+/** The corner radius of a lone selected note's band; a band beside a selected neighbour is square. */
+const SELECTION_BAND_RADIUS = 3
 
 /**
  * What a clicked attribute glyph reports about itself. The score adds the measure index and
@@ -46,6 +46,11 @@ interface MeasureProps {
     selectedNoteIds?: ReadonlySet<string>
     /** The hovered note, only when it is in this measure — hovering elsewhere leaves this memo intact. */
     hoveredNoteId?: string
+    /**
+     * This measure's notes that just landed in a live recording and fade in (see NoteLanding),
+     * only when it has some — the same Set while they don't change, so the memo holds.
+     */
+    landingNoteIds?: ReadonlySet<string>
     /**
      * A tempo marking, clef, key or time signature was clicked: what it is, plus the glyph's
      * measure-local x and the row-local y to anchor at. One stable callback serves every glyph,
@@ -112,6 +117,7 @@ export const Measure = memo(function Measure({
     layout,
     selectedNoteIds,
     hoveredNoteId,
+    landingNoteIds,
     onAttributeClick,
     onAttributeHover,
 }: MeasureProps) {
@@ -149,14 +155,23 @@ export const Measure = memo(function Measure({
                 )
             })}
 
-            {measure.notes.map((note) => {
+            {measure.notes.map((note, i, notes) => {
                 const isSelected = selectedNoteIds?.has(note.id) ?? false
                 const isHovered = !isSelected && note.id === hoveredNoteId
                 const noteLayout = layout.noteLayoutFor(note)
                 const noteX = layout.getXForElement(note)
-                // Span the band across the note's full allotted slot so a run of selected notes
-                // reads as one continuous strip, with the last note reaching the end barline.
-                const bandWidth = layout.getAllottedWidth(note)
+                // One band per selected note (the e2e suites count them), spanning the note's full
+                // allotted slot — the last note reaching the end barline — so a run of selected notes
+                // reads as one continuous strip: inside a run the bands meet square, and only a lone
+                // selected note keeps soft corners. A run is judged in score order, across barlines:
+                // one that carries on into the next bar takes its last band on through the barline
+                // (which draws over it) to the bar's end, where the next bar's square band begins, or
+                // the strip would break (or show rounded nicks) above and below the staff. The bands
+                // abut rather than overlap: the fill is translucent, so an overlap would paint a
+                // darker hairline at every note, while abutting edges blend to the band's own colour.
+                const selectedNext = isSelected && !!selectedNoteIds?.has(note.getNext()?.id ?? '')
+                const inRun = selectedNext || (isSelected && !!selectedNoteIds?.has(note.getPrevious()?.id ?? ''))
+                const runsOn = selectedNext && i === notes.length - 1
                 return (
                     <g key={note.id} transform={`translate(${noteX}, 0)`}>
                         {isSelected && (
@@ -165,9 +180,9 @@ export const Measure = memo(function Measure({
                                 data-selection-band
                                 x={0}
                                 y={STAFF_BAND_Y}
-                                width={bandWidth}
+                                width={runsOn ? layout.measureWidth - noteX : layout.getAllottedWidth(note)}
                                 height={STAFF_BAND_HEIGHT}
-                                rx={3}
+                                rx={inRun ? 0 : SELECTION_BAND_RADIUS}
                                 fill={INTERACTION_BLUE_BAND}
                             />
                         )}
@@ -176,6 +191,7 @@ export const Measure = memo(function Measure({
                             stem={layout.stemFor(note)}
                             beamed={!!layout.beamFor(note)}
                             color={isSelected || isHovered ? INTERACTION_BLUE : undefined}
+                            landing={landingNoteIds?.has(note.id)}
                         />
                     </g>
                 )

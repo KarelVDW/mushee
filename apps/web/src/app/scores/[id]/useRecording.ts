@@ -69,7 +69,7 @@ export function useRecording({
     score: Score | null
     activeNote: Note | null
     transportRef: RefObject<Transport | null>
-    playbackCursorRef: RefObject<SVGRectElement | null>
+    playbackCursorRef: RefObject<SVGGElement | null>
     /** The score's scroller — kept clear of the after-take summary while it is up (ToastClearance). */
     scrollAreaRef: RefObject<HTMLElement | null>
     stopAll: () => void
