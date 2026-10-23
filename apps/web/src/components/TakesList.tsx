@@ -3,20 +3,29 @@
 import Link from 'next/link'
 import { useEffect, useRef, useState } from 'react'
 
-import { focusWithoutTooltip, IconButton, showToast, TertiaryButton } from '@/components/ui'
+import { focusWithoutTooltip, Icon, IconButton, showToast, TertiaryButton, Tooltip } from '@/components/ui'
 import { track } from '@/lib/analytics'
 import { recordingAudioUrl, type RecordingSummary } from '@/lib/api'
 import { formatTakeDate } from '@/lib/dates'
 import { useDeleteRecording } from '@/lib/queries'
 import { formatRecordingTime } from '@/lib/recordingTime'
 
+/** Why a recording's play button can't act: the reason its tooltip gives. */
+const NO_AUDIO_REASON = 'No audio was kept for this recording'
+
 interface TakePlayer {
     /** Id of the take whose audio is playing, if any. */
     playing: string | null
+    /** How far through the playing take's audio it is, 0–1 (0 when nothing plays). */
+    progress: number
+    /** Seconds of the playing take heard so far (0 when nothing plays). */
+    elapsed: number
     /** Plays `take`, or stops it when it is the one playing. */
     toggle(take: RecordingSummary): void
     stop(): void
 }
+
+const AT_START = { progress: 0, elapsed: 0 }
 
 /**
  * One Audio element for the whole list (the cookie rides same-site). Every async
@@ -24,21 +33,40 @@ interface TakePlayer {
  * take's late `error`, or the AbortError its pending `play()` rejects with when
  * paused, must not clear the row now playing or raise a false toast. Unmounting
  * stops whatever was playing.
+ *
+ * While the audio actually plays, one animation-frame loop reads its clock into `progress`
+ * and `elapsed`, so a replay visibly moves; the loop is cancelled on pause, end, stop and
+ * unmount — it never runs while nothing plays.
  */
 function useTakePlayer(): TakePlayer {
     const [playing, setPlaying] = useState<string | null>(null)
+    const [clock, setClock] = useState(AT_START)
     const audioRef = useRef<HTMLAudioElement | null>(null)
+    const frame = useRef<number | null>(null)
 
-    useEffect(() => () => audioRef.current?.pause(), [])
+    const cancelFrame = () => {
+        if (frame.current !== null) cancelAnimationFrame(frame.current)
+        frame.current = null
+    }
+
+    useEffect(
+        () => () => {
+            cancelFrame()
+            audioRef.current?.pause()
+        },
+        [],
+    )
 
     const stop = () => {
+        cancelFrame()
         const audio = audioRef.current
         if (audio) {
-            audio.onended = audio.onerror = null
+            audio.onended = audio.onerror = audio.onplaying = audio.onpause = null
             audio.pause()
         }
         audioRef.current = null
         setPlaying(null)
+        setClock(AT_START)
     }
 
     const toggle = (take: RecordingSummary) => {
@@ -46,25 +74,83 @@ function useTakePlayer(): TakePlayer {
         stop()
         const audio = new Audio(recordingAudioUrl(take.id))
         const isCurrent = () => audioRef.current === audio
+        const finish = () => {
+            cancelFrame()
+            setPlaying(null)
+            setClock(AT_START)
+        }
+        // The take's own length until the element knows its duration (a streamed file may not say).
+        const duration = () => (Number.isFinite(audio.duration) && audio.duration > 0 ? audio.duration : take.seconds)
+        const tick = () => {
+            if (!isCurrent()) return
+            const elapsed = audio.currentTime
+            setClock({ progress: Math.min(1, Math.max(0, elapsed / Math.max(duration(), 0.001))), elapsed })
+            frame.current = requestAnimationFrame(tick)
+        }
+        audio.onplaying = () => {
+            if (!isCurrent()) return
+            cancelFrame()
+            tick()
+        }
+        audio.onpause = cancelFrame
         audio.onended = () => {
-            if (isCurrent()) setPlaying(null)
+            if (isCurrent()) finish()
         }
         audio.onerror = () => {
             if (!isCurrent()) return
-            setPlaying(null)
+            finish()
             showToast("This recording's audio couldn't be loaded.")
         }
         audioRef.current = audio
         setPlaying(take.id)
+        setClock(AT_START)
         track('take_played', { seconds: take.seconds })
         void audio.play().catch((err: unknown) => {
             if (!isCurrent() || (err instanceof DOMException && err.name === 'AbortError')) return
-            setPlaying(null)
+            finish()
             showToast("This recording's audio couldn't be played.")
         })
     }
 
-    return { playing, toggle, stop }
+    return { playing, progress: clock.progress, elapsed: clock.elapsed, toggle, stop }
+}
+
+interface PlayButtonProps {
+    take: RecordingSummary
+    playing: boolean
+    onToggle: () => void
+}
+
+/**
+ * A recording's 36px play / pause well, with its tooltip. A recording with no audio kept stays
+ * focusable (aria-disabled, its click ignored) so hover and keyboard focus still reach the
+ * tooltip, which says why it can't play. The playing well takes the soft primary fill.
+ */
+function PlayButton({ take, playing, onToggle }: PlayButtonProps) {
+    const silent = !take.hasAudio
+    const label = playing ? 'Pause recording' : 'Play recording'
+    return (
+        <Tooltip label={label} reason={silent ? NO_AUDIO_REASON : undefined}>
+            <button
+                type="button"
+                aria-label={label}
+                aria-disabled={silent || undefined}
+                onClick={silent ? undefined : onToggle}
+                className={[
+                    'inline-flex size-9 shrink-0 items-center justify-center rounded-full border-0',
+                    'pointer-coarse:min-h-10 pointer-coarse:min-w-10',
+                    'transition-[transform,translate,scale,background-color,color,opacity] duration-(--t-press) ease-solkey',
+                    'motion-safe:not-aria-disabled:active:scale-[0.97] focus-ring',
+                    silent
+                        ? 'cursor-not-allowed opacity-40 bg-surface-container-lowest text-on-surface'
+                        : playing
+                          ? 'cursor-pointer bg-primary-soft text-on-primary-soft'
+                          : 'cursor-pointer bg-surface-container-lowest text-on-surface hover:bg-(--control-fill-hover) active:bg-(--control-fill-press)',
+                ].join(' ')}>
+                <Icon name={playing ? 'pause' : 'play'} size={16} />
+            </button>
+        </Tooltip>
+    )
 }
 
 interface TakesListProps {
@@ -153,18 +239,33 @@ export function TakesList({ takes, scoreTitleFor, scroll = true, numbered = fals
             {takes.map((take) => {
                 const scoreTitle = scoreTitleFor?.(take)
                 const number = numbers?.get(take.id)
+                const isPlaying = playing === take.id
+                // The length, or while it plays how far it has got: '0:02 / 0:05'.
+                const clock = (
+                    <span className="font-mono font-normal text-[12px] tabular-nums shrink-0">
+                        {isPlaying
+                            ? `${formatRecordingTime(player.elapsed)} / ${formatRecordingTime(take.seconds)}`
+                            : formatRecordingTime(take.seconds)}
+                    </span>
+                )
                 return (
-                    <li key={take.id} data-take={take.id} className="flex items-center gap-2 rounded-md bg-surface-container-low px-3 py-2">
-                        <IconButton
-                            icon={playing === take.id ? 'pause' : 'play'}
-                            size={32}
-                            onClick={() => player.toggle(take)}
-                            disabled={!take.hasAudio}
-                            ariaLabel={playing === take.id ? 'Pause recording' : 'Play recording'}
-                            title={take.hasAudio ? undefined : 'No audio was kept for this recording'}
-                            hoverTone="neutral"
-                            idleClassName="bg-surface-container-lowest"
-                        />
+                    <li
+                        key={take.id}
+                        data-take={take.id}
+                        className={[
+                            'relative isolate flex items-center gap-3 rounded-md px-3 py-2.5',
+                            isPlaying ? 'bg-surface-container' : 'bg-surface-container-low',
+                        ].join(' ')}>
+                        {/* The replay's progress, sweeping the row behind its content (read from the audio's
+                            own clock every frame, so no transition). */}
+                        {isPlaying && (
+                            <span
+                                aria-hidden
+                                className="absolute inset-y-0 left-0 w-full origin-left rounded-md bg-primary-soft/35 -z-10"
+                                style={{ transform: `scaleX(${player.progress})` }}
+                            />
+                        )}
+                        <PlayButton take={take} playing={isPlaying} onToggle={() => player.toggle(take)} />
                         {confirming === take.id ? (
                             // The question takes the row's text over; on a narrow panel its buttons
                             // wrap under it rather than squeezing it.
@@ -183,30 +284,29 @@ export function TakesList({ takes, scoreTitleFor, scroll = true, numbered = fals
                             </div>
                         ) : (
                             <>
-                                <div className="flex flex-col gap-0.5 flex-1 min-w-0">
+                                {/* Line heights with room for descenders: the title's 'g' is never clipped. */}
+                                <div className="flex flex-col gap-1 flex-1 min-w-0">
                                     {numbered && number !== undefined ? (
                                         <>
-                                            <span className="font-body font-medium text-[13px] leading-none text-on-surface truncate">
+                                            <span className="font-body font-medium text-[14px] leading-[1.3] text-on-surface truncate">
                                                 Recording {number}
                                             </span>
-                                            <span className="truncate font-body font-normal text-[11px] leading-none text-on-surface-variant">
-                                                <span className="font-mono">{formatRecordingTime(take.seconds)}</span>
+                                            <span className="truncate font-body font-normal text-[12px] leading-[1.35] text-on-surface-variant">
+                                                {clock}
                                                 {' · '}
                                                 {formatTakeDate(take.startedAt)}
                                             </span>
                                         </>
                                     ) : (
                                         <>
-                                            <span className="font-body font-medium text-[13px] leading-none text-on-surface truncate">
+                                            <span className="font-body font-medium text-[14px] leading-[1.3] text-on-surface truncate">
                                                 {number !== undefined && `Recording ${number} · `}
                                                 {formatTakeDate(take.startedAt)}
                                             </span>
                                             {/* The score name rides the length line, outside any clipping box, so the
                                                 link's focus ring shows whole; the name truncates inside the link. */}
-                                            <span className="flex items-baseline min-w-0 leading-none text-on-surface-variant">
-                                                <span className="font-mono font-normal text-[11px] shrink-0">
-                                                    {formatRecordingTime(take.seconds)}
-                                                </span>
+                                            <span className="flex items-baseline min-w-0 text-[12px] leading-[1.35] text-on-surface-variant">
+                                                {clock}
                                                 {scoreTitle !== undefined && (
                                                     <>
                                                         <span className="font-body text-[12px] whitespace-pre shrink-0"> · </span>
@@ -230,14 +330,16 @@ export function TakesList({ takes, scoreTitleFor, scroll = true, numbered = fals
                                     )}
                                 </div>
                                 <span data-delete className="contents">
-                                    <IconButton
-                                        icon="trash-2"
-                                        size={32}
-                                        onClick={() => setConfirming(take.id)}
-                                        ariaLabel="Delete recording"
-                                        hoverTone="magenta"
-                                        idleClassName="bg-transparent text-on-surface-variant"
-                                    />
+                                    <Tooltip label="Delete recording">
+                                        <IconButton
+                                            icon="trash-2"
+                                            size={32}
+                                            onClick={() => setConfirming(take.id)}
+                                            ariaLabel="Delete recording"
+                                            hoverTone="magenta"
+                                            idleClassName="bg-transparent text-on-surface-variant"
+                                        />
+                                    </Tooltip>
                                 </span>
                             </>
                         )}

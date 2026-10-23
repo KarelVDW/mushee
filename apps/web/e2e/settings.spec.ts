@@ -90,7 +90,7 @@ test('recordings tab: links each score, labels orphans "Deleted score", and disa
     await expect(silent).toHaveCount(1)
     const silentPlay = silent.getByRole('button', { name: 'Play recording' })
     await expect(silentPlay).toBeDisabled()
-    await expect(silentPlay).toHaveAttribute('title', 'No audio was kept for this recording')
+    await expect(silentPlay).toHaveAccessibleDescription('No audio was kept for this recording')
     await expect(rows.getByRole('button', { name: 'Play recording', disabled: false })).toHaveCount(3)
 })
 
