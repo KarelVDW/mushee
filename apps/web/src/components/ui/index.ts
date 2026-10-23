@@ -2,6 +2,7 @@
 export { AuthCard, type AuthCredentials, AuthFrame, AuthShell } from './AuthCard'
 export { Badge } from './Badge'
 export { Footer, PageHeader, SkipLink, TopNav } from './Chrome'
+export { Container } from './Container'
 export { ChipToggle, Segmented, Switch, ToolGroup, TransportBtn } from './Controls'
 export { DialogPanel } from './Dialog'
 export { HeaderMenu } from './HeaderMenu'
