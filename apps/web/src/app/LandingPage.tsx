@@ -157,18 +157,17 @@ function FeatureGrid() {
                     title="Simple tools, real notation."
                     sub="Everything you need to catch an idea before it evaporates."
                 />
-                {/* Phones: icon-left rows, so the six features stay a short scroll; from sm up, stacked cards. */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+                {/* Open editorial items, no boxes: the page keeps its boxes for what you act on (the FAQ rows, the plan cards).
+                    Phones: icon-left rows, so the six features stay a short scroll; from sm up, the icon above. */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-12 gap-y-10 sm:gap-y-14">
                     {FEATURES.map(({ icon, title, body }) => (
-                        <div key={title} className="bg-surface rounded-lg p-5 sm:p-6 flex flex-row sm:flex-col items-start gap-4 sm:gap-3">
+                        <div key={title} className="flex flex-row sm:flex-col items-start gap-4">
                             <div className="w-10 h-10 sm:w-11 sm:h-11 shrink-0 rounded-full bg-primary-soft text-on-primary-soft inline-flex items-center justify-center">
                                 <Icon name={icon} size={22} />
                             </div>
-                            <div className="flex flex-col gap-1.5 sm:gap-3 min-w-0">
-                                <h3 className="font-headline font-semibold text-[17px] sm:text-[18px] leading-[1.3] tracking-[-0.005em] text-on-surface m-0">
-                                    {title}
-                                </h3>
-                                <p className="font-body font-normal text-[15px] sm:text-[16px] leading-[1.55] text-on-surface-variant m-0">
+                            <div className="flex flex-col gap-1.5 sm:gap-2 min-w-0">
+                                <h3 className="type-subheading text-[18px] text-on-surface m-0">{title}</h3>
+                                <p className="font-body font-normal text-[16px] leading-[1.55] text-on-surface-variant m-0 max-w-[34ch] text-pretty">
                                     {body}
                                 </p>
                             </div>
