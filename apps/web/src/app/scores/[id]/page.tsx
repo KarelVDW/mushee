@@ -14,7 +14,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { useCallback, useEffect, useId, useRef, useState, useSyncExternalStore } from 'react'
 
 import { SelectionPopover } from '@/components/editor/SelectionPopover'
-import { dismissToast, ErrorScreen, focusWithoutTooltip, LoadingScreen, PopoverSheetHost, showToast, TertiaryButton } from '@/components/ui'
+import { dismissToast, ErrorScreen, focusWithoutTooltip, PopoverSheetHost, showToast } from '@/components/ui'
 import { ApiError, NetworkError } from '@/lib/api'
 import { withPlan } from '@/lib/plans'
 import { useScoreDocument } from '@/lib/queries'
@@ -28,6 +28,7 @@ import { PLAY_PAUSE_COMMAND, RECORD_COMMAND } from './commands'
 import { EditorAnnouncer, KeyboardHelp } from './EditorAnnouncer'
 import { EditorEmptyState } from './EditorEmptyState'
 import { EditorHeader, HEADER_FIT_QUERIES, type HeaderFit, UNTITLED_SCORE } from './EditorHeader'
+import { EditorSkeleton } from './EditorSkeleton'
 import { KeyboardShortcutsDialog } from './KeyboardShortcutsDialog'
 import { MeasureControls } from './MeasureControls'
 import { NoteToolDock } from './NoteToolDock'
@@ -544,15 +545,15 @@ export default function ScoreEditorPage() {
         )
     }
 
-    // Hold the loading screen until the playback samples (score instrument + metronome
+    // Hold the editor's skeleton until the playback samples (score instrument + metronome
     // woodblock) are in memory: pressing record must click instantly, and a half-ready
-    // editor whose transport buttons play nothing reads as broken. It says which wait it is.
+    // editor whose transport buttons play nothing reads as broken. It says which wait it is,
+    // in the editor's own shape, so the real chrome lands where the skeleton drew it.
     if (!score || !instrumentsReady) {
         return (
-            <LoadingScreen
-                testId="editor-loading"
+            <EditorSkeleton
                 message={score ? `Getting the ${score.instrument.displayName.toLowerCase()} sound ready…` : 'Opening your score…'}
-                slowAction={<TertiaryButton onClick={() => window.location.reload()}>Try again</TertiaryButton>}
+                onRetry={() => window.location.reload()}
             />
         )
     }
