@@ -23,12 +23,6 @@ import { TupletBracket } from './TupletBracket'
 // clefs, keys and time signatures.
 const STAFF_BAND_Y = Staff.TOP_Y - 6
 const STAFF_BAND_HEIGHT = Staff.HEIGHT + 12
-/**
- * How far each selection band reaches past its note's slot, so neighbouring bands overlap
- * instead of abutting: a run reads as one strip, with no anti-aliased seam between notes (or at
- * a barline, which draws over the overlap).
- */
-const SELECTION_BAND_OVERLAP = 0.5
 /** The corner radius of a lone selected note's band; a band beside a selected neighbour is square. */
 const SELECTION_BAND_RADIUS = 3
 
@@ -167,10 +161,15 @@ export const Measure = memo(function Measure({
                 const noteLayout = layout.noteLayoutFor(note)
                 const noteX = layout.getXForElement(note)
                 // One band per selected note (the e2e suites count them), spanning the note's full
-                // allotted slot — the last note reaching the end barline — and a hair past it, so a
-                // run of selected notes reads as one continuous strip. Only a lone selected note
-                // keeps soft corners; inside a run the bands meet square.
+                // allotted slot — the last note reaching the end barline — so a run of selected notes
+                // reads as one continuous strip: inside a run the bands meet square, and only a lone
+                // selected note keeps soft corners. A run that carries on into the next bar takes its
+                // last band on through the barline (which draws over it) to the bar's end, where the
+                // next band begins, or the strip would break above and below the staff. The bands abut
+                // rather than overlap: the fill is translucent, so an overlap would paint a darker
+                // hairline at every note, while abutting edges blend to the band's own colour.
                 const inRun = !!selectedNoteIds && [notes[i - 1], notes[i + 1]].some((n) => !!n && selectedNoteIds.has(n.id))
+                const runsOn = isSelected && i === notes.length - 1 && !!selectedNoteIds?.has(note.getNext()?.id ?? '')
                 return (
                     <g key={note.id} transform={`translate(${noteX}, 0)`}>
                         {isSelected && (
@@ -179,7 +178,7 @@ export const Measure = memo(function Measure({
                                 data-selection-band
                                 x={0}
                                 y={STAFF_BAND_Y}
-                                width={layout.getAllottedWidth(note) + SELECTION_BAND_OVERLAP}
+                                width={runsOn ? layout.measureWidth - noteX : layout.getAllottedWidth(note)}
                                 height={STAFF_BAND_HEIGHT}
                                 rx={inRun ? 0 : SELECTION_BAND_RADIUS}
                                 fill={INTERACTION_BLUE_BAND}

@@ -46,16 +46,17 @@ describe('Measure selection bands', () => {
         }
     })
 
-    it('reaches half a unit past each note’s slot, so neighbouring bands overlap', () => {
+    it('spans each note’s slot, so neighbouring bands meet edge to edge, never overlapping', () => {
         const score = makeScore(1)
         const measure = score.measures[0]
         const layout = score.layout.measureLayoutFor(measure)
         const drawn = bands(score, 0, [0, 1, 2, 3])
-        drawn.forEach((band, i) => expect(band.width).toBe(layout.getAllottedWidth(measure.notes[i]) + 0.5))
-        // Each band ends past where the next note's band begins.
+        drawn.forEach((band, i) => expect(band.width).toBe(layout.getAllottedWidth(measure.notes[i])))
+        // Each band ends exactly where the next note's band begins: the translucent fill would
+        // paint a darker hairline wherever two overlapped.
         for (let i = 0; i < 3; i++) {
             const end = layout.getXForElement(measure.notes[i]) + drawn[i].width
-            expect(end).toBeGreaterThan(layout.getXForElement(measure.notes[i + 1]))
+            expect(end).toBe(layout.getXForElement(measure.notes[i + 1]))
         }
     })
 
@@ -72,6 +73,37 @@ describe('Measure selection bands', () => {
         // run carries on into bar 2 (the barline draws over the meeting).
         expect(bands(score, 0, [3]).map((band) => band.rx)).toEqual([3])
         expect(bands(score, 1, [0, 1]).map((band) => band.rx)).toEqual([0, 0])
+    })
+
+    it('takes a run that carries on into the next bar through the barline, and stops a run that ends there', () => {
+        const score = makeScore(2)
+        const [first, second] = score.measures
+        const layout = score.layout.measureLayoutFor(first)
+        const last = first.notes[3]
+        const bandsOf = (selected: string[]) =>
+            elements(renderMeasure({ measure: first, layout, selectedNoteIds: new Set(selected) }))
+                .map((el) => el.props as BandProps)
+                .filter((props) => props['data-selection-band'])
+        // Into bar 2: on through the barline (which stands between the last slot and the bar's
+        // end, and draws over the band), to where bar 2's first band begins.
+        const [across] = bandsOf([last.id, second.notes[0].id])
+        expect(layout.getXForElement(last) + layout.getAllottedWidth(last)).toBeLessThan(layout.measureWidth)
+        expect(layout.getXForElement(last) + across.width).toBe(layout.measureWidth)
+        expect(score.layout.rows[0].getMeasureX(first) + layout.measureWidth).toBe(
+            score.layout.rows[0].getMeasureX(second) + score.layout.measureLayoutFor(second).getXForElement(second.notes[0]),
+        )
+        // Ending at the barline: each band its own slot only.
+        expect(bandsOf([first.notes[2].id, last.id]).map((band) => band.width)).toEqual([
+            layout.getAllottedWidth(first.notes[2]),
+            layout.getAllottedWidth(last),
+        ])
+        // The score's last note has no next bar to run on into.
+        const lastLayout = score.layout.measureLayoutFor(second)
+        const final = second.notes[3]
+        const [end] = elements(renderMeasure({ measure: second, layout: lastLayout, selectedNoteIds: new Set([final.id]) }))
+            .map((el) => el.props as BandProps)
+            .filter((props) => props['data-selection-band'])
+        expect(end.width).toBe(lastLayout.getAllottedWidth(final))
     })
 
     it('draws no band without a selection', () => {

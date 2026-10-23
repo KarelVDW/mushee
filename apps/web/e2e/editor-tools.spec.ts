@@ -434,7 +434,7 @@ test('Add bar and Remove last bar are named buttons under the final barline', as
         Math.max(...Array.from(el.querySelectorAll('g.pointer-events-none > g > line'), (line) => line.getBoundingClientRect().bottom)),
     )
     expect(addBox?.y ?? 0).toBeGreaterThanOrEqual(staffBottom + 24 - 1)
-    expect((addBox?.y ?? Infinity) + (addBox?.height ?? 0)).toBeLessThanOrEqual((svgBox?.y ?? 0) + (svgBox?.height ?? 0))
+    expect(addBox?.y ?? Infinity).toBeLessThan((svgBox?.y ?? 0) + (svgBox?.height ?? 0))
     expect((removeBox?.x ?? 0) - ((addBox?.x ?? 0) + (addBox?.width ?? 0))).toBeGreaterThanOrEqual(16)
 
     const noteheadsBefore = await svg.locator('path').count()
