@@ -19,12 +19,18 @@ import { TimeSignature } from './TimeSignature'
 import { TupletBracket } from './TupletBracket'
 
 // The full staff band, with a little air above and below: the vertical extent of both the
-// selection highlight (a soft, rounded blue strip behind selected noteheads, matching the
-// playback cursor's height) and the click targets of clefs, keys and time signatures.
-// Adjacent selected notes' bands abut into a continuous run because each spans the full gap
-// to the next note.
+// selection highlight (a soft blue strip behind selected noteheads) and the click targets of
+// clefs, keys and time signatures.
 const STAFF_BAND_Y = Staff.TOP_Y - 6
 const STAFF_BAND_HEIGHT = Staff.HEIGHT + 12
+/**
+ * How far each selection band reaches past its note's slot, so neighbouring bands overlap
+ * instead of abutting: a run reads as one strip, with no anti-aliased seam between notes (or at
+ * a barline, which draws over the overlap).
+ */
+const SELECTION_BAND_OVERLAP = 0.5
+/** The corner radius of a lone selected note's band; a band beside a selected neighbour is square. */
+const SELECTION_BAND_RADIUS = 3
 
 /**
  * What a clicked attribute glyph reports about itself. The score adds the measure index and
@@ -149,14 +155,16 @@ export const Measure = memo(function Measure({
                 )
             })}
 
-            {measure.notes.map((note) => {
+            {measure.notes.map((note, i, notes) => {
                 const isSelected = selectedNoteIds?.has(note.id) ?? false
                 const isHovered = !isSelected && note.id === hoveredNoteId
                 const noteLayout = layout.noteLayoutFor(note)
                 const noteX = layout.getXForElement(note)
-                // Span the band across the note's full allotted slot so a run of selected notes
-                // reads as one continuous strip, with the last note reaching the end barline.
-                const bandWidth = layout.getAllottedWidth(note)
+                // One band per selected note (the e2e suites count them), spanning the note's full
+                // allotted slot — the last note reaching the end barline — and a hair past it, so a
+                // run of selected notes reads as one continuous strip. Only a lone selected note
+                // keeps soft corners; inside a run the bands meet square.
+                const inRun = !!selectedNoteIds && [notes[i - 1], notes[i + 1]].some((n) => !!n && selectedNoteIds.has(n.id))
                 return (
                     <g key={note.id} transform={`translate(${noteX}, 0)`}>
                         {isSelected && (
@@ -165,9 +173,9 @@ export const Measure = memo(function Measure({
                                 data-selection-band
                                 x={0}
                                 y={STAFF_BAND_Y}
-                                width={bandWidth}
+                                width={layout.getAllottedWidth(note) + SELECTION_BAND_OVERLAP}
                                 height={STAFF_BAND_HEIGHT}
-                                rx={3}
+                                rx={inRun ? 0 : SELECTION_BAND_RADIUS}
                                 fill={INTERACTION_BLUE_BAND}
                             />
                         )}
