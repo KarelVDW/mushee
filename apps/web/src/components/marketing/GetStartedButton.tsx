@@ -66,7 +66,7 @@ export function GetStartedButton({
 
     if (variant === 'secondary') {
         return (
-            <SecondaryButton href={href} onClick={onClick} fullWidth={fullWidth}>
+            <SecondaryButton href={href} onClick={onClick} size={size} fullWidth={fullWidth}>
                 {label}
             </SecondaryButton>
         )

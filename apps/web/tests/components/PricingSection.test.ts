@@ -51,6 +51,27 @@ describe('Pricing', () => {
         expect(songwriter.badges).toEqual(['Best value'])
     })
 
+    it('prices a paid card by the month, with the year and what it saves on the line under it', () => {
+        const [sketch, songwriter, studio] = cards()
+        expect(songwriter.text).toContain('$9/ month')
+        expect(songwriter.text).toContain('or $90 a year — save 17%')
+        expect(studio.text).toContain('or $190 a year — save 17%')
+        expect(sketch.text).toContain('Freeforever')
+        expect(sketch.text).not.toContain('a year')
+    })
+
+    it('keeps every card CTA a flat, full-width lg capsule, and the magenta plate off the cards', () => {
+        const host = document.createElement('div')
+        host.innerHTML = renderToStaticMarkup(createElement(Pricing, { ctaLocation: 'pricing' }))
+        expect(host.innerHTML).not.toContain('shadow-offset')
+        const ctas = [...host.querySelectorAll('a')].filter((a) => /^(Start free|Choose )/.test(a.textContent ?? ''))
+        expect(ctas.map((a) => a.textContent)).toEqual(['Start free', 'Choose Songwriter', 'Choose Studio', 'Choose Arranger'])
+        for (const cta of ctas) {
+            expect(cta.className).toContain('h-(--control-lg)')
+            expect(cta.className).toContain('w-full')
+        }
+    })
+
     it('offers the professional tier as "Choose Arranger"', () => {
         const host = document.createElement('div')
         host.innerHTML = renderToStaticMarkup(createElement(Pricing, { ctaLocation: 'pricing' }))

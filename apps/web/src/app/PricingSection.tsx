@@ -1,5 +1,6 @@
 'use client'
 
+import { PriceTag } from '@mushee/ui'
 import { useState } from 'react'
 
 import { settingsTabPath } from '@/app/settings/settingsTabs'
@@ -16,6 +17,7 @@ import {
     planBudgetHint,
     planCtaLabel,
     planFeatures,
+    planSavingsPercent,
     type PlanTier,
     recordingBudgetLabel,
     withPlan,
@@ -139,28 +141,23 @@ interface CardProps {
 }
 
 /**
- * A tier card's button. For a stranger: "Start free" / "Choose {plan}" into signup (or, for a
- * signed-in visitor whose plan isn't known yet, the plan dialog). Once the visitor's plan is
- * known: "Your plan" on their own card, to the plan tab, and "Switch to {plan}" on the others,
- * to the plan tab's Change plan with that tier selected.
+ * A tier card's button, always the big (lg) capsule across the card, and always flat: the
+ * page's magenta pop belongs to its hero and closing CTAs. For a stranger: "Start free" /
+ * "Choose {plan}" into signup (or, for a signed-in visitor whose plan isn't known yet, the plan
+ * dialog). Once the visitor's plan is known: "Your plan" on their own card, to the plan tab, and
+ * "Switch to {plan}" on the others, to the plan tab's Change plan with that tier selected.
  */
-function PlanCardCta({
-    tier,
-    ctaLocation,
-    currentTierId,
-    primary,
-    fullWidth = false,
-}: CardProps & { primary: boolean; fullWidth?: boolean }) {
+function PlanCardCta({ tier, ctaLocation, currentTierId, primary }: CardProps & { primary: boolean }) {
     if (currentTierId === null) {
         return (
-            <GetStartedButton location={ctaLocation} plan={tier.id} variant={primary ? 'primary' : 'secondary'} fullWidth={fullWidth}>
+            <GetStartedButton location={ctaLocation} plan={tier.id} variant={primary ? 'primary' : 'secondary'} size="lg" fullWidth>
                 {planCtaLabel(tier)}
             </GetStartedButton>
         )
     }
     if (tier.id === currentTierId) {
         return (
-            <SecondaryButton href={settingsTabPath('plan')} fullWidth={fullWidth}>
+            <SecondaryButton href={settingsTabPath('plan')} size="lg" fullWidth>
                 Your plan
             </SecondaryButton>
         )
@@ -168,15 +165,24 @@ function PlanCardCta({
     const href = withPlan(settingsTabPath('plan'), tier.id)
     const label = `Switch to ${tier.name}`
     return primary ? (
-        <PrimaryButton href={href} fullWidth={fullWidth}>
+        <PrimaryButton href={href} size="lg" fullWidth>
             {label}
         </PrimaryButton>
     ) : (
-        <SecondaryButton href={href} fullWidth={fullWidth}>
+        <SecondaryButton href={href} size="lg" fullWidth>
             {label}
         </SecondaryButton>
     )
 }
+
+/** A paid plan's second price line: the year's price and what it saves, in the app's own words. */
+function yearlyLine(tier: PlanTier, currency: Currency): string {
+    return `or ${formatMoney(tier.priceYearly, currency)} a year — save ${planSavingsPercent(tier)}%`
+}
+
+// PriceTag sets its cadence and note in on_surface_variant, which sinks on the charcoal card: there
+// they take the inverse quiet tone (the note is the tag's last line, the cadence its first line's last part).
+const PRICE_ON_DARK = '[&>span:last-child]:text-inverse-on-surface [&>span:first-child>span:last-child]:text-inverse-on-surface'
 
 /** The professional tier: present enough to anchor the ladder, slim enough
  *  not to compete with the consumer cards. */
@@ -253,30 +259,34 @@ function PricingCard(props: CardProps) {
     const [budget, ...features] = planFeatures(tier)
     const budgetHint = planBudgetHint(tier)
     const quiet = emphasis ? 'text-inverse-on-surface' : 'text-on-surface-variant'
+    const free = tier.priceMonthly === 0
     return (
         <div
             className={[
                 'rounded-lg p-7 flex flex-col gap-4',
+                // The popular card is set apart by its charcoal alone (no offset plate: the magenta is the
+                // hero CTA's); on it the focus ring turns neon so it stays visible.
                 emphasis
-                    ? 'bg-on-surface text-surface shadow-(--shadow-offset-3)'
+                    ? 'bg-on-surface text-surface [--focus-ring-color:var(--color-primary-container)]'
                     : 'bg-surface-container-lowest text-on-surface tonal-layer-glow',
             ].join(' ')}>
             <div className="flex justify-between items-start gap-3">
                 <div className="flex flex-col gap-1.5">
                     <h3 className="font-headline font-semibold text-[20px] leading-none tracking-[-0.01em] m-0">{tier.name}</h3>
-                    <span className={`font-body font-normal text-[13px] leading-[1.3] ${quiet}`}>{tier.tagline}</span>
+                    <span className={`font-body font-normal text-[14px] leading-[1.3] ${quiet}`}>{tier.tagline}</span>
                 </div>
                 {/* The visitor's own plan wins the corner; "Best value" stays on the popular card otherwise. */}
                 {current ? <Badge tone="neutral">Your plan</Badge> : emphasis && <Badge tone="secondary">Best value</Badge>}
             </div>
-            <div className="flex items-baseline gap-1.5">
-                <span className="font-display font-bold text-[40px] tracking-[-0.03em]">
-                    {tier.priceMonthly === 0 ? 'Free' : formatMoney(tier.priceMonthly, currency)}
-                </span>
-                <span className={`font-body font-medium text-[13px] leading-none ${quiet}`}>
-                    {tier.priceMonthly === 0 ? 'forever' : `/ month · ${formatMoney(tier.priceYearly, currency)}/yr`}
-                </span>
-            </div>
+            {/* One price block: the month, and under it the year with its saving; Sketch keeps the line's
+                height empty, so the three cards' feature lists start level. */}
+            <PriceTag
+                size="xl"
+                amount={free ? 'Free' : formatMoney(tier.priceMonthly, currency)}
+                cadence={free ? 'forever' : '/ month'}
+                note={free ? null : yearlyLine(tier, currency)}
+                className={emphasis ? PRICE_ON_DARK : undefined}
+            />
             <ul className="list-none p-0 m-0 flex flex-col gap-2.5">
                 <FeatureLine emphasis={emphasis} hint={budgetHint}>
                     {budget}
@@ -288,23 +298,23 @@ function PricingCard(props: CardProps) {
                 ))}
             </ul>
             <div className="mt-auto pt-2">
-                <PlanCardCta {...props} primary={emphasis} fullWidth />
+                <PlanCardCta {...props} primary={emphasis} />
             </div>
         </div>
     )
 }
 
-/** One checked line of a tier card, with an optional 12px picture of what it means (the free budget's). */
+/** One checked line of a tier card (15px), with an optional 13px picture of what it means (the free budget's). */
 function FeatureLine({ emphasis, hint, children }: { emphasis: boolean; hint?: string | null; children: string }) {
     return (
-        <li className="flex gap-2.5 items-start font-body font-normal text-[14px] leading-normal">
-            <span className={emphasis ? 'text-primary-container' : 'text-primary'}>
+        <li className="flex gap-3 items-start font-body font-normal text-[15px] leading-normal">
+            <span className={`shrink-0 ${emphasis ? 'text-primary-container' : 'text-primary'}`}>
                 <Icon name="check" size={16} />
             </span>
             <span className="flex flex-col gap-0.5">
                 <span>{children}</span>
                 {hint && (
-                    <span className={`text-[12px] leading-[1.4] ${emphasis ? 'text-inverse-on-surface' : 'text-on-surface-variant'}`}>
+                    <span className={`text-[13px] leading-[1.4] ${emphasis ? 'text-inverse-on-surface' : 'text-on-surface-variant'}`}>
                         {hint}
                     </span>
                 )}

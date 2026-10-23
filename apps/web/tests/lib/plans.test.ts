@@ -15,6 +15,7 @@ import {
     planCtaLabel,
     planFeatures,
     planPrice,
+    planSavingsPercent,
     recordingBudgetLabel,
     requestedPlanFrom,
     withPlan,
@@ -55,6 +56,14 @@ describe('plan catalogue', () => {
         expect(planPrice(pro, 'yearly')).toBe('$7.50/mo · billed yearly')
         expect(planPrice(studio, 'yearly')).toBe('$15.83/mo · billed yearly')
         expect(planPrice(arranger, 'monthly')).toBe('$49/mo')
+    })
+
+    it('says what a year saves as one whole percentage, the same for every card', () => {
+        expect(planSavingsPercent(planById('free'))).toBe(0)
+        // Two months free on every paid tier: $90 for $108, $190 for $228, $490 for $588.
+        for (const id of ['pro', 'studio', 'arranger'] as const) expect(planSavingsPercent(planById(id))).toBe(17)
+        expect(planSavingsPercent({ priceMonthly: 10, priceYearly: 90 })).toBe(25)
+        expect(planSavingsPercent({ priceMonthly: 10, priceYearly: 120 })).toBe(0)
     })
 
     it('writes recording budgets as allowances in words, and no cap without the word unlimited', () => {
