@@ -66,12 +66,13 @@ export function EditorEmptyState({ show, touch, onStartRecording, descriptionId,
             data-export-exclude
             inert={leaving}
             className={[
-                'mx-auto mb-6 max-w-120 flex flex-col items-center gap-3 text-center',
-                // 56px below the score's last row on desktop. The bar buttons' row (MeasureControls:
-                // 12px + a 32px row, 40px on touch) sits in between — held invisible while the score
-                // is empty, so it keeps its room — and this margin is what is left.
-                // Phones keep 24px clear of those 40px buttons — the row alone already takes 52px.
-                touch ? 'mt-6' : 'mt-3 pointer-coarse:mt-1',
+                // Phones centre it; from sm up it reads on from the first bar, on the staff's left
+                // edge (the paper's padding) — bar, heading, how-to, button: one reading line.
+                'mx-auto mb-6 max-w-120 flex flex-col items-center gap-3 text-center sm:mx-0 sm:items-start sm:text-left',
+                // Below the bar buttons' row (MeasureControls: 12px + a 32px row, 40px on touch),
+                // held invisible while the score is empty so it keeps its room. Phones keep 24px
+                // clear of those 40px buttons — the row alone already takes 52px.
+                touch ? 'mt-6' : 'mt-10',
                 'transition-[opacity,transform] duration-200 ease-solkey motion-reduce:transition-none',
                 leaving ? 'opacity-0 translate-y-2' : 'opacity-100 translate-y-0',
             ].join(' ')}>
@@ -79,6 +80,7 @@ export function EditorEmptyState({ show, touch, onStartRecording, descriptionId,
             <p id={descriptionId} className="m-0 max-w-[34ch] font-body font-normal text-[15px] leading-normal text-on-surface-variant">
                 {EMPTY_SCORE_COPY.body[form]}
             </p>
+            {/* One tonal step above the paper, so it reads as a button — still quieter than the transport's Record. */}
             <button
                 ref={startRef}
                 type="button"
@@ -86,11 +88,11 @@ export function EditorEmptyState({ show, touch, onStartRecording, descriptionId,
                 className={[
                     'mt-1 inline-flex items-center gap-2 rounded-full border-0 cursor-pointer px-5',
                     touch ? 'h-10' : 'h-11',
-                    'bg-surface-container-low text-on-surface hover:bg-surface-container',
+                    'bg-surface-container text-on-surface hover:bg-surface-container-high',
                     'font-label font-semibold text-[14px] leading-none',
                     'transition-colors duration-150 ease-solkey focus-ring',
                 ].join(' ')}>
-                <span aria-hidden className="size-2 shrink-0 rounded-full bg-error-container" />
+                <span aria-hidden className="size-2 shrink-0 rounded-full bg-record" />
                 {EMPTY_SCORE_COPY.start}
             </button>
             <p className="m-0 font-body font-normal text-[13px] leading-normal text-on-surface-variant">{EMPTY_SCORE_COPY.byHand[form]}</p>

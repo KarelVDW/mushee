@@ -35,6 +35,8 @@ interface ExportMenuProps {
     menuTitle?: string
     /** The chip's size: `lg` beside a page's big CTA (the shared score page). */
     size?: 'default' | 'lg'
+    /** The phone header's form: the panel opens as the full-width header card (HeaderMenu `sheet`). */
+    sheet?: boolean
 }
 
 /**
@@ -51,6 +53,7 @@ export function ExportMenu({
     ariaLabel = 'Export score',
     menuTitle = 'Download as',
     size,
+    sheet = false,
 }: ExportMenuProps) {
     // Held here, not in the panel: an export keeps running (and blocks a second one) after Escape closes the menu.
     const [busy, setBusy] = useState<ExportFormat | null>(null)
@@ -82,7 +85,7 @@ export function ExportMenu({
                     }
                 }
                 onExported()
-                showToast(`Downloaded “${filename}”.`, 'info')
+                showToast(`Downloaded “${filename}”.`, 'info', { icon: 'check' })
             } catch (err) {
                 console.error(`Export to ${format} failed`, err)
                 showToast(`The ${formatLabel} export failed. Please try again.`)
@@ -94,9 +97,19 @@ export function ExportMenu({
     )
 
     return (
-        <HeaderMenu icon="download" label={label} compact={compact} ariaLabel={ariaLabel} title={menuTitle} size={size} className="gap-2">
+        <HeaderMenu
+            icon="download"
+            label={label}
+            compact={compact}
+            sheet={sheet}
+            ariaLabel={ariaLabel}
+            title={menuTitle}
+            size={size}
+            className="w-84 gap-2">
             {({ close }) => (
-                <div role="group" aria-label="Export format" className="flex flex-col gap-1.5">
+                // Bare rows, like the other header menus' (transparent until hovered), each one 48px
+                // at least: the format, its extension trailing, and what it is for.
+                <div role="group" aria-label="Export format" className="flex flex-col gap-0.5 -mx-1.5">
                     {FORMATS.map(({ format, label: formatLabel, description, extension }) => (
                         <button
                             key={format}
@@ -104,21 +117,23 @@ export function ExportMenu({
                             disabled={busy !== null}
                             onClick={() => void handleExport(format, close)}
                             className={[
-                                'flex flex-col items-start justify-center gap-1.5 w-64 max-w-full px-3 py-2.5 pointer-coarse:min-h-11 rounded-md border-0 text-left',
+                                'flex flex-col items-start justify-center gap-1 w-full min-h-12 px-2.5 py-2 rounded-md border-0 bg-transparent text-left',
                                 'cursor-pointer disabled:cursor-not-allowed disabled:opacity-40',
-                                'bg-surface-container-low hover:bg-surface-container',
+                                'enabled:hover:bg-surface-container-high enabled:active:bg-surface-container-highest',
                                 'transition-colors duration-150 ease-solkey focus-ring',
                             ].join(' ')}>
                             <span className="flex w-full items-baseline justify-between gap-3">
-                                <span className="font-label font-semibold text-[13px] leading-none text-on-surface">
+                                <span className="font-label font-semibold text-[14px] leading-tight text-on-surface">
                                     {busy === format ? `Preparing ${formatLabel}…` : formatLabel}
                                 </span>
                                 {/* Visual only: read aloud it would repeat the format's name ("PDF .pdf"). */}
-                                <span aria-hidden className="font-mono text-[11px] leading-none text-on-surface-variant">
+                                <span aria-hidden className="font-mono text-[12px] leading-none text-on-surface-variant">
                                     {extension}
                                 </span>
                             </span>
-                            <span className="font-body font-normal text-[11px] leading-[1.35] text-on-surface-variant">{description}</span>
+                            <span className="font-body font-normal text-[12px] max-sm:text-[13px] leading-[1.4] text-on-surface-variant text-pretty">
+                                {description}
+                            </span>
                         </button>
                     ))}
                 </div>

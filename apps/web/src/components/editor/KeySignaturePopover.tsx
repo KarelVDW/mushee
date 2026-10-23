@@ -1,6 +1,6 @@
 'use client'
 
-import { KeySignatureIcon } from '@mushee/notation/components'
+import { AccidentalIcon, KeySignatureIcon } from '@mushee/notation/components'
 import { KeySignature } from '@mushee/notation/model'
 import { type ReactNode, useEffect, useRef } from 'react'
 
@@ -10,26 +10,45 @@ import { Popover, PopoverOption } from '@/components/ui'
 const KEY_ROWS: number[][] = [[-7, -6, -5, -4, -3, -2, -1], [0], [1, 2, 3, 4, 5, 6, 7]]
 
 /**
- * Cell, glyph and label sizes per grid size: `md` is the key-signature picker's own,
- * `sm` the tighter grid inside the transpose popover's key tab. Labels never go under 11px.
+ * Cell, staff and label sizes per grid size: `md` is the key-signature picker's own, `sm` the
+ * tighter grid inside the transpose popover's key tab. Each signature sits on a faint staff of
+ * `staff` px (KeySignatureIcon `staff`), its lines `staffWidth` px long however few accidentals ride
+ * on them (a long run widens it), so the accidentals read as a key, not specks.
  */
 const GRID_SIZES = {
-    md: { gap: 'gap-1.5', cell: 'w-12 h-14 px-1 py-1.5', glyph: 32, label: 'text-[11px]' },
-    sm: { gap: 'gap-1', cell: 'w-10.5 h-12 px-1 py-1', glyph: 26, label: 'text-[11px]' },
+    md: { gap: 'gap-1.5', cell: 'w-12 h-16 px-1 py-1', staff: 24, staffWidth: 40, label: 'text-[12px]' },
+    sm: { gap: 'gap-1', cell: 'w-10.5 h-14 px-0.5 py-1', staff: 20, staffWidth: 34, label: 'text-[12px]' },
 } as const
 
 /**
  * A phone sheet's grid: seven fluid columns across the sheet (about 41px a cell at 360, 45px at
  * 390), so the flats and the sharps each stay one row instead of wrapping a key onto a row of
- * its own; the `sm` glyph, since a 32px seven-flat run wouldn't fit such a cell. C sits alone
- * in the middle column of its row.
+ * its own — on a 22px staff a seven-sharp run is 40px wide, so it fits the narrowest cell.
  */
 const FLUID_GRID = {
     row: 'grid grid-cols-7 gap-1 w-full',
-    cell: 'w-full min-w-0 h-12 px-0.5 py-1',
-    alone: 'col-start-4',
-    glyph: 26,
+    cell: 'w-full min-w-0 h-16 px-0.5 py-1',
+    staff: 22,
+    staffWidth: 36,
+    label: 'text-[13px]',
 } as const
+
+/** The C tile: the one key with nothing to draw, a wide row of its own between the flats and the sharps. */
+const C_TILE = 'w-full h-11 flex-row gap-2.5 justify-center px-3'
+/** The C tile's short empty staff, as tall as the other keys' staves. */
+const C_STAFF_WIDTH = 40
+
+/** A key's name drawn for a tile: its letter, then the alteration as notation (never the UI font's ♭ ♯). */
+function KeyName({ fifths, className }: { fifths: number; className: string }) {
+    const name = KeySignature.majorKeyName(fifths)
+    const alter = name.endsWith('♯') ? 1 : name.endsWith('♭') ? -1 : 0
+    return (
+        <span className={`inline-flex items-center gap-px font-semibold leading-none ${className}`}>
+            {name.charAt(0)}
+            {alter !== 0 && <AccidentalIcon alter={alter} size={11} />}
+        </span>
+    )
+}
 
 interface KeySignatureGridProps {
     /** The highlighted key's fifths, or null for none. */
@@ -56,26 +75,45 @@ export function KeySignatureGrid({ active, onSelect, size, fluid = false, ariaLa
         // Only on open: a pick closes the picker, and scrolling under the user's finger mid-browse would jump.
     }, [])
     const rowClass = fluid ? FLUID_GRID.row : `flex flex-wrap justify-center ${sizes.gap}`
-    const glyph = fluid ? FLUID_GRID.glyph : sizes.glyph
+    const { staff, staffWidth, label } = fluid ? FLUID_GRID : sizes
     return (
-        <div ref={gridRef} role="group" aria-label={ariaLabel} className="flex flex-col gap-1.5 items-center">
+        // As wide as a row of seven keys (or the sheet, fluid), so the C tile spans exactly the rows above and below it.
+        <div
+            ref={gridRef}
+            role="group"
+            aria-label={ariaLabel}
+            className={`flex flex-col gap-1.5 items-stretch ${fluid ? 'w-full' : 'w-max max-w-full mx-auto'}`}>
             {KEY_ROWS.map((row, i) => (
                 <div key={i} className={rowClass}>
                     {row.map((fifths) => {
                         const name = KeySignature.majorKeyName(fifths)
-                        const cell = fluid ? `${FLUID_GRID.cell}${row.length === 1 ? ` ${FLUID_GRID.alone}` : ''}` : sizes.cell
+                        const common = {
+                            active: fifths === active,
+                            ariaLabel: `${name} major`,
+                            title: KeySignature.readingsOf(fifths),
+                            onClick: () => onSelect(fifths),
+                            layout: 'cell' as const,
+                        }
+                        if (fifths === 0) {
+                            return (
+                                <PopoverOption key={fifths} {...common} className={`${C_TILE}${fluid ? ' col-span-7' : ''}`}>
+                                    <KeySignatureIcon fifths={0} size={staff} staff width={C_STAFF_WIDTH} />
+                                    <span className="font-semibold text-[12px] leading-none">C</span>
+                                    <span className="font-body font-normal text-[12px] leading-none text-on-surface-variant">
+                                        no sharps or flats
+                                    </span>
+                                </PopoverOption>
+                            )
+                        }
                         return (
                             <PopoverOption
                                 key={fifths}
-                                active={fifths === active}
-                                ariaLabel={`${name} major`}
-                                title={KeySignature.readingsOf(fifths)}
-                                onClick={() => onSelect(fifths)}
-                                className={`flex-col justify-end gap-0.5 ${cell}`}>
+                                {...common}
+                                className={`flex-col justify-end gap-0.5 ${fluid ? FLUID_GRID.cell : sizes.cell}`}>
                                 <span className="flex flex-1 items-center">
-                                    <KeySignatureIcon fifths={fifths} size={glyph} />
+                                    <KeySignatureIcon fifths={fifths} size={staff} staff width={staffWidth} />
                                 </span>
-                                <span className={`${sizes.label} leading-none font-medium`}>{name}</span>
+                                <KeyName fifths={fifths} className={label} />
                             </PopoverOption>
                         )
                     })}

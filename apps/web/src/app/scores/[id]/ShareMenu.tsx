@@ -48,6 +48,8 @@ interface ShareMenuProps {
     shareToken: string | null
     /** Icon-only trigger (the mobile header). */
     compact?: boolean
+    /** The phone header's form: the panel opens as the full-width header card (HeaderMenu `sheet`). */
+    sheet?: boolean
 }
 
 /**
@@ -56,12 +58,13 @@ interface ShareMenuProps {
  * off is gone for everyone who has it, and turning sharing back on mints a new one. Sits in
  * the editor header next to Recordings and Export, same panel pattern.
  */
-export function ShareMenu({ scoreId, shareToken, compact = false }: ShareMenuProps) {
+export function ShareMenu({ scoreId, shareToken, compact = false, sheet = false }: ShareMenuProps) {
     return (
         <HeaderMenu
             icon={shareToken ? 'link' : 'share-2'}
             label="Share"
             compact={compact}
+            sheet={sheet}
             ariaLabel="Share score"
             title="Share a read-only link"
             className="gap-3 w-80 max-w-[calc(100vw-1.5rem)]">

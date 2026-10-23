@@ -7,20 +7,7 @@ import { type CSSProperties, useEffect, useRef } from 'react'
 
 import { Icon, LoadingStatus, SecondaryButton, Wordmark } from '@/components/ui'
 
-/**
- * The desktop dock's tool wells by their least width, left to right: Pitch, Length, Sharp or
- * flat, Rest, More, and the score's clef · key · time · tempo. The editor skeleton draws its
- * empty wells from it, so the dock keeps its shape when the real tools arrive.
- * (Kept here for now; it moves next to NoteToolDock with the dock's own polish.)
- */
-export const DOCK_WELL_MIN_WIDTHS = {
-    pitch: 'min-w-40',
-    length: 'min-w-72',
-    accidental: 'min-w-28',
-    rest: 'min-w-16',
-    more: 'min-w-20',
-    score: 'min-w-60',
-} as const
+import { DOCK_WELL_MIN_WIDTHS } from './NoteToolDock'
 
 /** The header and dock chrome's own tone, on a layer of its own (as the real bars draw it). */
 const CHROME_BACKDROP = 'pointer-events-none absolute inset-0 -z-10 bg-surface-container-low/85 backdrop-blur-xl tonal-layer-glow'

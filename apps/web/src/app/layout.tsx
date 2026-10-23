@@ -71,6 +71,11 @@ export const metadata: Metadata = {
     },
 }
 
+// Edge to edge (`viewportFit: 'cover'`) is the editor's alone for now (scores/[id]/layout.tsx): its
+// header and dock pad themselves by env(safe-area-inset-*), while the other pages' chrome (the
+// library's TopNav, the auth card, the cookie sheet, the marketing nav) does not yet, and would
+// run under a landscape notch or an Android gesture bar. Once those pad their insets, cover can
+// move here for every page.
 export const viewport: Viewport = {
     themeColor: BRAND.surface,
 }

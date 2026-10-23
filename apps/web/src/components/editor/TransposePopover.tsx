@@ -228,29 +228,27 @@ export function TransposePopover({
             </p>
 
             {!advanced && (
-                <>
-                    <div className="grid grid-cols-2 gap-2">
-                        <StepButton icon="chevron-down" disabled={semitones <= -MAX_SEMITONES} onClick={() => nudge(-1)}>
-                            Half step lower
-                        </StepButton>
-                        <StepButton icon="chevron-up" disabled={semitones >= MAX_SEMITONES} onClick={() => nudge(1)}>
-                            Half step higher
-                        </StepButton>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                        <OctaveChip disabled={semitones - OCTAVE < -MAX_SEMITONES} onClick={() => nudge(-OCTAVE)}>
-                            Down an octave
-                        </OctaveChip>
-                        <OctaveChip disabled={semitones + OCTAVE > MAX_SEMITONES} onClick={() => nudge(OCTAVE)}>
-                            Up an octave
-                        </OctaveChip>
-                    </div>
-                </>
+                // The four moves as one set of like capsules: half steps above, whole octaves below.
+                <div className="grid grid-cols-2 gap-2">
+                    <StepButton icon="chevron-down" disabled={semitones <= -MAX_SEMITONES} onClick={() => nudge(-1)}>
+                        Half step lower
+                    </StepButton>
+                    <StepButton icon="chevron-up" disabled={semitones >= MAX_SEMITONES} onClick={() => nudge(1)}>
+                        Half step higher
+                    </StepButton>
+                    <StepButton icon="chevron-down" disabled={semitones - OCTAVE < -MAX_SEMITONES} onClick={() => nudge(-OCTAVE)}>
+                        Down an octave
+                    </StepButton>
+                    <StepButton icon="chevron-up" disabled={semitones + OCTAVE > MAX_SEMITONES} onClick={() => nudge(OCTAVE)}>
+                        Up an octave
+                    </StepButton>
+                </div>
             )}
 
             {advanced && (
                 <Segmented
                     ariaLabel="Transpose by"
+                    tone="inset"
                     value={tab}
                     onChange={(v) => v && setTab(v)}
                     options={[
@@ -273,6 +271,7 @@ export function TransposePopover({
                                     ariaLabel={name}
                                     title={name}
                                     onClick={() => selectDegree(d)}
+                                    layout="cell"
                                     className="justify-center w-full min-w-0 h-10 text-[13px] font-medium">
                                     {label}
                                 </PopoverOption>
@@ -287,6 +286,7 @@ export function TransposePopover({
                                     active={quality === value}
                                     ariaLabel={QUALITY_LABELS[value]}
                                     onClick={() => setQuality(value)}
+                                    layout="cell"
                                     className="justify-center px-3 h-10 text-[13px] font-medium">
                                     {QUALITY_LABELS[value]}
                                 </PopoverOption>
@@ -337,6 +337,7 @@ export function TransposePopover({
                     {/* Same segmented pill as the Up/Down direction toggle. */}
                     <Segmented
                         ariaLabel="Apply to"
+                        tone="inset"
                         value={scope}
                         onChange={(v) => v && setScope(v)}
                         options={[
@@ -347,9 +348,10 @@ export function TransposePopover({
                 </div>
             )}
 
+            {/* The preview on white paper, as the score itself is, its edge a hairline inset. */}
             <div
                 aria-hidden
-                className="shrink-0 bg-surface-container-low rounded-md px-3 py-2 flex justify-center overflow-hidden pointer-events-none select-none">
+                className="shrink-0 bg-surface-container-lowest rounded-md shadow-[inset_0_0_0_1px_rgb(172_173_173/0.15)] px-3 py-2 flex justify-center overflow-hidden pointer-events-none select-none">
                 <div className="overflow-hidden" style={{ width: previewZoom.width, height: previewZoom.height }}>
                     <div style={{ width: PREVIEW_LAYOUT_WIDTH, transform: `scale(${previewZoom.scale})`, transformOrigin: 'top left' }}>
                         <ScoreView score={preview} layoutId={preview.layout.id} />
@@ -366,39 +368,28 @@ interface StepControlProps {
     children: ReactNode
 }
 
-/** The simple mode's 44px "Half step lower / higher" buttons: the tonal capsule with a chevron. */
+/** A tonal control's fill through its states; disabled, it keeps its fill and only its content fades. */
+const TONAL_CONTROL = [
+    'border-0 bg-(--control-fill) text-on-surface enabled:hover:bg-(--control-fill-hover) enabled:active:bg-(--control-fill-press)',
+    'enabled:cursor-pointer disabled:cursor-not-allowed [&:disabled>*]:opacity-40',
+    'transition-[background-color,scale] duration-150 ease-solkey motion-safe:enabled:active:scale-[0.97] focus-ring',
+].join(' ')
+
+/**
+ * The simple mode's four 44px moves ("Half step lower", "Up an octave" — a whole octave the most
+ * common fix for a whistled or high-voice take): one tonal capsule each, its 16px chevron saying which way.
+ */
 function StepButton({ icon, disabled, onClick, children }: StepControlProps & { icon: 'chevron-up' | 'chevron-down' }) {
     return (
         <button
             type="button"
             disabled={disabled}
             onClick={onClick}
-            className={[
-                'h-11 px-3 inline-flex items-center justify-center gap-1.5 rounded-full border-0 cursor-pointer',
-                'bg-surface-container-low text-on-surface font-label font-semibold text-[13px] leading-none whitespace-nowrap',
-                'enabled:hover:bg-surface-container-high disabled:cursor-not-allowed disabled:opacity-40',
-                'transition-colors duration-150 ease-solkey focus-ring',
-            ].join(' ')}>
-            <Icon name={icon} size={16} />
-            {children}
-        </button>
-    )
-}
-
-/** A whole-octave jump ("Up an octave") — the most common fix for a whistled or high-voice take. */
-function OctaveChip({ disabled, onClick, children }: StepControlProps) {
-    return (
-        <button
-            type="button"
-            disabled={disabled}
-            onClick={onClick}
-            className={[
-                'h-10 px-4 inline-flex items-center rounded-full border-0 cursor-pointer',
-                'bg-transparent text-on-surface font-label font-medium text-[13px] leading-none whitespace-nowrap',
-                'enabled:hover:bg-surface-container-high disabled:cursor-not-allowed disabled:opacity-40',
-                'transition-colors duration-150 ease-solkey focus-ring',
-            ].join(' ')}>
-            {children}
+            className={`h-11 px-3 rounded-full font-label font-semibold text-[13px] leading-none whitespace-nowrap ${TONAL_CONTROL}`}>
+            <span className="inline-flex items-center justify-center gap-1.5">
+                <Icon name={icon} size={16} />
+                {children}
+            </span>
         </button>
     )
 }
@@ -416,6 +407,7 @@ function DirectionControl({ direction, onChange }: { direction: 1 | -1; onChange
     return (
         <Segmented
             ariaLabel="Direction"
+            tone="inset"
             value={direction > 0 ? 'up' : 'down'}
             onChange={(v) => onChange(v === 'up' ? 1 : -1)}
             options={[
@@ -445,24 +437,19 @@ function NumberStepper({ value, min, max, onChange, ariaLabel, suffix, grow }: N
     const [draft, setDraft] = useState(String(value))
     useEffect(() => setDraft(String(value)), [value])
     const clamp = (n: number) => Math.max(min, Math.min(max, n))
+    // Round tonal ± buttons, the icon buttons' circle: at a limit the glyph fades, the button stays.
     const stepButton = (delta: -1 | 1) => (
         <button
             type="button"
             aria-label={`${delta > 0 ? 'Increase' : 'Decrease'} ${ariaLabel.toLowerCase()}`}
             disabled={delta > 0 ? value >= max : value <= min}
             onClick={() => onChange(clamp(value + delta))}
-            className={[
-                'w-10 self-stretch inline-flex items-center justify-center rounded-sm border-0 shrink-0',
-                'bg-surface-container-low text-on-surface cursor-pointer',
-                'enabled:hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-40',
-                'transition-colors duration-150 ease-solkey',
-                'focus-ring',
-            ].join(' ')}>
-            <Icon name={delta > 0 ? 'plus' : 'minus'} size={14} />
+            className={`size-10 shrink-0 inline-flex items-center justify-center rounded-full ${TONAL_CONTROL}`}>
+            <Icon name={delta > 0 ? 'plus' : 'minus'} size={16} />
         </button>
     )
     return (
-        <div className={`flex items-stretch gap-1 ${grow ? 'flex-1' : ''}`}>
+        <div className={`flex items-center gap-1.5 ${grow ? 'flex-1' : ''}`}>
             <UnitNumberField
                 value={draft}
                 onChange={(raw) => {

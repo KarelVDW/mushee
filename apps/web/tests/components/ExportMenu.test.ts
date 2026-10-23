@@ -66,8 +66,9 @@ describe('ExportMenu', () => {
         expect(formats().map((b) => b.querySelector('[aria-hidden="true"]')?.textContent)).toEqual(['.pdf', '.mid', '.musicxml'])
         // No jargon: "DAW" is gone.
         expect(host.textContent).not.toMatch(/DAW/)
-        // Coarse pointers get a 44px row, keyboards the shared ring.
-        expect(formats()[0].className).toContain('pointer-coarse:min-h-11')
+        // Bare rows, 48px at least on every pointer (over the 44px touch floor), keyboards the shared ring.
+        expect(formats()[0].className).toContain('min-h-12')
+        expect(formats()[0].className).toContain('bg-transparent')
         expect(formats()[0].className).toContain('focus-ring')
     })
 
@@ -76,7 +77,7 @@ describe('ExportMenu', () => {
         act(() => chip('Export score')?.click())
         act(() => formats()[1].click())
         expect(downloadBlob).toHaveBeenCalledWith(expect.any(Blob), 'My tune.mid')
-        expect(showToast).toHaveBeenCalledWith('Downloaded “My tune.mid”.', 'info')
+        expect(showToast).toHaveBeenCalledWith('Downloaded “My tune.mid”.', 'info', { icon: 'check' })
         expect(host.querySelector('[role="dialog"]')).toBeNull()
     })
 
@@ -91,7 +92,7 @@ describe('ExportMenu', () => {
             return Promise.resolve()
         })
         expect(downloadBlob).toHaveBeenCalledWith(expect.any(Blob), 'My tune.pdf')
-        expect(showToast).toHaveBeenCalledWith('Downloaded “My tune.pdf”.', 'info')
+        expect(showToast).toHaveBeenCalledWith('Downloaded “My tune.pdf”.', 'info', { icon: 'check' })
     })
 
     it('takes its own chip text and name, which contains that text (the share page’s Download)', () => {

@@ -2,11 +2,20 @@
 
 import { Fragment, useEffect, useState, useSyncExternalStore } from 'react'
 
-import { DialogPanel, Eyebrow, IconButton, PrimaryButton, TertiaryButton } from '@/components/ui'
+import { DialogPanel, Eyebrow, IconButton, Keycap, PrimaryButton, TertiaryButton } from '@/components/ui'
 import { useKeyboardLayout } from '@/components/ui/Tooltip'
 import { type Keybindings, KeyboardLayout, Shortcut } from '@/lib/Keybindings'
+import { useMediaQuery } from '@/lib/useMediaQuery'
 
 import { EDITOR_COMMAND_GROUPS, type EditorCommand } from './commands'
+
+/**
+ * From lg (Tailwind's 64rem) the list runs in three columns of 32px rows on a wider panel, so the
+ * whole of it fits a laptop screen (1440×900) without scrolling; from md two columns on the 672px
+ * panel. Either way each column stays narrow enough that a key sits close to its label.
+ */
+const THREE_COLUMNS_QUERY = '(min-width: 64rem)'
+const DIALOG_WIDTH = { twoColumns: 672, threeColumns: 1040 } as const
 
 interface KeyboardShortcutsDialogProps {
     keybindings: Keybindings<EditorCommand>
@@ -25,6 +34,7 @@ export function KeyboardShortcutsDialog({ keybindings, onClose }: KeyboardShortc
     const layout = useKeyboardLayout()
     const [editingId, setEditingId] = useState<string | null>(null)
     const [notice, setNotice] = useState<string | null>(null)
+    const threeColumns = useMediaQuery(THREE_COLUMNS_QUERY)
 
     // Fetch the browser's live code → character map again on every open (the user may have
     // switched system layouts); every other surface naming a key follows the refreshed map.
@@ -61,7 +71,7 @@ export function KeyboardShortcutsDialog({ keybindings, onClose }: KeyboardShortc
             title="Keyboard shortcuts"
             subtitle="Click a shortcut to change it. Keys follow your keyboard layout."
             onClose={onClose}
-            width={620}
+            width={threeColumns ? DIALOG_WIDTH.threeColumns : DIALOG_WIDTH.twoColumns}
             footer={
                 <>
                     {notice && (
@@ -81,9 +91,12 @@ export function KeyboardShortcutsDialog({ keybindings, onClose }: KeyboardShortc
                     <PrimaryButton onClick={onClose}>Done</PrimaryButton>
                 </>
             }>
-            <div className="overflow-y-auto min-h-0 flex flex-col gap-5 pb-2">
+            {/* Two columns from md, three from lg, the groups flowing down them in order (never split), so
+                every key sits close to its label. The box keeps its full height (shrink-0): where the
+                list outgrows the dialog the body scrolls down, never spilling a column sideways. */}
+            <div className="shrink-0 pb-2 md:columns-2 md:gap-x-10 lg:columns-3">
                 {EDITOR_COMMAND_GROUPS.map((group) => (
-                    <section key={group} className="flex flex-col">
+                    <section key={group} className="flex flex-col break-inside-avoid mb-5">
                         <div className="px-2.5 pb-1.5">
                             <Eyebrow>{group}</Eyebrow>
                         </div>
@@ -106,6 +119,14 @@ export function KeyboardShortcutsDialog({ keybindings, onClose }: KeyboardShortc
     )
 }
 
+/**
+ * One shortcut row: its 14px label on the left and the keys on the right, at least 36px tall
+ * (32px in the three columns, which is what lets the list fit a 900px-tall screen).
+ */
+const ROW =
+    'flex items-center justify-between gap-4 min-h-9 lg:min-h-8 px-2.5 rounded-md hover:bg-surface-container transition-colors duration-150'
+const ROW_LABEL = 'font-body font-normal text-[14px] leading-tight text-on-surface'
+
 interface ShortcutRowProps {
     command: EditorCommand
     keybindings: Keybindings<EditorCommand>
@@ -124,14 +145,14 @@ function ShortcutRow({ command, keybindings, layout, editing, onEditToggle }: Sh
         // A key the command reaches by name (the Menu key, Escape for a take) is a keycap of its own.
         const namedKey = command.alternateKey ?? command.preemptKey
         return (
-            <div className="flex items-center justify-between gap-4 px-2.5 py-1 rounded-md hover:bg-surface-container transition-colors duration-150">
-                <span className="font-body font-normal text-[13px] leading-none text-on-surface">{command.label}</span>
+            <div className={ROW}>
+                <span className={ROW_LABEL}>{command.label}</span>
                 <span className="inline-flex items-center gap-1.5">
                     {shortcut && <ShortcutKeys shortcut={shortcut} layout={null} isMac={keybindings.isMac} />}
                     {namedKey && (
                         <>
                             {shortcut && <span className="font-body font-normal text-[11px] leading-none text-on-surface-variant">or</span>}
-                            <Keycap>{namedKey.label}</Keycap>
+                            <Keycap size="md">{namedKey.label}</Keycap>
                         </>
                     )}
                 </span>
@@ -139,8 +160,8 @@ function ShortcutRow({ command, keybindings, layout, editing, onEditToggle }: Sh
         )
     }
     return (
-        <div className="group flex items-center justify-between gap-4 px-2.5 py-1 rounded-md hover:bg-surface-container transition-colors duration-150">
-            <span className="font-body font-normal text-[13px] leading-none text-on-surface">{command.label}</span>
+        <div className={`group ${ROW}`}>
+            <span className={ROW_LABEL}>{command.label}</span>
             <div className="flex items-center gap-1">
                 {!editing && keybindings.isCustomized(command.id) && (
                     <IconButton
@@ -166,7 +187,7 @@ function ShortcutRow({ command, keybindings, layout, editing, onEditToggle }: Sh
                     aria-label={`Change shortcut for ${command.label}`}
                     className="bg-transparent border-0 p-0 cursor-pointer">
                     {editing ? (
-                        <span className="inline-flex items-center font-label font-semibold text-[11px] leading-none uppercase tracking-[0.04em] text-on-surface bg-primary-container/40 rounded-sm px-2 py-1.5 animate-pulse">
+                        <span className="inline-flex items-center font-body font-normal text-[12px] leading-none bg-primary-soft text-on-primary-soft rounded-sm px-2 py-1.5 animate-solkey-pulse">
                             Press the new keys…
                         </span>
                     ) : shortcut ? (
@@ -192,17 +213,9 @@ function ShortcutKeys({ shortcut, layout, isMac }: { shortcut: Shortcut; layout:
                             +
                         </span>
                     )}
-                    <Keycap>{part}</Keycap>
+                    <Keycap size="md">{part}</Keycap>
                 </Fragment>
             ))}
         </span>
-    )
-}
-
-function Keycap({ children }: { children: string }) {
-    return (
-        <kbd className="inline-flex items-center justify-center font-label font-semibold text-[11px] leading-none text-on-surface bg-surface-container rounded-sm px-1.5 py-1.5 min-w-6">
-            {children}
-        </kbd>
     )
 }

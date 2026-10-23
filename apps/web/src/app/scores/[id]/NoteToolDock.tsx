@@ -14,7 +14,7 @@ import { ChipToggle, Icon, Segmented, ToolGroup } from '@/components/ui'
 import { LOWER_PITCH, RAISE_PITCH, SET_ACCIDENTAL, SET_DURATION, TOGGLE_DOT, TOGGLE_REST } from './actions'
 import { HistoryTools } from './HistoryTools'
 import { MoreNoteTools, MoreToolsSheet } from './MoreToolsSheet'
-import { DottedIcon, DURATION_TYPES, DurationIcon, NoteToolStates, RestIcon, ScoreSettingsWords } from './NoteToolParts'
+import { DOCK_UNIT_WELL, DottedIcon, DURATION_TYPES, DurationIcon, NoteToolStates, RestIcon, ScoreSettingsWords } from './NoteToolParts'
 import { PopoverChip } from './PopoverChip'
 import type { ScoreManipulator } from './ScoreManipulator'
 
@@ -78,6 +78,57 @@ interface NoteToolDockProps {
     footer?: ReactNode
 }
 
+/**
+ * The desktop dock's units by their least width, left to right: Pitch, Length, Sharp or flat,
+ * Rest, More, and the score's clef · key · time · tempo. The editor skeleton draws its empty
+ * 46px wells from it, so the dock keeps its shape when the real tools arrive.
+ */
+export const DOCK_WELL_MIN_WIDTHS = {
+    pitch: 'min-w-42',
+    length: 'min-w-72',
+    accidental: 'min-w-32',
+    rest: 'min-w-18',
+    more: 'min-w-20',
+    score: 'min-w-62',
+} as const
+
+/**
+ * The Length well's hold on the Segmented inside it: the track's own dock padding, white fill
+ * and lift (an unlayered class, so it goes through its shadow variable) give way to the well's,
+ * and its height follows the well's content box.
+ */
+const FLATTENED_TRACK =
+    '[&>[role=group]]:h-auto [&>[role=group]]:p-0 [&>[role=group]]:bg-transparent [&>[role=group]]:[--shadow-raised:none]'
+
+/**
+ * The phone tool row's hold on its `fill` Segmented: each option's tooltip wrapper (a
+ * `shrink-0` inline-flex span around the button) takes an equal share of the track too, so the
+ * five values split the row evenly and the picked one is a round-ended pill, not an egg.
+ */
+const FILLED_TRACK_OPTIONS = '[&>[role=group]>*]:flex-1 [&>[role=group]>*]:min-w-0'
+
+/**
+ * The one line along the dock's top edge. While a dock popover is open (an anchored panel
+ * inside the dock rises over it) the line fades out rather than being cut mid-sentence, keeping
+ * its height so the tools don't move; under reduced motion it goes at once.
+ */
+const HINT_LINE = [
+    'm-0 pb-2 text-center font-body font-normal text-[13px] leading-tight text-on-surface-variant truncate',
+    'motion-safe:animate-[tooltip-in_200ms_var(--ease-solkey)]',
+    'transition-opacity duration-150 ease-solkey motion-reduce:transition-none group-has-[[role=dialog]]/dock:opacity-0',
+].join(' ')
+
+/**
+ * The dock's side padding against the safe-area insets (a landscape phone's notch), like the
+ * header's: 8px on phones, 12px (16px from sm) on the desktop layout, or the inset where larger.
+ * Its bottom pads the home indicator, and its chrome layer runs to the screen's edges.
+ */
+const PHONE_DOCK_SIDES = 'pl-[max(0.5rem,env(safe-area-inset-left))] pr-[max(0.5rem,env(safe-area-inset-right))]'
+const DESKTOP_DOCK_SIDES = [
+    'pl-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))]',
+    'sm:pl-[max(1rem,env(safe-area-inset-left))] sm:pr-[max(1rem,env(safe-area-inset-right))]',
+].join(' ')
+
 /** Slack around the phone dock's height animation, so focus rings at its edges aren't clipped (px). */
 const RING_SLACK_PX = 4
 
@@ -112,10 +163,11 @@ function AnimatedHeight({ children }: { children: ReactNode }) {
  * the editor's bottom edge — the chrome mirror of the slim header, so it never hangs over the
  * score. Desktop, left to right: Pitch (Higher · Lower) — Length (five values + Dotted) —
  * Sharp or flat — Rest — More (Triplet, Tie, Simplify sharps and flats) — the score's clef,
- * key, time and tempo. Each group sits in a white capsule well (or is a white chip on its
- * own), popovers open upward, and groups wrap onto more rows rather than overflow. Phones
- * get one tool row — Undo, the note values and a labelled More tile — and the rest in the
- * More sheet. Every icon-only control wears a tooltip with its live shortcut.
+ * key, time and tempo. Each group sits in a white capsule well, 46px tall like every unit in
+ * the row (a lone tool, Rest or More, is a one-control well), popovers open upward, and groups
+ * wrap onto more rows rather than overflow. Phones get one tool row spanning the dock — Undo,
+ * the note values filling the row and a labelled More capsule — and the rest in the More
+ * sheet. Every icon-only control wears a tooltip with its live shortcut.
  *
  * The dock reads the selection's state straight off the manipulator (it subscribes itself)
  * and dispatches every edit to it directly; what is pressed, off and why follows
@@ -151,13 +203,15 @@ export function NoteToolDock({
     const duration = tools.duration
     // Beats are counted in the felt pulse; only where that is a quarter does "Quarter note — 1 beat" hold.
     const beatsAreQuarters = words.pulseIsQuarter
-    const durations = (
+    const durations = (form: { size?: 'dock'; fill?: boolean }) => (
         <Segmented
             ariaLabel="Note duration"
             value={duration.value}
             disabled={duration.disabled}
             disabledReason={duration.reason}
             onChange={(type) => type && manipulator.run(SET_DURATION, type)}
+            size={form.size}
+            fill={form.fill}
             options={DURATION_TYPES.map((type) => ({
                 value: type,
                 label: <DurationIcon dur={type} />,
@@ -170,7 +224,7 @@ export function NoteToolDock({
 
     return (
         <div
-            className={`relative z-20 shrink-0 py-2.5 pb-[max(0.625rem,env(safe-area-inset-bottom))] ${compact ? 'px-2' : 'px-3 sm:px-4'}`}>
+            className={`group/dock relative z-20 shrink-0 py-2.5 pb-[max(0.625rem,env(safe-area-inset-bottom))] ${compact ? PHONE_DOCK_SIDES : DESKTOP_DOCK_SIDES}`}>
             {/* The chrome tone and its blur sit on a layer of their own: a bar with a backdrop-filter
                 would become the backdrop root of every popover and tooltip opened inside it. */}
             <span
@@ -183,14 +237,12 @@ export function NoteToolDock({
                         <div className="flex items-center gap-2">{recording}</div>
                     ) : (
                         <>
-                            {line && (
-                                <p className="m-0 pb-2 text-center font-body font-normal text-[13px] leading-tight text-on-surface-variant truncate motion-safe:animate-[tooltip-in_200ms_var(--ease-solkey)]">
-                                    {line}
-                                </p>
-                            )}
-                            <div role="group" aria-label="Note tools" className="mx-auto flex items-center justify-center gap-x-2">
+                            {line && <p className={HINT_LINE}>{line}</p>}
+                            {/* The row spans the dock, so its edges are the action row's: Undo, the note
+                                values filling the room between, and the More capsule as tall as their well. */}
+                            <div role="group" aria-label="Note tools" className={`flex w-full items-center gap-2 ${FILLED_TRACK_OPTIONS}`}>
                                 <HistoryTools manipulator={manipulator} compact />
-                                {durations}
+                                {durations({ fill: true })}
                                 <MoreToolsSheet
                                     manipulator={manipulator}
                                     metronome={metronome}
@@ -209,11 +261,7 @@ export function NoteToolDock({
                 <div className="flex justify-center">{recording}</div>
             ) : (
                 <>
-                    {line && (
-                        <p className="m-0 pb-2 text-center font-body font-normal text-[13px] leading-tight text-on-surface-variant truncate motion-safe:animate-[tooltip-in_200ms_var(--ease-solkey)]">
-                            {line}
-                        </p>
-                    )}
+                    {line && <p className={HINT_LINE}>{line}</p>}
                     <div
                         role="group"
                         aria-label="Note tools"
@@ -228,28 +276,30 @@ export function NoteToolDock({
                                 <ChipToggle
                                     key={label}
                                     plain
+                                    size="dock"
                                     ariaLabel={label}
                                     disabled={tools.pitch.disabled}
                                     disabledReason={tools.pitch.reason}
                                     shortcut={shortcut(action.id)}
                                     onClick={() => manipulator.run(action)}>
-                                    {/* 22px content in the chip's 7px padding: a 36px button. */}
-                                    <span className="inline-flex items-center gap-1 h-5.5">
+                                    <span className="inline-flex items-center gap-1">
                                         <Icon name={icon} size={14} />
                                         {label}
                                     </span>
                                 </ChipToggle>
                             ))}
                         </ToolGroup>
-                        {/* Length: the five values and Dotted share one well; the Segmented's own track is
-                            flattened into it, so Dotted (a toggle, not a sixth value) sits beside them. */}
+                        {/* Length: the five values and Dotted share one well. The Segmented's own dock
+                            track gives up its padding, fill and lift (its height follows the well's), so
+                            Dotted — a toggle, not a sixth value — sits beside the values in one capsule. */}
                         <div
                             role="group"
                             aria-label="Note length"
-                            className="inline-flex items-center gap-0.5 p-0.75 rounded-full bg-surface-container-lowest tonal-layer-glow *:[[role=group]]:p-0! *:[[role=group]]:bg-transparent! *:[[role=group]]:shadow-none!">
-                            {durations}
+                            className={`${DOCK_UNIT_WELL} p-(--well-pad) gap-0.5 ${FLATTENED_TRACK}`}>
+                            {durations({ size: 'dock' })}
                             <ChipToggle
                                 plain
+                                size="dock"
                                 ariaLabel="Dotted"
                                 active={tools.dotted.active}
                                 disabled={tools.dotted.disabled}
@@ -257,9 +307,7 @@ export function NoteToolDock({
                                 hint="one and a half times as long"
                                 shortcut={shortcut(TOGGLE_DOT.id)}
                                 onClick={() => manipulator.run(TOGGLE_DOT)}>
-                                <span className="inline-flex -my-1">
-                                    <DottedIcon />
-                                </span>
+                                <DottedIcon />
                             </ChipToggle>
                         </div>
                         <Segmented
@@ -268,46 +316,48 @@ export function NoteToolDock({
                             disabled={tools.accidental.disabled}
                             disabledReason={tools.accidental.reason}
                             onChange={(accidental) => manipulator.run(SET_ACCIDENTAL, accidental)}
+                            size="dock"
                             options={ACCIDENTALS.map((a) => ({
                                 value: a.value,
-                                // 20px window in the button's 14px line: the -my keeps the well as tall as before.
-                                label: (
-                                    <span className="inline-flex -my-0.75">
-                                        <AccidentalIcon alter={a.alter} size={20} />
-                                    </span>
-                                ),
+                                label: <AccidentalIcon alter={a.alter} size={22} />,
                                 ariaLabel: a.name,
                                 hint: a.hint,
                                 shortcut: shortcut(a.command),
                             }))}
                         />
-                        <ChipToggle
-                            ariaLabel="Rest"
-                            active={tools.rest.active}
-                            disabled={tools.rest.disabled}
-                            disabledReason={tools.rest.reason}
-                            hint="turn this note into silence"
-                            shortcut={shortcut(TOGGLE_REST.id)}
-                            onClick={() => manipulator.run(TOGGLE_REST)}>
-                            <span className="inline-flex items-center gap-1.5">
-                                <RestIcon height={12} />
-                                Rest
-                            </span>
-                        </ChipToggle>
+                        {/* Rest on its own: a one-control well, the same silhouette as its neighbours. */}
+                        <div className={`${DOCK_UNIT_WELL} py-(--well-pad) px-1`}>
+                            <ChipToggle
+                                plain
+                                size="dock"
+                                ariaLabel="Rest"
+                                active={tools.rest.active}
+                                disabled={tools.rest.disabled}
+                                disabledReason={tools.rest.reason}
+                                hint="turn this note into silence"
+                                shortcut={shortcut(TOGGLE_REST.id)}
+                                onClick={() => manipulator.run(TOGGLE_REST)}>
+                                <span className="inline-flex items-center gap-1.5">
+                                    <RestIcon height={13} />
+                                    Rest
+                                </span>
+                            </ChipToggle>
+                        </div>
                         <MoreNoteTools manipulator={manipulator} />
                         <ToolGroup ariaLabel="Score settings">
                             <PopoverChip
                                 plain
+                                size="dock"
                                 ariaLabel={words.clefLabel}
                                 disabled={tools.scoreSettings.disabled}
                                 disabledReason={tools.scoreSettings.reason}
                                 tooltip={`${words.clef} clef`}
                                 // ClefIcon's size is its staff window's height, of which a treble clef's
-                                // ink fills about 0.77: 28 draws it at the planned 22px, in on-surface ink.
-                                // The -my keeps the chip as tall as its neighbours.
+                                // ink fills about 0.77: 34 draws it 26px tall — the note values' height —
+                                // in on-surface ink, inside the chip's 40px.
                                 chip={
-                                    <span className="inline-flex -my-0.75 text-on-surface">
-                                        <ClefIcon type={settings.clef} size={28} />
+                                    <span className="inline-flex text-on-surface">
+                                        <ClefIcon type={settings.clef} size={34} />
                                     </span>
                                 }>
                                 {({ anchorRef, className, close }) => (
@@ -326,6 +376,7 @@ export function NoteToolDock({
                             </PopoverChip>
                             <PopoverChip
                                 plain
+                                size="dock"
                                 ariaLabel={words.keyLabel}
                                 disabled={tools.scoreSettings.disabled}
                                 disabledReason={tools.scoreSettings.reason}
@@ -346,6 +397,7 @@ export function NoteToolDock({
                             </PopoverChip>
                             <PopoverChip
                                 plain
+                                size="dock"
                                 ariaLabel={words.timeLabel}
                                 disabled={tools.scoreSettings.disabled}
                                 disabledReason={tools.scoreSettings.reason}
@@ -366,6 +418,7 @@ export function NoteToolDock({
                             </PopoverChip>
                             <PopoverChip
                                 plain
+                                size="dock"
                                 ariaLabel={words.tempoLabel}
                                 disabled={tools.scoreSettings.disabled}
                                 disabledReason={tools.scoreSettings.reason}

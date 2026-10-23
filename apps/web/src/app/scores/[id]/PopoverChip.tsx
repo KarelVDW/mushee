@@ -14,6 +14,8 @@ interface PopoverChipProps {
     disabledReason?: string
     /** Transparent at rest, for a chip inside a ToolGroup well (see ChipToggle). */
     plain?: boolean
+    /** The chip's size (ChipToggle `size`): `dock` for the tool dock's 40px controls. */
+    size?: 'default' | 'dock'
     /** The chip's face. */
     chip: ReactNode
     /** The tooltip's name line (defaults to the aria-label once a hint or shortcut is given), its hint and live shortcut. */
@@ -46,6 +48,7 @@ export function PopoverChip({
     disabled,
     disabledReason,
     plain = false,
+    size,
     chip,
     tooltip,
     hint,
@@ -66,10 +69,11 @@ export function PopoverChip({
     const close = () => setOpen(false)
 
     return (
-        <div ref={anchorRef} className="relative">
+        <div ref={anchorRef} className="relative flex">
             <ChipToggle
                 popup
                 plain={plain}
+                size={size}
                 active={open}
                 disabled={disabled}
                 disabledReason={disabledReason}

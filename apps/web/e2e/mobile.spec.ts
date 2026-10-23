@@ -674,21 +674,24 @@ test('share chip: create and copy the read-only link, and turn it off after a co
     await expect(panel.getByRole('button', { name: 'Create link and copy' })).toBeVisible()
     expect(apiMock.shareToken).toBeNull()
 
-    // The panel stays on screen, and the header did not grow to fit it.
-    await expectInsideGutter(page, panel)
+    // The panel is the header card, and the header did not grow to fit it.
+    await expectHeaderCard(page, panel)
     await expectHeaderFitsViewport(page)
 })
 
 /**
- * A header panel stays 16px inside both viewport edges, whichever chip it hangs from. (A clamp
- * applied twice shows only under the dev server's StrictMode — a prod build mounts once.)
+ * A phone header panel is the header card, whichever chip it opens from: it spans the viewport
+ * less 8px a side (the paper's and the dock's gutter) and hangs 8px under the header.
  */
-async function expectInsideGutter(page: Page, panel: Locator): Promise<void> {
+async function expectHeaderCard(page: Page, panel: Locator): Promise<void> {
     const box = await panel.boundingBox()
+    const header = await page.locator('header').boundingBox()
     const width = page.viewportSize()?.width ?? 0
     expect(box).not.toBeNull()
-    expect(box?.x ?? -1).toBeGreaterThanOrEqual(16 - 1)
-    expect((box?.x ?? 0) + (box?.width ?? Infinity)).toBeLessThanOrEqual(width - 16 + 1)
+    expect(header).not.toBeNull()
+    expect(Math.abs((box?.x ?? -1) - 8)).toBeLessThanOrEqual(1)
+    expect(Math.abs((box?.width ?? 0) - (width - 16))).toBeLessThanOrEqual(1)
+    expect(Math.abs((box?.y ?? 0) - ((header?.y ?? 0) + (header?.height ?? 0) + 8))).toBeLessThanOrEqual(1)
 }
 
 test('editing the title takes the header row up to a Done button; Done hands back the chips', async ({ page }) => {
@@ -751,7 +754,7 @@ test('recordings chip: lists the score’s recordings and deletes one after conf
     await expect(rows).toHaveCount(2)
     expect(apiMock.recordingDeletes).toEqual(['take-2'])
 
-    await expectInsideGutter(page, panel)
+    await expectHeaderCard(page, panel)
     await expectHeaderFitsViewport(page)
 })
 

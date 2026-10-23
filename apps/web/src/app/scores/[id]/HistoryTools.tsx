@@ -2,38 +2,30 @@
 
 import { useId, useSyncExternalStore } from 'react'
 
-import { ChipToggle, HeaderMenu, Icon, type IconName, type TooltipShortcut, TransportBtn } from '@/components/ui'
+import { ChipToggle, HeaderMenu, Icon, type IconName, Keycap, ToolGroup, type TooltipShortcut, TransportBtn } from '@/components/ui'
 import { shortcutText } from '@/components/ui/Tooltip'
 
 import { SHOW_SHORTCUTS_KEY } from './commands'
 import type { ScoreManipulator } from './ScoreManipulator'
+import { usePhoneDockButtonSize } from './TransportControls'
 
 /**
  * Undo / redo. History travel is a document-level (meta) operation, not a selection edit, so
  * on desktop the pair sits in the header with the other score-level chrome, each naming its
  * ⌘Z / ⇧⌘Z in a tooltip. Phones have no ⌘Z and no header room (`compact`): Undo leads the
- * dock's tool row as a 40px round button, and Redo leads the More sheet's "Whole score" rows.
+ * dock's tool row as a round button the nudges' size, and Redo leads the More sheet's "Whole score" rows.
  * A narrow desktop header folds the pair and the shortcuts list into one chip ({@link HistoryMenu}).
  */
 export function HistoryTools({ manipulator, compact = false }: { manipulator: ScoreManipulator; compact?: boolean }) {
     useSyncExternalStore(manipulator.subscribe, manipulator.getSnapshot, manipulator.getSnapshot)
     const keybindings = manipulator.keybindings
 
-    if (compact) {
-        return (
-            <TransportBtn
-                size={40}
-                onClick={() => manipulator.undo()}
-                disabled={!manipulator.canUndo}
-                ariaLabel="Undo"
-                shortcut={keybindings.shortcutFor('undo')}>
-                <Icon name="undo" size={16} />
-            </TransportBtn>
-        )
-    }
+    if (compact) return <PhoneUndo manipulator={manipulator} />
+    // One white well for the pair, so a disabled Undo still shows its place (its glyph fades, the well stays).
     return (
-        <div role="group" aria-label="History" className="flex items-center gap-1">
+        <ToolGroup ariaLabel="History" size="header">
             <ChipToggle
+                plain
                 onClick={() => manipulator.undo()}
                 disabled={!manipulator.canUndo}
                 ariaLabel="Undo"
@@ -42,6 +34,7 @@ export function HistoryTools({ manipulator, compact = false }: { manipulator: Sc
                 <Icon name="undo" size={16} />
             </ChipToggle>
             <ChipToggle
+                plain
                 onClick={() => manipulator.redo()}
                 disabled={!manipulator.canRedo}
                 ariaLabel="Redo"
@@ -49,7 +42,22 @@ export function HistoryTools({ manipulator, compact = false }: { manipulator: Sc
                 tooltipSide="bottom">
                 <Icon name="redo" size={16} />
             </ChipToggle>
-        </div>
+        </ToolGroup>
+    )
+}
+
+/** The phone tool row's Undo: a round button the nudges' size (40px, 44px from 400px wide), 18px glyph. */
+function PhoneUndo({ manipulator }: { manipulator: ScoreManipulator }) {
+    const size = usePhoneDockButtonSize()
+    return (
+        <TransportBtn
+            size={size}
+            onClick={() => manipulator.undo()}
+            disabled={!manipulator.canUndo}
+            ariaLabel="Undo"
+            shortcut={manipulator.keybindings.shortcutFor('undo')}>
+            <Icon name="undo" size={18} />
+        </TransportBtn>
     )
 }
 
@@ -136,11 +144,7 @@ function MenuRow({ icon, label, disabledHint, shortcut, onClick }: MenuRowProps)
                     </span>
                 )}
             </span>
-            {keys && (
-                <kbd className="shrink-0 font-label font-semibold text-[11px] leading-none text-on-surface bg-surface-container rounded-sm px-1.5 py-1">
-                    {keys}
-                </kbd>
-            )}
+            {keys && <Keycap className="shrink-0">{keys}</Keycap>}
         </button>
     )
 }
