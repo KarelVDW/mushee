@@ -31,8 +31,10 @@ interface ExportMenuProps {
     label?: string
     /** The chip's and panel's accessible name; it must contain `label` (WCAG 2.5.3). */
     ariaLabel?: string
-    /** The panel's eyebrow (`title` is the score's, for the file names). */
+    /** The panel's title (`title` is the score's, for the file names). */
     menuTitle?: string
+    /** The chip's size: `lg` beside a page's big CTA (the shared score page). */
+    size?: 'default' | 'lg'
 }
 
 /**
@@ -48,6 +50,7 @@ export function ExportMenu({
     label = 'Export',
     ariaLabel = 'Export score',
     menuTitle = 'Download as',
+    size,
 }: ExportMenuProps) {
     // Held here, not in the panel: an export keeps running (and blocks a second one) after Escape closes the menu.
     const [busy, setBusy] = useState<ExportFormat | null>(null)
@@ -91,7 +94,7 @@ export function ExportMenu({
     )
 
     return (
-        <HeaderMenu icon="download" label={label} compact={compact} ariaLabel={ariaLabel} title={menuTitle} className="gap-2">
+        <HeaderMenu icon="download" label={label} compact={compact} ariaLabel={ariaLabel} title={menuTitle} size={size} className="gap-2">
             {({ close }) => (
                 <div role="group" aria-label="Export format" className="flex flex-col gap-1.5">
                     {FORMATS.map(({ format, label: formatLabel, description, extension }) => (

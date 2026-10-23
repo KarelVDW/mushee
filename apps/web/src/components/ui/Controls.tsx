@@ -229,16 +229,18 @@ interface ChipToggleProps extends TooltipProps, DisableableProps {
     /**
      * `default`: the 32px chip (40px on coarse pointers). `dock`: the dock's unit, 40px tall and
      * at least as wide (44px coarse), so a 3px well around it makes the dock's 46px (50px) row.
+     * `lg`: a 44px chip with a 14px label, for a page's one menu beside its big CTA.
      */
-    size?: 'default' | 'dock'
-    /** An icon-only circle of the size's height: 32px (40px coarse), or 40px (44px) in the dock. */
+    size?: 'default' | 'dock' | 'lg'
+    /** An icon-only circle of the size's height: 32px (40px coarse), 40px (44px) in the dock, or 44px. */
     round?: boolean
 }
 
-/** A ChipToggle's box per size: a full pill, or with `round` a circle of the same height. */
+/** A ChipToggle's box and label size per size: a full pill, or with `round` a circle of the same height. */
 const CHIP_SIZES = {
-    default: { pill: 'h-(--control-sm) px-3.5 pointer-coarse:px-4', round: 'size-(--control-sm) p-0' },
-    dock: { pill: 'h-(--control-md) min-w-(--control-md) px-3', round: 'size-(--control-md) p-0' },
+    default: { pill: 'h-(--control-sm) px-3.5 pointer-coarse:px-4', round: 'size-(--control-sm) p-0', text: 'text-[13px]' },
+    dock: { pill: 'h-(--control-md) min-w-(--control-md) px-3', round: 'size-(--control-md) p-0', text: 'text-[13px]' },
+    lg: { pill: 'h-11 px-5', round: 'size-11 p-0', text: 'text-[14px]' },
 } as const
 
 /** A plain chip inside a header-sized ToolGroup: 28px in its 32px well (40px in a 44px one on touch). */
@@ -295,7 +297,8 @@ export function ChipToggle({
                 className={[
                     'border-0 rounded-full whitespace-nowrap',
                     box,
-                    'font-label font-semibold text-[13px] leading-none',
+                    'font-label font-semibold leading-none',
+                    CHIP_SIZES[size].text,
                     'inline-flex items-center justify-center',
                     state.off ? 'cursor-not-allowed' : 'cursor-pointer',
                     'transition-[transform,scale,background-color,color,filter] duration-150 ease-solkey',

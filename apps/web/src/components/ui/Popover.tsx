@@ -37,6 +37,15 @@ const SHEET_FRAME_CLASS =
  */
 export const SHEET_SYSTEM_ROOM = { px: 140, maxHeight: 'max-h-[calc(100%-8.75rem)]' } as const
 
+/**
+ * A phone header menu's card (Popover variant `header-sheet`): full width between 8px gutters,
+ * 8px under the measured header, as tall as the viewport allows below it (its body scrolls).
+ */
+const HEADER_SHEET_CLASS =
+    'popover-enter fixed inset-x-2 top-[calc(var(--app-header-h,0px)+0.5rem)] z-(--z-popover) flex flex-col min-h-0 max-h-[calc(100dvh-var(--app-header-h,0px)-1rem)] rounded-xl bg-surface-container-lowest shadow-overlay'
+/** It arrives the way an anchored panel does from the header: dropping the last 6px. */
+const HEADER_SHEET_ENTRANCE = { '--pop-from': '-6px' } as CSSProperties
+
 /** The host element; `null` while a host is mounting, `undefined` when there is no host above. */
 const SheetHostContext = createContext<HTMLElement | null | undefined>(undefined)
 
@@ -119,8 +128,11 @@ interface PopoverProps {
      * `anchored` (default) sits next to its trigger. `sheet` is the phone form: portalled into
      * the {@link PopoverSheetHost}, as tall as the room between header and dock allows (its body
      * scrolls, with a fade at the clipped edge), headed by a title, the hint and a 40px Close.
+     * `header-sheet` is a phone header menu's form: the same full-width floating card, hanging
+     * 8px under the measured header (`--app-header-h`) instead of standing on the dock, portalled
+     * into <body> and arriving downward like an anchored panel from the header.
      */
-    variant?: 'anchored' | 'sheet'
+    variant?: 'anchored' | 'sheet' | 'header-sheet'
     /** Anchored only: keep the panel this many px inside the viewport's left and right edges. */
     viewportGutter?: number
     /**
@@ -208,7 +220,7 @@ export function Popover({
     // frame already moves.
     useLayoutEffect(() => {
         const panel = popRef.current
-        if (sheet || !panel) return
+        if (variant !== 'anchored' || !panel) return
         const anchor = (anchorRef?.current ?? (panel.offsetParent as HTMLElement | null))?.getBoundingClientRect()
         if (!anchor) return
         const rect = panel.getBoundingClientRect()
@@ -217,7 +229,7 @@ export function Popover({
         panel.style.setProperty('--pop-from', `${upward ? travel : -travel}px`)
         const originX = Math.min(Math.max(anchor.left + anchor.width / 2 - rect.left, 0), rect.width)
         panel.style.transformOrigin = `${Math.round(originX)}px ${upward ? '100%' : '0%'}`
-    }, [sheet, anchorRef])
+    }, [variant, anchorRef])
 
     // While a popover is open no key reaches the editor shortcuts underneath. The listener
     // sits on window in the capture phase, so it runs before the editor container's own
@@ -256,7 +268,25 @@ export function Popover({
         }
     }, [onDismiss, anchorRef])
 
-    const shift = useViewportClamp(popRef, sheet ? undefined : viewportGutter)
+    const shift = useViewportClamp(popRef, variant === 'anchored' ? viewportGutter : undefined)
+
+    if (variant === 'header-sheet') {
+        if (typeof document === 'undefined') return null
+        return createPortal(
+            <div
+                ref={popRef}
+                role="dialog"
+                aria-label={ariaLabel}
+                style={HEADER_SHEET_ENTRANCE}
+                className={HEADER_SHEET_CLASS}
+                onMouseDown={(e) => e.stopPropagation()}>
+                <PopoverHeader variant="sheet" title={title} hint={hint} headerRight={headerRight} lead={lead} onClose={onDismiss} />
+                <SheetBody className={splitGapClasses(className).gap}>{children}</SheetBody>
+                {footer && <div className="shrink-0 px-4 pt-2 pb-4">{footer}</div>}
+            </div>,
+            document.body,
+        )
+    }
 
     if (sheet) {
         const panel = (
