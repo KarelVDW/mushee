@@ -8,6 +8,7 @@ vi.mock('@/lib/auth-client', () => ({
     useSession: () => ({ data: visitor.authed ? { user: { id: 'u1' } } : null, isPending: visitor.pending }),
 }))
 
+import NotFound from '@/app/not-found'
 import { NotFoundActions } from '@/app/NotFoundActions'
 
 function render() {
@@ -61,5 +62,12 @@ describe('NotFoundActions', () => {
         const signIn = host.querySelector('a[href="/login"]')
         expect(signIn?.className).toContain('rounded-full')
         expect(signIn?.className).toContain('h-(--control-md)')
+    })
+
+    it('sits in the page’s main landmark, the skip link’s target', () => {
+        const host = document.createElement('div')
+        host.innerHTML = renderToStaticMarkup(createElement(NotFound))
+        expect(host.querySelectorAll('main')).toHaveLength(1)
+        expect(host.querySelector('main#content h1')?.textContent).toBe("This page doesn't exist")
     })
 })

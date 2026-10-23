@@ -10,16 +10,17 @@ const PLACEMENT = {
 } as const
 
 /**
- * The marketing surfaces' one coloured atmosphere: a quiet cyan radial gradient pinned to one
- * corner or edge of its section — no blur filter (cheap to scroll, and no banded clip edge).
- * Decorative; the section must clip it (`relative overflow-hidden`) and lift its content above
- * it (`relative z-2`).
+ * The marketing surfaces' one coloured atmosphere: a quiet radial gradient of the
+ * primary-container cyan (20% at the centre, 8% halfway, then clear), read from the token so it
+ * follows the theme, pinned to one corner or edge of its section — no blur filter (cheap to
+ * scroll, and no banded clip edge). Decorative; the section must clip it (`relative
+ * overflow-hidden`) and lift its content above it (`relative z-2`).
  */
 export function Haze({ placement }: { placement: keyof typeof PLACEMENT }) {
     return (
         <div
             aria-hidden
-            className={`pointer-events-none absolute rounded-full bg-[radial-gradient(closest-side,rgb(0_219_233/0.20),rgb(0_219_233/0.08)_50%,transparent)] ${PLACEMENT[placement]}`}
+            className={`pointer-events-none absolute rounded-full bg-[radial-gradient(closest-side,color-mix(in_srgb,var(--color-primary-container)_20%,transparent),color-mix(in_srgb,var(--color-primary-container)_8%,transparent)_50%,transparent)] ${PLACEMENT[placement]}`}
         />
     )
 }
