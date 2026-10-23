@@ -27,7 +27,9 @@ function TextField({ label, value, onChange, type = 'text', placeholder, leftIco
             )}
             <div
                 style={{
-                    background: 'var(--color-surface-container-low)',
+                    // FieldFrame: the --field-fill, 4px corners, at least 40px, no resting stroke.
+                    background: 'var(--field-fill)',
+                    minHeight: 40,
                     borderRadius: 4,
                     position: 'relative',
                     display: 'flex',
@@ -76,7 +78,7 @@ function TextField({ label, value, onChange, type = 'text', placeholder, leftIco
                         right: focused ? 0 : '50%',
                         bottom: 0,
                         height: 2,
-                        background: 'var(--color-primary-container)',
+                        background: 'var(--color-primary)',
                         transition: 'left 300ms var(--ease), right 300ms var(--ease)',
                     }}
                 />
@@ -104,7 +106,7 @@ function TextArea({ label, value, onChange, placeholder, rows = 4 }) {
                     {label}
                 </label>
             )}
-            <div style={{ background: 'var(--color-surface-container-low)', borderRadius: 4, position: 'relative', padding: '0 10px' }}>
+            <div style={{ background: 'var(--field-fill)', borderRadius: 4, position: 'relative', padding: '0 10px' }}>
                 <textarea
                     id={id}
                     value={value ?? ''}
@@ -132,7 +134,7 @@ function TextArea({ label, value, onChange, placeholder, rows = 4 }) {
                         right: focused ? 0 : '50%',
                         bottom: 0,
                         height: 2,
-                        background: 'var(--color-primary-container)',
+                        background: 'var(--color-primary)',
                         transition: 'left 300ms var(--ease), right 300ms var(--ease)',
                     }}
                 />

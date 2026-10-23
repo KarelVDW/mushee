@@ -1,9 +1,15 @@
 // Buttons.
 //
-// Magenta-shadow "pop" treatment is RESERVED for the primary action on a
-// surface — landing-page CTA, "Save score", "Continue" on a final step.
+// Magenta-shadow "pop" treatment is RESERVED for at most one hero CTA per
+// viewport — the landing hero and final CTA, the nav's "New score", a flow's
+// single closing CTA. Every onboarding Continue stays flat.
 // Use <PrimaryButton> for the everyday filled button (no shadow); use
 // <PrimaryButton emphasis="pop"> for the rare hero moment.
+//
+// Heights are the control tokens: md 40px, lg 48px. Hover deepens the neon a
+// step (primary-container-hover, label on-primary-soft). Disabled, a capsule
+// drops to the tonal surface-container fill with on-surface-variant text and no
+// shadow — never a faded neon.
 
 function PrimaryButton({ children, onClick, size = 'md', icon, type = 'button', disabled, emphasis = 'flat', fullWidth, danger = false }) {
     const [hover, setHover] = useState(false)
@@ -14,9 +20,10 @@ function PrimaryButton({ children, onClick, size = 'md', icon, type = 'button', 
     const baseShadow = pop ? '3px 3px 0 0 var(--color-secondary-container)' : 'none'
     const hoverShadow = pop ? '5px 5px 0 0 var(--color-secondary-container)' : 'none'
     const idleBg = danger ? 'var(--color-error-container)' : 'var(--color-primary-container)'
-    const hoverBg = danger ? 'var(--color-error)' : 'var(--color-primary)'
+    const hoverBg = danger ? 'var(--color-error)' : 'var(--color-primary-container-hover)'
     const idleFg = danger ? 'var(--color-on-error-container)' : 'var(--color-on-primary-container)'
-    const hoverFg = danger ? 'var(--color-on-error)' : 'var(--color-on-primary)'
+    const hoverFg = danger ? 'var(--color-on-error)' : 'var(--color-on-primary-soft)'
+    const lit = hover && !disabled
     return (
         <button
             type={type}
@@ -25,21 +32,21 @@ function PrimaryButton({ children, onClick, size = 'md', icon, type = 'button', 
             onMouseEnter={() => setHover(true)}
             onMouseLeave={() => setHover(false)}
             style={{
-                background: hover && !disabled ? hoverBg : idleBg,
-                color: hover && !disabled ? hoverFg : idleFg,
+                background: disabled ? 'var(--color-surface-container)' : lit ? hoverBg : idleBg,
+                color: disabled ? 'var(--color-on-surface-variant)' : lit ? hoverFg : idleFg,
                 border: 0,
                 borderRadius: 9999,
-                padding: big ? '13px 26px' : '9px 18px',
-                font: `600 ${big ? 14 : 13}px/1 var(--font-label)`,
+                height: big ? 48 : 40,
+                padding: big ? '0 26px' : '0 20px',
+                font: big ? 'var(--type-button-lg)' : 'var(--type-button)',
                 letterSpacing: '0.01em',
                 cursor: disabled ? 'not-allowed' : 'pointer',
-                opacity: disabled ? 0.4 : 1,
                 whiteSpace: 'nowrap',
                 flexShrink: 0,
-                boxShadow: hover && !disabled ? hoverShadow : baseShadow,
-                transform: hover && !disabled && pop ? 'translateY(-2px)' : 'translateY(0)',
-                transition: 'transform 220ms var(--ease), box-shadow 220ms var(--ease), background 150ms var(--ease)',
-                display: pop || icon ? 'inline-flex' : 'inline-block',
+                boxShadow: disabled ? 'none' : lit ? hoverShadow : baseShadow,
+                transform: lit && pop ? 'translateY(-2px)' : 'translateY(0)',
+                transition: 'transform 200ms var(--ease), box-shadow 200ms var(--ease), background 150ms var(--ease)',
+                display: 'inline-flex',
                 alignItems: 'center',
                 gap: 8,
                 width: fullWidth ? '100%' : undefined,
@@ -62,14 +69,15 @@ function SecondaryButton({ children, onClick, size = 'md', type = 'button', disa
             onMouseEnter={() => setHover(true)}
             onMouseLeave={() => setHover(false)}
             style={{
-                background: hover ? 'var(--color-surface-container)' : 'var(--color-surface-container-low)',
-                color: 'var(--color-on-surface)',
+                // The tonal control fill: surface-container → high on hover; disabled keeps it, the label muted.
+                background: hover && !disabled ? 'var(--control-fill-hover)' : 'var(--control-fill)',
+                color: disabled ? 'var(--color-on-surface-variant)' : 'var(--color-on-surface)',
                 border: 0,
                 borderRadius: 9999,
-                padding: big ? '13px 26px' : '9px 18px',
-                font: `600 ${big ? 14 : 13}px/1 var(--font-label)`,
+                height: big ? 48 : 40,
+                padding: big ? '0 26px' : '0 20px',
+                font: big ? 'var(--type-button-lg)' : 'var(--type-button)',
                 cursor: disabled ? 'not-allowed' : 'pointer',
-                opacity: disabled ? 0.4 : 1,
                 whiteSpace: 'nowrap',
                 flexShrink: 0,
                 transition: 'background 150ms var(--ease)',
@@ -97,8 +105,9 @@ function TertiaryButton({ children, onClick, danger = false }) {
                         : 'var(--color-secondary)'
                     : hover
                       ? 'var(--color-primary)'
-                      : 'var(--color-on-surface-variant)',
-                font: '500 13px/1 var(--font-body)',
+                      : 'var(--color-on-surface)',
+                // A button's voice, Tertiary included: Space Grotesk 600 in on-surface.
+                font: 'var(--type-button)',
                 cursor: 'pointer',
                 padding: '8px 0',
                 whiteSpace: 'nowrap',

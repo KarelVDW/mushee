@@ -31,9 +31,11 @@
                 text-transform: uppercase;
                 color: var(--color-on-surface-variant);
             }
+            /* FieldFrame: the --field-fill, 4px corners, at least 40px (--control-md), no resting stroke. */
             .input-wrap {
-                background: var(--color-surface-container-low);
+                background: var(--field-fill);
                 border-radius: 4px;
+                min-height: 40px;
                 position: relative;
                 display: flex;
                 align-items: center;
@@ -82,6 +84,19 @@
                 left: 25%;
                 right: 25%;
             }
+            /* While invalid: a full-width 2px error stroke at rest (focus still sweeps primary over it). */
+            .error-stroke {
+                position: absolute;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                height: 2px;
+                background: var(--color-error);
+            }
+            .error-line {
+                font: 500 12px/1.4 var(--font-body);
+                color: var(--color-error);
+            }
             .row {
                 display: grid;
                 grid-template-columns: 1fr 1fr;
@@ -105,6 +120,17 @@
                         <input type="password" value="********" />
                         <div class="underline partial"></div>
                     </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="field">
+                    <span class="lbl">Email</span>
+                    <div class="input-wrap">
+                        <input value="" aria-invalid="true" />
+                        <div class="error-stroke"></div>
+                        <div class="underline"></div>
+                    </div>
+                    <span class="error-line">Enter the email on your account.</span>
                 </div>
             </div>
             <div class="field">
