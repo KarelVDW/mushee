@@ -1,36 +1,35 @@
 'use client'
 
-import { PrimaryButton, SecondaryButton, TertiaryButton } from '@/components/ui'
+import { RestBarMark } from '@/components/RestBarMark'
+import { ErrorScreen } from '@/components/ui'
 import { useSession } from '@/lib/auth-client'
 import { LIBRARY_PATH } from '@/lib/nextPath'
 
+const MESSAGE = 'The link may be old, or the address was mistyped.'
+
 /**
- * The 404's session-dependent part: a signed-in visitor is told their scores are safe and
- * goes back to the library; a signed-out one (a mistyped public address) goes to the home
- * page, with sign-in as the quiet alternative — never to a library they may not have. The
- * buttons wait for the session, so neither set flashes in for the other.
+ * The 404 screen, which depends on the session: a signed-in visitor is told their scores are
+ * safe and goes back to the library; a signed-out one (a mistyped public address) goes to the
+ * home page, with sign-in as the second way in — never to a library they may not have. A
+ * missing page is not a fault, so it is the neutral `missing` screen with the empty bar. The
+ * buttons wait for the session, so neither set flashes in for the other; their row keeps its
+ * height meanwhile.
  */
 export function NotFoundActions() {
     const { data: session, isPending } = useSession()
     const authed = !!session?.user
+    const actions = isPending
+        ? { secondaryAction: <span aria-hidden className="block h-(--control-md)" /> }
+        : authed
+          ? { backHref: LIBRARY_PATH, backLabel: 'Back to your library', secondaryAction: { label: 'Go home', href: '/' } }
+          : { backHref: '/', backLabel: 'Go to the home page', secondaryAction: { label: 'Sign in', href: '/login' } }
     return (
-        <>
-            <p className="font-body font-normal text-[14px] leading-normal text-on-surface-variant m-0">
-                The link may be old, or the address was mistyped.{authed && ' Your scores are safe.'}
-            </p>
-            <div className="flex flex-wrap items-center justify-center gap-3 mt-2 min-h-10">
-                {isPending ? null : authed ? (
-                    <>
-                        <PrimaryButton href={LIBRARY_PATH}>Back to your library</PrimaryButton>
-                        <SecondaryButton href="/">Go home</SecondaryButton>
-                    </>
-                ) : (
-                    <>
-                        <PrimaryButton href="/">Go to the home page</PrimaryButton>
-                        <TertiaryButton href="/login">Sign in</TertiaryButton>
-                    </>
-                )}
-            </div>
-        </>
+        <ErrorScreen
+            tone="missing"
+            illustration={<RestBarMark />}
+            title="This page doesn't exist"
+            message={authed ? `${MESSAGE} Your scores are safe.` : MESSAGE}
+            {...actions}
+        />
     )
 }

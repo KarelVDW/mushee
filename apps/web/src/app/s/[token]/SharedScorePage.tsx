@@ -228,7 +228,7 @@ function LoadProblem({ notFound, headingLevel, onRetry }: { notFound: boolean; h
     const Heading = headingLevel === 1 ? 'h1' : 'h2'
     return (
         <section className="max-w-130 mx-auto text-center flex flex-col gap-4 items-center py-16">
-            <Heading className="font-display font-bold text-[28px] sm:text-[36px] leading-none tracking-[-0.03em] text-on-surface m-0">
+            <Heading className="font-display font-bold text-[28px] sm:text-[36px] leading-[1.1] tracking-[-0.03em] text-on-surface m-0">
                 {notFound ? 'This link doesn’t open anything.' : 'The score couldn’t be loaded.'}
             </Heading>
             <p className="font-body font-normal text-[15px] leading-normal text-on-surface-variant m-0">
@@ -236,7 +236,8 @@ function LoadProblem({ notFound, headingLevel, onRetry }: { notFound: boolean; h
                     ? 'The owner may have turned sharing off, or the address is incomplete. Ask them for a fresh link.'
                     : 'Something went wrong on our side. Try again in a moment.'}
             </p>
-            {notFound && <PrimaryButton href="/">See what Solkey does</PrimaryButton>}
+            {/* Secondary: the header's Start free stays the page's one loud cyan. */}
+            {notFound && <SecondaryButton href="/">See what Solkey does</SecondaryButton>}
             {onRetry && <TertiaryButton onClick={onRetry}>Try again</TertiaryButton>}
         </section>
     )
