@@ -27,21 +27,27 @@ const CHROME_BACKDROP = 'pointer-events-none absolute inset-0 -z-10 bg-surface-c
 /** An empty white well or circle: the card lift, no ring, no accent. */
 const WELL = 'block bg-surface-container-lowest tonal-layer-glow'
 
-/** A row's stride and staff, in the layout's own units (ScoreLayout: ROW_HEIGHT + ROW_GAP; Staff.TOP_Y). */
-const ROW_STRIDE = ROW_HEIGHT + ROW_GAP
+/**
+ * The skeleton score's vertical rhythm, in the layout's own units (ScoreLayout and Staff): the
+ * first staff's top line, the staff's height, and where the second row's staff starts.
+ */
 const STAFF_TOP = SPACE_ABOVE_STAFF * STAVE_LINE_DISTANCE
+const STAFF_HEIGHT = (NUM_STAFF_LINES - 1) * STAVE_LINE_DISTANCE
+const SECOND_STAFF_TOP = ROW_HEIGHT + ROW_GAP + STAFF_TOP
+
+/** `units` layout units as a CSS length (`--u` is one unit in pixels; see EditorSkeleton). */
+const units = (n: number) => `calc(var(--u) * ${n})`
 
 /**
- * One staff of the skeleton score: five 1px `outline_variant` lines where the real row's staff
- * will be drawn — `--u` is one layout unit in pixels (see EditorSkeleton) — on the slow pulse.
+ * One staff of the skeleton score: five 1px `outline_variant` lines, STAVE_LINE_DISTANCE apart,
+ * where the real row's staff will be drawn — on the slow pulse.
  */
-function StaffRow({ index, className }: { index: number; className: string }) {
-    const style: CSSProperties = { top: `calc(var(--u) * ${index * ROW_STRIDE + STAFF_TOP})`, gap: `calc(var(--u) * ${STAVE_LINE_DISTANCE} - 1px)` }
+function StaffRow({ className, style }: { className: string; style?: CSSProperties }) {
     return (
         <span
             aria-hidden
-            className={`absolute left-0 flex flex-col animate-solkey-pulse motion-reduce:animate-none ${className}`}
-            style={style}>
+            className={`flex flex-col animate-solkey-pulse motion-reduce:animate-none ${className}`}
+            style={{ ...style, gap: `calc(${units(STAVE_LINE_DISTANCE)} - 1px)` }}>
             {Array.from({ length: NUM_STAFF_LINES }, (_, i) => (
                 <span key={i} className="block h-px bg-outline-variant" />
             ))}
@@ -103,15 +109,17 @@ export function EditorSkeleton({ message, onRetry }: EditorSkeletonProps) {
                     {/* One layout unit (--u) in pixels, as ScoreView scales the score: a wide sheet fits its
                         SCORE_WIDTH-unit layout to the width (0.1cqw a unit), a narrow one reflows at full size. */}
                     <div className="@container">
-                        <div
-                            className="relative [--u:1px] @min-[768px]:[--u:0.1cqw]"
-                            style={{ height: `calc(var(--u) * ${2 * ROW_STRIDE})` }}>
-                            <StaffRow index={0} className="w-full" />
-                            <StaffRow index={1} className="w-3/5" />
-                            {/* Under the first staff, clear of the second's. */}
+                        <div className="flex flex-col [--u:1px] @min-[768px]:[--u:0.1cqw]">
+                            <StaffRow className="w-full" style={{ marginTop: units(STAFF_TOP) }} />
+                            {/* The status under the first staff, a staff space below it. Its box fills the room
+                                down to the second staff, which it only pushes on (the slow stage on a
+                                narrow sheet) rather than overlap. */}
                             <div
-                                className="absolute inset-x-0 flex justify-center"
-                                style={{ top: `calc(var(--u) * ${STAFF_TOP + (NUM_STAFF_LINES - 1) * STAVE_LINE_DISTANCE + 2 * STAVE_LINE_DISTANCE})` }}>
+                                className="flex justify-center"
+                                style={{
+                                    paddingBlock: units(STAVE_LINE_DISTANCE),
+                                    minHeight: units(SECOND_STAFF_TOP - STAFF_TOP - STAFF_HEIGHT),
+                                }}>
                                 <div className="w-full max-w-md">
                                     <LoadingStatus
                                         message={message}
@@ -120,6 +128,7 @@ export function EditorSkeleton({ message, onRetry }: EditorSkeletonProps) {
                                     />
                                 </div>
                             </div>
+                            <StaffRow className="w-3/5" />
                         </div>
                     </div>
                 </div>
