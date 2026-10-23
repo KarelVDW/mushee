@@ -382,41 +382,43 @@ function BackLink({ onClick }: { onClick: () => void }) {
  */
 const STICKY_EYEBROW = 'sticky top-0 z-1 -mx-4 px-4 py-2 bg-surface-container-lowest'
 
-/** How far the folded menu shows past 'This note': the 20px section gap and 24px of the 'Whole score' label. */
-const FOLD_PEEK_PX = 44
+/** How far the folded menu shows past its fold row: the top of the next row, under the 16px fade. */
+const FOLD_PEEK_PX = 20
 
 /**
  * The More sheet's own fit, set on its panel (the Popover's dialog) as the body's content
  * changes size:
  * - the top fade sits under the pinned section label (`--sheet-fade-top`, its height), so the
  *   label is never washed out;
- * - with a note selected the sheet folds just past 'This note' (`--sheet-peek-h`: that section's
- *   bottom plus {@link FOLD_PEEK_PX}), never taller than the one-system room above it allows —
- *   so the bottom fade lands on the 'Whole score' label, which also says there is more below,
- *   and never across a control.
+ * - with a note selected the sheet folds just past `foldRow` — Redo, the first 'Whole score'
+ *   row, kept in reach without scrolling (`--sheet-peek-h`: that row's bottom plus
+ *   {@link FOLD_PEEK_PX}), never taller than the one-system room above it allows. The bottom
+ *   fade then falls on the next row's bare top, which says there is more below, and never
+ *   across a filled control such as the sharp-or-flat track.
  */
-function useMenuSheetFold(section: HTMLElement | null, eyebrow: HTMLElement | null, fold: boolean) {
+function useMenuSheetFold(section: HTMLElement | null, foldRow: Element | null, eyebrow: HTMLElement | null, fold: boolean) {
     useLayoutEffect(() => {
         const panel = section?.closest<HTMLElement>('[role="dialog"]')
         if (!section || !panel) return
         const body = section.closest<HTMLElement>('[data-popover-body]')
         const measure = () => {
             if (eyebrow) panel.style.setProperty('--sheet-fade-top', `${eyebrow.offsetHeight}px`)
-            if (!fold) {
+            if (!fold || !foldRow) {
                 panel.style.removeProperty('--sheet-peek-h')
                 panel.style.removeProperty('max-height')
                 return
             }
-            const bottom = section.getBoundingClientRect().bottom + (body?.scrollTop ?? 0) - panel.getBoundingClientRect().top
+            const bottom = foldRow.getBoundingClientRect().bottom + (body?.scrollTop ?? 0) - panel.getBoundingClientRect().top
             panel.style.setProperty('--sheet-peek-h', `${Math.ceil(bottom + FOLD_PEEK_PX)}px`)
             panel.style.maxHeight = `min(100% - ${SHEET_SYSTEM_ROOM.px}px, var(--sheet-peek-h))`
         }
         measure()
+        // 'This note' changing height (a reason line coming and going) moves the fold row.
         const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(measure)
         observer?.observe(section)
         // The fit stays on the panel as it closes: its leaving copy keeps the same height.
         return () => observer?.disconnect()
-    }, [section, eyebrow, fold])
+    }, [section, foldRow, eyebrow, fold])
 }
 
 interface MoreToolsMenuProps {
@@ -434,12 +436,14 @@ interface MoreToolsMenuProps {
 function MoreToolsMenu({ manipulator, words, anchorRef, metronome, onMetronomeToggle, onOpen, onTranspose, onClose }: MoreToolsMenuProps) {
     const [thisNote, setThisNote] = useState<HTMLElement | null>(null)
     const [eyebrow, setEyebrow] = useState<HTMLElement | null>(null)
+    const [wholeScoreRows, setWholeScoreRows] = useState<HTMLElement | null>(null)
     const tools = new NoteToolStates(manipulator)
     const accidental = tools.accidental
     // The clef / key / time / tempo rows: off while a recording writes into the score, saying so.
     const settingsState = tools.scoreSettings
     const nothingSelected = !manipulator.selectedNote
-    useMenuSheetFold(thisNote, eyebrow, !nothingSelected)
+    // Folded after Redo, the first 'Whole score' row.
+    useMenuSheetFold(thisNote, wholeScoreRows?.firstElementChild ?? null, eyebrow, !nothingSelected)
     // A score of rests has nothing to transpose yet.
     const emptyScore = !manipulator.score?.hasPitchedNotes
 
@@ -522,7 +526,7 @@ function MoreToolsMenu({ manipulator, words, anchorRef, metronome, onMetronomeTo
                 <div className={STICKY_EYEBROW}>
                     <Eyebrow>Whole score</Eyebrow>
                 </div>
-                <div className="flex flex-col -mx-2">
+                <div ref={setWholeScoreRows} className="flex flex-col -mx-2">
                     {/* First, in reach without scrolling: one Undo too many after fixing notes is
                         taken back from here (Undo itself leads the tool row). */}
                     <SheetRow
