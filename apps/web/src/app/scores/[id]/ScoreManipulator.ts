@@ -783,11 +783,20 @@ export class ScoreManipulator {
     onShortcutsRequest?: () => void
 
     /**
-     * Page-registered feedback hook: a pitch operation (transpose / minimize accidentals)
-     * just rewrote this range — flash it. Called after the mutation, so a notes array holds
-     * the replacement identities.
+     * Page-registered feedback hook, the editor's one "this just changed" signal: an edit just
+     * landed on this range — a pitch operation (transpose / minimize accidentals) rewrote it, or
+     * a recording wrote it ({@link flashRange}) — so flash it. Called after the mutation, so a
+     * notes array holds the replacement identities.
      */
-    onPitchHighlight?: (notes: Note[] | 'all') => void
+    onRangeFlash?: (notes: Note[] | 'all') => void
+
+    /**
+     * Flash `notes` as just changed, through {@link onRangeFlash} — for edits made outside the
+     * manipulator's own operations: the bars a recording just added. Nothing to flash, no flash.
+     */
+    flashRange(notes: Note[]): void {
+        if (notes.length > 0) this.onRangeFlash?.(notes)
+    }
 
     /**
      * Run minimize-accidentals with its scope rule (a selection that
@@ -802,7 +811,7 @@ export class ScoreManipulator {
         // spelling (or key) that really changed is worth an Undo.
         const before = this.spelling()
         this.run(MINIMIZE_ACCIDENTALS, scope)
-        this.onPitchHighlight?.(scope === 'score' ? 'all' : [...this._selectedNotes])
+        this.onRangeFlash?.(scope === 'score' ? 'all' : [...this._selectedNotes])
         if (this.spelling() !== before) this.offerUndo('Tidied sharps and flats.')
     }
 
@@ -843,7 +852,7 @@ export class ScoreManipulator {
                 if (at) this.setSingle(this.noteAt(at))
             }
         })
-        this.onPitchHighlight?.(selectionScope ? [...this._selectedNotes] : 'all')
+        this.onRangeFlash?.(selectionScope ? [...this._selectedNotes] : 'all')
         if (changed) this.offerUndo(ScoreManipulator.movedWords(interval))
     }
 

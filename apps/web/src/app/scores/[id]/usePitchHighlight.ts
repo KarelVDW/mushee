@@ -12,8 +12,11 @@ const FLASH_MS = 900
 
 /**
  * Transient magenta emphasis on the canvas: a pulse over the open transpose popover's target
- * range (`aim`, the popover's onScopeChange), replaced by a fading flash the moment a pitch
- * operation lands (the manipulator's onPitchHighlight hook, registered here).
+ * range (`aim`, the popover's onScopeChange), replaced by a fading flash the moment an edit
+ * lands on a range — a pitch operation, or the bars a recording just added (the manipulator's
+ * onRangeFlash hook, registered here; its flashRange triggers it from outside). The flash
+ * fades 0.24 → 0 over FLASH_MS; under reduced motion HighlightLayer rests it as a static wash,
+ * which this hook clears after the same FLASH_MS.
  */
 export function usePitchHighlight(manipulator: ScoreManipulator): {
     highlight: ScoreHighlight | null
@@ -35,15 +38,15 @@ export function usePitchHighlight(manipulator: ScoreManipulator): {
         [manipulator],
     )
 
-    // Flash the range a pitch operation (transpose apply / minimize accidentals) just rewrote.
+    // Flash the range an edit just landed on (transpose apply / minimize accidentals / a take's bars).
     useEffect(() => {
-        manipulator.onPitchHighlight = (notes) => {
+        manipulator.onRangeFlash = (notes) => {
             if (flashTimer.current) clearTimeout(flashTimer.current)
             setHighlight({ kind: 'flash', notes, id: ++highlightSeq.current })
             flashTimer.current = setTimeout(() => setHighlight(null), FLASH_MS)
         }
         return () => {
-            manipulator.onPitchHighlight = undefined
+            manipulator.onRangeFlash = undefined
             if (flashTimer.current) clearTimeout(flashTimer.current)
         }
     }, [manipulator])
