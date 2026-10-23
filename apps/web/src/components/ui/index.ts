@@ -5,6 +5,7 @@ export { Footer, PageHeader, SkipLink, TopNav } from './Chrome'
 export { ChipToggle, Segmented, Switch, ToolGroup, TransportBtn } from './Controls'
 export { DialogPanel } from './Dialog'
 export { HeaderMenu } from './HeaderMenu'
+export { Keycap } from './Keycap'
 export { isAcceptablePassword, NEW_PASSWORD_HINT, SIGNUP_PASSWORD_HINT } from './Password'
 export { NewPasswordFields, PasswordField } from './PasswordField'
 export {

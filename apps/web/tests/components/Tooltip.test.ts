@@ -12,6 +12,7 @@ import {
     TOOLTIP_HOVER_DELAY_MS,
     TooltipCard,
 } from '@/components/ui/Tooltip'
+import { Keycap } from '@/components/ui/Keycap'
 import { Shortcut } from '@/lib/Keybindings'
 
 // React's act() refuses to run outside a test-aware environment.
@@ -108,7 +109,7 @@ describe('Tooltip', () => {
         advance(TOOLTIP_HOVER_DELAY_MS - 1)
         expect(card()).toBeNull()
         advance(1)
-        expect(card()?.textContent).toBe('Quarter note — 1 beat · Q')
+        expect(card()?.textContent).toBe('Quarter note — 1 beat\u00a0·\u00a0Q')
         expect(card()?.className).toContain('bg-surface-container-lowest')
         pointer(button(), 'pointerout', { relatedTarget: outside })
         expect(card()).toBeNull()
@@ -130,7 +131,7 @@ describe('Tooltip', () => {
     it('opens at once on keyboard focus, closes on blur', () => {
         render()
         keyFocus()
-        expect(card()?.textContent).toBe('Quarter note — 1 beat · Q')
+        expect(card()?.textContent).toBe('Quarter note — 1 beat\u00a0·\u00a0Q')
         act(() => button().blur())
         expect(card()).toBeNull()
     })
@@ -447,8 +448,27 @@ describe('TooltipCard', () => {
     it('draws "Name — hint · key" on the opaque card, decorative for assistive tech', () => {
         const html = markup({ label: 'Quarter note', hint: '1 beat', keys: 'Q' })
         expect(html).toMatch(/^<span aria-hidden="true" class="tooltip-enter [^"]*rounded-md bg-surface-container-lowest shadow-overlay/)
+        expect(html).toContain('max-w-72 text-balance')
         expect(html).toContain('<span class="font-label font-semibold">Quarter note</span>')
-        expect(html).toContain('<span class="text-on-surface-variant"> — </span><span class="text-on-surface-variant">1 beat</span>')
+        expect(html).toContain('<span class="text-on-surface-variant"> — </span><span class="text-on-surface-variant text-pretty">1 beat</span>')
+        expect(html).toContain('>Q</kbd>')
+    })
+
+    it('keeps the key on the same line as the word before it', () => {
+        const box = document.createElement('div')
+        box.innerHTML = markup({ label: 'Dotted', hint: 'one and a half times as long', keys: ':' })
+        const kbd = box.querySelector('kbd') as HTMLElement
+        const run = kbd.parentElement as HTMLElement
+        expect(run.className).toBe('whitespace-nowrap')
+        // Non-breaking spaces round the dot: no break opportunity before or after it.
+        expect(run.textContent).toBe(' · :')
+        // A lone punctuation key is set in the mono face, a size up.
+        expect(kbd.className).toContain('font-mono text-[14px]')
+    })
+
+    it('draws a key on its own without the dot', () => {
+        const html = markup({ keys: 'Q' })
+        expect(html).not.toContain('·')
         expect(html).toContain('>Q</kbd>')
     })
 
@@ -464,5 +484,26 @@ describe('TooltipCard', () => {
         expect(html).toContain('rounded-full bg-surface-container-high')
         expect(html).toContain(' — Start a recording')
         expect(html).not.toContain('⇧R')
+    })
+})
+
+describe('Keycap', () => {
+    const markup = (props: Parameters<typeof Keycap>[0]) => renderToStaticMarkup(createElement(Keycap, props))
+
+    it('is a <kbd> cap in the label face, 20px by default and 24px at md', () => {
+        const small = markup({ children: '⇧⌘Z' })
+        expect(small).toMatch(/^<kbd class="inline-flex items-center justify-center px-1\.5 rounded-sm bg-surface-container/)
+        expect(small).toContain('h-5 min-w-5')
+        expect(small).toContain('font-label font-semibold text-[11px]')
+        expect(small).toContain('shadow-[inset_0_-1px_0_rgb(45_47_47/0.12)]')
+        expect(small).toContain('>⇧⌘Z</kbd>')
+        expect(markup({ children: 'Q', size: 'md' })).toContain('h-6 min-w-6')
+    })
+
+    it('sets a lone punctuation key in the mono face, a size up, and leaves letters alone', () => {
+        expect(markup({ children: ':' })).toContain('font-mono text-[14px]')
+        expect(markup({ children: '?' })).toContain('font-mono text-[14px]')
+        expect(markup({ children: 'Q' })).not.toContain('font-mono')
+        expect(markup({ children: 'Ctrl+Z' })).not.toContain('font-mono')
     })
 })
