@@ -509,10 +509,15 @@ export default function ScoreEditorPage() {
         const header = root?.querySelector('header')
         const dock = dockRef.current
         if (!root || !header || !dock) return
+        // The bar heights are published on the document too, for the app-wide surfaces mounted
+        // outside the editor (the browser-support banner keeps clear of both bars).
+        const page = document.documentElement.style
         const measure = () => {
             root.style.setProperty('--app-header-h', `${header.offsetHeight}px`)
             root.style.setProperty('--dock-h', `${dock.offsetHeight}px`)
-            document.documentElement.style.setProperty('--toast-bottom', `${dock.offsetHeight + TOAST_GAP_PX}px`)
+            page.setProperty('--app-header-h', `${header.offsetHeight}px`)
+            page.setProperty('--dock-h', `${dock.offsetHeight}px`)
+            page.setProperty('--toast-bottom', `${dock.offsetHeight + TOAST_GAP_PX}px`)
         }
         measure()
         const observer = new ResizeObserver(measure)
@@ -520,7 +525,7 @@ export default function ScoreEditorPage() {
         observer.observe(dock)
         return () => {
             observer.disconnect()
-            document.documentElement.style.removeProperty('--toast-bottom')
+            for (const name of ['--app-header-h', '--dock-h', '--toast-bottom']) page.removeProperty(name)
         }
     }, [editorReady])
 
