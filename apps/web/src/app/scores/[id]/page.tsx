@@ -14,6 +14,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { useCallback, useEffect, useId, useRef, useState, useSyncExternalStore } from 'react'
 
 import { SelectionPopover } from '@/components/editor/SelectionPopover'
+import { RestBarMark } from '@/components/RestBarMark'
 import { dismissToast, ErrorScreen, focusWithoutTooltip, PopoverSheetHost, showToast } from '@/components/ui'
 import { ApiError, NetworkError } from '@/lib/api'
 import { withPlan } from '@/lib/plans'
@@ -224,6 +225,16 @@ export default function ScoreEditorPage() {
         focusCanvas()
     }, [focusCanvas])
     const handleSelectionMenu = useCallback((_event: SelectionMenuEvent) => openSelectionMenu('pointer'), [openSelectionMenu])
+    // One transient surface at a time: an in-score glyph's sheet or popover closes the selection
+    // bar. A tap on the selected note that lands on its glyph (the tempo mark above it) releases
+    // into the tap-again menu first and the glyph's click right after — so the glyph wins.
+    const openAttributePopover = useCallback(
+        (event: AttributeClickEvent) => {
+            closeSelectionMenu()
+            setAttributePopover(event)
+        },
+        [closeSelectionMenu],
+    )
     useEffect(() => {
         manipulator.onSelectionMenuRequest = () => openSelectionMenu('keyboard')
         return () => {
@@ -529,16 +540,24 @@ export default function ScoreEditorPage() {
             />
         )
     }
+    // A missing score is no fault: an empty bar for a mark, and the way back as the quiet button.
+    if (scoreMissing) {
+        return (
+            <ErrorScreen
+                tone="missing"
+                illustration={<RestBarMark />}
+                title="Score not found"
+                message="This score doesn’t exist (anymore), or it belongs to a different account."
+                secondaryAction={{ label: 'Back to library', onClick: () => router.push('/scores') }}
+            />
+        )
+    }
     if (loadError || unreadable) {
         return (
             <ErrorScreen
-                title={scoreMissing ? 'Score not found' : "This score couldn't be loaded"}
-                message={
-                    scoreMissing
-                        ? 'This score doesn’t exist (anymore), or it belongs to a different account.'
-                        : 'Something went wrong while loading this score. Try again, and if it keeps happening, come back in a few minutes.'
-                }
-                onRetry={scoreMissing ? undefined : () => void refetch()}
+                title="This score couldn't be loaded"
+                message="Something went wrong while loading this score. Try again, and if it keeps happening, come back in a few minutes."
+                onRetry={() => void refetch()}
                 onBack={() => router.push('/scores')}
                 backLabel="Back to library"
             />
@@ -651,7 +670,7 @@ export default function ScoreEditorPage() {
                                     onSelectionMenu={handleSelectionMenu}
                                     onNoteChange={handleNoteChange}
                                     onMeasureButtonsLayout={setMeasureButtonsRect}
-                                    onAttributeClick={setAttributePopover}
+                                    onAttributeClick={openAttributePopover}
                                     onAttributeHover={setAttributeHover}
                                 />
                             </div>
