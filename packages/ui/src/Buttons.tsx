@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { type ButtonHTMLAttributes, type ReactNode } from 'react'
+import { type AnchorHTMLAttributes, type ButtonHTMLAttributes, type ReactNode } from 'react'
 
 import { Icon, type IconName } from './Icon'
 
@@ -25,51 +25,82 @@ type PrimaryButtonProps = {
     ariaLabel?: string
 } & ButtonOrLink<{ type?: 'button' | 'submit' | 'reset'; disabled?: boolean }>
 
+// The capsule's height is a token (theme.css: 40px md, 48px lg; 44/52px on coarse pointers),
+// never padding plus line-height, so an icon never changes it and neighbours line up.
+const CAPSULE_HEIGHT: Record<ButtonSize, string> = {
+    md: 'h-(--control-md) px-5 text-[13px]',
+    lg: 'h-(--control-lg) px-6.5 text-[14px]',
+}
+
+// Icon-only: a true circle of the same height.
+const CAPSULE_ICON_ONLY: Record<ButtonSize, string> = {
+    md: 'px-0 aspect-square size-(--control-md)',
+    lg: 'px-0 aspect-square size-(--control-lg)',
+}
+
+// The press every compact control shares: a 3% shrink over 100ms (reduced motion keeps only the
+// tonal step). Never on a disabled control. Tailwind's scale and translate utilities set the
+// individual `scale` / `translate` properties, so the transition lists them beside transform.
+const PRESS_SCALE = 'motion-safe:not-disabled:not-aria-disabled:active:scale-[0.97]'
+const PRESS_TRANSITION = 'transition-[transform,translate,scale,background-color,color,box-shadow] duration-(--t-press) ease-solkey'
+
+// The disabled states below are spelled out for both the native attribute and aria-disabled,
+// class by class, so Tailwind's scanner sees each one.
+
 function primaryClasses({
     size,
     emphasis,
     danger,
     fullWidth,
+    iconOnly,
 }: {
     size: ButtonSize
     emphasis: 'flat' | 'pop'
     danger: boolean
     fullWidth: boolean
+    iconOnly: boolean
 }) {
     // Destructive variant: red fill, no magenta pop — the signature lift is reserved
     // for actions you want the user to tap, not for ones you want them to think twice about.
     const pop = emphasis === 'pop' && !danger
 
+    // Hover deepens the neon a step instead of inverting it to dark teal, and press one step
+    // further (on_primary_soft text: 5.7:1 on hover, 4.83:1 pressed). Danger steps from
+    // error_container to error on hover and darkens again on press.
     const palette = danger
-        ? 'bg-error-container text-on-error-container hover:bg-error hover:text-on-error'
-        : 'bg-primary-container text-on-primary-container hover:bg-primary hover:text-on-primary'
+        ? 'bg-error-container text-on-error-container hover:bg-error hover:text-on-error active:bg-error active:text-on-error active:brightness-90 disabled:brightness-100 aria-disabled:brightness-100'
+        : 'bg-primary-container text-on-primary-container hover:bg-primary-container-hover hover:text-on-primary-soft active:bg-primary-container-pressed active:text-on-primary-soft'
 
-    // The disabled freeze lives here too: outside `pop` it would paint the magenta
-    // shadow onto disabled flat/danger buttons on hover.
+    // Pop: the magenta plate grows 3→5px under a -2px lift on hover; on press the capsule sinks
+    // onto its plate (3px right and down, the shadow gone).
     const popStyles = pop
-        ? 'shadow-(--shadow-offset-3) hover:shadow-(--shadow-offset-5) hover:-translate-y-[2px] disabled:hover:translate-y-0 disabled:hover:shadow-(--shadow-offset-3)'
+        ? 'shadow-(--shadow-offset-3) hover:shadow-(--shadow-offset-5) hover:-translate-y-[2px] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none active:duration-100'
         : ''
 
     return [
         'inline-flex items-center justify-center gap-2 whitespace-nowrap shrink-0 cursor-pointer',
         'border-0 rounded-full font-label font-semibold tracking-[0.01em]',
-        // Touch: md grows by padding to 41px (44px with its icon) — the 40px floor, same type size.
-        size === 'lg' ? 'px-6.5 py-3.25 text-[14px]' : 'px-4.5 py-2.25 text-[13px] pointer-coarse:py-3.5',
+        CAPSULE_HEIGHT[size],
+        iconOnly ? CAPSULE_ICON_ONLY[size] : '',
         'leading-none',
-        'transition-[transform,box-shadow,background-color,color] duration-200 ease-solkey',
+        PRESS_TRANSITION,
+        PRESS_SCALE,
         'focus-ring',
-        'disabled:opacity-40 disabled:cursor-not-allowed',
         palette,
         popStyles,
+        // Disabled: a neutral capsule that holds still — no neon fade, no magenta ghost, no
+        // hover. The disabled variants sort after hover and active, so they win over both.
+        'disabled:bg-surface-container aria-disabled:bg-surface-container disabled:text-on-surface-variant aria-disabled:text-on-surface-variant disabled:opacity-100 aria-disabled:opacity-100 disabled:shadow-none aria-disabled:shadow-none disabled:translate-x-0 aria-disabled:translate-x-0 disabled:translate-y-0 aria-disabled:translate-y-0 disabled:cursor-not-allowed aria-disabled:cursor-not-allowed',
         fullWidth ? 'w-full' : '',
     ].join(' ')
 }
 
 /**
- * Filled cyan capsule (red with `danger`). With `emphasis="pop"` it gains the
- * magenta offset shadow that grows from 3px to 5px on hover, paired with a -2px
- * lift; disabled, it holds still at 3px. Hover/disabled states are pure CSS — no
- * JS state.
+ * Filled cyan capsule (red with `danger`), 40px (md) or 48px (lg) tall. Hover deepens the
+ * fill a step, press another step with a 3% shrink. With `emphasis="pop"` it gains the
+ * magenta offset shadow that grows from 3px to 5px on hover, paired with a -2px lift, and
+ * sinks onto that plate when pressed. Disabled, it is a still, neutral capsule. Without
+ * children it renders as an icon-only circle (pass `ariaLabel`). Pure CSS — no JS state.
  */
 export function PrimaryButton({
     children,
@@ -84,7 +115,7 @@ export function PrimaryButton({
     fullWidth = false,
     ariaLabel,
 }: PrimaryButtonProps) {
-    const className = primaryClasses({ size, emphasis, danger, fullWidth })
+    const className = primaryClasses({ size, emphasis, danger, fullWidth, iconOnly: children == null && icon != null })
     const content = (
         <>
             {children != null && <span>{children}</span>}
@@ -105,28 +136,54 @@ export function PrimaryButton({
     )
 }
 
+type SecondaryTone = 'tonal' | 'raised'
+
 type SecondaryButtonProps = {
     children?: ReactNode
     onClick?: () => void
     fullWidth?: boolean
+    /** md (40px, the default) or lg (48px) — the same heights as PrimaryButton. */
+    size?: ButtonSize
+    /**
+     * `tonal` (default): the quiet control fill (--control-fill), for the page and white cards.
+     * `raised`: a white capsule with the raised shadow, for tinted surfaces where a grey fill
+     * would sink (the pricing cards, grey panels).
+     */
+    tone?: SecondaryTone
 } & ButtonOrLink<{ disabled?: boolean }>
 
-function secondaryClasses({ fullWidth }: { fullWidth: boolean }) {
+const SECONDARY_TONES: Record<SecondaryTone, string> = {
+    tonal: 'bg-(--control-fill) hover:bg-(--control-fill-hover) active:bg-(--control-fill-press) disabled:bg-(--control-fill) aria-disabled:bg-(--control-fill)',
+    raised: 'bg-surface-container-lowest tonal-layer-glow hover:bg-surface-container-low active:bg-surface-container disabled:bg-surface-container-lowest aria-disabled:bg-surface-container-lowest',
+}
+
+function secondaryClasses({ fullWidth, size, tone }: { fullWidth: boolean; size: ButtonSize; tone: SecondaryTone }) {
     return [
         'inline-flex items-center justify-center whitespace-nowrap shrink-0 cursor-pointer',
         'border-0 rounded-full font-label font-semibold',
-        'bg-surface-container-low text-on-surface hover:bg-surface-container',
-        'px-4.5 py-2.25 text-[13px] pointer-coarse:py-3.5',
+        'text-on-surface',
+        SECONDARY_TONES[tone],
+        CAPSULE_HEIGHT[size],
         'leading-none',
-        'transition-colors duration-150 ease-solkey',
+        PRESS_TRANSITION,
+        PRESS_SCALE,
         'focus-ring',
-        'disabled:opacity-40 disabled:cursor-not-allowed',
+        // Disabled: its own fill, the label muted, no hover — never faded to 40%.
+        'disabled:opacity-100 aria-disabled:opacity-100 disabled:text-on-surface-variant aria-disabled:text-on-surface-variant disabled:cursor-not-allowed aria-disabled:cursor-not-allowed',
         fullWidth ? 'w-full' : '',
     ].join(' ')
 }
 
-export function SecondaryButton({ children, onClick, href, disabled, fullWidth = false }: SecondaryButtonProps) {
-    const className = secondaryClasses({ fullWidth })
+export function SecondaryButton({
+    children,
+    onClick,
+    href,
+    disabled,
+    fullWidth = false,
+    size = 'md',
+    tone = 'tonal',
+}: SecondaryButtonProps) {
+    const className = secondaryClasses({ fullWidth, size, tone })
     if (href != null) {
         return (
             <Link href={href} onClick={onClick} className={className}>
@@ -150,18 +207,19 @@ type TertiaryButtonProps = {
 
 function tertiaryClasses({ danger }: { danger: boolean }) {
     return [
-        // inline-flex so the <Link> form's padding takes up space too, and so the touch floor
-        // (40×40 on coarse pointers, DESIGN.md §4b) centres the label; desktop keeps py-2.
+        // inline-flex so the <Link> form's padding takes up space too, and so the height floor
+        // (--control-sm: 32px, 40px on coarse pointers, DESIGN.md §4b) centres the label.
         'inline-flex items-center justify-center bg-transparent border-0 cursor-pointer whitespace-nowrap shrink-0 py-2 px-0',
-        'pointer-coarse:min-h-10 pointer-coarse:min-w-10',
-        'font-body font-medium text-[13px] leading-none',
+        'min-h-(--control-sm) pointer-coarse:min-w-10',
+        // A button's voice (Space Grotesk 600) in on_surface, never caption-grey body text.
+        'font-label font-semibold text-[13px] leading-none',
         'transition-colors duration-150 ease-solkey',
         'focus-ring rounded-sm',
-        // Disabled: dimmed like the capsule buttons, and the hover colour holds still.
+        // Disabled: dimmed, and the hover colour holds still.
         'disabled:opacity-40 disabled:cursor-not-allowed',
         danger
             ? 'text-secondary hover:text-secondary-container disabled:hover:text-secondary'
-            : 'text-on-surface-variant hover:text-primary disabled:hover:text-on-surface-variant',
+            : 'text-on-surface hover:text-primary disabled:hover:text-on-surface',
     ].join(' ')
 }
 
@@ -186,6 +244,7 @@ interface IconButtonProps {
     onClick?: () => void
     /** Hover fill: cyan (default), magenta for destructive actions, neutral for a quiet tonal step. */
     hoverTone?: 'cyan' | 'magenta' | 'neutral'
+    /** Pixel size of the circle; unset, it follows --control-sm (32px, 40px on coarse pointers). */
     size?: number
     ariaLabel?: string
     /** Native tooltip — e.g. why the button is disabled. */
@@ -195,13 +254,15 @@ interface IconButtonProps {
     idleClassName?: string
 }
 
+// Hover, then press. The neutral tone steps through the control fills; the cyan and magenta
+// hovers press one step deeper in their own hue, so a mouse press never flashes back to grey.
 const ICON_BUTTON_HOVER: Record<NonNullable<IconButtonProps['hoverTone']>, string> = {
-    cyan: 'hover:bg-primary-container hover:text-on-primary-container',
-    magenta: 'hover:bg-secondary-container hover:text-on-secondary',
-    neutral: 'hover:bg-surface-container-high',
+    cyan: 'hover:bg-primary-container hover:text-on-primary-container active:bg-primary-container-pressed active:text-on-primary-soft',
+    magenta: 'hover:bg-secondary-container hover:text-on-secondary active:bg-secondary active:text-on-secondary',
+    neutral: 'hover:bg-(--control-fill-hover) active:bg-(--control-fill-press)',
 }
 
-export function IconButton({ icon, onClick, hoverTone = 'cyan', size = 32, ariaLabel, title, disabled, idleClassName }: IconButtonProps) {
+export function IconButton({ icon, onClick, hoverTone = 'cyan', size, ariaLabel, title, disabled, idleClassName }: IconButtonProps) {
     return (
         <button
             type="button"
@@ -216,15 +277,48 @@ export function IconButton({ icon, onClick, hoverTone = 'cyan', size = 32, ariaL
                 // neighbouring buttons' hit areas never overlap the way an invisible halo would.
                 'pointer-coarse:min-h-10 pointer-coarse:min-w-10',
                 'text-on-surface',
-                idleClassName ?? 'bg-surface-container',
+                size == null ? 'size-(--control-sm)' : '',
+                idleClassName ?? 'bg-(--control-fill)',
                 ICON_BUTTON_HOVER[hoverTone],
-                'transition-colors duration-150 ease-solkey',
+                'transition-[transform,translate,scale,background-color,color,opacity] duration-150 ease-solkey',
+                PRESS_SCALE,
                 'focus-ring',
                 'disabled:opacity-40 disabled:cursor-not-allowed',
             ].join(' ')}
-            style={{ width: size, height: size }}>
-            <Icon name={icon} size={size <= 28 ? 14 : 16} />
+            style={size == null ? undefined : { width: size, height: size }}>
+            <Icon name={icon} size={size != null && size <= 28 ? 14 : 16} />
         </button>
+    )
+}
+
+/**
+ * The in-sentence link: primary text over a quiet 35% underline that firms up on hover, 3px
+ * below the baseline. It inherits the surrounding font size; the shared focus ring applies.
+ */
+export const TEXT_LINK_CLASS =
+    'text-primary font-medium underline decoration-1 decoration-primary/35 underline-offset-[3px] hover:decoration-primary transition-colors duration-150 ease-solkey rounded-sm focus-ring'
+
+type TextLinkProps = Omit<AnchorHTMLAttributes<HTMLAnchorElement>, 'href'> & {
+    href: string
+    children: ReactNode
+    /** `'a'` (default) renders a plain anchor (mailto:, other sites); `Link` renders next/link for in-app routes. */
+    as?: 'a' | typeof Link
+}
+
+/** An inline link in running text, styled by {@link TEXT_LINK_CLASS}. */
+export function TextLink({ as = 'a', href, children, className, ...rest }: TextLinkProps) {
+    const classes = className ? `${TEXT_LINK_CLASS} ${className}` : TEXT_LINK_CLASS
+    if (as === Link) {
+        return (
+            <Link href={href} className={classes} {...rest}>
+                {children}
+            </Link>
+        )
+    }
+    return (
+        <a href={href} className={classes} {...rest}>
+            {children}
+        </a>
     )
 }
 

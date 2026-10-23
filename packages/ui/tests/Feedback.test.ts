@@ -46,7 +46,7 @@ describe('ErrorScreen', () => {
         const withRetry = html(
             createElement(ErrorScreen, { title: 'x', message: 'y', onRetry: noop, onBack: noop, backLabel: 'Back to library' }),
         )
-        expect(withRetry).toMatch(/bg-surface-container-low[^"]*">Back to library<\/button>/)
+        expect(withRetry).toMatch(/bg-\(--control-fill\)[^"]*">Back to library<\/button>/)
     })
 
     it('renders the way back as a link and takes an extra quiet action', () => {
