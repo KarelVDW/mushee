@@ -14,7 +14,7 @@ import { ChipToggle, Icon, Segmented, ToolGroup } from '@/components/ui'
 import { LOWER_PITCH, RAISE_PITCH, SET_ACCIDENTAL, SET_DURATION, TOGGLE_DOT, TOGGLE_REST } from './actions'
 import { HistoryTools } from './HistoryTools'
 import { MoreNoteTools, MoreToolsSheet } from './MoreToolsSheet'
-import { DottedIcon, DURATION_TYPES, DurationIcon, NoteToolStates, RestIcon, ScoreSettingsWords } from './NoteToolParts'
+import { DOCK_UNIT_WELL, DottedIcon, DURATION_TYPES, DurationIcon, NoteToolStates, RestIcon, ScoreSettingsWords } from './NoteToolParts'
 import { PopoverChip } from './PopoverChip'
 import type { ScoreManipulator } from './ScoreManipulator'
 
@@ -77,6 +77,28 @@ interface NoteToolDockProps {
     /** Extra dock row rendered below the tools (the mobile action row). */
     footer?: ReactNode
 }
+
+/**
+ * The desktop dock's units by their least width, left to right: Pitch, Length, Sharp or flat,
+ * Rest, More, and the score's clef · key · time · tempo. The editor skeleton draws its empty
+ * 46px wells from it, so the dock keeps its shape when the real tools arrive.
+ */
+export const DOCK_WELL_MIN_WIDTHS = {
+    pitch: 'min-w-42',
+    length: 'min-w-72',
+    accidental: 'min-w-32',
+    rest: 'min-w-18',
+    more: 'min-w-20',
+    score: 'min-w-62',
+} as const
+
+/**
+ * The Length well's hold on the Segmented inside it: the track's own dock padding, white fill
+ * and lift (an unlayered class, so it goes through its shadow variable) give way to the well's,
+ * and its height follows the well's content box.
+ */
+const FLATTENED_TRACK =
+    '[&>[role=group]]:h-auto [&>[role=group]]:p-0 [&>[role=group]]:bg-transparent [&>[role=group]]:[--shadow-raised:none]'
 
 /** Slack around the phone dock's height animation, so focus rings at its edges aren't clipped (px). */
 const RING_SLACK_PX = 4
@@ -151,13 +173,15 @@ export function NoteToolDock({
     const duration = tools.duration
     // Beats are counted in the felt pulse; only where that is a quarter does "Quarter note — 1 beat" hold.
     const beatsAreQuarters = words.pulseIsQuarter
-    const durations = (
+    const durations = (form: { size?: 'dock'; fill?: boolean }) => (
         <Segmented
             ariaLabel="Note duration"
             value={duration.value}
             disabled={duration.disabled}
             disabledReason={duration.reason}
             onChange={(type) => type && manipulator.run(SET_DURATION, type)}
+            size={form.size}
+            fill={form.fill}
             options={DURATION_TYPES.map((type) => ({
                 value: type,
                 label: <DurationIcon dur={type} />,
@@ -190,7 +214,7 @@ export function NoteToolDock({
                             )}
                             <div role="group" aria-label="Note tools" className="mx-auto flex items-center justify-center gap-x-2">
                                 <HistoryTools manipulator={manipulator} compact />
-                                {durations}
+                                {durations({})}
                                 <MoreToolsSheet
                                     manipulator={manipulator}
                                     metronome={metronome}
@@ -228,28 +252,30 @@ export function NoteToolDock({
                                 <ChipToggle
                                     key={label}
                                     plain
+                                    size="dock"
                                     ariaLabel={label}
                                     disabled={tools.pitch.disabled}
                                     disabledReason={tools.pitch.reason}
                                     shortcut={shortcut(action.id)}
                                     onClick={() => manipulator.run(action)}>
-                                    {/* 22px content in the chip's 7px padding: a 36px button. */}
-                                    <span className="inline-flex items-center gap-1 h-5.5">
+                                    <span className="inline-flex items-center gap-1">
                                         <Icon name={icon} size={14} />
                                         {label}
                                     </span>
                                 </ChipToggle>
                             ))}
                         </ToolGroup>
-                        {/* Length: the five values and Dotted share one well; the Segmented's own track is
-                            flattened into it, so Dotted (a toggle, not a sixth value) sits beside them. */}
+                        {/* Length: the five values and Dotted share one well. The Segmented's own dock
+                            track gives up its padding, fill and lift (its height follows the well's), so
+                            Dotted — a toggle, not a sixth value — sits beside the values in one capsule. */}
                         <div
                             role="group"
                             aria-label="Note length"
-                            className="inline-flex items-center gap-0.5 p-0.75 rounded-full bg-surface-container-lowest tonal-layer-glow *:[[role=group]]:p-0! *:[[role=group]]:bg-transparent! *:[[role=group]]:shadow-none!">
-                            {durations}
+                            className={`${DOCK_UNIT_WELL} p-(--well-pad) gap-0.5 ${FLATTENED_TRACK}`}>
+                            {durations({ size: 'dock' })}
                             <ChipToggle
                                 plain
+                                size="dock"
                                 ariaLabel="Dotted"
                                 active={tools.dotted.active}
                                 disabled={tools.dotted.disabled}
@@ -257,9 +283,7 @@ export function NoteToolDock({
                                 hint="one and a half times as long"
                                 shortcut={shortcut(TOGGLE_DOT.id)}
                                 onClick={() => manipulator.run(TOGGLE_DOT)}>
-                                <span className="inline-flex -my-1">
-                                    <DottedIcon />
-                                </span>
+                                <DottedIcon />
                             </ChipToggle>
                         </div>
                         <Segmented
@@ -268,46 +292,48 @@ export function NoteToolDock({
                             disabled={tools.accidental.disabled}
                             disabledReason={tools.accidental.reason}
                             onChange={(accidental) => manipulator.run(SET_ACCIDENTAL, accidental)}
+                            size="dock"
                             options={ACCIDENTALS.map((a) => ({
                                 value: a.value,
-                                // 20px window in the button's 14px line: the -my keeps the well as tall as before.
-                                label: (
-                                    <span className="inline-flex -my-0.75">
-                                        <AccidentalIcon alter={a.alter} size={20} />
-                                    </span>
-                                ),
+                                label: <AccidentalIcon alter={a.alter} size={22} />,
                                 ariaLabel: a.name,
                                 hint: a.hint,
                                 shortcut: shortcut(a.command),
                             }))}
                         />
-                        <ChipToggle
-                            ariaLabel="Rest"
-                            active={tools.rest.active}
-                            disabled={tools.rest.disabled}
-                            disabledReason={tools.rest.reason}
-                            hint="turn this note into silence"
-                            shortcut={shortcut(TOGGLE_REST.id)}
-                            onClick={() => manipulator.run(TOGGLE_REST)}>
-                            <span className="inline-flex items-center gap-1.5">
-                                <RestIcon height={12} />
-                                Rest
-                            </span>
-                        </ChipToggle>
+                        {/* Rest on its own: a one-control well, the same silhouette as its neighbours. */}
+                        <div className={`${DOCK_UNIT_WELL} py-(--well-pad) px-1`}>
+                            <ChipToggle
+                                plain
+                                size="dock"
+                                ariaLabel="Rest"
+                                active={tools.rest.active}
+                                disabled={tools.rest.disabled}
+                                disabledReason={tools.rest.reason}
+                                hint="turn this note into silence"
+                                shortcut={shortcut(TOGGLE_REST.id)}
+                                onClick={() => manipulator.run(TOGGLE_REST)}>
+                                <span className="inline-flex items-center gap-1.5">
+                                    <RestIcon height={13} />
+                                    Rest
+                                </span>
+                            </ChipToggle>
+                        </div>
                         <MoreNoteTools manipulator={manipulator} />
                         <ToolGroup ariaLabel="Score settings">
                             <PopoverChip
                                 plain
+                                size="dock"
                                 ariaLabel={words.clefLabel}
                                 disabled={tools.scoreSettings.disabled}
                                 disabledReason={tools.scoreSettings.reason}
                                 tooltip={`${words.clef} clef`}
                                 // ClefIcon's size is its staff window's height, of which a treble clef's
-                                // ink fills about 0.77: 28 draws it at the planned 22px, in on-surface ink.
-                                // The -my keeps the chip as tall as its neighbours.
+                                // ink fills about 0.77: 34 draws it 26px tall — the note values' height —
+                                // in on-surface ink, inside the chip's 40px.
                                 chip={
-                                    <span className="inline-flex -my-0.75 text-on-surface">
-                                        <ClefIcon type={settings.clef} size={28} />
+                                    <span className="inline-flex text-on-surface">
+                                        <ClefIcon type={settings.clef} size={34} />
                                     </span>
                                 }>
                                 {({ anchorRef, className, close }) => (
@@ -326,6 +352,7 @@ export function NoteToolDock({
                             </PopoverChip>
                             <PopoverChip
                                 plain
+                                size="dock"
                                 ariaLabel={words.keyLabel}
                                 disabled={tools.scoreSettings.disabled}
                                 disabledReason={tools.scoreSettings.reason}
@@ -346,6 +373,7 @@ export function NoteToolDock({
                             </PopoverChip>
                             <PopoverChip
                                 plain
+                                size="dock"
                                 ariaLabel={words.timeLabel}
                                 disabled={tools.scoreSettings.disabled}
                                 disabledReason={tools.scoreSettings.reason}
@@ -366,6 +394,7 @@ export function NoteToolDock({
                             </PopoverChip>
                             <PopoverChip
                                 plain
+                                size="dock"
                                 ariaLabel={words.tempoLabel}
                                 disabled={tools.scoreSettings.disabled}
                                 disabledReason={tools.scoreSettings.reason}

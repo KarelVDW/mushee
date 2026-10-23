@@ -29,6 +29,15 @@ export const RESTS_HAVE_NO_PITCH = 'Rests have no pitch — select one to make i
 /** A tool that can act, pressed or not. */
 const ENABLED: ToolState = { active: false, disabled: false }
 
+/**
+ * One desktop dock unit's white well: 40px controls (`--control-md`) with 3px of well padding
+ * (`--well-pad`) all round — 46px tall, 50px on coarse pointers — the height every unit in the
+ * dock row shares (ToolGroup and Segmented `size="dock"` come out the same). A standalone tool
+ * (Rest, More) is a one-control well, so its silhouette matches its neighbours'.
+ */
+export const DOCK_UNIT_WELL =
+    'inline-flex items-center h-[calc(var(--control-md)+2*var(--well-pad))] rounded-full bg-surface-container-lowest tonal-layer-glow'
+
 /** The note values the length picker offers, longest first. */
 export const DURATION_TYPES: readonly DurationType[] = ['w', 'h', 'q', '8', '16']
 

@@ -25,6 +25,7 @@ import { shortcutText, useKeyboardLayout } from '@/components/ui/Tooltip'
 
 import { SET_ACCIDENTAL, TOGGLE_DOT, TOGGLE_REST, TOGGLE_TIE, TOGGLE_TUPLET } from './actions'
 import {
+    DOCK_UNIT_WELL,
     DottedIcon,
     NEEDS_A_NOTE,
     NoteToolStates,
@@ -57,13 +58,16 @@ export function MoreNoteTools({ manipulator }: { manipulator: ScoreManipulator }
     const tools = new NoteToolStates(manipulator)
 
     return (
-        <div ref={anchorRef} className="relative">
-            <ChipToggle popup active={open} onClick={() => setOpen(!open)} ariaLabel="More note tools">
-                <span className="inline-flex items-center gap-1">
-                    More
-                    <Icon name="chevron-up" size={12} />
-                </span>
-            </ChipToggle>
+        <div ref={anchorRef} className="relative flex">
+            {/* A one-control dock well (see DOCK_UNIT_WELL), the same 46px silhouette as its neighbours. */}
+            <div className={`${DOCK_UNIT_WELL} py-(--well-pad) px-1`}>
+                <ChipToggle plain size="dock" popup active={open} onClick={() => setOpen(!open)} ariaLabel="More note tools">
+                    <span className="inline-flex items-center gap-1">
+                        More
+                        <Icon name="chevron-up" size={14} />
+                    </span>
+                </ChipToggle>
+            </div>
             {open && (
                 <Popover
                     ariaLabel="More note tools"
