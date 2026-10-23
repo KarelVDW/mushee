@@ -9,6 +9,7 @@ import { useSession } from '@/lib/auth-client'
 import { requestConsentSettings } from '@/lib/consent'
 import { useSignOut } from '@/lib/queries'
 
+import { Container } from './Container'
 import { Popover } from './Popover'
 import { Tooltip } from './Tooltip'
 
@@ -45,15 +46,21 @@ export function SkipLink() {
 interface TopNavProps {
     user?: string
     onCreate?: () => void
+    /**
+     * The New score CTA's emphasis: `pop` (default) with the magenta plate, or `flat` where the
+     * page itself already leads with a pop CTA (the empty first-run library), so the screen
+     * never shows two.
+     */
+    createEmphasis?: 'pop' | 'flat'
 }
 
-export function TopNav({ user, onCreate }: TopNavProps) {
+export function TopNav({ user, onCreate, createEmphasis = 'pop' }: TopNavProps) {
     const pathname = usePathname()
 
     return (
         <nav className="sticky top-0 z-(--z-sticky) bg-surface-container-low/85 backdrop-blur-xl tonal-layer-glow">
             <SkipLink />
-            <div className="max-w-384 mx-auto px-4 sm:px-8 py-3.5 sm:py-4.5 flex items-center justify-between gap-3">
+            <Container width="app" className="py-3.5 sm:py-4.5 flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3 sm:gap-6.5 min-w-0">
                     <Link href="/scores" className="no-underline max-[24rem]:hidden">
                         <Wordmark size={28} />
@@ -86,21 +93,25 @@ export function TopNav({ user, onCreate }: TopNavProps) {
                         <>
                             {/* One CTA, two widths: the label costs too much room on a phone. */}
                             <span className="max-sm:hidden">
-                                <PrimaryButton onClick={onCreate} icon="plus" emphasis="pop">
+                                <PrimaryButton onClick={onCreate} icon="plus" emphasis={createEmphasis}>
                                     New score
                                 </PrimaryButton>
                             </span>
                             <span className="sm:hidden">
-                                <PrimaryButton onClick={onCreate} icon="plus" emphasis="pop" ariaLabel="New score" />
+                                <PrimaryButton onClick={onCreate} icon="plus" emphasis={createEmphasis} ariaLabel="New score" />
                             </span>
                         </>
                     )}
                     <AccountMenu user={user} />
                 </div>
-            </div>
+            </Container>
         </nav>
     )
 }
+
+/** The avatar's hover and open state: a soft identity ring, offset from the avatar on the nav's own tone. */
+const AVATAR_RING =
+    'hover:ring-2 hover:ring-secondary-soft hover:ring-offset-2 hover:ring-offset-surface-container-low aria-expanded:ring-2 aria-expanded:ring-secondary-soft aria-expanded:ring-offset-2 aria-expanded:ring-offset-surface-container-low'
 
 /**
  * The avatar is the account menu (library-account-09): a small Popover with who is signed
@@ -128,13 +139,8 @@ function AccountMenu({ user }: { user?: string }) {
                     aria-haspopup="dialog"
                     aria-expanded={open}
                     onClick={() => setOpen((o) => !o)}
-                    className="relative inline-flex rounded-full border-0 bg-transparent p-0 cursor-pointer focus-ring pointer-coarse:after:absolute pointer-coarse:after:-inset-0.5 pointer-coarse:after:content-[''] pointer-coarse:after:rounded-full">
-                    <Avatar
-                        name={name ?? 'You'}
-                        size="sm"
-                        tone="neutral"
-                        className="hover:bg-surface-container-highest transition-colors duration-150 ease-solkey"
-                    />
+                    className={`relative inline-flex rounded-full border-0 bg-transparent p-0 cursor-pointer focus-ring transition-shadow duration-150 ease-solkey ${AVATAR_RING} pointer-coarse:after:absolute pointer-coarse:after:-inset-0.5 pointer-coarse:after:content-[''] pointer-coarse:after:rounded-full`}>
+                    <Avatar name={name ?? 'You'} size="sm" tone="soft" />
                 </button>
             </Tooltip>
             {open && (
@@ -201,43 +207,70 @@ interface FooterProps {
     width?: 'app' | 'marketing'
 }
 
+const SITE_LINKS = [
+    { label: 'Pricing', href: '/pricing' },
+    { label: 'Privacy', href: '/privacy' },
+    { label: 'Terms', href: '/terms' },
+    { label: 'Contact', href: '/contact' },
+] as const
+
+/**
+ * The site footer. In the app it is one quiet 12px strip on the nav's grid; on the public pages
+ * it closes the page properly — the 24px wordmark and the site links in two rows, the © line
+ * under them, on the marketing grid.
+ */
 export function Footer({ width = 'app' }: FooterProps) {
+    const marketing = width === 'marketing'
+    const links = (linkClass: string, navClass: string) => (
+        <nav aria-label="Site" className={navClass}>
+            {SITE_LINKS.map(({ label, href }) => (
+                <Link key={href} href={href} className={linkClass}>
+                    {label}
+                </Link>
+            ))}
+            <button
+                type="button"
+                onClick={() => requestConsentSettings()}
+                className={`${linkClass} bg-transparent border-0 p-0 cursor-pointer`}>
+                Cookie settings
+            </button>
+        </nav>
+    )
+    // The year is computed at render: prerendered pages show the build year until the next
+    // deploy, and suppressHydrationWarning covers a server/client mismatch across New Year.
+    const copyright = (size: string) => (
+        <span suppressHydrationWarning className={`font-body font-normal ${size} leading-none text-on-surface-variant whitespace-nowrap`}>
+            © {new Date().getFullYear()} Solkey.
+        </span>
+    )
+
+    if (marketing) {
+        // Touch: padding grows each 14px link to a 40px target (14px + 2 × 13px), the rows meeting edge to edge.
+        const linkClass =
+            'font-body font-normal text-[14px] leading-none text-on-surface-variant no-underline hover:text-on-surface transition-colors duration-150 ease-solkey pointer-coarse:py-3.25'
+        return (
+            <footer className="bg-surface border-t border-outline-variant/15">
+                <Container width="marketing" className="pt-12 pb-10">
+                    <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-8">
+                        <Wordmark size={24} />
+                        {links(linkClass, 'flex flex-wrap items-center gap-x-6 gap-y-3 pointer-coarse:gap-y-0')}
+                    </div>
+                    <div className="mt-10">{copyright('text-[13px]')}</div>
+                </Container>
+            </footer>
+        )
+    }
+
     // Touch: padding grows each link to a 40px target (12px text + 2 × 14px) and the row tightens to keep them on one line.
     const linkClass =
         'font-body font-normal text-[12px] leading-none text-on-surface-variant no-underline hover:text-on-surface pointer-coarse:py-3.5 pointer-coarse:px-1'
     return (
         <footer className="bg-surface py-6 border-t border-outline-variant/15">
-            <div
-                className={`${width === 'app' ? 'max-w-384' : 'max-w-320'} mx-auto px-5 sm:px-8 flex justify-between items-center gap-6 flex-wrap`}>
+            <Container width="app" className="flex justify-between items-center gap-6 flex-wrap">
                 <Wordmark size={20} />
-                <nav aria-label="Site" className="flex items-center gap-5 pointer-coarse:gap-x-3 pointer-coarse:gap-y-0 flex-wrap">
-                    <Link href="/pricing" className={linkClass}>
-                        Pricing
-                    </Link>
-                    <Link href="/privacy" className={linkClass}>
-                        Privacy
-                    </Link>
-                    <Link href="/terms" className={linkClass}>
-                        Terms
-                    </Link>
-                    <Link href="/contact" className={linkClass}>
-                        Contact
-                    </Link>
-                    <button
-                        type="button"
-                        onClick={() => requestConsentSettings()}
-                        className={`${linkClass} bg-transparent border-0 p-0 cursor-pointer`}>
-                        Cookie settings
-                    </button>
-                </nav>
-                {/* The year is computed at render: prerendered pages show the build year until the next
-                    deploy, and suppressHydrationWarning covers a server/client mismatch across New Year. */}
-                <span
-                    suppressHydrationWarning
-                    className="font-body font-normal text-[12px] leading-none text-on-surface-variant whitespace-nowrap">
-                    © {new Date().getFullYear()} Solkey.
-                </span>
-            </div>
+                {links(linkClass, 'flex items-center gap-5 pointer-coarse:gap-x-3 pointer-coarse:gap-y-0 flex-wrap')}
+                {copyright('text-[12px]')}
+            </Container>
         </footer>
     )
 }

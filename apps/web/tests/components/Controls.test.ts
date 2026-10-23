@@ -3,7 +3,7 @@ import { createRoot, type Root } from 'react-dom/client'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { ChipToggle, Segmented, Switch, TransportBtn } from '@/components/ui/Controls'
+import { ChipToggle, Segmented, Switch, ToolGroup, TransportBtn } from '@/components/ui/Controls'
 
 // React's act() refuses to run outside a test-aware environment.
 ;(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
@@ -48,6 +48,118 @@ describe('Segmented', () => {
         expect(markup).toContain('aria-disabled="true"')
         expect(markup).not.toContain('disabled=""')
         expect(markup).toContain('>Select one note to change its length.</span>')
+        // A disabled pick is a grey thumb with its glyph faded — never a pale cyan smudge.
+        expect(markup).toContain('bg-surface-container-high text-on-surface')
+        expect(markup).not.toContain('bg-primary-container')
+        expect(markup).toContain('<span class="inline-flex items-center opacity-40">♩</span>')
+    })
+
+    const mount = (markup: string) => {
+        const box = document.createElement('div')
+        box.innerHTML = markup
+        return box
+    }
+
+    it('rests in full-strength ink and picks in loud primary on the chrome track', () => {
+        const box = mount(
+            html(createElement(Segmented, { options: [...accidentals], value: 'flat', onChange: noop, ariaLabel: 'Accidental' })),
+        )
+        const [track, buttons] = [box.firstElementChild as HTMLElement, [...box.querySelectorAll('button')]]
+        expect(track.className).toContain('bg-surface-container-lowest tonal-layer-glow')
+        expect(buttons[0].className).toContain('bg-primary-container text-on-primary-container')
+        expect(buttons[1].className).toContain('text-on-surface hover:bg-surface-container-high')
+        expect(buttons[1].className).not.toContain('text-on-surface-variant')
+    })
+
+    it('an inset track recedes on white panels, its pick a raised white thumb', () => {
+        const box = mount(
+            html(
+                createElement(Segmented, {
+                    options: [...accidentals],
+                    value: 'flat',
+                    onChange: noop,
+                    ariaLabel: 'Accidental',
+                    tone: 'inset',
+                }),
+            ),
+        )
+        const track = box.firstElementChild as HTMLElement
+        expect(track.className).toContain('bg-surface-container-low')
+        expect(track.className).not.toContain('tonal-layer-glow')
+        expect((box.querySelector('button') as HTMLElement).className).toContain(
+            'bg-surface-container-lowest tonal-layer-glow text-on-surface',
+        )
+    })
+
+    it('the dock size is a 40px option in a track one well-pad bigger; fill shares the row', () => {
+        const box = mount(
+            html(
+                createElement(Segmented, {
+                    options: [...accidentals],
+                    value: 'flat',
+                    onChange: noop,
+                    ariaLabel: 'Accidental',
+                    size: 'dock',
+                    fill: true,
+                }),
+            ),
+        )
+        const track = box.firstElementChild as HTMLElement
+        expect(track.className).toContain('h-[calc(var(--control-md)+2*var(--well-pad))] p-(--well-pad)')
+        expect(track.className).toContain('flex flex-1')
+        const option = box.querySelector('button') as HTMLElement
+        expect(option.className).toContain('h-(--control-md) min-w-(--control-md)')
+        expect(option.className).toContain('flex-1 min-w-0')
+    })
+
+    describe('radio mode', () => {
+        let host: HTMLElement
+        let root: Root
+
+        beforeEach(() => {
+            host = document.createElement('div')
+            document.body.appendChild(host)
+            root = createRoot(host)
+        })
+
+        afterEach(() => {
+            act(() => root.unmount())
+            host.remove()
+        })
+
+        const billing = [
+            { value: 'monthly', label: 'Monthly' },
+            { value: 'yearly', label: 'Yearly' },
+        ] as const
+
+        it('is a radiogroup with one tab stop; the arrows move and pick', () => {
+            const onChange = vi.fn()
+            act(() =>
+                root.render(
+                    createElement(Segmented, { options: [...billing], value: 'monthly', onChange, ariaLabel: 'Billing', mode: 'radio' }),
+                ),
+            )
+            expect(host.querySelector('[role="radiogroup"]')?.getAttribute('aria-label')).toBe('Billing')
+            const radios = [...host.querySelectorAll<HTMLButtonElement>('[role="radio"]')]
+            expect(radios.map((r) => r.getAttribute('aria-checked'))).toEqual(['true', 'false'])
+            expect(radios.some((r) => r.hasAttribute('aria-pressed'))).toBe(false)
+            expect(radios.map((r) => r.tabIndex)).toEqual([0, -1])
+            radios[0].focus()
+            act(() => {
+                radios[0].dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }))
+            })
+            expect(onChange).toHaveBeenCalledWith('yearly')
+            expect(document.activeElement).toBe(radios[1])
+        })
+
+        it('the default mode keeps toggle buttons', () => {
+            act(() =>
+                root.render(createElement(Segmented, { options: [...billing], value: 'monthly', onChange: noop, ariaLabel: 'Billing' })),
+            )
+            expect(host.querySelector('[role="radiogroup"]')).toBeNull()
+            expect(host.querySelector('[role="group"]')).not.toBeNull()
+            expect(host.querySelector('button')?.getAttribute('aria-pressed')).toBe('true')
+        })
     })
 })
 
@@ -61,6 +173,46 @@ describe('ChipToggle', () => {
         expect(trigger).toContain('aria-haspopup="dialog"')
         expect(trigger).toContain('aria-expanded="false"')
         expect(trigger).not.toContain('aria-pressed')
+    })
+
+    it('an open menu trigger turns one tone darker — never cyan; a pressed toggle stays loud', () => {
+        const open = html(createElement(ChipToggle, { active: true, popup: true, ariaLabel: 'Share score', children: 'Share' }))
+        expect(open).toContain('aria-expanded="true"')
+        expect(open).toContain('bg-surface-container-high text-on-surface')
+        expect(open).not.toContain('bg-primary-container')
+        const pressed = html(createElement(ChipToggle, { active: true, ariaLabel: 'Rest', children: 'Rest' }))
+        expect(pressed).toContain('bg-primary-container text-on-primary-container active:brightness-95')
+        // Unpressed chips shrink a little when pressed (more on touch); a pressed one only darkens.
+        const rest = html(createElement(ChipToggle, { ariaLabel: 'Rest', children: 'Rest' }))
+        expect(rest).toContain('motion-safe:active:scale-[0.97]')
+        expect(rest).toContain('pointer-coarse:motion-safe:active:scale-[0.94]')
+        expect(rest).toContain('pointer-coarse:active:bg-surface-container-high')
+        expect(pressed).not.toContain('active:scale-')
+    })
+
+    it('sizes by token: 32px by default, the 40px dock unit, and a circle when round', () => {
+        expect(html(createElement(ChipToggle, { ariaLabel: 'Rest', children: 'Rest' }))).toContain('h-(--control-sm) px-3.5')
+        const dock = html(createElement(ChipToggle, { ariaLabel: 'Rest', size: 'dock', children: 'Rest' }))
+        expect(dock).toContain('h-(--control-md) min-w-(--control-md) px-3')
+        expect(html(createElement(ChipToggle, { ariaLabel: 'Share score', round: true, children: 'x' }))).toContain(
+            'size-(--control-sm) p-0',
+        )
+        expect(html(createElement(ChipToggle, { ariaLabel: 'Share score', round: true, size: 'dock', children: 'x' }))).toContain(
+            'size-(--control-md) p-0',
+        )
+    })
+
+    it('a plain chip in a header well takes the well’s 28px size', () => {
+        const markup = html(
+            createElement(ToolGroup, {
+                ariaLabel: 'History',
+                size: 'header',
+                children: createElement(ChipToggle, { ariaLabel: 'Undo', plain: true, children: 'u' }),
+            }),
+        )
+        expect(markup).toContain('min-h-8 p-0.5 gap-0.5 pointer-coarse:min-h-11')
+        expect(markup).toContain('h-7 min-w-9')
+        expect(markup).not.toContain('h-(--control-sm)')
     })
 
     it('renders bare without tooltip props, and wrapped with them', () => {
@@ -107,7 +259,21 @@ describe('ChipToggle', () => {
             expect(onClick).not.toHaveBeenCalled()
             const description = document.getElementById(button.getAttribute('aria-describedby') as string)
             expect(description?.textContent).toBe('Tie needs the next note to be the same pitch.')
-            expect(button.className).toContain('opacity-40')
+            // Only the content fades: the chip keeps its white fill and lift, so it still reads as a control.
+            expect(button.className).not.toContain('opacity-40')
+            expect(button.className).toContain('bg-surface-container-lowest tonal-layer-glow')
+            const content = button.firstElementChild as HTMLElement
+            expect(content.className).toContain('opacity-40')
+            expect(content.textContent).toBe('Tie')
+            expect(button.className).toContain('cursor-not-allowed')
+        })
+
+        it('disabled and active shows the open tone with faded content, never cyan', () => {
+            act(() => root.render(createElement(ChipToggle, { ariaLabel: 'Tie', disabled: true, active: true, children: 'Tie' })))
+            const button = host.querySelector('button') as HTMLButtonElement
+            expect(button.className).toContain('bg-surface-container-high')
+            expect(button.className).not.toContain('bg-primary-container')
+            expect((button.firstElementChild as HTMLElement).className).toContain('opacity-40')
         })
 
         it('without a reason: natively disabled, as before', () => {
@@ -159,10 +325,34 @@ describe('TransportBtn', () => {
         expect(live.square).toContain('motion-reduce:transition-none')
     })
 
-    it('grows on hover only when motion is welcome', () => {
+    it('grows on hover and sinks when pressed, only when motion is welcome', () => {
         const play = html(createElement(TransportBtn, { size: 40, ariaLabel: 'Play', tone: 'play' }))
         expect(play).toContain('motion-safe:hover:scale-105')
+        expect(play).toContain('motion-safe:active:scale-[0.96]')
         expect(play).not.toMatch(/ hover:scale-105/)
+        expect(html(createElement(TransportBtn, { size: 46, ariaLabel: 'Record', tone: 'record' }))).toContain(
+            'motion-safe:active:scale-[0.96]',
+        )
+    })
+
+    it('play is a ringless white disc that fills while playing; record is one recording red', () => {
+        const play = html(createElement(TransportBtn, { size: 40, ariaLabel: 'Play', tone: 'play' }))
+        expect(play).toContain('border-0')
+        expect(play).not.toContain('border-primary-container')
+        expect(play).toContain('bg-surface-container-lowest tonal-layer-glow text-primary')
+        expect(html(createElement(TransportBtn, { size: 40, ariaLabel: 'Pause', tone: 'play', active: true }))).toContain(
+            'bg-primary-container text-on-primary-container',
+        )
+        const idle = html(createElement(TransportBtn, { size: 46, ariaLabel: 'Record', tone: 'record' }))
+        expect(idle).toContain('border-[3px]')
+        expect(idle).toContain('border-record')
+        // A flat dot: no glossy inset shadow.
+        expect(idle).toContain('rounded-full bg-record')
+        expect(idle).not.toContain('inset_')
+        const live = html(createElement(TransportBtn, { size: 46, ariaLabel: 'Stop recording', tone: 'record', active: true }))
+        expect(live).toContain('bg-record border-record')
+        expect(live).toContain('bg-on-record')
+        expect(live).not.toContain('bg-error')
     })
 })
 
@@ -256,6 +446,34 @@ describe('Switch', () => {
         expect(hint.hidden).toBe(false)
         expect(hint.className).toContain('text-[12px]')
         expect(hint.className).toContain('text-on-surface-variant')
+        box.remove()
+    })
+
+    it('off: a grey track and a small outline knob; on: the primary track and a bigger white knob, no check', () => {
+        const knob = (checked: boolean) => {
+            const { box, button } = mount({ checked })
+            const classes = {
+                track: button.className,
+                knob: (button.firstElementChild as HTMLElement).className,
+                svg: button.querySelector('svg'),
+            }
+            box.remove()
+            return classes
+        }
+        const off = knob(false)
+        expect(off.track).toContain('bg-surface-container-highest')
+        expect(off.knob).toContain('size-3.5')
+        expect(off.knob).toContain('bg-outline')
+        const on = knob(true)
+        expect(on.track).toContain('bg-primary-container')
+        expect(on.knob).toContain('size-4.5 translate-x-4.5 bg-surface-container-lowest')
+        expect(on.knob).toContain('shadow-[0_1px_2px_rgb(45_47_47/0.24)]')
+        expect(on.svg).toBeNull()
+    })
+
+    it('can set its label in semibold', () => {
+        const { box, button } = mount({ labelEmphasis: true })
+        expect(document.getElementById(button.getAttribute('aria-labelledby') as string)?.className).toContain('font-semibold')
         box.remove()
     })
 

@@ -19,6 +19,8 @@ import { createPortal } from 'react-dom'
 
 import { KeyboardLayout, type Shortcut } from '@/lib/Keybindings'
 
+import { Keycap } from './Keycap'
+
 /** Mouse hover this long before a tooltip opens. */
 export const TOOLTIP_HOVER_DELAY_MS = 400
 /** A touch press held this long names the control in a bubble. */
@@ -417,7 +419,7 @@ function FloatingTooltipCard({ anchor, side, touch, label, hint, keys }: Floatin
 }
 
 const CARD_CLASS =
-    'max-w-60 rounded-md bg-surface-container-lowest editorial-shadow px-2.5 py-1.5 font-body text-[13px] leading-[1.35] text-on-surface'
+    'max-w-72 text-balance rounded-md bg-surface-container-lowest shadow-overlay px-2.5 py-1.5 font-body text-[13px] leading-[1.35] text-on-surface'
 const TOUCH_BUBBLE_CLASS =
     'max-w-[min(20rem,calc(100vw-1rem))] rounded-full bg-surface-container-high px-3 py-1.5 font-label font-semibold text-[13px] leading-[1.3] text-on-surface'
 
@@ -438,9 +440,11 @@ interface TooltipCardProps {
 
 /**
  * The tooltip's visual card: "Name — hint · key" on an opaque 13px card that fades in (the
- * touch form is a pill bubble). Decorative for assistive tech — a real Tooltip carries its
- * description in hidden role=tooltip text. The caller positions it; anything else that names
- * a control on hover (the in-score glyphs' "Change key") reuses it, so every label looks alike.
+ * touch form is a pill bubble), its lines balanced. The key's " · " rides with the key on one
+ * unbreakable run glued to the word before it, so a key never strands on a line of its own.
+ * Decorative for assistive tech — a real Tooltip carries its description in hidden role=tooltip
+ * text. The caller positions it; anything else that names a control on hover (the in-score
+ * glyphs' "Change key") reuses it, so every label looks alike.
  */
 export function TooltipCard({ label, hint, keys, touch = false, className, style, ref }: TooltipCardProps) {
     const look = touch ? TOUCH_BUBBLE_CLASS : CARD_CLASS
@@ -458,15 +462,16 @@ export function TooltipCard({ label, hint, keys, touch = false, className, style
         <span ref={ref} aria-hidden="true" style={style} className={classes}>
             {label && <span className="font-label font-semibold">{label}</span>}
             {label && hint && <span className="text-on-surface-variant"> — </span>}
-            {hint && <span className={label ? 'text-on-surface-variant' : undefined}>{hint}</span>}
-            {keys && (
-                <>
-                    {(label || hint) && <span className="text-on-surface-variant"> · </span>}
-                    <kbd className="font-label font-semibold text-[11px] leading-none text-on-surface bg-surface-container rounded-sm px-1.5 py-0.5">
-                        {keys}
-                    </kbd>
-                </>
-            )}
+            {hint && <span className={label ? 'text-on-surface-variant text-pretty' : 'text-pretty'}>{hint}</span>}
+            {keys &&
+                (label || hint ? (
+                    <span className="whitespace-nowrap">
+                        <span className="text-on-surface-variant">{' · '}</span>
+                        <Keycap>{keys}</Keycap>
+                    </span>
+                ) : (
+                    <Keycap>{keys}</Keycap>
+                ))}
         </span>
     )
 }

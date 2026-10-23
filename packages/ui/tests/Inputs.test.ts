@@ -123,9 +123,9 @@ describe('the input fill', () => {
         }
     })
 
-    it('is surface_container_low on the page and steps up to surface_container on the dialogs’ glass', () => {
+    it('is surface_container_low on the page and on the opaque dialogs alike — no glass panel overrides it', () => {
         expect(rule(':root')).toContain('--field-fill: var(--color-surface-container-low);')
-        expect(rule('.glass-panel')).toContain('--field-fill: var(--color-surface-container);')
+        expect(rule('.glass-panel')).toBe('')
     })
 })
 

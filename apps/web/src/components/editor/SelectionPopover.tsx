@@ -68,7 +68,8 @@ export function SelectionPopover({
     onDismiss,
 }: SelectionPopoverProps) {
     const barRef = useRef<HTMLDivElement>(null)
-    const [pos, setPos] = useState<{ left: number; top: number } | null>(null)
+    // `flipped`: placed under the anchored row instead of above it (no room above in view).
+    const [pos, setPos] = useState<{ left: number; top: number; flipped: boolean } | null>(null)
     // The action holding the toolbar's one tab stop (roving tabindex), by its place in the bar.
     const [current, setCurrent] = useState(0)
     const actions = [
@@ -91,7 +92,9 @@ export function SelectionPopover({
 
     // Center the bar on the anchor with its bottom at the anchor's height, clamped inside
     // the score wrapper's sides (with a small overhang past its top, for the first row) and
-    // inside the visible part of the viewport.
+    // inside the visible part of the viewport. It stays above the row; only when there is no
+    // room for it above in view (the row scrolled up under the header) does it flip under the
+    // row — under the selection bands on the anchored row — rather than pinning over the staff.
     useLayoutEffect(() => {
         const bar = barRef.current
         const parent = bar?.offsetParent as HTMLElement | null
@@ -109,7 +112,16 @@ export function SelectionPopover({
             minTop = Math.max(minTop, visible.top - origin.top + EDGE_MARGIN)
             maxTop = Math.max(minTop, visible.bottom - origin.top - bar.offsetHeight - EDGE_MARGIN)
         }
-        setPos({ left, top: Math.min(Math.max(y - bar.offsetHeight, minTop), maxTop) })
+        const above = y - bar.offsetHeight
+        const pinned = Math.min(Math.max(above, minTop), maxTop)
+        // Pushed down by the top of the view, the bar may still clear the staff; once it would
+        // sit over the row's bands instead, it goes under them.
+        const row = above < minTop ? anchoredRow(parent, y) : null
+        if (row && pinned + bar.offsetHeight > row.top + 1 && row.bottom + EDGE_MARGIN <= maxTop) {
+            setPos({ left, top: Math.max(row.bottom + EDGE_MARGIN, minTop), flipped: true })
+            return
+        }
+        setPos({ left, top: pinned, flipped: false })
     }, [x, y, canPaste, viewport, scrolled])
 
     // Focus the first action once the bar is placed — a still-hidden bar can't take focus.
@@ -176,9 +188,14 @@ export function SelectionPopover({
             role="toolbar"
             aria-label="Selection actions"
             style={{ left: pos?.left ?? x, top: pos?.top ?? y, visibility: pos ? 'visible' : 'hidden' }}
-            // Tonal gray, not the white glass panel: the bar floats over the pure-white
-            // score canvas, and the surface shift is what separates it (no-line rule).
-            className="bg-surface-container-high/90 backdrop-blur-md editorial-shadow absolute z-(--z-popover) flex items-center gap-0.5 rounded-full px-1.5 py-1">
+            // Opaque tonal gray, never glass behind text: the bar floats over the pure-white score
+            // canvas, and the surface shift plus the overlay edge is what separates it (no-line
+            // rule). It grows in from the row it points at — from its bottom edge above the row,
+            // its top edge when flipped under it.
+            className={[
+                'selection-bar-enter bg-surface-container-high shadow-overlay absolute z-(--z-popover) flex items-center gap-0.5 rounded-full px-1.5 py-1',
+                pos?.flipped ? 'origin-top' : 'origin-bottom',
+            ].join(' ')}>
             {actions.map(({ label, destructive, onClick }, index) => (
                 <SelectionAction
                     key={label}
@@ -191,6 +208,22 @@ export function SelectionPopover({
             ))}
         </div>
     )
+}
+
+/**
+ * The vertical extent of the selection bands on the row the bar points at (the topmost selected
+ * row: its bands are the first under the anchor `y`), in the score wrapper's pixels — the staff
+ * the bar must not cover, and under which a flipped bar goes. Null when no band is drawn there.
+ */
+function anchoredRow(wrapper: HTMLElement, y: number): { top: number; bottom: number } | null {
+    const origin = wrapper.getBoundingClientRect().top
+    const bands = Array.from(wrapper.querySelectorAll('[data-selection-band]'), (band) => band.getBoundingClientRect())
+        .map((rect) => ({ top: rect.top - origin, bottom: rect.bottom - origin }))
+        .filter((band) => band.bottom > y)
+    if (bands.length === 0) return null
+    const top = Math.min(...bands.map((band) => band.top))
+    // The bands of one row share their top; a lower row's start a row height further down.
+    return { top, bottom: Math.max(...bands.filter((band) => band.top - top < 1).map((band) => band.bottom)) }
 }
 
 interface SelectionActionProps {

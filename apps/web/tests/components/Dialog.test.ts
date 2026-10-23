@@ -95,6 +95,83 @@ describe('DialogPanel', () => {
         expect(onClose).toHaveBeenCalledTimes(2)
     })
 
+    it('is an opaque white panel that hangs from the top on sm+ and is a bottom sheet on phones', () => {
+        open(vi.fn())
+        const panel = dialog() as HTMLElement
+        expect(panel.className).toContain('bg-surface-container-lowest')
+        expect(panel.className).toContain('shadow-overlay')
+        expect(panel.className).not.toContain('glass-panel')
+        expect(panel.className).toContain('animate-dialog-in')
+        expect(panel.className).toContain('max-sm:rounded-t-xl')
+        // The width rides in as a variable, so the phone sheet's full width can override it.
+        expect(panel.style.getPropertyValue('--dialog-w')).toBe('440px')
+        expect(panel.style.width).toBe('')
+        const scrim = panel.parentElement?.parentElement as HTMLElement
+        expect(scrim.className).toContain('sm:items-start')
+        expect(scrim.className).toContain('max-sm:items-end')
+        expect(scrim.className).toContain('animate-scrim-in')
+    })
+
+    describe('footer', () => {
+        function openWithFooter() {
+            act(() => {
+                root.render(
+                    createElement(DialogPanel, {
+                        title: 'Delete this score?',
+                        width: 440,
+                        onClose: vi.fn(),
+                        footer: [
+                            createElement('button', { key: 'cancel', type: 'button' }, 'Cancel'),
+                            createElement('button', { key: 'delete', type: 'button' }, 'Delete'),
+                        ],
+                    }),
+                )
+            })
+            return host.querySelector('footer') as HTMLElement
+        }
+
+        afterEach(() => {
+            vi.unstubAllGlobals()
+            document.documentElement.style.removeProperty('--toast-bottom')
+        })
+
+        it('keeps its children in order, the primary last — stacked on top, full width, on phones', () => {
+            const footer = openWithFooter()
+            expect([...footer.children].map((child) => child.textContent)).toEqual(['Cancel', 'Delete'])
+            expect(footer.className).toContain('max-sm:flex-col-reverse')
+            // A tooltip-wrapped primary fills the width too.
+            expect(footer.className).toContain('max-sm:[&>*]:w-full')
+            expect(footer.className).toContain('max-sm:[&>*>button]:w-full')
+        })
+
+        it('lifts toasts above a phone sheet’s footer while open, and gives the page its own value back on close', () => {
+            vi.stubGlobal('matchMedia', (query: string) => ({
+                matches: query.includes('max-width'),
+                addEventListener: () => undefined,
+                removeEventListener: () => undefined,
+            }))
+            const style = document.documentElement.style
+            style.setProperty('--toast-bottom', '96px')
+            openWithFooter()
+            // jsdom lays nothing out: a 0px footer plus the 12px gap.
+            expect(style.getPropertyValue('--toast-bottom')).toBe('12px')
+            act(() => root.render(null))
+            expect(style.getPropertyValue('--toast-bottom')).toBe('96px')
+
+            style.removeProperty('--toast-bottom')
+            openWithFooter()
+            expect(style.getPropertyValue('--toast-bottom')).toBe('12px')
+            act(() => root.render(null))
+            expect(style.getPropertyValue('--toast-bottom')).toBe('')
+        })
+
+        it('leaves the toasts alone on wider screens', () => {
+            vi.stubGlobal('matchMedia', () => ({ matches: false, addEventListener: () => undefined, removeEventListener: () => undefined }))
+            openWithFooter()
+            expect(document.documentElement.style.getPropertyValue('--toast-bottom')).toBe('')
+        })
+    })
+
     it('without onClose it cannot be dismissed and shows no ×', () => {
         open(undefined)
         expect(host.querySelector('button[aria-label="Close"]')).toBeNull()

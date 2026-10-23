@@ -117,6 +117,71 @@ describe('HeaderMenu', () => {
         expect(document.activeElement).toBe(outside)
     })
 
+    it('an open chip turns a tone darker, never cyan', () => {
+        render(createElement('button', { type: 'button' }, 'MusicXML'))
+        act(() => chip().click())
+        expect(chip().className).toContain('bg-surface-container-high')
+        expect(chip().className).not.toContain('bg-primary-container')
+    })
+
+    it('titles its panel in sentence case, never an eyebrow', () => {
+        render(createElement('button', { type: 'button' }, 'MusicXML'))
+        act(() => chip().click())
+        const heading = panel()?.querySelector('h2') as HTMLElement
+        expect(heading.textContent).toBe('Export as')
+        expect(heading.className).toContain('type-label')
+        expect(heading.className).not.toContain('uppercase')
+    })
+
+    it('an icon-only chip is a circle; a labelled one keeps its pill; lg is the 44px size', () => {
+        render(createElement('span', null, 'x'), { compact: true })
+        expect(chip().className).toContain('size-(--control-sm) p-0')
+        expect(chip().querySelectorAll('svg')).toHaveLength(2)
+        render(createElement('span', null, 'x'))
+        expect(chip().className).toContain('h-(--control-sm) px-3.5')
+        render(createElement('span', null, 'x'), { size: 'lg' })
+        expect(chip().className).toContain('h-11 px-5')
+        expect(chip().className).toContain('text-[14px]')
+    })
+
+    describe('sheet', () => {
+        const sheet = () => document.body.querySelector<HTMLElement>('[role="dialog"][aria-label="Export score"]')
+
+        it('opens a full-width card under the header, titled at the sheet size with a 40px Close', () => {
+            render(createElement('button', { type: 'button' }, 'MusicXML'), { sheet: true, compact: true, className: 'gap-2 w-80' })
+            act(() => chip().click())
+            const card = sheet() as HTMLElement
+            expect(card).not.toBeNull()
+            // Out of the header's subtree, into <body>.
+            expect(host.contains(card)).toBe(false)
+            expect(card.className).toContain('fixed inset-x-2 top-[calc(var(--app-header-h,0px)+0.5rem)]')
+            expect(card.className).toContain('rounded-xl')
+            expect(card.className).toContain('shadow-overlay')
+            expect(card.className).toContain('popover-enter')
+            expect(card.style.getPropertyValue('--pop-from')).toBe('-6px')
+            // The panel's widths stay off the card; only the content gap is kept.
+            expect(card.className).not.toContain('w-80')
+            expect(card.querySelector('[data-popover-body] > div')?.className).toContain('gap-2')
+            const heading = card.querySelector('h2') as HTMLElement
+            expect(heading.textContent).toBe('Export as')
+            expect(heading.className).toContain('text-[20px]')
+            expect(document.activeElement?.textContent).toBe('MusicXML')
+            const closeButton = card.querySelector<HTMLButtonElement>('button[aria-label="Close"]') as HTMLButtonElement
+            expect(closeButton.className).toContain('size-10')
+            act(() => closeButton.click())
+            expect(sheet()).toBeNull()
+            expect(document.activeElement).toBe(chip())
+        })
+
+        it('closes on Escape, handing focus back to the chip', () => {
+            render(createElement('button', { type: 'button' }, 'MusicXML'), { sheet: true })
+            act(() => chip().click())
+            pressEscape()
+            expect(sheet()).toBeNull()
+            expect(document.activeElement).toBe(chip())
+        })
+    })
+
     it('hands a render-prop child the close callback', () => {
         render(({ close }) => createElement('button', { type: 'button', onClick: close }, 'Done'))
         act(() => chip().click())

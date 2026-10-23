@@ -99,4 +99,11 @@ describe('ExportMenu', () => {
         expect(chip('Download score')?.textContent).toBe('Download')
         expect(chip('Export score')).toBeNull()
     })
+
+    it('passes its size on to the chip (the share page’s 44px Download)', () => {
+        render({ label: 'Download', ariaLabel: 'Download score', size: 'lg' })
+        expect(chip('Download score')?.className).toContain('h-11 px-5')
+        render()
+        expect(chip('Export score')?.className).toContain('h-(--control-sm)')
+    })
 })

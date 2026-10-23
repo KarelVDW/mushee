@@ -47,9 +47,9 @@ export interface TextFieldProps {
 // (The placeholder colour is set kit-wide in theme.css.)
 const FIELD_TEXT = 'text-on-surface font-body font-normal text-[14px] pointer-coarse:text-[16px]'
 
-// The input fill, read from `--field-fill` (theme.css): `surface-container-low` on the page, one
-// tonal step up inside a dialog's glass, which renders that same shade. The container decides,
-// so no caller passes a tone. A named group, so an outer `group` never lights the stroke.
+// The input fill, read from `--field-fill` (theme.css): `surface-container-low` on the page and
+// on the opaque dialogs; a container of that same shade sets it a tonal step up. The container
+// decides, so no caller passes a tone. A named group, so an outer `group` never lights the stroke.
 const FIELD_FRAME = 'relative group/field bg-(--field-fill) rounded-sm min-h-(--control-md)'
 
 // The focus stroke: 2px `primary` (the neon fill fails 3:1 on the input fill), grown from the

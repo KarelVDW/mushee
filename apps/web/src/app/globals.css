@@ -1,5 +1,5 @@
 @import 'tailwindcss';
-/* Tokens, base styles and the shared utilities (focus-ring, shadows, glass) — one
+/* Tokens, base styles and the shared utilities (focus-ring, shadows, type roles) — one
    source for every app; see packages/ui/src/theme.css. */
 @import '@mushee/ui/theme.css';
 /* The notation renderer (packages/notation) and the shared kit (packages/ui)
@@ -78,8 +78,12 @@
 }
 
 /* Tooltips (components/ui/Tooltip.tsx) fade in; phone popover sheets (Popover variant
-   "sheet") rise 16px as they fade in, so the sheet reads as coming from the dock. Both
-   appear at once under reduced motion. */
+   "sheet") rise 16px as they fade in, so the sheet reads as coming from the dock, and the
+   phone bottom-sheet dialogs (DialogPanel under sm) rise the same way. Both appear at once
+   under reduced motion. A closing sheet leaves an inert copy playing theme.css's sheet-out
+   (animate-sheet-out), and anchored popovers arrive with theme.css's .popover-enter; neither
+   is turned off here, since the copy waits for its animationend — the theme's reduced-motion
+   rule shortens both to an instant. */
 @keyframes tooltip-in {
     from {
         opacity: 0;
@@ -97,9 +101,22 @@
 .popover-sheet-enter {
     animation: popover-sheet-in 200ms var(--ease-solkey);
 }
+/* The score's selection-actions bar (components/editor/SelectionPopover.tsx) grows in from the
+   row it points at — its transform origin is set by the bar: bottom above the row, top when
+   flipped under it. The individual `scale` property, so it never fights a transform. */
+@keyframes selection-bar-in {
+    from {
+        opacity: 0;
+        scale: 0.96;
+    }
+}
+.selection-bar-enter {
+    animation: selection-bar-in 150ms var(--ease-solkey);
+}
 @media (prefers-reduced-motion: reduce) {
     .tooltip-enter,
-    .popover-sheet-enter {
+    .popover-sheet-enter,
+    .selection-bar-enter {
         animation: none;
     }
 }
