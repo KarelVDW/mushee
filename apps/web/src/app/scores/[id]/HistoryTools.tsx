@@ -2,7 +2,7 @@
 
 import { useId, useSyncExternalStore } from 'react'
 
-import { ChipToggle, HeaderMenu, Icon, type IconName, ToolGroup, type TooltipShortcut, TransportBtn } from '@/components/ui'
+import { ChipToggle, HeaderMenu, Icon, type IconName, Keycap, ToolGroup, type TooltipShortcut, TransportBtn } from '@/components/ui'
 import { shortcutText } from '@/components/ui/Tooltip'
 
 import { SHOW_SHORTCUTS_KEY } from './commands'
@@ -144,11 +144,7 @@ function MenuRow({ icon, label, disabledHint, shortcut, onClick }: MenuRowProps)
                     </span>
                 )}
             </span>
-            {keys && (
-                <kbd className="shrink-0 font-label font-semibold text-[11px] leading-none text-on-surface bg-surface-container rounded-sm px-1.5 py-1">
-                    {keys}
-                </kbd>
-            )}
+            {keys && <Keycap className="shrink-0">{keys}</Keycap>}
         </button>
     )
 }
