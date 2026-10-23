@@ -453,7 +453,9 @@ test.describe('onboarding', () => {
         await expect(
             page.getByText('No problem — the editor works without a mic, and recording will ask again when you need it.'),
         ).toBeVisible()
-        await expect(page.getByText(/^To allow it now: .+ Then Try again\.$/)).toBeVisible()
+        // Where this browser keeps the setting, as numbered steps under their lead line.
+        await expect(page.getByText('To allow it now:', { exact: true })).toBeVisible()
+        await expect(page.getByRole('listitem').filter({ hasText: 'Set Microphone to Allow.' })).toBeVisible()
         await expect(page.getByText("You can change this any time in your browser's site settings.")).toHaveCount(0)
         await expect(page.getByRole('button', { name: 'Try again' })).toBeVisible()
         await page.getByRole('button', { name: 'Continue' }).click()
