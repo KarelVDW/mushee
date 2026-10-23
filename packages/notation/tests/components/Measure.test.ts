@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest'
 
 import { INTERACTION_BLUE_BAND } from '../../src/components/constants'
 import { Measure } from '../../src/components/Measure'
+import { NoteGroup } from '../../src/components/NoteGroup'
 import type { Score } from '../../src/model'
 
 interface BandProps {
@@ -78,5 +79,26 @@ describe('Measure selection bands', () => {
         const measure = score.measures[0]
         const tree = renderMeasure({ measure, layout: score.layout.measureLayoutFor(measure) })
         expect(elements(tree).filter((el) => (el.props as BandProps)['data-selection-band'])).toHaveLength(0)
+    })
+})
+
+describe('Measure landing notes', () => {
+    /** The `landing` prop of each NoteGroup measure 0 draws. */
+    function landingFlags(score: Score, landingNoteIds?: ReadonlySet<string>): Array<boolean | undefined> {
+        const measure = score.measures[0]
+        const tree = renderMeasure({ measure, layout: score.layout.measureLayoutFor(measure), landingNoteIds })
+        return elements(tree)
+            .filter((el) => el.type === NoteGroup)
+            .map((el) => (el.props as { landing?: boolean }).landing)
+    }
+
+    it('fades in only the notes a take just wrote', () => {
+        const score = makeScore(1)
+        const [, second] = score.measures[0].notes
+        expect(landingFlags(score, new Set([second.id]))).toEqual([false, true, false, false])
+    })
+
+    it('fades in nothing without landing notes', () => {
+        expect(landingFlags(makeScore(1))).toEqual([undefined, undefined, undefined, undefined])
     })
 })

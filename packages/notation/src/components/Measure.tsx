@@ -53,6 +53,11 @@ interface MeasureProps {
     /** The hovered note, only when it is in this measure — hovering elsewhere leaves this memo intact. */
     hoveredNoteId?: string
     /**
+     * This measure's notes that just landed in a live recording and fade in (see NoteLanding),
+     * only when it has some — the same Set while they don't change, so the memo holds.
+     */
+    landingNoteIds?: ReadonlySet<string>
+    /**
      * A tempo marking, clef, key or time signature was clicked: what it is, plus the glyph's
      * measure-local x and the row-local y to anchor at. One stable callback serves every glyph,
      * so it never defeats the memo. Omit it and the glyphs render inert (read-only consumers).
@@ -118,6 +123,7 @@ export const Measure = memo(function Measure({
     layout,
     selectedNoteIds,
     hoveredNoteId,
+    landingNoteIds,
     onAttributeClick,
     onAttributeHover,
 }: MeasureProps) {
@@ -184,6 +190,7 @@ export const Measure = memo(function Measure({
                             stem={layout.stemFor(note)}
                             beamed={!!layout.beamFor(note)}
                             color={isSelected || isHovered ? INTERACTION_BLUE : undefined}
+                            landing={landingNoteIds?.has(note.id)}
                         />
                     </g>
                 )

@@ -3,6 +3,7 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { INPUT_CURSOR_GAP, MEASURE_BUTTON_OFFSET, SCORE_WIDTH } from '../engraving/constants'
+import { NoteLanding } from '../lib/NoteLanding'
 import type { RecordingWaveformStore } from '../lib/RecordingWaveformStore'
 import { useObservedWidth } from '../lib/useObservedWidth'
 import { useScrollFollow } from '../lib/useScrollFollow'
@@ -80,6 +81,12 @@ interface ScoreViewProps {
      */
     interactive?: boolean
     /**
+     * A take is live (the host's recording state isn't idle): each note it writes fades in once
+     * as it lands, opacity only, and a measure the server re-sends unchanged doesn't replay (see
+     * NoteLanding). Beams, ties and brackets appear at once. Default false.
+     */
+    recording?: boolean
+    /**
      * A tempo marking, clef, key or time signature was clicked. The score only reports the
      * event — what happens next (the editor opens its popover) is the parent's call; omit the
      * callback and the glyphs render inert (the read-only consumers pass nothing).
@@ -148,6 +155,7 @@ export const ScoreView = memo(function ScoreView({
     onNoteChange,
     onMeasureButtonsLayout,
     interactive = true,
+    recording = false,
     onAttributeClick,
     onAttributeHover,
     role,
@@ -189,6 +197,12 @@ export const ScoreView = memo(function ScoreView({
     const scaledHeight = containerWidth > 0 ? totalHeight * (containerWidth / layout.scoreWidth) : 0
     // The svg renders once the container has been measured (and there is a row to draw).
     const svgMounted = containerWidth > 0 && totalHeight > 0
+
+    // Which notes fade in as they land during a take. Taken in on every render — the answer
+    // for a repeated render of the same score is the same, and it forgets everything once the
+    // take ends — so each measure's prop below stays the same Set while nothing in it is new.
+    const [noteLanding] = useState(() => new NoteLanding())
+    noteLanding.update(score, recording)
 
     // Input-cursor position: note-local x, row-local y
     const inputCursorPos = useMemo(() => {
@@ -472,6 +486,7 @@ export const ScoreView = memo(function ScoreView({
                                     layout={layout.measureLayoutFor(measure)}
                                     selectedNoteIds={selectedIds}
                                     hoveredNoteId={hoveredNote && hoveredMeasure === measure ? hoveredNote.id : undefined}
+                                    landingNoteIds={noteLanding.landingIn(measure)}
                                     onAttributeClick={interactive && onAttributeClick ? handleAttributeClick : undefined}
                                     // Reported whenever the glyphs are clickable — the ghost needs it even
                                     // when the host doesn't listen.
