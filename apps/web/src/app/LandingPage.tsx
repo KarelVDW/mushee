@@ -3,6 +3,7 @@ import { GetStartedButton, GetStartedNote } from '@/components/marketing/GetStar
 import { Haze } from '@/components/marketing/Haze'
 import { MarketingNav } from '@/components/marketing/MarketingNav'
 import { SectionHeading } from '@/components/marketing/SectionHeading'
+import { StepVignette, type StepVignetteKind } from '@/components/marketing/StepVignettes'
 import { Container, Eyebrow, Footer, Icon, type IconName } from '@/components/ui'
 import { BETA_MODE } from '@/lib/plans'
 
@@ -67,20 +68,23 @@ function Hero() {
     )
 }
 
-const HOW_STEPS: readonly { readonly num: string; readonly title: string; readonly body: string }[] = [
+const HOW_STEPS: readonly { readonly num: string; readonly vignette: StepVignetteKind; readonly title: string; readonly body: string }[] = [
     {
         num: '01',
+        vignette: 'record',
         title: 'Press record',
         body: 'Open a new score and press record. Solkey counts you in, then listens — only while you record.',
     },
     {
         num: '02',
+        vignette: 'sing',
         title: 'Sing or play the tune',
         // The one place the landing says how Solkey hears; the FAQ below goes into more detail.
         body: 'Your voice or any instrument, one note at a time. Solkey writes the melody onto the staff, bar by bar, while you play.',
     },
     {
         num: '03',
+        vignette: 'fix',
         title: 'Fix it and keep it',
         body: 'Tap a wrong note to fix it, change the key if you like, and hear it played back. Everything saves as you go.',
     },
@@ -125,13 +129,17 @@ function HowItWorks() {
             <Container width="marketing">
                 <SectionHeading eyebrow="How it works" title="From melody to sheet music in one go." />
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                    {HOW_STEPS.map(({ num, title, body }) => (
-                        <div key={num} className="flex flex-col gap-3">
-                            <span className="font-mono font-medium text-[14px] leading-none text-primary">{num}</span>
-                            <h3 className="font-headline font-semibold text-[22px] leading-tight tracking-[-0.01em] text-on-surface m-0">
-                                {title}
-                            </h3>
-                            <p className="font-body font-normal text-[16px] leading-[1.55] text-on-surface-variant m-0">{body}</p>
+                    {HOW_STEPS.map(({ num, vignette, title, body }) => (
+                        <div key={num}>
+                            {/* What the step looks like in Solkey, above its number. */}
+                            <StepVignette kind={vignette} />
+                            <div className="flex flex-col gap-3">
+                                <span className="font-mono font-medium text-[14px] leading-none text-primary">{num}</span>
+                                <h3 className="font-headline font-semibold text-[22px] leading-tight tracking-[-0.01em] text-on-surface m-0">
+                                    {title}
+                                </h3>
+                                <p className="font-body font-normal text-[16px] leading-[1.55] text-on-surface-variant m-0">{body}</p>
+                            </div>
                         </div>
                     ))}
                 </div>
