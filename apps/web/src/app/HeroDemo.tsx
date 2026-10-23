@@ -63,9 +63,10 @@ export function HeroDemo() {
                     </div>
                 )}
             </div>
-            {/* The caption, with the example beside it when this environment has one. */}
+            {/* The caption, with the example beside it when this environment has one: the caption gives way
+                (down to 16rem) before the chip drops to its own line. */}
             <div className="flex flex-wrap items-center justify-between gap-3">
-                <p className="m-0 font-body font-normal text-[13px] leading-normal text-on-surface-variant">
+                <p className="m-0 flex-1 min-w-64 font-body font-normal text-[13px] leading-normal text-on-surface-variant">
                     Someone humming Frère Jacques. Each note appears a moment after it&apos;s sung.
                 </p>
                 {EXAMPLE_SHARE_TOKEN && (
