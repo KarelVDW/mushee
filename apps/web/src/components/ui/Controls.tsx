@@ -230,10 +230,11 @@ interface ChipToggleProps extends TooltipProps, DisableableProps {
     /**
      * `default`: the 32px chip (40px on coarse pointers). `dock`: the dock's unit, 40px tall and
      * at least as wide (44px coarse), so a 3px well around it makes the dock's 46px (50px) row.
-     * `lg`: a 44px chip with a 14px label, for a page's one menu beside its big CTA.
+     * `lg`: the capsule height (48px, 52px coarse) with a 14px label, for a page's one menu beside
+     * its big CTA, so it lines up with Primary/SecondaryButton lg.
      */
     size?: 'default' | 'dock' | 'lg'
-    /** An icon-only circle of the size's height: 32px (40px coarse), 40px (44px) in the dock, or 44px. */
+    /** An icon-only circle of the size's height: 32px (40px coarse), 40px (44px) in the dock, or 48px (52px) at lg. */
     round?: boolean
 }
 
@@ -241,7 +242,7 @@ interface ChipToggleProps extends TooltipProps, DisableableProps {
 const CHIP_SIZES = {
     default: { pill: 'h-(--control-sm) px-3.5 pointer-coarse:px-4', round: 'size-(--control-sm) p-0', text: 'text-[13px]' },
     dock: { pill: 'h-(--control-md) min-w-(--control-md) px-3', round: 'size-(--control-md) p-0', text: 'text-[13px]' },
-    lg: { pill: 'h-11 px-5', round: 'size-11 p-0', text: 'text-[14px]' },
+    lg: { pill: 'h-(--control-lg) px-6.5', round: 'size-(--control-lg) p-0', text: 'text-[14px]' },
 } as const
 
 /** A plain chip inside a header-sized ToolGroup: 28px in its 32px well (40px in a 44px one on touch). */

@@ -29,7 +29,7 @@ interface HeaderMenuProps {
      * the score peeking past it. Only the phone layout passes it.
      */
     sheet?: boolean
-    /** `lg`: a 44px chip with a 14px label, beside a page's big CTA (the shared score's Download). */
+    /** `lg`: a capsule-height chip (48px, 52px coarse) with a 14px label, beside a page's big CTA (the shared score's Download). */
     size?: 'default' | 'lg'
     /** Panel content, mounted only while open. A function receives `close`, for content that dismisses the menu itself. */
     children: ReactNode | ((menu: { close: () => void }) => ReactNode)
