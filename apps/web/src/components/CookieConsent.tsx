@@ -81,8 +81,10 @@ function usePagePaddingUnder(banner: RefObject<HTMLElement | null>) {
 
 /**
  * First-visit notice: one-tap essential/all choices, or the full preferences. A solid card,
- * never glass, so the page can't show through its text; on phones a compact full-width bottom
- * sheet (text, then the two choices side by side, then Customize) with the page padded under it.
+ * never glass, so the page can't show through its text, stacked as text, then the two choices
+ * side by side, then Customize. On phones a compact full-width bottom sheet; from sm a 26rem
+ * card in the bottom-right corner (clear of the left-hand hero CTA and section headings) that
+ * rises in. The page is padded under it either way.
  */
 function CookieBanner({ onCustomize, onDecide }: { onCustomize: () => void; onDecide: (analytics: boolean) => void }) {
     const ref = useRef<HTMLDivElement>(null)
@@ -93,12 +95,15 @@ function CookieBanner({ onCustomize, onDecide }: { onCustomize: () => void; onDe
             role="dialog"
             aria-label="Cookie consent"
             className={[
-                'fixed z-(--z-banner) inset-x-0 bottom-0 sm:inset-x-5 sm:bottom-5 sm:max-w-180 sm:mx-auto',
-                'bg-surface-container-lowest editorial-shadow rounded-t-xl sm:rounded-lg',
-                'px-5 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:px-5.5 sm:py-4.5',
-                'flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-3 sm:gap-5',
+                'fixed z-(--z-banner) inset-x-0 bottom-0',
+                'sm:inset-x-auto sm:right-5 sm:left-auto sm:bottom-5 sm:max-w-[26rem] sm:mx-0',
+                'bg-surface-container-lowest max-sm:shadow-(--shadow-editorial) sm:shadow-overlay rounded-t-xl sm:rounded-lg',
+                'px-5 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:p-5',
+                // The corner card rises 16px and fades in over 200ms (at once under reduced motion).
+                'sm:animate-[popover-sheet-in_200ms_var(--ease-solkey)] motion-reduce:animate-none',
+                'flex flex-col gap-3 sm:gap-4',
             ].join(' ')}>
-            <div className="flex-1 sm:min-w-55 flex flex-col gap-1.5">
+            <div className="flex flex-col gap-1.5">
                 <Eyebrow className="max-sm:hidden">Cookies</Eyebrow>
                 <p className="font-body font-normal text-[14px] leading-normal text-on-surface m-0">
                     {/* Phones get the short version, so the sheet stays clear of the hero's Start free. */}
@@ -118,7 +123,7 @@ function CookieBanner({ onCustomize, onDecide }: { onCustomize: () => void; onDe
             </div>
             {/* "Essential only" and "Accept all" carry equal visual weight — the GDPR-parity
                 the component promises. Only "Customize" steps back a level. */}
-            <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 shrink-0">
+            <div className="flex flex-col gap-1">
                 <div className="grid grid-cols-2 gap-2">
                     <SecondaryButton fullWidth onClick={() => onDecide(false)}>
                         Essential only
@@ -127,7 +132,7 @@ function CookieBanner({ onCustomize, onDecide }: { onCustomize: () => void; onDe
                         Accept all
                     </SecondaryButton>
                 </div>
-                <div className="self-start sm:self-auto">
+                <div className="self-start">
                     <TertiaryButton onClick={onCustomize}>Customize</TertiaryButton>
                 </div>
             </div>
@@ -147,7 +152,7 @@ function CookiePreferencesDialog({ analytics, onAnalyticsChange, onDecide, onClo
     return (
         <DialogPanel
             title="Cookie preferences"
-            subtitle="Choose what Solkey may use. You can change this any time via 'Cookie settings' in the footer."
+            subtitle="Choose what Solkey may use. You can change this any time via ‘Cookie settings’ in the footer."
             onClose={onClose}
             width={520}
             footer={
@@ -168,7 +173,10 @@ function CookiePreferencesDialog({ analytics, onAnalyticsChange, onDecide, onClo
                     says "how you use Solkey" deliberately, not the plan's "what went wrong": consent copy must not
                     suggest replay only captures errors. */}
                 <ConsentCategory
-                    header={<Switch checked={analytics} onChange={onAnalyticsChange} label="Screen replays to help us fix bugs" />}>
+                    header={
+                        // Semibold, like the two category titles above it.
+                        <Switch checked={analytics} onChange={onAnalyticsChange} label="Screen replays to help us fix bugs" labelEmphasis />
+                    }>
                     Lets us replay how you use Solkey on your screen (what you type stays hidden) and link it to your account, so we can fix
                     your issues faster. Uses one cookie. Off unless you turn it on.
                 </ConsentCategory>
