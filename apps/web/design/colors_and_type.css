@@ -195,9 +195,10 @@
        name here stays `--ease` for drop-in HTML. */
 
     --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
-    --t-quick: 150ms; /* hover color */
-    --t-snap: 200ms; /* shadow / transform lift */
-    --t-flow: 300ms; /* tab + stroke sweeps */
+    --t-press: 100ms; /* a press: the 0.97 shrink and its tonal step */
+    --t-quick: 150ms; /* tints, small entrances (popovers, the pick check) */
+    --t-snap: 200ms; /* lifts, dialogs, toasts */
+    --t-flow: 300ms; /* strokes and sweeps */
 }
 
 /* ───────────────── Semantic element styles ───────────────── */
