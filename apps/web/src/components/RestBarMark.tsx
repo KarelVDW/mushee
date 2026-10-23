@@ -25,7 +25,7 @@ export function RestBarMark() {
     return (
         <svg aria-hidden width={WIDTH} height={HEIGHT} viewBox={`0 0 ${WIDTH} ${HEIGHT}`} xmlns="http://www.w3.org/2000/svg">
             {Array.from({ length: NUM_STAFF_LINES }, (_, i) => (
-                <line key={i} x1={0} x2={THIN_X + BARLINE_THIN_WIDTH} y1={lineY(i)} y2={lineY(i)} strokeWidth={1} className="stroke-outline-variant" />
+                <line key={i} x1={0} x2={WIDTH} y1={lineY(i)} y2={lineY(i)} strokeWidth={1} className="stroke-outline-variant" />
             ))}
             <rect
                 x={THIN_X}
