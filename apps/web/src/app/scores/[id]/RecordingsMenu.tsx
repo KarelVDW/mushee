@@ -39,13 +39,19 @@ function RecordingsPanel({ scoreId }: { scoreId: string }) {
 
     return (
         <>
-            {/* A recording row's shape while the list loads: the play well and its two lines, on the slow pulse. */}
+            {/* A recording row's shape while the list loads, on the slow pulse: the real row's padding,
+                its 36px play well (40px on touch) and a bar on each of its two lines, each line at the
+                row's own line height — so the panel doesn't move when the list arrives. */}
             {recordings.isPending && (
-                <div aria-hidden className="h-12 rounded-md bg-surface-container-low flex items-center gap-3 px-3">
-                    <Skeleton className="size-8 shrink-0 rounded-full" />
-                    <span className="flex flex-col gap-1.5">
-                        <Skeleton className="h-3 w-24 rounded-sm" />
-                        <Skeleton className="h-2.5 w-36 rounded-sm" />
+                <div aria-hidden className="rounded-md bg-surface-container-low flex items-center gap-3 px-3 py-2.5">
+                    <Skeleton className="size-9 pointer-coarse:size-10 shrink-0 rounded-full" />
+                    <span className="flex flex-col gap-1">
+                        <span className="flex h-[calc(14px*1.3)] items-center">
+                            <Skeleton className="h-3 w-24 rounded-sm" />
+                        </span>
+                        <span className="flex h-[calc(12px*1.35)] items-center">
+                            <Skeleton className="h-2.5 w-36 rounded-sm" />
+                        </span>
                     </span>
                 </div>
             )}

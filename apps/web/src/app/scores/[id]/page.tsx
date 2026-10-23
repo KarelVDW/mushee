@@ -533,8 +533,9 @@ export default function ScoreEditorPage() {
     }, [editorReady])
 
     // Unreachable (offline, or the server down) is no fault: a neutral screen that keeps trying
-    // by itself (the query polls, and coming back online retries). A missing score, or one that
-    // can't be read, is a real fault — with a way back to the library.
+    // by itself (the query polls, and coming back online retries). Nor is a missing score (the
+    // empty bar below). A score that fails to load, or can't be read, is a real fault — with a
+    // way back to the library.
     if (loadError instanceof NetworkError && !scoreDocument) {
         return (
             <ErrorScreen

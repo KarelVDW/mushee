@@ -3,7 +3,7 @@
 import { NUM_STAFF_LINES, ROW_GAP, ROW_HEIGHT, SPACE_ABOVE_STAFF, STAVE_LINE_DISTANCE } from '@mushee/notation/engraving/constants'
 import { Skeleton } from '@mushee/ui'
 import Link from 'next/link'
-import type { CSSProperties } from 'react'
+import { type CSSProperties, useEffect, useRef } from 'react'
 
 import { Icon, LoadingStatus, SecondaryButton, Wordmark } from '@/components/ui'
 
@@ -71,11 +71,37 @@ interface EditorSkeletonProps {
  * what is happening (announced politely), and after a while the slow-connection line and
  * Try again. Only the title bar and the staves pulse — and nothing under reduced motion.
  * Everything but the back link and the status is hidden from assistive tech.
+ *
+ * Its bars' heights go on the document as the loaded editor's do (`--app-header-h`, `--dock-h`),
+ * so the app-wide surfaces mounted outside it (the browser-support banner) keep clear of the
+ * skeleton's bars as they will of the real ones; the editor takes the variables over when it
+ * replaces the skeleton.
  */
 export function EditorSkeleton({ message, onRetry }: EditorSkeletonProps) {
+    const headerRef = useRef<HTMLElement>(null)
+    const dockRef = useRef<HTMLDivElement>(null)
+    useEffect(() => {
+        const header = headerRef.current
+        const dock = dockRef.current
+        if (!header || !dock) return
+        const page = document.documentElement.style
+        const measure = () => {
+            page.setProperty('--app-header-h', `${header.offsetHeight}px`)
+            page.setProperty('--dock-h', `${dock.offsetHeight}px`)
+        }
+        measure()
+        const observer = new ResizeObserver(measure)
+        observer.observe(header)
+        observer.observe(dock)
+        return () => {
+            observer.disconnect()
+            for (const name of ['--app-header-h', '--dock-h']) page.removeProperty(name)
+        }
+    }, [])
+
     return (
         <div data-testid="editor-loading" className="relative flex flex-col h-dvh bg-surface text-on-surface">
-            <header className="relative z-10 flex items-center gap-2 sm:gap-4 px-3 sm:px-5 py-2">
+            <header ref={headerRef} className="relative z-10 flex items-center gap-2 sm:gap-4 px-3 sm:px-5 py-2">
                 <span aria-hidden className={CHROME_BACKDROP} />
                 <div className="flex items-center gap-1.5 sm:gap-2.5 flex-1 min-w-0">
                     <Link
@@ -133,7 +159,10 @@ export function EditorSkeleton({ message, onRetry }: EditorSkeletonProps) {
                     </div>
                 </div>
             </div>
-            <div aria-hidden className="relative z-20 shrink-0 py-2.5 pb-[max(0.625rem,env(safe-area-inset-bottom))] px-2 md:px-4">
+            <div
+                ref={dockRef}
+                aria-hidden
+                className="relative z-20 shrink-0 py-2.5 pb-[max(0.625rem,env(safe-area-inset-bottom))] px-2 md:px-4">
                 <span className={CHROME_BACKDROP} />
                 {/* Desktop: one row of empty wells at the tools' least widths. */}
                 <div className="max-md:hidden mx-auto flex items-center justify-center flex-wrap gap-y-2 gap-x-6">

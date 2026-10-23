@@ -154,12 +154,13 @@ describe('TakesList playback', () => {
     const row = (index: number) => container.querySelectorAll('li')[index]
     const progressLayer = (index: number) => row(index)?.querySelector<HTMLElement>('.origin-left') ?? null
 
-    it("shows the replay's progress while it plays: a sweep behind the row and the clock '0:02 / 0:12'", async () => {
+    it("shows the replay's progress while it plays: a sweep behind the row and the clock '0:02 / 0:05'", async () => {
         await click(0)
         const audio = FakeAudio.instances[0]
         expect(audio).toBeDefined()
         if (!audio) return
-        // Nothing heard yet: the row is the playing one, the clock at its start, no frame loop yet.
+        // Nothing heard yet: the row is the playing one, the clock at its start out of the take's
+        // recorded length (the element doesn't know its duration yet), no frame loop yet.
         expect(row(0)?.textContent).toContain('0:00 / 0:12')
         expect(progressLayer(0)?.style.transform).toBe('scaleX(0)')
         expect(frames.size).toBe(0)
@@ -171,7 +172,8 @@ describe('TakesList playback', () => {
         runFrame()
         expect(progressLayer(0)?.style.transform).toBe('scaleX(0.4)')
         expect(progressLayer(0)?.getAttribute('aria-hidden')).toBe('true')
-        expect(row(0)?.textContent).toContain('0:02 / 0:12')
+        // The clock counts out of the same length the sweep measures: the audio's own 5 seconds.
+        expect(row(0)?.textContent).toContain('0:02 / 0:05')
         // Only the playing row sweeps.
         expect(progressLayer(1)).toBeNull()
         expect(row(1)?.textContent).not.toContain(' / ')

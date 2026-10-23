@@ -21,12 +21,17 @@ interface TakePlayer {
     progress: number
     /** Seconds of the playing take heard so far (0 when nothing plays). */
     elapsed: number
+    /**
+     * The playing take's length in seconds, as `progress` measures it: the audio's own duration
+     * once the element knows it, the take's recorded length until then (0 when nothing plays).
+     */
+    total: number
     /** Plays `take`, or stops it when it is the one playing. */
     toggle(take: RecordingSummary): void
     stop(): void
 }
 
-const AT_START = { progress: 0, elapsed: 0 }
+const AT_REST = { progress: 0, elapsed: 0, total: 0 }
 
 /**
  * One Audio element for the whole list (the cookie rides same-site). Every async
@@ -41,7 +46,7 @@ const AT_START = { progress: 0, elapsed: 0 }
  */
 function useTakePlayer(): TakePlayer {
     const [playing, setPlaying] = useState<string | null>(null)
-    const [clock, setClock] = useState(AT_START)
+    const [clock, setClock] = useState(AT_REST)
     const audioRef = useRef<HTMLAudioElement | null>(null)
     const frame = useRef<number | null>(null)
 
@@ -67,7 +72,7 @@ function useTakePlayer(): TakePlayer {
         }
         audioRef.current = null
         setPlaying(null)
-        setClock(AT_START)
+        setClock(AT_REST)
     }
 
     const toggle = (take: RecordingSummary) => {
@@ -78,14 +83,15 @@ function useTakePlayer(): TakePlayer {
         const finish = () => {
             cancelFrame()
             setPlaying(null)
-            setClock(AT_START)
+            setClock(AT_REST)
         }
         // The take's own length until the element knows its duration (a streamed file may not say).
         const duration = () => (Number.isFinite(audio.duration) && audio.duration > 0 ? audio.duration : take.seconds)
         const tick = () => {
             if (!isCurrent()) return
             const elapsed = audio.currentTime
-            setClock({ progress: Math.min(1, Math.max(0, elapsed / Math.max(duration(), 0.001))), elapsed })
+            const total = duration()
+            setClock({ progress: Math.min(1, Math.max(0, elapsed / Math.max(total, 0.001))), elapsed, total })
             frame.current = requestAnimationFrame(tick)
         }
         audio.onplaying = () => {
@@ -104,7 +110,7 @@ function useTakePlayer(): TakePlayer {
         }
         audioRef.current = audio
         setPlaying(take.id)
-        setClock(AT_START)
+        setClock({ progress: 0, elapsed: 0, total: take.seconds })
         track('take_played', { seconds: take.seconds })
         void audio.play().catch((err: unknown) => {
             if (!isCurrent() || (err instanceof DOMException && err.name === 'AbortError')) return
@@ -113,7 +119,7 @@ function useTakePlayer(): TakePlayer {
         })
     }
 
-    return { playing, progress: clock.progress, elapsed: clock.elapsed, toggle, stop }
+    return { playing, ...clock, toggle, stop }
 }
 
 interface PlayButtonProps {
@@ -241,11 +247,12 @@ export function TakesList({ takes, scoreTitleFor, scroll = true, numbered = fals
                 const scoreTitle = scoreTitleFor?.(take)
                 const number = numbers?.get(take.id)
                 const isPlaying = playing === take.id
-                // The length, or while it plays how far it has got: '0:02 / 0:05'.
+                // The length, or while it plays how far it has got: '0:02 / 0:05', out of the same length
+                // the sweep measures, so the two always agree.
                 const clock = (
                     <span className="font-mono font-normal text-[12px] tabular-nums shrink-0">
                         {isPlaying
-                            ? `${formatRecordingTime(player.elapsed)} / ${formatRecordingTime(take.seconds)}`
+                            ? `${formatRecordingTime(player.elapsed)} / ${formatRecordingTime(player.total)}`
                             : formatRecordingTime(take.seconds)}
                     </span>
                 )

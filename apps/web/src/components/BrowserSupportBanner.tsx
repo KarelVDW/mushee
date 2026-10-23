@@ -69,8 +69,10 @@ export function BrowserSupportBanner() {
                 overlay
                     ? [
                           'fixed z-(--z-banner) rounded-lg bg-surface-container-lowest overlay-shadow',
-                          // Phones: under the header. Wider: bottom left, above the dock (the editor publishes both heights).
-                          'inset-x-4 top-[calc(var(--app-header-h,0px)+8px)]',
+                          // Phones: under the header. Wider: bottom left, above the dock. The editor and its
+                          // loading skeleton publish both heights; unpublished (the library and its other
+                          // screens), the header is the library's nav: py-3.5 around a control-md row.
+                          'inset-x-4 top-[calc(var(--app-header-h,calc(var(--control-md)+1.75rem))+8px)]',
                           'md:inset-x-auto md:left-4 md:top-auto md:bottom-[calc(var(--dock-h,0px)+12px)] md:max-w-sm',
                       ].join(' ')
                     : 'relative w-full bg-surface-container-lowest tonal-layer-glow'

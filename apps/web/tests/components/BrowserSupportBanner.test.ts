@@ -112,7 +112,8 @@ describe('BrowserSupportBanner', () => {
         const classes = banner()?.className ?? ''
         expect(classes).toContain('fixed')
         // Phones: under the header. Wider: bottom left, above the dock — never over the transport.
-        expect(classes).toContain('top-[calc(var(--app-header-h,0px)+8px)]')
+        // Without a published header height (the library), the library nav's own height.
+        expect(classes).toContain('top-[calc(var(--app-header-h,calc(var(--control-md)+1.75rem))+8px)]')
         expect(classes).toContain('md:bottom-[calc(var(--dock-h,0px)+12px)]')
         expect(classes).toContain('md:left-4')
     })

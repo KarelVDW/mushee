@@ -65,14 +65,15 @@ export function RecordingLimitDialog({ info, onUpgrade, onClose }: RecordingLimi
     })
     // The way forward, in one callout: what the next plan gives (its title) over the minute
     // packs (its body) — either alone as an untitled callout, and none when there is neither.
+    // The packs line keeps its quiet tone even alone, where the untitled body would be on_surface.
     const packs = BETA_MODE ? null : (
-        <>
+        <span className="text-on-surface-variant">
             Just need to finish this one?{' '}
             <Link href={`${settingsTabPath('plan')}&packs=1`} className="text-primary underline">
                 Minute packs
             </Link>{' '}
             start at {formatMoney(CHEAPEST_PACK.price, currency)} and never expire.
-        </>
+        </span>
     )
     const callout =
         copy.upgrade && packs ? (
