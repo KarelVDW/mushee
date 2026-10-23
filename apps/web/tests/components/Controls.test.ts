@@ -48,6 +48,91 @@ describe('Segmented', () => {
         expect(markup).toContain('aria-disabled="true"')
         expect(markup).not.toContain('disabled=""')
         expect(markup).toContain('>Select one note to change its length.</span>')
+        // A disabled pick is a grey thumb with its glyph faded — never a pale cyan smudge.
+        expect(markup).toContain('bg-surface-container-high text-on-surface')
+        expect(markup).not.toContain('bg-primary-container')
+        expect(markup).toContain('<span class="inline-flex items-center opacity-40">♩</span>')
+    })
+
+    const mount = (markup: string) => {
+        const box = document.createElement('div')
+        box.innerHTML = markup
+        return box
+    }
+
+    it('rests in full-strength ink and picks in loud primary on the chrome track', () => {
+        const box = mount(html(createElement(Segmented, { options: [...accidentals], value: 'flat', onChange: noop, ariaLabel: 'Accidental' })))
+        const [track, buttons] = [box.firstElementChild as HTMLElement, [...box.querySelectorAll('button')]]
+        expect(track.className).toContain('bg-surface-container-lowest tonal-layer-glow')
+        expect(buttons[0].className).toContain('bg-primary-container text-on-primary-container')
+        expect(buttons[1].className).toContain('text-on-surface hover:bg-surface-container-high')
+        expect(buttons[1].className).not.toContain('text-on-surface-variant')
+    })
+
+    it('an inset track recedes on white panels, its pick a raised white thumb', () => {
+        const box = mount(
+            html(createElement(Segmented, { options: [...accidentals], value: 'flat', onChange: noop, ariaLabel: 'Accidental', tone: 'inset' })),
+        )
+        const track = box.firstElementChild as HTMLElement
+        expect(track.className).toContain('bg-surface-container-low')
+        expect(track.className).not.toContain('tonal-layer-glow')
+        expect((box.querySelector('button') as HTMLElement).className).toContain('bg-surface-container-lowest tonal-layer-glow text-on-surface')
+    })
+
+    it('the dock size is a 40px option in a track one well-pad bigger; fill shares the row', () => {
+        const box = mount(
+            html(createElement(Segmented, { options: [...accidentals], value: 'flat', onChange: noop, ariaLabel: 'Accidental', size: 'dock', fill: true })),
+        )
+        const track = box.firstElementChild as HTMLElement
+        expect(track.className).toContain('h-[calc(var(--control-md)+2*var(--well-pad))] p-(--well-pad)')
+        expect(track.className).toContain('flex flex-1')
+        const option = box.querySelector('button') as HTMLElement
+        expect(option.className).toContain('h-(--control-md) min-w-(--control-md)')
+        expect(option.className).toContain('flex-1 min-w-0')
+    })
+
+    describe('radio mode', () => {
+        let host: HTMLElement
+        let root: Root
+
+        beforeEach(() => {
+            host = document.createElement('div')
+            document.body.appendChild(host)
+            root = createRoot(host)
+        })
+
+        afterEach(() => {
+            act(() => root.unmount())
+            host.remove()
+        })
+
+        const billing = [
+            { value: 'monthly', label: 'Monthly' },
+            { value: 'yearly', label: 'Yearly' },
+        ] as const
+
+        it('is a radiogroup with one tab stop; the arrows move and pick', () => {
+            const onChange = vi.fn()
+            act(() => root.render(createElement(Segmented, { options: [...billing], value: 'monthly', onChange, ariaLabel: 'Billing', mode: 'radio' })))
+            expect(host.querySelector('[role="radiogroup"]')?.getAttribute('aria-label')).toBe('Billing')
+            const radios = [...host.querySelectorAll<HTMLButtonElement>('[role="radio"]')]
+            expect(radios.map((r) => r.getAttribute('aria-checked'))).toEqual(['true', 'false'])
+            expect(radios.some((r) => r.hasAttribute('aria-pressed'))).toBe(false)
+            expect(radios.map((r) => r.tabIndex)).toEqual([0, -1])
+            radios[0].focus()
+            act(() => {
+                radios[0].dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }))
+            })
+            expect(onChange).toHaveBeenCalledWith('yearly')
+            expect(document.activeElement).toBe(radios[1])
+        })
+
+        it('the default mode keeps toggle buttons', () => {
+            act(() => root.render(createElement(Segmented, { options: [...billing], value: 'monthly', onChange: noop, ariaLabel: 'Billing' })))
+            expect(host.querySelector('[role="radiogroup"]')).toBeNull()
+            expect(host.querySelector('[role="group"]')).not.toBeNull()
+            expect(host.querySelector('button')?.getAttribute('aria-pressed')).toBe('true')
+        })
     })
 })
 

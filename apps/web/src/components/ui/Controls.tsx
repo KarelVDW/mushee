@@ -2,6 +2,8 @@
 
 import { createContext, type CSSProperties, type ReactNode, useContext, useId } from 'react'
 
+import { useRadioGroup } from '@/lib/useRadioGroup'
+
 import { Tooltip, type TooltipShortcut } from './Tooltip'
 
 /**
@@ -99,8 +101,42 @@ interface SegmentedProps<T> extends DisableableProps {
     ariaLabel: string
     /** Which side of the options their tooltips sit on. */
     tooltipSide?: 'top' | 'bottom'
+    /**
+     * `default`: the compact track. `dock`: the dock's unit — 40px options (`--control-md`) in a
+     * track 3px (`--well-pad`) bigger all round, so it lines up with the dock's other wells.
+     */
+    size?: 'default' | 'dock'
+    /** Stretch across the row: the track grows and its options share the width equally. */
+    fill?: boolean
+    /**
+     * `chrome` (default): the white track with its lift, for the chrome over the page. `inset`:
+     * for a white panel or card, where a white track would vanish — a recessed
+     * surface_container_low track with no lift, the picked option a raised white thumb.
+     */
+    tone?: 'chrome' | 'inset'
+    /**
+     * `toggle` (default): toggle buttons with aria-pressed. `radio`: one choice of a set — a
+     * radiogroup of radios with aria-checked, one tab stop, and arrow keys that move and pick
+     * (the billing toggle).
+     */
+    mode?: 'toggle' | 'radio'
 }
 
+/** A Segmented track and its options per size. */
+const SEGMENTED_SIZES = {
+    default: { track: 'gap-0.5 p-0.75', option: 'px-2.5 py-1.5 min-w-8.5 pointer-coarse:py-2.5 pointer-coarse:min-w-10' },
+    dock: {
+        track: 'h-[calc(var(--control-md)+2*var(--well-pad))] p-(--well-pad) gap-0.5',
+        option: 'px-2.5 h-(--control-md) min-w-(--control-md)',
+    },
+} as const
+
+/**
+ * A row of mutually exclusive options in one track. Resting options are full-strength ink, like
+ * every control in a well; the picked one is loud primary in the chrome tone (a pressed toggle
+ * in a transparent-at-rest track) or a raised white thumb in the inset tone. Disabled, the glyphs
+ * fade to 40% — a picked one keeps a grey thumb, never a pale cyan smudge.
+ */
 export function Segmented<T extends string | undefined>({
     options,
     value,
@@ -109,39 +145,67 @@ export function Segmented<T extends string | undefined>({
     disabled,
     disabledReason,
     tooltipSide,
+    size = 'default',
+    fill = false,
+    tone = 'chrome',
+    mode = 'toggle',
 }: SegmentedProps<T>) {
     const state = disabledState({ disabled, disabledReason })
+    const radio = mode === 'radio'
+    const radios = useRadioGroup(
+        options.map((o) => o.value),
+        value,
+        (v) => {
+            if (!state.off) onChange(v)
+        },
+    )
+    const sizes = SEGMENTED_SIZES[size]
+    const picked = tone === 'inset' ? 'bg-surface-container-lowest tonal-layer-glow text-on-surface' : 'bg-primary-container text-on-primary-container'
     return (
         <div
-            role="group"
+            role={radio ? 'radiogroup' : 'group'}
             aria-label={ariaLabel}
-            className="inline-flex gap-0.5 p-0.75 rounded-full bg-surface-container-lowest tonal-layer-glow">
+            aria-disabled={radio ? state.aria : undefined}
+            className={[
+                fill ? 'flex flex-1' : 'inline-flex',
+                'rounded-full',
+                sizes.track,
+                tone === 'inset' ? 'bg-surface-container-low' : 'bg-surface-container-lowest tonal-layer-glow',
+            ].join(' ')}>
             {options.map((o, i) => {
                 const active = value !== null && value === o.value
                 return (
                     <Tooltip key={i} {...tooltipFor({ ...o, tooltipSide }, o.ariaLabel, state.reason)}>
                         <button
                             type="button"
+                            {...(radio ? radios.radioProps(i) : {})}
+                            role={radio ? 'radio' : undefined}
                             aria-label={o.ariaLabel}
-                            aria-pressed={active}
+                            aria-pressed={radio ? undefined : active}
+                            aria-checked={radio ? active : undefined}
                             aria-disabled={state.aria}
                             disabled={state.native}
                             onClick={state.off ? undefined : () => onChange(o.value)}
                             className={[
-                                'border-0 px-2.5 py-1.5 rounded-full min-w-8.5',
-                                'pointer-coarse:py-2.5 pointer-coarse:min-w-10',
+                                'border-0 rounded-full',
+                                sizes.option,
+                                fill ? 'flex-1 min-w-0' : '',
                                 'font-label font-semibold text-[14px] leading-none',
                                 'inline-flex items-center justify-center',
-                                'transition-[background-color,color] duration-150 ease-solkey',
+                                'transition-[background-color,color,box-shadow] duration-150 ease-solkey',
                                 'focus-ring',
-                                state.off ? 'cursor-not-allowed opacity-40' : 'cursor-pointer',
-                                active
-                                    ? 'bg-primary-container text-on-primary-container'
-                                    : state.off
-                                      ? 'bg-transparent text-on-surface-variant'
-                                      : 'bg-transparent text-on-surface-variant hover:bg-surface-container-high',
-                            ].join(' ')}>
-                            {o.label}
+                                state.off ? 'cursor-not-allowed' : 'cursor-pointer',
+                                state.off
+                                    ? active
+                                        ? 'bg-surface-container-high text-on-surface'
+                                        : 'bg-transparent text-on-surface'
+                                    : active
+                                      ? picked
+                                      : 'bg-transparent text-on-surface hover:bg-surface-container-high',
+                            ]
+                                .filter(Boolean)
+                                .join(' ')}>
+                            {state.off ? <span className="inline-flex items-center opacity-40">{o.label}</span> : o.label}
                         </button>
                     </Tooltip>
                 )
