@@ -31,6 +31,10 @@
     --color-on-primary-soft: #003f43;
     --color-primary-dim: #00595f;
     --color-inverse-primary: #00dbe9;
+    /* The filled CTA's hover and press steps: a deeper neon that keeps its hue instead of
+       inverting to dark teal (on_primary_soft text: 5.7:1 on hover, 4.83:1 pressed). */
+    --color-primary-container-hover: #00c8d5;
+    --color-primary-container-pressed: #00b8c4;
 
     /* The Accent — Secondary (Neon Magenta) */
     --color-secondary: #b60052;
@@ -52,6 +56,19 @@
     --color-on-error: #ffefee;
     --color-error-container: #fb5151;
     --color-on-error-container: #570008;
+    /* The quiet error tier, for form-level messages (credentials don't match, account exists):
+       on_surface 11.8:1 and error 5.9:1 on it. error_container stays for real faults. */
+    --color-error-soft: #fdecec;
+
+    /* Recording red — the record button, the live dot and the recording strip. One red,
+       mirroring the canvas's RECORDING_CURSOR_RED (3.76:1 against white). */
+    --color-record: #ef4444;
+    --color-on-record: #ffffff;
+
+    /* A picked option (a chip, a value tile, a menu row): the soft primary well, paired with
+       SelectedMark so the choice never rides on colour alone. */
+    --color-selected: var(--color-primary-soft);
+    --color-on-selected: var(--color-on-primary-soft);
 
     /* Outlines */
     --color-outline: #767777;
@@ -73,7 +90,12 @@
     --radius-xl: 1rem;
     --radius-full: 9999px;
 
-    /* Shadows — atmospheric, never black */
+    /* Shadows — atmospheric, never black. Two lift tiers: `raised` for resting tonal
+       cards and tonal buttons (the tonal shadow's value; --shadow-tonal stays as its alias),
+       `overlay` for surfaces that float over the page (menus, popovers, toasts): a hairline
+       edge plus a soft, near-omnidirectional fall-off. */
+    --shadow-raised: 0 0 24px 0 rgb(45 47 47 / 0.06);
+    --shadow-overlay: 0 0 0 1px rgb(172 173 173 / 0.18), 0 1px 2px rgb(45 47 47 / 0.05), 0 6px 28px -4px rgb(45 47 47 / 0.12);
     --shadow-tonal: 0 0 24px 0 rgba(45, 47, 47, 0.06);
     --shadow-editorial: 0 0 19px 0 rgba(45, 47, 47, 0.06);
     --shadow-offset-3: 3px 3px 0 0 #ff2079;
@@ -117,6 +139,14 @@
    still shows its edge — by tone, never a resting stroke (the No-Line Rule). See .glass-panel. */
 :root {
     --field-fill: var(--color-surface-container-low);
+    /* Tonal controls (SecondaryButton, IconButton, Chip) and choice tiles: one fill per
+       state, so every quiet control steps through the same three tones. */
+    --control-fill: var(--color-surface-container);
+    --control-fill-hover: var(--color-surface-container-high);
+    --control-fill-press: var(--color-surface-container-highest);
+    --tile-fill: var(--color-surface-container-low);
+    --tile-fill-hover: var(--color-surface-container);
+    --tile-fill-press: var(--color-surface-container-high);
 }
 
 body {
@@ -144,12 +174,16 @@ body {
     }
 }
 
-/* Atmospheric Shadows — tinted with on_surface, never black. */
+/* Atmospheric Shadows — tinted with on_surface, never black. .editorial-shadow stays the
+   resting card's shadow; floating surfaces take .overlay-shadow (or the shadow-overlay utility). */
 .tonal-layer-glow {
-    box-shadow: var(--shadow-tonal);
+    box-shadow: var(--shadow-raised);
 }
 .editorial-shadow {
     box-shadow: var(--shadow-editorial);
+}
+.overlay-shadow {
+    box-shadow: var(--shadow-overlay);
 }
 
 .manuscript-canvas {
