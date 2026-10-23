@@ -103,10 +103,11 @@
     --fg-rebel: #b60052; /* secondary — destructive / sign-out */
 
     /* ───────────────── Type ─────────────────
-     Space Grotesk — display + UI default
-     Manrope — body copy at long-reading sizes
-     Newsreader — serif italic for warm/literary moments
-     Geist Mono — code, tempo, schematic numbers */
+     Space Grotesk — display + UI default, every button
+     Manrope — body copy at reading sizes
+     Newsreader — serif italic clause in display headlines (marketing + auth only)
+     Geist Mono — readouts only: bpm, clocks, time signatures, step numbers,
+                  the code field, file extensions (never prices) */
 
     --font-display: 'Space Grotesk', system-ui, sans-serif;
     --font-headline: 'Space Grotesk', system-ui, sans-serif;
@@ -116,19 +117,24 @@
     --font-serif: 'Newsreader', Georgia, serif;
     --font-mono: 'Geist Mono', 'JetBrains Mono', ui-monospace, monospace;
 
-    /* Type scale */
-    --type-display-lg: 700 4rem/0.95 var(--font-display); /* 64px hero */
-    --type-display-md: 700 3rem/1 var(--font-display); /* 48px page title */
-    --type-display-sm: 700 2rem/1.05 var(--font-display); /* 32px modal title */
-    --type-headline-lg: 600 1.5rem/1.2 var(--font-headline); /* 24px */
-    --type-headline-md: 600 1.25rem/1.3 var(--font-headline); /* 20px */
-    --type-title-lg: 600 1rem/1.4 var(--font-headline); /* 16px card title */
-    --type-body-lg: 400 0.95rem/1.5 var(--font-body);
-    --type-body-md: 400 0.9rem/1.55 var(--font-body);
-    --type-body-sm: 400 0.75rem/1.45 var(--font-body);
-    --type-label-lg: 600 0.75rem/1 var(--font-label);
-    --type-label-md: 600 0.6875rem/1 var(--font-label);
-    --type-mono-md: 500 0.85rem/1.45 var(--font-mono);
+    /* Type roles — the type-* utilities in packages/ui/src/theme.css, whose class names
+       are the API. Each token is the role's base step as a font shorthand; the .type-*
+       classes below add its tracking, caps and sm/lg steps. type-numeral has no size of its
+       own (it takes the context's), so it is a class only. */
+    --type-hero: 700 40px/0.95 var(--font-display); /* → 56px sm, 72px lg */
+    --type-page: 700 34px/1 var(--font-display); /* → 48px sm */
+    --type-title: 700 26px/1.05 var(--font-display); /* → 32px sm */
+    --type-heading: 600 20px/1.25 var(--font-headline);
+    --type-subheading: 600 17px/1.3 var(--font-headline);
+    --type-label: 600 15px/1.25 var(--font-label);
+    --type-lede: 400 17px/1.5 var(--font-body); /* → 18px sm */
+    --type-body: 400 14px/1.5 var(--font-body);
+    --type-body-lg: 400 16px/1.6 var(--font-body);
+    --type-hint: 400 13px/1.4 var(--font-body);
+    --type-caption: 400 12px/1.4 var(--font-body);
+    --type-eyebrow: 600 11px/1 var(--font-label);
+    --type-button: 600 13px/1 var(--font-label);
+    --type-button-lg: 600 14px/1 var(--font-label);
 
     --tracking-display: -0.03em;
     --tracking-tight: -0.015em;
@@ -167,46 +173,110 @@
 body {
     background: var(--color-background);
     color: var(--color-on-background);
-    font: var(--type-body-md);
+    font: var(--type-body);
     -webkit-font-smoothing: antialiased;
 }
 
-/* Display headlines — serif, mixed case, tight-but-not-extreme tracking */
-.h-display,
-.h1 {
-    font: var(--type-display-md);
-    letter-spacing: var(--tracking-display);
-    color: var(--color-on-surface);
-    margin: 0;
+/* No stranded words: headings balance their lines, running text avoids a lone last word
+   (the base layer in theme.css does the same). */
+h1,
+h2,
+h3,
+h4,
+summary {
+    text-wrap: balance;
 }
-.h-mega {
-    font: var(--type-display-lg);
-    letter-spacing: var(--tracking-display);
-    color: var(--color-on-surface);
-}
-.h2 {
-    font: var(--type-display-sm);
-    letter-spacing: var(--tracking-display);
-    color: var(--color-on-surface);
-}
-.h3 {
-    font: var(--type-headline-md);
-    letter-spacing: var(--tracking-tight);
-    color: var(--color-on-surface);
+p,
+li,
+dd,
+figcaption,
+label {
+    text-wrap: pretty;
 }
 
-/* Eyebrow / micro-label — caps, but understated */
-.label,
-.eyebrow {
-    font: var(--type-label-md);
+/* Type roles — one class per job, the same names as the app's type-* utilities. Colour
+   stays the caller's (it inherits on_surface), save the eyebrow, which carries the
+   Eyebrow component's on_surface_variant. */
+.type-hero {
+    font: var(--type-hero);
+    letter-spacing: -0.04em;
+}
+.type-page {
+    font: var(--type-page);
+    letter-spacing: var(--tracking-display);
+}
+.type-title {
+    font: var(--type-title);
+    letter-spacing: var(--tracking-display);
+}
+.type-heading {
+    font: var(--type-heading);
+    letter-spacing: -0.01em;
+}
+.type-subheading {
+    font: var(--type-subheading);
+}
+.type-label {
+    font: var(--type-label);
+}
+.type-lede {
+    font: var(--type-lede);
+}
+.type-body {
+    font: var(--type-body);
+}
+.type-body-lg {
+    font: var(--type-body-lg);
+}
+.type-hint {
+    font: var(--type-hint);
+}
+.type-caption {
+    font: var(--type-caption);
+}
+.type-eyebrow {
+    font: var(--type-eyebrow);
     letter-spacing: var(--tracking-widest);
     text-transform: uppercase;
     color: var(--color-on-surface-variant);
 }
+.type-button {
+    font: var(--type-button);
+}
+.type-button-lg {
+    font: var(--type-button-lg);
+}
+/* Readouts — bpm, clocks, time signatures, step numbers; the size is the context's. */
+.type-numeral,
+code,
+.mono {
+    font-family: var(--font-mono);
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+}
+@media (min-width: 640px) {
+    .type-hero {
+        font-size: 56px;
+    }
+    .type-page {
+        font-size: 48px;
+    }
+    .type-title {
+        font-size: 32px;
+    }
+    .type-lede {
+        font-size: 18px;
+    }
+}
+@media (min-width: 1024px) {
+    .type-hero {
+        font-size: 72px;
+    }
+}
 
 /* Body text */
 p {
-    font: var(--type-body-md);
+    font: var(--type-body);
     color: var(--color-on-surface);
     margin: 0;
 }
@@ -223,12 +293,6 @@ p {
     letter-spacing: -0.04em;
     color: var(--color-on-surface);
     line-height: 1;
-}
-
-/* Mono — for technical / code-ish moments */
-code,
-.mono {
-    font: var(--type-mono-md);
 }
 
 /* Selection — neon cyan */

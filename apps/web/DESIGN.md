@@ -52,9 +52,16 @@ Four families (loaded in `app/layout.tsx`), each with one job:
 - **Space Grotesk** — display + UI: wordmark, headlines, buttons, labels. The wordmark is `Solkey`, 700 italic, tracked `-0.04em`.
 - **Manrope** — body copy at reading sizes.
 - **Newsreader italic** — the warm serif clause in display headlines, **marketing + auth surfaces only**. In-app chrome (Library, Editor, Settings — including the score-title field) stays Space Grotesk.
-- **Geist Mono** — numeric readouts: bpm, prices, step numbers, time signatures, the recording clock, the 6-digit code field.
+- **Geist Mono** — numeric readouts: bpm, step numbers, time signatures, the recording clock, the 6-digit code field, file extensions. Prices use `PriceTag` (Space Grotesk 700, tabular), never mono.
 
-ALL-CAPS only for `Eyebrow`-style schematic labels (11px, `0.12em` tracking). Everything else is sentence case. No label anywhere is smaller than 11px (`Badge` included).
+Sizes come from the **type roles** in `packages/ui/src/theme.css` (`type-hero` … `type-numeral`; table in [design/README.md → Typography](design/README.md#typography)) — the class names are the API. Buttons, Tertiary included, are Space Grotesk. Newsreader loads its opsz axis.
+
+- Headings balance (text-wrap: balance) and body text wraps pretty, so no word sits alone on a heading's last line, or in cards, menus, sheets or tooltips.
+- A number never breaks from its unit (U+00A0).
+- The italic Newsreader clause always starts its own line.
+- A dialog's description is 15px, never smaller than the body below it.
+
+ALL-CAPS only for `Eyebrow`-style schematic labels (11px, `0.12em` tracking). ALL-CAPS eyebrows label sections inside a surface and are never a surface's title. Everything else is sentence case. No label is smaller than 11px (`Badge` included).
 
 ---
 
@@ -63,7 +70,7 @@ ALL-CAPS only for `Eyebrow`-style schematic labels (11px, `0.12em` tracking). Ev
 - **Cards:** `surface_container_lowest` + `tonal-layer-glow` (24px blur, 6% `on_surface`). List rows and compact cards use `rounded-md`; standalone cards and panels `rounded-lg`; full sheets `rounded-xl`.
 - **Dialogs** are the one glass surface: `.glass-panel` (85% white + 12px blur) + `editorial-shadow` (19px tier) + `rounded-lg`, over the scrim `bg-on-surface/40 backdrop-blur-xs`. `DialogPanel` renders its own scrim and already carries the a11y contract (role, focus trap, Escape, focus restore, one `onClose` for Escape/backdrop/×, its subtitle linked as the description) — always build dialogs from it. Its footer is one right-aligned row that wraps rather than running past the panel's edge; below `sm` the buttons stack full width with the primary on top — so pass the footer's buttons secondary first, primary last.
 - **Popovers, menus, tooltips and sheets are opaque:** `surface_container_lowest` + `editorial-shadow`. Blur doesn't nest — a glass panel opened inside the backdrop-filtered header or dock would sample only that bar and show the staff through its text. (The header and dock keep their own blur on an `aria-hidden` backdrop layer, so anything opened from them still sits over the real page.) Anchored popovers build from `Popover`/`PopoverOption` (dialog role, Escape + outside-click dismissal, no editor shortcut fires behind an open one); on phones the same `Popover` renders as a sheet (§4b).
-- **A popover may carry one plain hint line** (`Popover hint`, 13px Manrope `on_surface_variant`) under its eyebrow — required for every popover named by a notation term: clef ("Treble for higher notes, bass for lower ones."), time, key, tempo, transpose. Option grids lead with the two to four choices a newcomer needs and put the rest behind a labelled More ("More clefs", "More time signatures", Transpose's "More options"). The clef picker leads with Treble and Bass plus the instrument's usual clef (`Instrument.defaultClef` — a viola's Alto, "Usual for viola") and the clef in use, each listed once.
+- **Every popover and sheet opens with `PopoverHeader`** — a plain sentence-case title (15px on desktop, 20px on phone sheets), never an eyebrow. **A popover may carry one plain hint line** (`Popover hint`, 13px Manrope `on_surface_variant`) under its title — required for every popover named by a notation term: clef ("Treble for higher notes, bass for lower ones."), time, key, tempo, transpose. Option grids lead with the two to four choices a newcomer needs and put the rest behind a labelled More ("More clefs", "More time signatures", Transpose's "More options"). The clef picker leads with Treble and Bass plus the instrument's usual clef (`Instrument.defaultClef` — a viola's Alto, "Usual for viola") and the clef in use, each listed once.
 - **Limit and upgrade dialogs stay calm.** The score-limit, daily-recording-limit and change-plan dialogs use the neutral tone — never `error_container`, no alarm callout — say that the user's work is safe, and end in one flat PrimaryButton (no pop). A button that leads to payment says so and names the price.
 - **Never black shadows.** Always `on_surface` at 6%.
 - **The magenta pop** (`emphasis="pop"`: 3px→5px offset shadow + −2px hover lift) is reserved for **at most one hero CTA per viewport** — landing hero and final CTA, the top-nav "New score". Dialog confirms (Change plan included), section actions, and utility buttons stay flat.

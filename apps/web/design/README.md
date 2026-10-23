@@ -37,13 +37,13 @@ Every decision answers to this person: what we build, what we leave out, where a
 
 ## Sources
 
-| Source              | Path                                                | Notes                                                                                                                            |
-| ------------------- | --------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| Production codebase | `apps/web/`                                         | Next 16 / React 19 / Tailwind v4. App router. The single product — this design system lives inside it at `apps/web/design/`.     |
-| Color tokens        | `packages/ui/src/theme.css`                         | M3-style palette with cyan + magenta accents — the shared theme each app's `globals.css` imports.                                |
-| UI primitives       | `packages/ui/src/`                                  | The shared `@mushee/ui` kit: buttons, inputs, feedback, icons, toasts. Web-only pieces live in `apps/web/src/components/ui/`.    |
-| Type loader         | `apps/web/src/app/layout.tsx`                       | Loads Space Grotesk, Manrope, Newsreader, and Geist Mono via `next/font/google`. Icons are inline SVGs — no icon font is loaded. |
-| Notation glyphs     | `packages/notation/src/engraving/bravura_glyphs.ts` | Bravura SMuFL outlines — bundled glyph data, rendered as SVG `<path>`. Not used outside the score canvas.                        |
+| Source              | Path                                                | Notes                                                                                                                                                                                                                                       |
+| ------------------- | --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Production codebase | `apps/web/`                                         | Next 16 / React 19 / Tailwind v4. App router. The single product — this design system lives inside it at `apps/web/design/`.                                                                                                                |
+| Color tokens        | `packages/ui/src/theme.css`                         | M3-style palette with cyan + magenta accents — the shared theme each app's `globals.css` imports.                                                                                                                                           |
+| UI primitives       | `packages/ui/src/`                                  | The shared `@mushee/ui` kit: buttons, inputs, feedback, icons, toasts. Web-only pieces live in `apps/web/src/components/ui/`.                                                                                                               |
+| Type loader         | `apps/web/src/app/layout.tsx`                       | Loads Space Grotesk, Manrope, Newsreader (with its `opsz` axis) and Geist Mono via `next/font/google`. The font variables live on `<html>`, so hand-written CSS may use `var(--font-body)`. Icons are inline SVGs — no icon font is loaded. |
+| Notation glyphs     | `packages/notation/src/engraving/bravura_glyphs.ts` | Bravura SMuFL outlines — bundled glyph data, rendered as SVG `<path>`. Not used outside the score canvas.                                                                                                                                   |
 
 There is **one product**: the web app. The UI kit covers Landing → Auth → Onboarding → Library → Editor → Settings.
 
@@ -77,8 +77,8 @@ There is **one product**: the web app. The UI kit covers Landing → Auth → On
 
 - **Sentence case** for everything in the UI: buttons, nav, labels, headings, dialogs. Legal page titles are sentence case too ("Privacy policy", "Terms of service").
 - Title Case is reserved for proper nouns (instrument names, score titles, people).
-- ALL-CAPS is used _only_ for the small `--type-label-*` schematic eyebrows — short tags like "How it works" or "Pricing" — at `0.12em` tracking.
-- Display headings use a hint of italic via Newsreader for warmth (e.g. "The fastest way to get a melody _on the page._"); sans-serif Space Grotesk does the structural work. **Newsreader is reserved for marketing + auth surfaces** — the landing page, the auth split-panel, the final CTA, pull-quotes, testimonials. In-app chrome (Library, Editor, Settings page titles) stays in Space Grotesk and skips italic; warmth there is earned through copy, not letterforms.
+- ALL-CAPS is used _only_ for the small `type-eyebrow` labels — short tags like "How it works" or "Pricing" — at `0.12em` tracking. ALL-CAPS eyebrows label sections inside a surface and are never a surface's title. Every popover and sheet opens with `PopoverHeader` (15px title on desktop, 20px on phone sheets, 13px hint).
+- Display headings use a hint of italic via Newsreader for warmth (e.g. "The fastest way to get a melody _on the page._"); sans-serif Space Grotesk does the structural work. The italic Newsreader clause always starts its own line. **Newsreader is reserved for marketing + auth surfaces** — the landing page, the auth split-panel, the final CTA, pull-quotes, testimonials. In-app chrome (Library, Editor, Settings page titles) stays in Space Grotesk and skips italic; warmth there is earned through copy, not letterforms.
 
 **Voice — first vs second person:**
 
@@ -223,16 +223,44 @@ A **white-on-white** layering system punctuated by two accent colors. Accents ar
 
 Four families, each with a clear job.
 
-| Family            | Role                 | Where                                                                                                                                                                                  |
-| ----------------- | -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Space Grotesk** | Display + UI default | Wordmark, headlines, button labels, nav, card titles, schematic labels. Quirky terminals + technical bones. Loaded weights 300–700.                                                    |
-| **Manrope**       | Body copy            | Long-reading paragraphs, marketing prose, settings descriptions. Geometric and very readable. Loaded weights 300–800.                                                                  |
-| **Newsreader**    | Serif italic accent  | The italic clause inside a display headline ("_on the page._"), pull-quotes, testimonial copy. **Marketing + auth surfaces only** — not for in-app page titles. Optical-size variable. |
-| **Geist Mono**    | Mono                 | File paths, raw MIDI values, bpm and time-signature readouts, step numbers in numbered flows, the recording clock, the 6-digit code field. Loaded weights 400–600.                     |
+| Family            | Role                 | Where                                                                                                                                                                                                                                  |
+| ----------------- | -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Space Grotesk** | Display + UI default | Wordmark, headlines, button labels, nav, card titles, schematic labels. Quirky terminals + technical bones. Loaded weights 300–700.                                                                                                    |
+| **Manrope**       | Body copy            | Long-reading paragraphs, marketing prose, settings descriptions. Geometric and very readable. Loaded weights 300–800.                                                                                                                  |
+| **Newsreader**    | Serif italic accent  | The italic clause inside a display headline ("_on the page._"), pull-quotes, testimonial copy. **Marketing + auth surfaces only** — not for in-app page titles. Newsreader loads its opsz axis, so display sizes draw its display cut. |
+| **Geist Mono**    | Mono                 | Readouts only: bpm, clocks (the recording clock, a recording's length), time signatures, step numbers in numbered flows, the 6-digit code field, file extensions. Never prices. Loaded weights 400–600.                                |
 
 The wordmark is always **`Solkey`** in Space Grotesk Bold (700) **italic**, tracked `-0.04em`. Lowercase save the capital S. This _is_ the logo.
 
-Scale tokens live in `colors_and_type.css` — `display-lg / md / sm`, `headline-lg / md`, `title-lg`, `body-lg / md / sm`, `label-lg / md`, `mono-md`.
+**Type roles.** One utility per job in `packages/ui/src/theme.css`, each a complete text style (family, weight, size, leading, tracking) that steps up at `sm` / `lg` where the role does. The class names are the API: a call site picks the role, never a raw size (a size, leading or tracking utility after it still adjusts that one property; colour stays the caller's). `colors_and_type.css` mirrors them for static HTML.
+
+| Role              | Size (px)              | Face                             | For                                                                   |
+| ----------------- | ---------------------- | -------------------------------- | --------------------------------------------------------------------- |
+| `type-hero`       | 40 → 56 (sm) → 72 (lg) | Space Grotesk 700, 0.95, −0.04em | The landing hero.                                                     |
+| `type-page`       | 34 → 48 (sm)           | Space Grotesk 700, 1, −0.03em    | App page titles (`PageTitle`), marketing section h2s.                 |
+| `type-title`      | 26 → 32 (sm)           | Space Grotesk 700, 1.05, −0.03em | Dialog and step titles (`ModalTitle`), the shared score's h1.         |
+| `type-heading`    | 20                     | Space Grotesk 600, 1.25, −0.01em | Card and section titles, empty-state titles, tier names.              |
+| `type-subheading` | 17                     | Space Grotesk 600, 1.3           | Feature items, FAQ questions, the editor title.                       |
+| `type-label`      | 15                     | Space Grotesk 600, 1.25          | Popover titles, the account name, tile names.                         |
+| `type-lede`       | 17 → 18 (sm)           | Manrope 400, 1.5                 | Hero and section subs.                                                |
+| `type-body`       | 14                     | Manrope 400, 1.5                 | The UI default.                                                       |
+| `type-body-lg`    | 16                     | Manrope 400, 1.6                 | FAQ answers, legal text, long reading.                                |
+| `type-hint`       | 13                     | Manrope 400, 1.4                 | Hints, tooltips, toasts.                                              |
+| `type-caption`    | 12                     | Manrope 400, 1.4                 | Field hints and errors, meta, the footer.                             |
+| `type-eyebrow`    | 11                     | Space Grotesk 600, caps, 0.12em  | Section labels (`Eyebrow`), field labels.                             |
+| `type-button`     | 13                     | Space Grotesk 600, 1             | md buttons, Tertiary included.                                        |
+| `type-button-lg`  | 14                     | Space Grotesk 600, 1             | lg buttons.                                                           |
+| `type-numeral`    | (the context's)        | Geist Mono 500, tabular figures  | Readouts: bpm, clocks, time signatures, step numbers, the code field. |
+
+Call sites move to the roles as their files are touched; new code starts on them. The marketing body scale is 18 / 17 / 16 / 14 / 13 (lede, sub, reading text, card body, notes); text inputs keep their own 14px (16px on coarse pointers, the iOS zoom floor).
+
+- Headings balance (text-wrap: balance) and body text wraps pretty, so no word sits alone on a heading's last line, or in cards, menus, sheets or tooltips. The base layer in `theme.css` sets both (`h1`–`h4` and `summary` balance; `p`, `li`, `dd`, `figcaption` and `label` wrap pretty); the tooltip card balances its lines.
+- A number never breaks from its unit (U+00A0): "3 hours", "5 scores", "20 min".
+- The italic Newsreader clause always starts its own line (a `<br />` before the `<em>`).
+- Prices use PriceTag (Space Grotesk 700, tabular). Geist Mono is only for readouts (bpm, clocks, time signatures, step numbers, the code field, file extensions).
+- Buttons, Tertiary included, are Space Grotesk.
+- No label is smaller than 11px.
+- A dialog's description is 15px, never smaller than the body below it.
 
 ### Spacing & layout
 
