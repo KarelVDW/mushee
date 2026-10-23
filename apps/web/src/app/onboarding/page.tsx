@@ -302,6 +302,7 @@ export default function OnboardingPage() {
                     )}
                     {showContinue && (
                         <div
+                            data-sticky-actions
                             className={[
                                 'flex flex-col gap-2 sm:col-start-2 sm:row-start-1 sm:items-end',
                                 'max-sm:sticky max-sm:bottom-0 max-sm:z-1 max-sm:-mx-5 max-sm:px-5 max-sm:pt-4 max-sm:pb-[max(1rem,env(safe-area-inset-bottom))] max-sm:bg-surface-container-lowest',

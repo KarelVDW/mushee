@@ -772,3 +772,21 @@ test('export chip: the format menu opens from the icon-only chip', async ({ page
     expect((box?.x ?? 0) + (box?.width ?? Infinity)).toBeLessThanOrEqual((viewport?.width ?? 0) + 1)
     await expectHeaderFitsViewport(page)
 })
+
+test('onboarding: a chordal pick scrolls its melody line clear of the sticky Continue bar', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 664 })
+    await page.goto('/onboarding')
+    await expect(page.getByRole('heading', { name: 'What will you record?' })).toBeVisible()
+    await page.getByRole('button', { name: 'Pick Violin', exact: true }).tap()
+    await page.getByRole('button', { name: 'Pick Piano', exact: true }).tap()
+    const hint = page.getByText('On piano, play the tune one note at a time — Solkey writes melodies.')
+    await expect(hint).toBeVisible()
+    // The line ends above the bar's 24px fade, not under it (the smooth scroll settles first).
+    const bar = page.locator('[data-sticky-actions]')
+    await expect
+        .poll(async () => {
+            const [line, actions] = await Promise.all([hint.boundingBox(), bar.boundingBox()])
+            return (line?.y ?? Infinity) + (line?.height ?? 0) <= (actions?.y ?? 0) - 24
+        })
+        .toBe(true)
+})

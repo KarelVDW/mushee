@@ -7,6 +7,17 @@
 @source '../../../../packages/notation/src/components';
 @source '../../../../packages/ui/src';
 
+/* A phone page whose actions stick to the screen's bottom edge (onboarding's Continue block,
+   marked data-sticky-actions) keeps whatever scrolls into view — the line a pick reveals, a
+   control that takes keyboard focus — above the bar and the 24px fade over it, never under them
+   (WCAG 2.4.11). The room is the tallest bar: the 52px touch button between its 16px paddings
+   (the bottom one grows at a home indicator), the payment note under it, and the fade. */
+@media (width < 40rem) {
+    html:has([data-sticky-actions]) {
+        scroll-padding-bottom: calc(8.5rem + max(0px, env(safe-area-inset-bottom) - 1rem));
+    }
+}
+
 /* Live recording waveform bars (@mushee/notation's RecordingWaveform.tsx, which ships
    no CSS: it relies on these classes, keyframes and --waveform-burst, and only drops an
    exiting bar on its animationend — any app hosting it must carry this block; HeroDemo
