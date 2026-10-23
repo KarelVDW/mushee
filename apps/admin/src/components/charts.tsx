@@ -86,7 +86,7 @@ export function DailyBars({ title, points, formatValue = formatCount }: DailyBar
                 </div>
                 {hover !== null && (
                     <div
-                        className="absolute -translate-x-1/2 glass-panel editorial-shadow rounded-md px-2.5 py-1.5 whitespace-nowrap pointer-events-none z-10"
+                        className="absolute -translate-x-1/2 bg-surface-container-lowest shadow-overlay rounded-md px-2.5 py-1.5 whitespace-nowrap pointer-events-none z-10"
                         style={anchorAbove(hover, 6)}>
                         <span className="font-label font-semibold text-[11px] text-on-surface-variant mr-2">
                             {formatDayTick(points[hover].day)}

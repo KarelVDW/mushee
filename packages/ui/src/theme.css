@@ -177,9 +177,10 @@
     --z-toast: 110;
 }
 
-/* The input fill TextField and TextArea read (and so PasswordField): surface_container_low on
-   the page. A container whose own tone is that shade sets it one tonal step up, so an empty field
-   still shows its edge — by tone, never a resting stroke (the No-Line Rule). See .glass-panel. */
+/* The input fill TextField and TextArea read (and so PasswordField): surface_container_low, on
+   the page and on the opaque white dialogs alike. A container whose own tone is that shade sets
+   it one tonal step up, so an empty field still shows its edge — by tone, never a resting stroke
+   (the No-Line Rule). */
 :root {
     --field-fill: var(--color-surface-container-low);
     /* Tonal controls (SecondaryButton, IconButton, Chip) and choice tiles: one fill per
@@ -419,18 +420,11 @@ body {
     background-size: 40px 40px;
 }
 
-/* Glass for surfaces over the page itself. Blur doesn't nest: a panel opened inside another
-   backdrop-filtered bar (the editor's header, the dock) samples only that bar, so menus,
-   popovers and tooltips use the opaque card instead — bg-surface-container-lowest with
-   .editorial-shadow — and never show the staff through their text.
-   Over the dialog scrim the glass itself renders about surface_container_low, so a field on it
-   would have no edge until focused: inside, the input fill steps up to surface_container. */
-.glass-panel {
-    background: rgba(255, 255, 255, 0.85);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    --field-fill: var(--color-surface-container);
-}
+/* No glass panels. Every floating surface — menus, popovers, tooltips, dialogs — is the opaque
+   card, bg-surface-container-lowest with the overlay shadow: blur doesn't nest (a panel opened
+   inside the blurred header or dock samples only that bar and shows the staff through its
+   text), and 85% white over the dialog scrim rendered greyer than the page. Only sticky chrome
+   bars (the editor header, the dock, the app nav) still blur what scrolls under them. */
 
 @keyframes solkey-spin {
     to {
