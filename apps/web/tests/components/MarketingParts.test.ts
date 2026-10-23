@@ -71,4 +71,10 @@ describe('Haze', () => {
         const haze = mount(renderToStaticMarkup(createElement(Haze, { placement: 'right-edge' }))).firstElementChild
         expect(haze?.className).toContain('h-full')
     })
+
+    it('keeps the corner glow inside its section, so its fade completes at the top and bottom edges', () => {
+        const haze = mount(renderToStaticMarkup(createElement(Haze, { placement: 'top-right' }))).firstElementChild
+        expect(haze?.className).not.toContain('-translate-y')
+        expect(haze?.className).toContain('max-h-full')
+    })
 })
