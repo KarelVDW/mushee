@@ -101,9 +101,22 @@
 .popover-sheet-enter {
     animation: popover-sheet-in 200ms var(--ease-solkey);
 }
+/* The score's selection-actions bar (components/editor/SelectionPopover.tsx) grows in from the
+   row it points at — its transform origin is set by the bar: bottom above the row, top when
+   flipped under it. The individual `scale` property, so it never fights a transform. */
+@keyframes selection-bar-in {
+    from {
+        opacity: 0;
+        scale: 0.96;
+    }
+}
+.selection-bar-enter {
+    animation: selection-bar-in 150ms var(--ease-solkey);
+}
 @media (prefers-reduced-motion: reduce) {
     .tooltip-enter,
-    .popover-sheet-enter {
+    .popover-sheet-enter,
+    .selection-bar-enter {
         animation: none;
     }
 }
