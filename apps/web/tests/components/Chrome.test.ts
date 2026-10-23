@@ -6,6 +6,7 @@ const account = vi.hoisted(() => ({ signOut: vi.fn() }))
 
 vi.mock('@/lib/auth-client', () => ({
     useSession: () => ({ data: { user: { name: 'Ada Lovelace', email: 'ada@example.com' } } }),
+    useHydratedSession: () => ({ data: { user: { name: 'Ada Lovelace', email: 'ada@example.com' } } }),
 }))
 vi.mock('@/lib/queries', () => ({ useSignOut: () => account.signOut }))
 vi.mock('next/navigation', () => ({ usePathname: () => '/scores' }))

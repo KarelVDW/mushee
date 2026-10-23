@@ -6,6 +6,7 @@ const visitor = vi.hoisted(() => ({ authed: false }))
 
 vi.mock('@/lib/auth-client', () => ({
     useSession: () => ({ data: visitor.authed ? { user: { id: 'u1' } } : null }),
+    useHydratedSession: () => ({ data: visitor.authed ? { user: { id: 'u1' } } : null }),
 }))
 vi.mock('@/lib/analytics', () => ({ track: vi.fn() }))
 

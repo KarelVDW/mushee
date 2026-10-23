@@ -5,7 +5,7 @@ import type { ReactNode } from 'react'
 import { settingsTabPath } from '@/app/settings/settingsTabs'
 import { PrimaryButton, SecondaryButton } from '@/components/ui'
 import { track } from '@/lib/analytics'
-import { useSession } from '@/lib/auth-client'
+import { useHydratedSession } from '@/lib/auth-client'
 import { LIBRARY_PATH, withNext } from '@/lib/nextPath'
 import { BETA_MODE, isPaidTier, type PlanTier, withPlan } from '@/lib/plans'
 
@@ -53,7 +53,7 @@ export function GetStartedButton({
     plan,
     children,
 }: GetStartedButtonProps) {
-    const { data: session } = useSession()
+    const { data: session } = useHydratedSession()
     const authed = !!session?.user
 
     const href = authed
@@ -90,7 +90,7 @@ export function GetStartedButton({
  * doesn't see it.
  */
 export function GetStartedNote({ children }: { children: ReactNode }) {
-    const { data: session } = useSession()
+    const { data: session } = useHydratedSession()
     if (session?.user) return null
     return <>{children}</>
 }

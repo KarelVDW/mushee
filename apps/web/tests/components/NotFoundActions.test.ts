@@ -6,6 +6,7 @@ const visitor = vi.hoisted(() => ({ authed: false, pending: false }))
 
 vi.mock('@/lib/auth-client', () => ({
     useSession: () => ({ data: visitor.authed ? { user: { id: 'u1' } } : null, isPending: visitor.pending }),
+    useHydratedSession: () => ({ data: visitor.authed ? { user: { id: 'u1' } } : null, isPending: visitor.pending }),
 }))
 
 import NotFound from '@/app/not-found'

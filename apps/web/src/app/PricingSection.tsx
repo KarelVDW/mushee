@@ -7,7 +7,7 @@ import { settingsTabPath } from '@/app/settings/settingsTabs'
 import { GetStartedButton } from '@/components/marketing/GetStartedButton'
 import { SectionHeading } from '@/components/marketing/SectionHeading'
 import { Badge, Container, Icon, PrimaryButton, SecondaryButton } from '@/components/ui'
-import { useSession } from '@/lib/auth-client'
+import { useHydratedSession } from '@/lib/auth-client'
 import { type Currency, formatMoney } from '@/lib/currency'
 import {
     CHEAPEST_PACK,
@@ -102,7 +102,7 @@ interface TierCardsProps {
  * plan (loading, an error, a tier off the ladder) keeps the static cards.
  */
 function TierCards(props: TierCardsProps) {
-    const { data: session } = useSession()
+    const { data: session } = useHydratedSession()
     return session?.user ? <AccountTierCards {...props} /> : <TierLadder {...props} currentTierId={null} />
 }
 

@@ -8,6 +8,7 @@ const visitor = vi.hoisted(() => ({ authed: false, tierId: null as string | null
 
 vi.mock('@/lib/auth-client', () => ({
     useSession: () => ({ data: visitor.authed ? { user: { id: 'u1' } } : null }),
+    useHydratedSession: () => ({ data: visitor.authed ? { user: { id: 'u1' } } : null }),
 }))
 vi.mock('@/lib/analytics', () => ({ track: vi.fn() }))
 vi.mock('@/lib/queries', () => ({

@@ -2,7 +2,7 @@ import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it, vi } from 'vitest'
 
-vi.mock('@/lib/auth-client', () => ({ useSession: () => ({ data: null }) }))
+vi.mock('@/lib/auth-client', () => ({ useSession: () => ({ data: null }), useHydratedSession: () => ({ data: null }) }))
 vi.mock('@/lib/analytics', () => ({ track: vi.fn() }))
 vi.mock('@/lib/queries', () => ({ useSignOut: () => ({ mutate: vi.fn() }) }))
 
