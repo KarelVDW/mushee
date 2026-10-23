@@ -1,8 +1,7 @@
+import Link from 'next/link'
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
-
-import Link from 'next/link'
 
 import { CloseButton, IconButton, PrimaryButton, SecondaryButton, TertiaryButton, TEXT_LINK_CLASS, TextLink } from '../src/Buttons'
 
