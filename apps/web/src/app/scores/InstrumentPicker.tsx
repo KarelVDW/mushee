@@ -1,6 +1,7 @@
 'use client'
 
 import { Instrument } from '@mushee/notation/model'
+import { SelectedMark } from '@mushee/ui'
 import { useId, useMemo, useState } from 'react'
 
 import { Chip, Eyebrow, Icon, TextField } from '@/components/ui'
@@ -38,8 +39,9 @@ type PopularInstrumentTilesProps = {
 )
 
 /**
- * The popular instruments as big tiles — at least 48px tall, a 15px name, two columns on a
- * phone and four from `sm` — each named 'Pick {instrument}'. Single choice for the score
+ * The popular instruments as big tiles — at least 56px tall, a 15px name on a shared top line,
+ * two columns on a phone and four from `sm` — each named 'Pick {instrument}'. A picked tile
+ * takes the selected fill and a SelectedMark in its corner, never colour alone. Single choice for the score
  * pickers; `multiple` toggles each tile on its own (onboarding's "What will you record?").
  */
 export function PopularInstrumentTiles(props: PopularInstrumentTilesProps) {
@@ -65,20 +67,23 @@ export function PopularInstrumentTiles(props: PopularInstrumentTilesProps) {
                         aria-describedby={subline ? sublineId : undefined}
                         onClick={() => pick(instrument)}
                         className={[
-                            'flex flex-col items-start justify-center gap-0.5 min-h-12 px-3 py-2.5 rounded-md border-0 text-left cursor-pointer',
+                            // Top-aligned, so every name sits on one line across the row whatever lies under it;
+                            // the right padding keeps the name clear of the pick mark.
+                            'relative flex flex-col items-start justify-start gap-0.5 min-h-14 pl-3 pr-8 pt-3 pb-2.5 rounded-md border-0 text-left cursor-pointer',
                             'transition-colors duration-150 ease-solkey focus-ring',
                             active
-                                ? 'bg-secondary-soft text-on-secondary-soft'
-                                : 'bg-surface-container text-on-surface hover:bg-surface-container-high',
+                                ? 'bg-(--color-selected) text-(--color-on-selected)'
+                                : 'bg-(--tile-fill) text-on-surface hover:bg-(--tile-fill-hover) active:bg-(--tile-fill-press)',
                         ].join(' ')}>
                         <span className="font-body font-medium text-[15px] leading-tight">{instrument.displayName}</span>
                         {subline && (
                             <span
                                 id={sublineId}
-                                className={`font-body font-normal text-[12px] leading-tight ${active ? 'text-on-secondary-soft' : 'text-on-surface-variant'}`}>
+                                className={`font-body font-normal text-[12px] leading-tight ${active ? 'text-(--color-on-selected)' : 'text-on-surface-variant'}`}>
                                 {subline}
                             </span>
                         )}
+                        {active && <SelectedMark className="absolute top-2 right-2" />}
                     </button>
                 )
             })}

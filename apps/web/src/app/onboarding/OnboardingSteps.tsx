@@ -1,6 +1,7 @@
 'use client'
 
 import { Instrument } from '@mushee/notation/model'
+import { SelectedMark } from '@mushee/ui'
 import { type KeyboardEvent, type ReactNode, type Ref, useEffect, useEffectEvent, useId, useRef, useState } from 'react'
 
 import { MicFailure } from '@/app/scores/[id]/RecordingCopy'
@@ -560,19 +561,32 @@ export function AboutStep({
     const detailQuestion = REFERRAL_SOURCES.find((s) => s.key === source)?.detailQuestion
     return (
         <StepShell titleRef={titleRef} title="A bit about you." subtitle="Optional. It helps us build the right things.">
-            <div className="flex flex-col gap-6">
+            <div className="flex flex-col gap-7">
                 <ChoiceRow label="Where are you with music?" options={BACKGROUNDS} value={background} onChange={onBackgroundChange} />
                 <ChoiceRow label="What do you want to do first?" options={GOALS} value={goal} onChange={onGoalChange} />
                 <div className="flex flex-col gap-3">
                     <ChoiceRow label="How did you find Solkey?" options={REFERRAL_SOURCES} value={source} onChange={onSourceChange} />
                     {detailQuestion && (
-                        <TextField label={`${detailQuestion} (optional)`} value={sourceDetail} onChange={onSourceDetailChange} />
+                        <TextField
+                            label={
+                                // The field's own label, in the questions' voice rather than the eyebrow's.
+                                <span className={`${QUESTION_CLASS} normal-case tracking-normal`}>
+                                    {detailQuestion}
+                                    <span className="font-normal text-on-surface-variant"> (optional)</span>
+                                </span>
+                            }
+                            value={sourceDetail}
+                            onChange={onSourceDetailChange}
+                        />
                     )}
                 </div>
             </div>
         </StepShell>
     )
 }
+
+/** A survey question's voice: a 15px semibold sentence. */
+const QUESTION_CLASS = 'font-body font-semibold text-[15px] leading-[1.3] text-on-surface'
 
 /** A question with its single-choice answers: a radiogroup named by the question, one Tab stop, arrows move. */
 function ChoiceRow({
@@ -594,7 +608,7 @@ function ChoiceRow({
     )
     return (
         <div className="flex flex-col gap-2.5">
-            <span id={labelId} className="font-body font-semibold text-[15px] leading-[1.3] text-on-surface">
+            <span id={labelId} className={QUESTION_CLASS}>
                 {label}
             </span>
             <div role="radiogroup" aria-labelledby={labelId} className="flex flex-wrap gap-2">
@@ -612,7 +626,10 @@ function ChoiceRow({
     )
 }
 
-/** One answer: the soft fill when chosen, and an 18px ring that fills with a check, so the choice never rests on colour alone. */
+/**
+ * One answer: an outlined 18px ring at rest on the tile fill; chosen, the selected fill and a
+ * SelectedMark in the ring's place, so the choice never rests on colour alone.
+ */
 function ChoiceChip({
     radio,
     checked,
@@ -634,15 +651,18 @@ function ChoiceChip({
             className={[
                 'inline-flex items-center gap-2 rounded-full border-0 pl-2.5 pr-4 py-2 min-h-9 pointer-coarse:min-h-10 cursor-pointer text-left',
                 'font-body font-medium text-[14px] leading-tight transition-colors duration-150 ease-solkey focus-ring',
-                checked ? 'bg-primary-soft text-on-primary-soft' : 'bg-surface-container text-on-surface hover:bg-surface-container-high',
+                checked
+                    ? 'bg-(--color-selected) text-(--color-on-selected)'
+                    : 'bg-surface-container-low text-on-surface hover:bg-surface-container-high',
             ].join(' ')}>
+            {/* The ring's 18px slot holds the mark too, so the label never shifts when picked. */}
             <span
                 aria-hidden="true"
                 className={[
                     'size-4.5 shrink-0 rounded-full inline-flex items-center justify-center',
-                    checked ? 'bg-primary-container text-on-primary-container' : 'border-2 border-solid border-outline',
+                    checked ? '' : 'border-2 border-solid border-outline',
                 ].join(' ')}>
-                {checked && <Icon name="check" size={12} />}
+                {checked && <SelectedMark size="sm" />}
             </span>
             {children}
         </button>
