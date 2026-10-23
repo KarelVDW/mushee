@@ -100,6 +100,13 @@ export const DOCK_WELL_MIN_WIDTHS = {
 const FLATTENED_TRACK =
     '[&>[role=group]]:h-auto [&>[role=group]]:p-0 [&>[role=group]]:bg-transparent [&>[role=group]]:[--shadow-raised:none]'
 
+/**
+ * The phone tool row's hold on its `fill` Segmented: each option's tooltip wrapper (a
+ * `shrink-0` inline-flex span around the button) takes an equal share of the track too, so the
+ * five values split the row evenly and the picked one is a round-ended pill, not an egg.
+ */
+const FILLED_TRACK_OPTIONS = '[&>[role=group]>*]:flex-1 [&>[role=group]>*]:min-w-0'
+
 /** Slack around the phone dock's height animation, so focus rings at its edges aren't clipped (px). */
 const RING_SLACK_PX = 4
 
@@ -212,9 +219,11 @@ export function NoteToolDock({
                                     {line}
                                 </p>
                             )}
-                            <div role="group" aria-label="Note tools" className="mx-auto flex items-center justify-center gap-x-2">
+                            {/* The row spans the dock, so its edges are the action row's: Undo, the note
+                                values filling the room between, and the More capsule as tall as their well. */}
+                            <div role="group" aria-label="Note tools" className={`flex w-full items-center gap-2 ${FILLED_TRACK_OPTIONS}`}>
                                 <HistoryTools manipulator={manipulator} compact />
-                                {durations({})}
+                                {durations({ fill: true })}
                                 <MoreToolsSheet
                                     manipulator={manipulator}
                                     metronome={metronome}

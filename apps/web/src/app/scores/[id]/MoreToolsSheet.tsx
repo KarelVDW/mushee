@@ -340,7 +340,8 @@ export function MoreToolsSheet({
     })()
 
     return (
-        <div ref={anchorRef} className="shrink-0">
+        // As tall as the note values' well beside it (the tool row stretches it), a capsule like every other unit.
+        <div ref={anchorRef} className="shrink-0 self-stretch flex">
             <button
                 type="button"
                 aria-label="More tools"
@@ -348,11 +349,12 @@ export function MoreToolsSheet({
                 aria-expanded={open}
                 onClick={() => (open ? closeAll() : setView('menu'))}
                 className={[
-                    'w-11 h-12 inline-flex flex-col items-center justify-center gap-0.5 rounded-2xl border-0 cursor-pointer',
+                    'self-stretch min-w-13 px-3.5 inline-flex flex-col items-center justify-center gap-0.5 rounded-full border-0 cursor-pointer',
                     'font-label font-semibold text-[11px] leading-none select-none [-webkit-touch-callout:none]',
                     'transition-[background-color,color] duration-150 ease-solkey focus-ring',
+                    // Open is a tone darker, never cyan: it is open, not chosen — the sheet shows that.
                     open
-                        ? 'bg-primary-container text-on-primary-container'
+                        ? 'bg-surface-container-high tonal-layer-glow text-on-surface'
                         : 'bg-surface-container-lowest tonal-layer-glow text-on-surface hover:bg-surface-container-high',
                 ].join(' ')}>
                 <Icon name="more-horizontal" size={18} />

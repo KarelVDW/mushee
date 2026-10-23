@@ -66,7 +66,9 @@ export function RecordButton({
     return (
         <span data-record-button className="contents">
             <TransportBtn
-                size={large ? 54 : 48}
+                // 56px on phones, at rest and live alike — the recording strip's height, so the
+                // button never changes size as a take starts.
+                size={large ? 56 : 48}
                 tone="record"
                 active={live}
                 onClick={onRecordToggle}
@@ -160,6 +162,24 @@ export function TransportControls({
 
 // --- Mobile action row (bottom of the dock): note navigation, pitch nudges, transport ---
 
+/** From this width a phone's dock buttons grow from 40px to 44px. */
+const ROOMY_PHONE_QUERY = '(min-width: 400px)'
+
+/**
+ * The phone dock's round-button size: 40px, 44px from 400px wide — the nudges', and Undo's
+ * at the head of the tool row, so the dock's two rows share one button size.
+ */
+export function usePhoneDockButtonSize(): 40 | 44 {
+    return useMediaQuery(ROOMY_PHONE_QUERY) ? 44 : 40
+}
+
+/**
+ * The 11px caption hanging under each phone well and its 2px gap, as variables on the action
+ * row: the captions read them, and the transport's bottom padding is their sum, so the circles
+ * centre on the wells rather than on the wells plus their captions.
+ */
+const WELL_CAPTION_VARS = '[--well-caption:11px] [--well-caption-gap:2px]'
+
 interface MobileEditorActionsProps {
     transport: TransportControlsProps
     onPrevious: () => void
@@ -175,9 +195,9 @@ interface MobileEditorActionsProps {
 /** One labelled pair of the phone's note controls: the white well, its two buttons, and an 11px caption under it. */
 function LabelledWell({ label, children }: { label: string; children: ReactNode }) {
     return (
-        <div className="flex flex-col items-center gap-0.5">
+        <div className="flex flex-col items-center gap-(--well-caption-gap)">
             <ToolGroup ariaLabel={label}>{children}</ToolGroup>
-            <span aria-hidden className="font-label font-semibold text-[11px] leading-none text-on-surface-variant">
+            <span aria-hidden className="font-label font-semibold text-(length:--well-caption) leading-none text-on-surface-variant">
                 {label}
             </span>
         </div>
@@ -195,10 +215,12 @@ function LabelledWell({ label, children }: { label: string; children: ReactNode 
  * long-press / double-tap / drag-release.
  */
 export function MobileEditorActions({ transport, onPrevious, onNext, onPitchUp, onPitchDown, disabled, pitch }: MobileEditorActionsProps) {
-    const roomy = useMediaQuery('(min-width: 400px)')
-    const size = roomy ? 44 : 40
+    const size = usePhoneDockButtonSize()
     return (
-        <div role="group" aria-label="Note navigation and transport" className="flex items-center justify-between gap-1.5 pt-2">
+        <div
+            role="group"
+            aria-label="Note navigation and transport"
+            className={`flex items-center justify-between gap-1.5 pt-2 ${WELL_CAPTION_VARS}`}>
             <div className="flex items-center gap-1.5">
                 <LabelledWell label="Note">
                     <TransportBtn size={size} onClick={onPrevious} ariaLabel="Select previous note" disabled={disabled}>
@@ -227,7 +249,10 @@ export function MobileEditorActions({ transport, onPrevious, onNext, onPitchUp, 
                     </TransportBtn>
                 </LabelledWell>
             </div>
-            <TransportControls {...transport} large showMetronome={false} />
+            {/* Lifted by the captions' height, so the circles centre on the wells' line. */}
+            <div className="pb-[calc(var(--well-caption)+var(--well-caption-gap))]">
+                <TransportControls {...transport} large showMetronome={false} />
+            </div>
         </div>
     )
 }
