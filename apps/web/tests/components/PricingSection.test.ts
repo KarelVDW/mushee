@@ -72,6 +72,22 @@ describe('Pricing', () => {
         }
     })
 
+    it('sets Arranger out as one wide card: its lines as checks, the same price block, its own button', () => {
+        const arranger = cards().find((card) => card.name === 'Arranger')
+        expect(arranger?.text).toContain('For transcribing every day')
+        for (const line of ['8 hours of recording a day', 'Everything in Studio', 'Direct support from the maker'])
+            expect(arranger?.text).toContain(line)
+        expect(arranger?.text).toContain('or $490 a year — save 17%')
+        expect(arranger?.cta).toBe('Choose Arranger')
+    })
+
+    it('keeps the one-time packs behind a disclosure', () => {
+        const host = document.createElement('div')
+        host.innerHTML = renderToStaticMarkup(createElement(Pricing, { ctaLocation: 'pricing' }))
+        const teaser = [...host.querySelectorAll('button')].find((b) => b.textContent?.startsWith('Not ready for a subscription?'))
+        expect(teaser?.getAttribute('aria-expanded')).toBe('false')
+    })
+
     it('offers the professional tier as "Choose Arranger"', () => {
         const host = document.createElement('div')
         host.innerHTML = renderToStaticMarkup(createElement(Pricing, { ctaLocation: 'pricing' }))

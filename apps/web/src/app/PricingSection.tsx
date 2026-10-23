@@ -184,38 +184,39 @@ function yearlyLine(tier: PlanTier, currency: Currency): string {
 // they take the inverse quiet tone (the note is the tag's last line, the cadence its first line's last part).
 const PRICE_ON_DARK = '[&>span:last-child]:text-inverse-on-surface [&>span:first-child>span:last-child]:text-inverse-on-surface'
 
-/** The professional tier: present enough to anchor the ladder, slim enough
- *  not to compete with the consumer cards. */
+/**
+ * The professional tier: one wide card under the ladder, on its grid — name and what it adds on
+ * the left, its price, then its button — present enough to anchor the ladder, quiet enough not
+ * to compete with the consumer cards. Stacked on phones.
+ */
 function ProfessionalCard(props: CardProps) {
     const { tier, currency, currentTierId } = props
+    const lines = [recordingBudgetLabel(tier.dailyRecordingSeconds), ...tier.features]
     return (
-        <div className="mt-6 max-w-190 mx-auto w-full bg-surface-container-lowest tonal-layer-glow rounded-lg px-6 py-5 flex flex-wrap items-center gap-4">
-            <span className="w-10 h-10 rounded-full bg-secondary-soft text-on-secondary-soft inline-flex items-center justify-center shrink-0">
-                <Icon name={tier.icon} size={18} />
-            </span>
-            <div className="flex flex-col gap-0.5 flex-1 min-w-50">
-                <span className="inline-flex flex-wrap items-center gap-2 font-headline font-semibold text-[16px] leading-[1.2] text-on-surface">
-                    {tier.name} — {tier.tagline.toLowerCase()}
-                    {tier.id === currentTierId && <Badge tone="neutral">Your plan</Badge>}
-                </span>
-                <span className="font-body font-normal text-[13px] leading-[1.4] text-on-surface-variant">
-                    {recordingBudgetLabel(tier.dailyRecordingSeconds)} · everything in Studio · direct support from the maker
-                </span>
+        <div className="mt-6 w-full rounded-lg bg-surface-container-lowest tonal-layer-glow p-7 flex flex-col gap-5 md:grid md:grid-cols-[minmax(0,1fr)_auto_auto] md:items-center md:gap-10">
+            <div className="flex flex-col gap-3 min-w-0">
+                <div className="flex flex-col gap-1.5">
+                    <div className="flex flex-wrap items-center gap-2">
+                        <h3 className="type-heading text-on-surface m-0">{tier.name}</h3>
+                        {tier.id === currentTierId && <Badge tone="neutral">Your plan</Badge>}
+                    </div>
+                    <span className="font-body font-normal text-[14px] leading-[1.3] text-on-surface-variant">{tier.tagline}</span>
+                </div>
+                <ul className="list-none p-0 m-0 flex flex-wrap gap-x-6 gap-y-2">
+                    {lines.map((line) => (
+                        <FeatureLine key={line} emphasis={false}>
+                            {line}
+                        </FeatureLine>
+                    ))}
+                </ul>
             </div>
-            <div className="flex items-baseline gap-1.5">
-                <span className="font-mono font-semibold text-[22px] leading-none tracking-[-0.01em] text-on-surface">
-                    {formatMoney(tier.priceMonthly, currency)}
-                </span>
-                <span className="font-body font-medium text-[12px] leading-none text-on-surface-variant">
-                    / month · {formatMoney(tier.priceYearly, currency)}/yr
-                </span>
-            </div>
+            <PriceTag size="lg" amount={formatMoney(tier.priceMonthly, currency)} cadence="/ month" note={yearlyLine(tier, currency)} />
             <PlanCardCta {...props} primary={false} />
         </div>
     )
 }
 
-/** One-time packs, one click away — the subscriptions above stay the offer. */
+/** One-time packs, one click away — the subscriptions above stay the offer. A disclosure: its chevron turns as it opens. */
 function PacksTeaser({ currency }: { currency: Currency }) {
     const [open, setOpen] = useState(false)
     return (
@@ -224,17 +225,20 @@ function PacksTeaser({ currency }: { currency: Currency }) {
                 type="button"
                 onClick={() => setOpen((v) => !v)}
                 aria-expanded={open}
-                className="border-0 bg-transparent p-0 cursor-pointer font-body font-medium text-[14px] text-primary underline">
+                className="group inline-flex items-center gap-2 border-0 bg-transparent p-0 cursor-pointer font-body font-medium text-[14px] leading-normal text-primary hover:text-primary-dim transition-colors duration-150 ease-solkey rounded-sm focus-ring pointer-coarse:min-h-10">
                 Not ready for a subscription? One-time minute packs, from {formatMoney(CHEAPEST_PACK.price, currency)}
+                <span
+                    aria-hidden
+                    className="shrink-0 inline-flex transition-transform duration-150 ease-solkey group-aria-expanded:rotate-180 motion-reduce:transition-none">
+                    <Icon name="chevron-down" size={16} />
+                </span>
             </button>
             {open && (
                 <div className="mt-5 max-w-190 mx-auto grid grid-cols-1 sm:grid-cols-3 gap-4 text-left">
                     {CREDIT_PACKS.map((pack) => (
                         <div key={pack.id} className="bg-surface-container-lowest tonal-layer-glow rounded-lg p-5 flex flex-col gap-1.5">
                             <span className="font-headline font-semibold text-[15px] leading-[1.2] text-on-surface">{pack.name}</span>
-                            <span className="font-mono font-semibold text-[20px] leading-none tracking-[-0.01em] text-on-surface">
-                                {formatMoney(pack.price, currency)}
-                            </span>
+                            <PriceTag amount={formatMoney(pack.price, currency)} className="text-on-surface" />
                             <span className="font-body font-normal text-[13px] leading-[1.4] text-on-surface-variant">
                                 {pack.minutes} min of recording · {pack.blurb}
                             </span>
