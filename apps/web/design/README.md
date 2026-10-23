@@ -43,7 +43,7 @@ Every decision answers to this person: what we build, what we leave out, where a
 | Color tokens        | `packages/ui/src/theme.css`                         | M3-style palette with cyan + magenta accents — the shared theme each app's `globals.css` imports.                                                                                                                                           |
 | UI primitives       | `packages/ui/src/`                                  | The shared `@mushee/ui` kit: buttons, inputs, feedback, icons, toasts. Web-only pieces live in `apps/web/src/components/ui/`.                                                                                                               |
 | Type loader         | `apps/web/src/app/layout.tsx`                       | Loads Space Grotesk, Manrope, Newsreader (with its `opsz` axis) and Geist Mono via `next/font/google`. The font variables live on `<html>`, so hand-written CSS may use `var(--font-body)`. Icons are inline SVGs — no icon font is loaded. |
-| Notation glyphs     | `packages/notation/src/engraving/bravura_glyphs.ts` | Bravura SMuFL outlines — bundled glyph data, rendered as SVG `<path>`. Not used outside the score canvas.                                                                                                                                   |
+| Notation glyphs     | `packages/notation/src/engraving/bravura_glyphs.ts` | Bravura SMuFL outlines — bundled glyph data, rendered as SVG `<path>`. Outside the canvas only as drawn notation marks (see Iconography).                                                                                                   |
 
 There is **one product**: the web app. The UI kit covers Landing → Auth → Onboarding → Library → Editor → Settings.
 
@@ -447,6 +447,18 @@ A Solkey card is **`surface_container_lowest` + `--shadow-raised` (`tonal-layer-
 
 **Primary system: the custom Solkey glyph set.** Inline SVGs drawn on a 24px grid with 2px strokes, **squared linecaps and mitered joins** — icons should read like technical schematics next to Space Grotesk. Color flows from `currentColor`; filled details (noteheads, indicator dots) opt out of the stroke locally. The registry lives in `packages/ui/src/Icon.tsx` (the shared `@mushee/ui` kit, used via `<Icon name="…" size={…}>`; a name it lacks fails type-checking), mirrored for the kit in `ui_kits/web/Icon.jsx` — keep the two in sync. Static HTML previews use the `.ico-glyph` utility from `colors_and_type.css` on a raw `<svg viewBox="0 0 24 24">`. Names are Lucide-style kebab-case: `search`, `pencil`, `trash-2`, `x`, `eye`, `eye-off`, `arrow-right`, `music`. Unknown names render a crossed-box fallback so gaps are visible.
 
+Strokes render at 2px from 16px up, 1.75 at 14 and 1.5 at 12; Icon compensates for the viewBox scale (`strokeWidthFor`: 48 / size viewBox units, capped at 3 so small glyphs stay open). Sizes come from a five-step scale (`ICON_SIZES`; `size="sm"` or a number):
+
+| Step | Size | For                                                                       |
+| ---- | ---- | ------------------------------------------------------------------------- |
+| `xs` | 12px | Inline with text of 13px or less: a chip's check, a More chevron          |
+| `sm` | 16px | Controls and chips — buttons, header chips, toast glyphs, dock icons      |
+| `md` | 20px | Large controls: a dialog's or sheet's Close, the phone transport's glyphs |
+| `lg` | 24px | Feature wells                                                             |
+| `xl` | 32px | Empty-state and success heroes                                            |
+
+Unsized call sites still default to 18px until an audit of them flips the default to 16 (`sm`).
+
 The registry also carries **reserved glyphs** with no call sites yet — navigation chrome (`menu`, `settings`), editing (`copy`, `scissors`, `zoom-in`), transport & audio (`skip-back`, `skip-forward`, `repeat`, `volume`, `headphones`), files & sharing (`upload`, `file-music`, `folder`, `printer`), social (`heart`, `star`, `bookmark`), status (`check-circle`, `help-circle`, `zap`), and music-specific marks (`piano`). Before drawing a new icon, check whether a reserved one already covers the concept — new features should pull from this set rather than a foreign icon pack.
 
 **One glyph, one meaning.** A glyph names one thing across the whole app, so a newcomer can learn it once:
@@ -464,7 +476,7 @@ The registry also carries **reserved glyphs** with no call sites yet — navigat
 
 The dotted-note control is a drawn glyph (a quarter note with its dot), never a "·" character; note lengths, the rest, the tie and the triplet are drawn glyphs too (`NoteToolParts.tsx`).
 
-**Notation glyphs: SMuFL / Bravura.** The score editor renders music notation using bundled Bravura outlines (`packages/notation/src/engraving/bravura_glyphs.ts`, the shared `@mushee/notation` workspace package) drawn as `<path>` inside `<svg>`. These are **not for general UI**; they only appear inside the score canvas. That file is generated: a subset of just the glyphs the app draws, cut from the full Bravura table by `packages/notation/scripts/subset-bravura.ts` (`pnpm --filter @mushee/notation glyphs:subset`), so a new glyph enters by being listed there. We did not copy it into the design system — re-import from `@mushee/notation` if you actually need to render notation.
+**Notation glyphs: SMuFL / Bravura.** The score editor renders music notation using bundled Bravura outlines (`packages/notation/src/engraving/bravura_glyphs.ts`, the shared `@mushee/notation` workspace package) drawn as `<path>` inside `<svg>`. These are **not for general UI**. Bravura glyphs appear outside the canvas only as drawn notation marks: dock glyphs, picker icons, the empty-library staff, and the bar-of-rest mark on missing screens (plus the marketing demo sheet and its step vignettes, which draw real notation) — never as an icon for an action. That file is generated: a subset of just the glyphs the app draws, cut from the full Bravura table by `packages/notation/scripts/subset-bravura.ts` (`pnpm --filter @mushee/notation glyphs:subset`), so a new glyph enters by being listed there. We did not copy it into the design system — re-import from `@mushee/notation` if you actually need to render notation.
 
 **No emoji.** Solkey's voice is plain, but it's not casual in that way.
 
