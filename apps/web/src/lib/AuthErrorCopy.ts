@@ -12,9 +12,18 @@ export type AuthErrorField = 'email' | 'password' | 'code'
  */
 export type AuthErrorAction = 'reset' | 'sign-in' | 'request-new-link' | 'resend'
 
-/** What an auth form shows for a failure: Solkey's words, and where and how to go on. */
+/**
+ * How loud a failure is:
+ * - `form` — the user can fix it (credentials that don't match, a field that's wrong, an account
+ *   that already exists, a code or link that's spent): the quiet form tier of the alert;
+ * - `fault` — something really failed (the network, the server, anything unknown): the fault slab.
+ */
+export type AuthErrorKind = 'form' | 'fault'
+
+/** What an auth form shows for a failure: Solkey's words, how loud, and where and how to go on. */
 export interface AuthErrorMessage {
     readonly message: string
+    readonly kind: AuthErrorKind
     /** Show the message under this field instead of in the form's alert. */
     readonly field?: AuthErrorField
     /** The next step to offer beside the message. */
@@ -34,32 +43,44 @@ export interface AuthErrorMessage {
  */
 export class AuthErrorCopy {
     /** The connection failed before the server could answer. */
-    static readonly NETWORK: AuthErrorMessage = { message: "Couldn't reach Solkey. Check your connection and try again." }
+    static readonly NETWORK: AuthErrorMessage = { message: "Couldn't reach Solkey. Check your connection and try again.", kind: 'fault' }
 
     /** Any failure without its own line — never blames a side, since it may be either. */
-    static readonly FALLBACK: AuthErrorMessage = { message: 'Something went wrong. Try again in a moment.' }
+    static readonly FALLBACK: AuthErrorMessage = { message: 'Something went wrong. Try again in a moment.', kind: 'fault' }
 
     private static readonly BY_CODE: ReadonlyMap<string, AuthErrorMessage> = (() => {
         const alreadyExists: AuthErrorMessage = {
             message: "There's already an account with this email. Sign in instead?",
+            kind: 'form',
             action: 'sign-in',
         }
         return new Map<string, AuthErrorMessage>([
             [
                 'INVALID_EMAIL_OR_PASSWORD',
-                { message: "That email and password don't match. Check for a typo, or reset your password.", action: 'reset' },
+                {
+                    message: "That email and password don't match. Check for a typo, or reset your password.",
+                    kind: 'form',
+                    action: 'reset',
+                },
             ],
             ['USER_ALREADY_EXISTS', alreadyExists],
             ['USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL', alreadyExists],
-            ['PASSWORD_TOO_SHORT', { message: 'Use at least 8 characters.', field: 'password' }],
-            ['INVALID_EMAIL', { message: "That email doesn't look quite right.", field: 'email' }],
+            ['PASSWORD_TOO_SHORT', { message: 'Use at least 8 characters.', kind: 'form', field: 'password' }],
+            ['INVALID_EMAIL', { message: "That email doesn't look quite right.", kind: 'form', field: 'email' }],
             [
                 'INVALID_TOKEN',
-                { message: 'This reset link has expired or was already used. Ask for a new one below.', action: 'request-new-link' },
+                {
+                    message: 'This reset link has expired or was already used. Ask for a new one below.',
+                    kind: 'form',
+                    action: 'request-new-link',
+                },
             ],
-            ['INVALID_OTP', { message: "That code doesn't match. Check the newest email from us, or send a new code.", field: 'code' }],
-            ['OTP_EXPIRED', { message: 'That code has expired. Send a new one.', action: 'resend' }],
-            ['TOO_MANY_ATTEMPTS', { message: 'Too many tries. Send a new code to start again.', action: 'resend' }],
+            [
+                'INVALID_OTP',
+                { message: "That code doesn't match. Check the newest email from us, or send a new code.", kind: 'form', field: 'code' },
+            ],
+            ['OTP_EXPIRED', { message: 'That code has expired. Send a new one.', kind: 'form', action: 'resend' }],
+            ['TOO_MANY_ATTEMPTS', { message: 'Too many tries. Send a new code to start again.', kind: 'form', action: 'resend' }],
         ])
     })()
 

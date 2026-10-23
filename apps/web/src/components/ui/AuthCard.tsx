@@ -4,6 +4,8 @@ import { Alert, PrimaryButton, TertiaryButton, TextField, Wordmark } from '@mush
 import Link from 'next/link'
 import { type FormEvent, type ReactNode, useState } from 'react'
 
+import { DemoSheetStill } from '@/components/DemoSheet'
+import { Haze } from '@/components/marketing/Haze'
 import type { AuthErrorAction, AuthErrorMessage } from '@/lib/AuthErrorCopy'
 import { withNext } from '@/lib/nextPath'
 import { BETA_MODE } from '@/lib/plans'
@@ -69,63 +71,70 @@ interface AuthFrameProps {
     headline: [string, string]
     tagline: string
     /**
-     * Gives phones a compact brand row instead — the wordmark and this one line, with
-     * the headline and tagline from md up. Left out, the panel stacks and keeps its
-     * (smaller) headline and tagline on phones too.
+     * The headline as one line, for the phones' compact brand strip (the wordmark and this
+     * line, which is then the page's h1); the two-line headline and the tagline take over
+     * from md. Left out, the strip reads the headline on one line.
      */
     mobileTagline?: string
     /** The form column's content. */
     children: ReactNode
 }
 
-/** The auth pages' card: brand panel (wordmark, serif headline, tagline) beside the form column. */
+/**
+ * The auth pages' card: brand panel (wordmark, the finished demo sheet on wide screens, serif
+ * headline, tagline) beside the form column, which holds the one cyan haze so it never tints the
+ * grey panel.
+ */
 export function AuthFrame({ headline, tagline, mobileTagline, children }: AuthFrameProps) {
     return (
-        <main className="w-full max-w-230 mx-auto bg-surface-container-lowest rounded-xl editorial-shadow flex flex-col md:flex-row overflow-hidden md:min-h-145 relative">
-            <div className="absolute -top-[20%] -right-[10%] w-1/2 h-1/2 bg-primary-container/20 rounded-full blur-[96px] pointer-events-none" />
+        <main className="w-full max-w-230 mx-auto bg-surface-container-lowest rounded-xl editorial-shadow flex flex-col md:flex-row overflow-hidden md:min-h-145">
             <BrandPanel headline={headline} tagline={tagline} mobileTagline={mobileTagline} />
-            <section className="flex-1 p-6 py-8 md:p-14 flex flex-col relative z-2">
-                <div className="max-w-90 w-full mx-auto flex-1 flex flex-col">{children}</div>
+            <section className="relative overflow-hidden flex-1 px-5 py-7 md:p-14 flex flex-col">
+                <Haze placement="top-right" />
+                <div className="relative z-2 max-w-90 w-full mx-auto flex-1 flex flex-col">{children}</div>
             </section>
         </main>
     )
 }
 
+/**
+ * The brand panel. Phones get a compact strip — the wordmark and the headline on one line;
+ * from md it stacks the wordmark over the two-line serif headline and the tagline, and from lg
+ * the finished demo sheet sits between them: the product the landing page just showed. One h1
+ * at every width.
+ */
 function BrandPanel({ headline, tagline, mobileTagline }: Omit<AuthFrameProps, 'children'>) {
-    const compact = mobileTagline !== undefined
     return (
-        <section
-            className={[
-                'md:w-[42%] bg-surface-container-high p-6 md:p-12 justify-between gap-4',
-                compact ? 'flex flex-row md:flex-col items-center md:items-stretch relative overflow-hidden' : 'flex flex-col',
-            ].join(' ')}>
+        <section className="md:w-[42%] bg-surface-container-high p-6 md:p-12 flex flex-row md:flex-col items-center md:items-stretch justify-between gap-4">
             {/* The way home: the only other one was the browser's Back button. */}
             <Link
                 href="/"
                 aria-label="Solkey home"
-                className={[
-                    'no-underline inline-flex items-center rounded-sm focus-ring pointer-coarse:min-h-10',
-                    compact ? 'md:self-start' : 'self-start',
-                ].join(' ')}>
+                className="no-underline inline-flex items-center rounded-sm focus-ring pointer-coarse:min-h-10 md:self-start">
                 <Wordmark size={32} />
             </Link>
-            <div className={compact ? 'flex flex-col gap-4 max-md:hidden' : 'flex flex-col gap-4'}>
+            <div className="max-lg:hidden my-auto py-8">
+                <DemoSheetStill />
+                <p className="m-0 mt-3 font-body text-[12px] leading-[1.4] text-on-surface-variant">Someone humming Frère Jacques.</p>
+            </div>
+            <div className="flex flex-col gap-4 min-w-0">
                 <h1
                     className={[
-                        'font-serif font-normal italic leading-none tracking-[-0.01em] text-on-surface m-0',
-                        compact ? 'text-[48px]' : 'text-[28px] md:text-[48px]',
+                        'm-0 font-serif font-normal italic',
+                        'max-md:text-[17px] max-md:leading-snug max-md:text-right max-md:text-on-surface-variant',
+                        'md:text-[48px] md:leading-none md:tracking-[-0.01em] md:text-on-surface',
                     ].join(' ')}>
-                    {headline[0]}
-                    <br />
-                    {headline[1]}
+                    <span className="md:hidden">{mobileTagline ?? headline.join(' ')}</span>
+                    <span className="max-md:hidden">
+                        {headline[0]}
+                        <br />
+                        {headline[1]}
+                    </span>
                 </h1>
-                <p className="font-body font-normal text-[14px] leading-normal text-on-surface-variant max-w-70 m-0">{tagline}</p>
-            </div>
-            {compact && (
-                <p className="md:hidden font-serif italic text-[17px] leading-snug text-on-surface-variant m-0 text-right">
-                    {mobileTagline}
+                <p className="max-md:hidden font-body font-normal text-[14px] leading-normal text-on-surface-variant max-w-75 m-0">
+                    {tagline}
                 </p>
-            )}
+            </div>
         </section>
     )
 }
@@ -189,9 +198,10 @@ export function AuthCard({ mode, notice, loading, submitDisabled, beforeSubmit, 
             </div>
 
             {/* method="post": a submit that lands before hydration falls back to a native submit,
-                and a GET would put the email and password in the URL (history, server logs). */}
-            <form method="post" onSubmit={submit} className="flex flex-col gap-5 flex-1">
-                <div className="flex flex-col gap-4.5 flex-1 justify-center">
+                and a GET would put the email and password in the URL (history, server logs).
+                Top-anchored: an alert only pushes the button down, never the fields being typed in. */}
+            <form method="post" onSubmit={submit} className="flex flex-col flex-1">
+                <div className="flex flex-col gap-4.5">
                     {isSignup && (
                         <TextField
                             label="Your name"
@@ -233,26 +243,30 @@ export function AuthCard({ mode, notice, loading, submitDisabled, beforeSubmit, 
                         </div>
                     )}
                     {alert && (
-                        <Alert>
+                        // A typo or an existing account is the user's to fix: the quiet form tier. A
+                        // network or server failure keeps the fault slab.
+                        <Alert tone={alert.kind}>
                             <AuthErrorText error={alert} email={email} next={next} />
                         </Alert>
                     )}
                     <FieldErrorAnnouncement label={error?.field === 'email' ? 'Email' : 'Password'} message={fieldMessage} />
                 </div>
 
-                <div className="flex flex-col gap-3.5 pt-2">
+                <div className="flex flex-col gap-3.5 mt-7">
                     {beforeSubmit}
                     <PrimaryButton size="lg" type="submit" emphasis="pop" fullWidth disabled={loading || submitDisabled}>
                         {loading ? copy.submitting : copy.submit}
                     </PrimaryButton>
                     {isSignup && <SignupTerms />}
-                    <div className="flex justify-between items-center">
-                        <span className="font-body font-normal text-[13px] leading-none text-on-surface-variant">{copy.switchPrompt}</span>
-                        <TertiaryButton href={withNext(copy.switchHref, next)} onClick={() => AuthPrefill.offer({ email })}>
-                            {copy.switchLabel}
-                        </TertiaryButton>
-                    </div>
                 </div>
+
+                {/* One centred line at the column's foot: the prompt and its answer read together. */}
+                <p className="m-0 mt-auto pt-6 flex justify-center items-center gap-1.5 font-body text-[13px] text-on-surface-variant">
+                    {copy.switchPrompt}{' '}
+                    <TertiaryButton href={withNext(copy.switchHref, next)} onClick={() => AuthPrefill.offer({ email })}>
+                        {copy.switchLabel}
+                    </TertiaryButton>
+                </p>
             </form>
         </AuthFrame>
     )
@@ -278,13 +292,14 @@ function SignupTerms() {
     return (
         <div className="flex flex-col gap-1 text-center font-body font-normal text-[12px] leading-[1.4] text-on-surface-variant">
             <p className="m-0">{BETA_MODE ? 'Free during the beta.' : 'Free to start — no card needed.'}</p>
+            {/* The legal names never break across lines. */}
             <p className="m-0">
                 By creating an account you agree to the{' '}
-                <Link href="/terms" className={INLINE_LINK}>
+                <Link href="/terms" className={`${INLINE_LINK} whitespace-nowrap`}>
                     Terms
                 </Link>{' '}
                 and{' '}
-                <Link href="/privacy" className={INLINE_LINK}>
+                <Link href="/privacy" className={`${INLINE_LINK} whitespace-nowrap`}>
                     Privacy policy
                 </Link>
                 .
@@ -331,22 +346,33 @@ function Tabs({ mode, next }: { mode: AuthMode; next?: string }) {
     )
 }
 
+/** A Sign in / Create account tab: the nav tabs' focus ring, hover and 40px coarse hit area, over its 3px underline. */
 function ModeTab({ href, label, active }: { href: string; label: string; active: boolean }) {
     return (
         <Link
             href={href}
             aria-current={active ? 'page' : undefined}
             className={[
-                'no-underline font-body font-medium text-[14px] leading-none pb-2 whitespace-nowrap',
+                'relative no-underline font-body font-medium text-[14px] leading-none pb-2 whitespace-nowrap rounded-sm focus-ring',
+                'transition-colors duration-150 ease-solkey',
+                "pointer-coarse:after:absolute pointer-coarse:after:-inset-x-2 pointer-coarse:after:-inset-y-3 pointer-coarse:after:content-['']",
                 active
                     ? 'text-on-surface border-b-[3px] border-primary-container'
-                    : 'text-on-surface-variant border-b-[3px] border-transparent',
+                    : 'text-on-surface-variant hover:text-on-surface border-b-[3px] border-transparent',
             ].join(' ')}>
             {label}
         </Link>
     )
 }
 
+/**
+ * The auth pages' page: the card top-anchored (from 12% of the viewport on wide screens), so a
+ * card that grows — an alert landing — extends downward and never shifts what is already there.
+ */
 export function AuthShell({ children }: { children: ReactNode }) {
-    return <div className="min-h-dvh flex items-center justify-center p-4 py-6 sm:p-8 bg-surface">{children}</div>
+    return (
+        <div className="min-h-dvh flex items-start justify-center px-4 pb-6 pt-[max(1.5rem,env(safe-area-inset-top))] sm:px-8 sm:pb-8 md:pt-[max(2rem,12dvh)] bg-surface">
+            {children}
+        </div>
+    )
 }

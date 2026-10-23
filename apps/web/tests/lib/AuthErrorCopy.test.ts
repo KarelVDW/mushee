@@ -12,12 +12,13 @@ describe('AuthErrorCopy', () => {
     it('turns a wrong email or password into a next step: reset', () => {
         expect(AuthErrorCopy.for(authError('INVALID_EMAIL_OR_PASSWORD', 'Invalid email or password'))).toEqual({
             message: "That email and password don't match. Check for a typo, or reset your password.",
+            kind: 'form',
             action: 'reset',
         })
     })
 
     it('points an existing account at sign-in, for both codes better-auth uses', () => {
-        const expected = { message: "There's already an account with this email. Sign in instead?", action: 'sign-in' }
+        const expected = { message: "There's already an account with this email. Sign in instead?", kind: 'form', action: 'sign-in' }
         expect(AuthErrorCopy.for(authError('USER_ALREADY_EXISTS'))).toEqual(expected)
         expect(AuthErrorCopy.for(authError('USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL', 'User already exists. Use another email.'))).toEqual(
             expected,
@@ -27,14 +28,17 @@ describe('AuthErrorCopy', () => {
     it('puts field problems under their field', () => {
         expect(AuthErrorCopy.for(authError('PASSWORD_TOO_SHORT', 'Password too short'))).toEqual({
             message: 'Use at least 8 characters.',
+            kind: 'form',
             field: 'password',
         })
         expect(AuthErrorCopy.for(authError('INVALID_EMAIL', 'Invalid email'))).toEqual({
             message: "That email doesn't look quite right.",
+            kind: 'form',
             field: 'email',
         })
         expect(AuthErrorCopy.for(authError('INVALID_OTP', 'Invalid OTP'))).toEqual({
             message: "That code doesn't match. Check the newest email from us, or send a new code.",
+            kind: 'form',
             field: 'code',
         })
     })
@@ -42,14 +46,20 @@ describe('AuthErrorCopy', () => {
     it('sends a used or expired reset link back for a new one', () => {
         expect(AuthErrorCopy.for(authError('INVALID_TOKEN', 'Invalid token'))).toEqual({
             message: 'This reset link has expired or was already used. Ask for a new one below.',
+            kind: 'form',
             action: 'request-new-link',
         })
     })
 
     it('offers a new code when the old one expired or was tried too often', () => {
-        expect(AuthErrorCopy.for(authError('OTP_EXPIRED'))).toEqual({ message: 'That code has expired. Send a new one.', action: 'resend' })
+        expect(AuthErrorCopy.for(authError('OTP_EXPIRED'))).toEqual({
+            message: 'That code has expired. Send a new one.',
+            kind: 'form',
+            action: 'resend',
+        })
         expect(AuthErrorCopy.for(authError('TOO_MANY_ATTEMPTS'))).toEqual({
             message: 'Too many tries. Send a new code to start again.',
+            kind: 'form',
             action: 'resend',
         })
     })
@@ -64,6 +74,7 @@ describe('AuthErrorCopy', () => {
     it('says the connection failed for a network failure', () => {
         expect(AuthErrorCopy.for(new NetworkError(new TypeError('Failed to fetch')))).toEqual({
             message: "Couldn't reach Solkey. Check your connection and try again.",
+            kind: 'fault',
         })
         // fetch rejects with a bare TypeError when the request never leaves the device.
         expect(AuthErrorCopy.for(new TypeError('Failed to fetch'))).toBe(AuthErrorCopy.NETWORK)
@@ -71,7 +82,8 @@ describe('AuthErrorCopy', () => {
     })
 
     it('falls back to plain copy for unknown codes and shapes', () => {
-        const fallback = { message: 'Something went wrong. Try again in a moment.' }
+        // Unknown, so never blamed on the user: the fault tier.
+        const fallback = { message: 'Something went wrong. Try again in a moment.', kind: 'fault' }
         expect(AuthErrorCopy.for(authError('EMAIL_NOT_VERIFIED', 'Email not verified'))).toEqual(fallback)
         expect(AuthErrorCopy.for({ message: 'Internal Server Error', status: 500, statusText: 'Internal Server Error' })).toEqual(fallback)
         expect(AuthErrorCopy.for({ code: 42 })).toEqual(fallback)
