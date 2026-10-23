@@ -85,6 +85,15 @@ describe('PacksDialog', () => {
         expect(buy?.textContent).toBe('Buy 15 min · $6')
     })
 
+    it('hands the footer its two buttons directly, so a phone stacks them full width with Buy on top', () => {
+        const footer = render(SKETCH).querySelector('footer')
+        // No wrapper: the dialog footer's own phone stack works on its direct children.
+        expect([...(footer?.children ?? [])].map((child) => [child.tagName, child.textContent])).toEqual([
+            ['BUTTON', 'See subscription plans'],
+            ['BUTTON', 'Buy 15 min · $6'],
+        ])
+    })
+
     it('picks a pack with the arrow keys, the group one Tab stop on the chosen pack', () => {
         const host = render(SKETCH)
         const cards = () => [...host.querySelectorAll<HTMLButtonElement>('[role="radio"]')]

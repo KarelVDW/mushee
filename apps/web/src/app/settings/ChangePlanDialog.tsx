@@ -130,13 +130,12 @@ export function ChangePlanDialog({ billing: state, initialTier, onClose, onShowP
             footer={
                 phase === 'choose' ? (
                     canApply ? (
-                        // One wrapping row, so a long "Switch to … — $90 a year" drops under "Keep my plan" on a phone.
-                        <div className="flex flex-wrap justify-end items-center gap-x-3 gap-y-2 min-w-0">
+                        <>
                             <TertiaryButton onClick={onClose}>Keep my plan</TertiaryButton>
                             <PrimaryButton danger={isCancel} icon={needsCheckout ? 'external-link' : undefined} onClick={apply}>
                                 {ctaLabel}
                             </PrimaryButton>
-                        </div>
+                        </>
                     ) : (
                         <TertiaryButton onClick={onClose}>Close</TertiaryButton>
                     )

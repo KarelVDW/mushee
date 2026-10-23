@@ -75,12 +75,12 @@ export function PacksDialog({ billing, onClose, onSeePlans }: PacksDialogProps) 
             width={640}
             footer={
                 phase === 'choose' ? (
-                    <div className="flex flex-wrap justify-end items-center gap-x-3 gap-y-2 min-w-0">
+                    <>
                         {onSeePlans && <TertiaryButton onClick={onSeePlans}>See subscription plans</TertiaryButton>}
                         <PrimaryButton icon="external-link" onClick={buy}>
                             {`Buy ${pack.minutes} min · ${formatMoney(pack.price, currency)}`}
                         </PrimaryButton>
-                    </div>
+                    </>
                 ) : null
             }>
             {phase === 'choose' && (
