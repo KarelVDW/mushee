@@ -125,6 +125,16 @@ describe('ChangePlanDialog', () => {
         expect(footerButtons(render(SKETCH))).toEqual(['Close'])
     })
 
+    it('hands the footer its two buttons directly, so a phone stacks them full width with the confirm on top', () => {
+        const host = render(SKETCH)
+        pick(host, 'Songwriter')
+        // No wrapper: the dialog footer's own phone stack works on its direct children.
+        expect([...(host.querySelector('footer')?.children ?? [])].map((child) => [child.tagName, child.textContent])).toEqual([
+            ['BUTTON', 'Keep my plan'],
+            ['BUTTON', 'Continue to payment'],
+        ])
+    })
+
     it('leads a new subscription to the payment page, naming the payment partner there', () => {
         const host = render(SKETCH)
         pick(host, 'Songwriter')

@@ -65,15 +65,15 @@ describe('PacksDialog', () => {
     it('measures packs against a free account’s allowance and nudges it toward Songwriter once', () => {
         const host = render(SKETCH)
         expect(host.textContent).toContain('Extra recording minutes')
-        expect(subtitle(host)).toBe('For busy days: used after your free 3 minutes run out, and they never expire.')
-        expect(host.textContent).toContain('Recording regularly? Songwriter gives you 20 minutes every day for $9 a month')
+        expect(subtitle(host)).toBe('For busy days: used after your free 3\u00a0minutes run out, and they never expire.')
+        expect(host.textContent).toContain('Recording regularly? Songwriter gives you 20\u00a0minutes every day for $9 a month')
         // The per-card subscription comparison stays on the marketing teaser only.
         expect(host.textContent).not.toContain('more a month')
     })
 
     it('gives a subscriber no subscription nudge, measured against its own daily allowance', () => {
         const host = render(STUDIO)
-        expect(subtitle(host)).toBe('For busy days: used after your daily 3 hours run out, and they never expire.')
+        expect(subtitle(host)).toBe('For busy days: used after your daily 3\u00a0hours run out, and they never expire.')
         expect(host.textContent).not.toContain('Recording regularly?')
     })
 
@@ -83,6 +83,15 @@ describe('PacksDialog', () => {
         expect(cards[0]).toMatch(/^15 min\$6Single · /)
         const buy = [...host.querySelectorAll('footer button')].at(-1)
         expect(buy?.textContent).toBe('Buy 15 min · $6')
+    })
+
+    it('hands the footer its two buttons directly, so a phone stacks them full width with Buy on top', () => {
+        const footer = render(SKETCH).querySelector('footer')
+        // No wrapper: the dialog footer's own phone stack works on its direct children.
+        expect([...(footer?.children ?? [])].map((child) => [child.tagName, child.textContent])).toEqual([
+            ['BUTTON', 'See subscription plans'],
+            ['BUTTON', 'Buy 15 min · $6'],
+        ])
     })
 
     it('picks a pack with the arrow keys, the group one Tab stop on the chosen pack', () => {

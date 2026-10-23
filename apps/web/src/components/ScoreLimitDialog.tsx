@@ -35,20 +35,20 @@ interface ScoreLimitCopyInit {
     price?: string
 }
 
-/** The score-limit dialog's words: a calm plan fact, then the two ways forward in one sentence. */
+/** The score-limit dialog's words: a calm plan fact, then the two ways forward in one sentence (each count held to its noun). */
 export class ScoreLimitCopy {
     constructor(private readonly init: ScoreLimitCopyInit) {}
 
     get title(): string {
         const { planName, limit } = this.init
-        return limit !== null ? `Your ${planName} plan holds ${limit} scores.` : "You've reached your plan's score limit."
+        return limit !== null ? `Your ${planName} plan holds ${limit}\u00a0scores.` : "You've reached your plan's score limit."
     }
 
     get body(): string {
         const { next, nextLimit, price } = this.init
         const deleteOne = "To start a new one, delete a score you don't need"
         if (!next) return `${deleteOne}.`
-        const room = nextLimit == null ? 'as many scores as you like' : `up to ${nextLimit} scores`
+        const room = nextLimit == null ? 'as many scores as you like' : `up to ${nextLimit}\u00a0scores`
         return `${deleteOne} — or switch to ${next.name} for ${room}${price ? ` (${price} a month)` : ''}.`
     }
 }

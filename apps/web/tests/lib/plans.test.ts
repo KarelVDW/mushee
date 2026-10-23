@@ -67,14 +67,14 @@ describe('plan catalogue', () => {
     })
 
     it('writes recording budgets as allowances in words, and no cap without the word unlimited', () => {
-        expect(recordingBudgetLabel(180)).toBe('3 minutes of recording a day')
-        expect(recordingBudgetLabel(30)).toBe('30 seconds of recording a day')
-        expect(recordingBudgetLabel(600)).toBe('10 minutes of recording a day')
-        expect(recordingBudgetLabel(1800)).toBe('30 minutes of recording a day')
-        expect(recordingBudgetLabel(3600)).toBe('1 hour of recording a day')
-        expect(recordingBudgetLabel(10800)).toBe('3 hours of recording a day')
-        expect(recordingBudgetLabel(28800)).toBe('8 hours of recording a day')
-        expect(recordingBudgetLabel(5400)).toBe('1 h 30 min of recording a day')
+        expect(recordingBudgetLabel(180)).toBe('3\u00a0minutes of recording a day')
+        expect(recordingBudgetLabel(30)).toBe('30\u00a0seconds of recording a day')
+        expect(recordingBudgetLabel(600)).toBe('10\u00a0minutes of recording a day')
+        expect(recordingBudgetLabel(1800)).toBe('30\u00a0minutes of recording a day')
+        expect(recordingBudgetLabel(3600)).toBe('1\u00a0hour of recording a day')
+        expect(recordingBudgetLabel(10800)).toBe('3\u00a0hours of recording a day')
+        expect(recordingBudgetLabel(28800)).toBe('8\u00a0hours of recording a day')
+        expect(recordingBudgetLabel(5400)).toBe('1\u00a0h 30\u00a0min of recording a day')
         expect(recordingBudgetLabel(null)).toBe('No daily recording limit')
     })
 
@@ -89,8 +89,8 @@ describe('plan catalogue', () => {
         for (const line of copy)
             expect(line).not.toMatch(/unlimited|audio-to-notation|engraving|keyboard-first|tier|cadence|budget|prorat|\btakes?\b|retake/i)
         expect(planFeatures(planById('free'))).toEqual([
-            '3 minutes of recording a day',
-            'Up to 5 scores',
+            '3\u00a0minutes of recording a day',
+            'Up to 5\u00a0scores',
             'Sing or play, see the notes',
             'Fix notes and hear them back',
         ])
@@ -124,7 +124,7 @@ describe('plan catalogue', () => {
     })
 
     it('formats score caps, with the free tier capped and the rest open', () => {
-        expect(planFeatures({ dailyRecordingSeconds: null, maxScores: 5, features: [] })[1]).toBe('Up to 5 scores')
+        expect(planFeatures({ dailyRecordingSeconds: null, maxScores: 5, features: [] })[1]).toBe('Up to 5\u00a0scores')
         expect(planFeatures({ dailyRecordingSeconds: null, maxScores: null, features: [] })[1]).toBe('As many scores as you like')
         expect(planById('free').maxScores).toBe(5)
         expect(PLAN_TIERS.filter((p) => p.id !== 'free').every((p) => p.maxScores === null)).toBe(true)
@@ -132,13 +132,13 @@ describe('plan catalogue', () => {
 
     it('puts the recording budget and score cap first in the feature list, API values winning', () => {
         const pro = planById('pro')
-        expect(planFeatures(pro)[0]).toBe('20 minutes of recording a day')
+        expect(planFeatures(pro)[0]).toBe('20\u00a0minutes of recording a day')
         expect(planFeatures(pro)[1]).toBe('As many scores as you like')
-        expect(planFeatures(planById('free'))[1]).toBe('Up to 5 scores')
+        expect(planFeatures(planById('free'))[1]).toBe('Up to 5\u00a0scores')
         // A plan merged with re-tuned database entitlements shows those, not the static fallbacks.
         const merged = { ...pro, dailyRecordingSeconds: 600, maxScores: 20 }
-        expect(planFeatures(merged)[0]).toBe('10 minutes of recording a day')
-        expect(planFeatures(merged)[1]).toBe('Up to 20 scores')
+        expect(planFeatures(merged)[0]).toBe('10\u00a0minutes of recording a day')
+        expect(planFeatures(merged)[1]).toBe('Up to 20\u00a0scores')
         expect(planFeatures(pro).slice(2)).toEqual(pro.features)
     })
 })

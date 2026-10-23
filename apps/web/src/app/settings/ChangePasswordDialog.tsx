@@ -1,5 +1,6 @@
 'use client'
 
+import { TextLink } from '@mushee/ui'
 import Link from 'next/link'
 import { useState } from 'react'
 
@@ -106,9 +107,9 @@ export function ChangePasswordDialog({ onClose }: ChangePasswordDialogProps) {
                     {error && <span className="font-body font-medium text-[12px] leading-[1.4] text-error">{error}</span>}
                     <span className="font-body font-normal text-[12px] leading-normal text-on-surface-variant">
                         Forgot your current password?{' '}
-                        <Link href="/reset-password" className="text-primary">
+                        <TextLink as={Link} href="/reset-password">
                             Send a reset link by email
-                        </Link>{' '}
+                        </TextLink>{' '}
                         instead.
                     </span>
                 </div>

@@ -51,8 +51,8 @@ describe('RecordingStripCopy', () => {
     it('counts down the last minute of a capped day (packs included by the caller), and never below zero', () => {
         const capped = status({ secondsLeftAtStart: 90 })
         expect(new RecordingStripCopy(capped, 20, false).hint?.kind).toBe('stop')
-        expect(new RecordingStripCopy(capped, 30, false).hint).toEqual({ kind: 'time-left', text: '1 min left today' })
-        expect(new RecordingStripCopy(capped, 60, false).hint).toEqual({ kind: 'time-left', text: '30 sec left today' })
+        expect(new RecordingStripCopy(capped, 30, false).hint).toEqual({ kind: 'time-left', text: '1\u00a0min left today' })
+        expect(new RecordingStripCopy(capped, 60, false).hint).toEqual({ kind: 'time-left', text: '30\u00a0sec left today' })
         expect(new RecordingStripCopy(capped, 200, false).secondsLeft).toBe(0)
         // An uncapped plan never counts down.
         expect(new RecordingStripCopy(status(), 5000, false).secondsLeft).toBeNull()
@@ -160,12 +160,12 @@ describe('RecordingLimitCopy', () => {
 
     it('names the allowance in words and when it comes back, never as a clock', () => {
         const copy = new RecordingLimitCopy({ limitSeconds: 180, usedSeconds: 180, now })
-        expect(copy.title).toBe("That's your 3 minutes of recording for today.")
+        expect(copy.title).toBe("That's your 3\u00a0minutes of recording for today.")
         expect(copy.subtitle).toMatch(
             /^Everything you recorded is in your score\. Playing, editing and exporting still work — recording is back (tonight|today|tomorrow) at .+\. No surprise charges — Solkey never bills for extra minutes\.$/,
         )
         expect(new RecordingLimitCopy({ limitSeconds: null, usedSeconds: 10800, now }).title).toBe(
-            "That's your 3 hours of recording for today.",
+            "That's your 3\u00a0hours of recording for today.",
         )
         expect(RecordingLimitCopy.NO_SURPRISES).toBe('No surprise charges — Solkey never bills for extra minutes.')
     })
@@ -173,7 +173,7 @@ describe('RecordingLimitCopy', () => {
     it('offers what the next tier gives, from the catalogue — and nothing at the top of the ladder', () => {
         const next = (dailySeconds: number | null) =>
             new RecordingLimitCopy({ limitSeconds: 180, usedSeconds: 180, next: { name: 'Songwriter', dailySeconds }, now })
-        expect(next(1200).upgrade).toBe('Songwriter gives you 20 minutes every day, starting right away.')
+        expect(next(1200).upgrade).toBe('Songwriter gives you 20\u00a0minutes every day, starting right away.')
         expect(next(null).upgrade).toBe('Songwriter lets you record as much as you like, starting right away.')
         expect(new RecordingLimitCopy({ limitSeconds: 10800, usedSeconds: 10800, now }).upgrade).toBeNull()
     })

@@ -1,10 +1,13 @@
 'use client'
 
+import { Glyph, NOTATION_INK } from '@mushee/notation/components'
 import { Instrument } from '@mushee/notation/model'
+import { SelectedMark, SuccessMark } from '@mushee/ui'
 import { type KeyboardEvent, type ReactNode, type Ref, useEffect, useEffectEvent, useId, useRef, useState } from 'react'
 
 import { MicFailure } from '@/app/scores/[id]/RecordingCopy'
 import { InstrumentChordHint, PopularInstrumentTiles } from '@/app/scores/InstrumentPicker'
+import { defaultScoreTitle } from '@/app/scores/NewScoreDialog'
 import { PlanPicker } from '@/components/PlanPicker'
 import { Chip, Eyebrow, Icon, ModalTitle, PrimaryButton, SubHeadline, TertiaryButton, TextField } from '@/components/ui'
 import type { BillingInterval } from '@/lib/api'
@@ -14,7 +17,6 @@ import { isIPhone, markMicModeGuideConfirmed } from '@/lib/micMode'
 import { Microphone } from '@/lib/Microphone'
 import type { PlanTier } from '@/lib/plans'
 import { formatAllowance } from '@/lib/recordingTime'
-import { useMediaQuery } from '@/lib/useMediaQuery'
 import { type RadioProps, useRadioGroup } from '@/lib/useRadioGroup'
 
 import { BACKGROUNDS, GOALS, REFERRAL_SOURCES } from './onboarding-data'
@@ -140,10 +142,8 @@ export function VerifyStep({
             <div className="flex flex-col">
                 <div role="status" className="flex flex-col">
                     {verified && (
-                        <div className="flex items-center gap-3 bg-surface-container-low rounded-md px-4 py-3.5 self-start min-w-0 max-w-full">
-                            <span className="w-7 h-7 rounded-full bg-primary-container text-on-primary-container inline-flex items-center justify-center shrink-0">
-                                <Icon name="check" size={16} />
-                            </span>
+                        <div className="flex items-center gap-3 bg-surface-container-low rounded-md px-4 py-3 self-start min-w-0 max-w-full">
+                            <SuccessMark size={40} />
                             <span className="font-body font-medium text-[14px] leading-[1.3] text-on-surface">Email verified.</span>
                         </div>
                     )}
@@ -280,6 +280,24 @@ const MIC_MODE_STEPS = [
     'Choose Wide Spectrum, then come back here.',
 ] as const
 
+/** Numbered steps, one action each: 24px primary_soft number discs beside 15px lines. */
+function StepList({ steps }: { steps: readonly string[] }) {
+    return (
+        <ol className="m-0 pl-0 list-none flex flex-col gap-2.5">
+            {steps.map((text, index) => (
+                <li key={text} className="flex items-start gap-3 font-body font-normal text-[15px] leading-normal text-on-surface">
+                    <span
+                        aria-hidden="true"
+                        className="size-6 shrink-0 rounded-full bg-primary-soft text-on-primary-soft inline-flex items-center justify-center font-mono text-[12px] font-semibold">
+                        {index + 1}
+                    </span>
+                    {text}
+                </li>
+            ))}
+        </ol>
+    )
+}
+
 // 'mic' — mic permission. The state itself lives in the page: the footer reads it, and it
 // must survive navigating away from this step and back.
 export function MicStep({
@@ -359,9 +377,9 @@ export function MicStep({
         onAdvance()
     }
 
-    // Where this browser keeps the microphone permission, in one line; null where there is no
-    // reliable path to name. It only shows once blocked, so the server render (no navigator) matches.
-    const permissionStep = typeof navigator === 'undefined' ? null : MicFailure.permissionStep(navigator.userAgent)
+    // Where this browser keeps the microphone permission, one action per step; null where there is
+    // no reliable path to name. It only shows once blocked, so the server render (no navigator) matches.
+    const permissionSteps = typeof navigator === 'undefined' ? null : MicFailure.permissionSteps(navigator.userAgent)
 
     return (
         <StepShell
@@ -369,17 +387,23 @@ export function MicStep({
             title="Allow microphone access."
             subtitle="Solkey uses your microphone to hear you sing, hum, whistle or play. It only listens while you press Record, never in the background.">
             <div className="flex items-start gap-4 bg-surface-container-low rounded-md p-5">
-                <span
-                    className={[
-                        'w-12 h-12 rounded-full shrink-0 inline-flex items-center justify-center transition-colors duration-150 ease-solkey',
-                        micState === 'granted'
-                            ? 'bg-primary-container text-on-primary-container'
-                            : micState === 'denied'
-                              ? 'bg-error-container text-on-error-container'
-                              : 'bg-surface-container text-on-surface',
-                    ].join(' ')}>
-                    <Icon name={micState === 'granted' ? 'check' : micState === 'denied' ? 'mic-off' : 'mic'} size={22} />
-                </span>
+                {micState === 'granted' ? (
+                    // The quiet success mark, in the well's 48px slot so the text never moves.
+                    <span className="size-12 shrink-0 inline-flex items-center justify-center">
+                        <SuccessMark size={40} />
+                    </span>
+                ) : (
+                    // A block is the visitor's choice, not a fault: the neutral can't-connect well, never red.
+                    <span
+                        className={[
+                            'w-12 h-12 rounded-full shrink-0 inline-flex items-center justify-center transition-colors duration-150 ease-solkey',
+                            micState === 'denied'
+                                ? 'bg-surface-container-high text-on-surface-variant'
+                                : 'bg-surface-container text-on-surface',
+                        ].join(' ')}>
+                        <Icon name={micState === 'denied' ? 'mic-off' : 'mic'} size={22} />
+                    </span>
+                )}
                 <div className="flex flex-col gap-1.5 flex-1 min-w-0" role="status">
                     <span className="font-body font-semibold text-[15px] leading-[1.3] text-on-surface">
                         {micState === 'granted' && 'Microphone connected.'}
@@ -402,25 +426,14 @@ export function MicStep({
 
             {micState === 'granted' && guideOpen && (
                 <div className="flex flex-col gap-3">
-                    <ol className="m-0 pl-0 list-none flex flex-col gap-2.5">
-                        {MIC_MODE_STEPS.map((text, index) => (
-                            <li
-                                key={text}
-                                className="flex items-start gap-3 font-body font-normal text-[15px] leading-normal text-on-surface">
-                                <span
-                                    aria-hidden="true"
-                                    className="size-6 shrink-0 rounded-full bg-primary-soft text-on-primary-soft inline-flex items-center justify-center font-mono text-[12px] font-semibold">
-                                    {index + 1}
-                                </span>
-                                {text}
-                            </li>
-                        ))}
-                    </ol>
+                    <StepList steps={MIC_MODE_STEPS} />
                     <p className="m-0 font-body font-normal text-[12px] leading-[1.4] text-on-surface-variant">
                         Solkey has the mic open only so this setting shows up. Nothing is recorded until you press Record.
                     </p>
                     <div className="flex gap-x-5 gap-y-2 items-center flex-wrap">
-                        <PrimaryButton onClick={() => leave(true)}>Done — Wide Spectrum is on</PrimaryButton>
+                        <PrimaryButton size="lg" onClick={() => leave(true)}>
+                            Done — Wide Spectrum is on
+                        </PrimaryButton>
                         <TertiaryButton onClick={() => leave(false)}>Not now</TertiaryButton>
                     </div>
                 </div>
@@ -432,10 +445,11 @@ export function MicStep({
                         // Blocked: the footer's Continue is the one next step. Browsers remember a block,
                         // so Try again stays quiet, after the line saying where this browser keeps it.
                         <>
-                            {permissionStep && (
-                                <p className="m-0 font-body font-normal text-[13px] leading-normal text-on-surface">
-                                    To allow it now: {permissionStep} Then Try again.
-                                </p>
+                            {permissionSteps && (
+                                <div className="flex flex-col gap-2.5">
+                                    <p className="m-0 font-body font-normal text-[15px] leading-normal text-on-surface">To allow it now:</p>
+                                    <StepList steps={permissionSteps} />
+                                </div>
                             )}
                             <div>
                                 <TertiaryButton onClick={() => void requestMic()}>
@@ -448,7 +462,7 @@ export function MicStep({
                         </>
                     ) : (
                         <div className="flex gap-x-5 gap-y-2 items-center flex-wrap">
-                            <PrimaryButton onClick={() => void requestMic()} disabled={micState === 'requesting'} icon="mic">
+                            <PrimaryButton size="lg" onClick={() => void requestMic()} disabled={micState === 'requesting'} icon="mic">
                                 {micState === 'requesting' ? 'Asking…' : 'Allow microphone'}
                             </PrimaryButton>
                             {/* Skipping the mic skips only the mic. A yes moves on by itself; after a no, the footer's Continue leads. */}
@@ -456,7 +470,7 @@ export function MicStep({
                         </div>
                     )}
                     {/* Said once: where this browser keeps the setting (above, when blocked), else this. */}
-                    {!(micState === 'denied' && permissionStep) && (
+                    {!(micState === 'denied' && permissionSteps) && (
                         <span className="font-body font-normal text-[12px] leading-[1.4] text-on-surface-variant">
                             You can change this any time in your browser&apos;s site settings.
                         </span>
@@ -560,19 +574,32 @@ export function AboutStep({
     const detailQuestion = REFERRAL_SOURCES.find((s) => s.key === source)?.detailQuestion
     return (
         <StepShell titleRef={titleRef} title="A bit about you." subtitle="Optional. It helps us build the right things.">
-            <div className="flex flex-col gap-6">
+            <div className="flex flex-col gap-7">
                 <ChoiceRow label="Where are you with music?" options={BACKGROUNDS} value={background} onChange={onBackgroundChange} />
                 <ChoiceRow label="What do you want to do first?" options={GOALS} value={goal} onChange={onGoalChange} />
                 <div className="flex flex-col gap-3">
                     <ChoiceRow label="How did you find Solkey?" options={REFERRAL_SOURCES} value={source} onChange={onSourceChange} />
                     {detailQuestion && (
-                        <TextField label={`${detailQuestion} (optional)`} value={sourceDetail} onChange={onSourceDetailChange} />
+                        <TextField
+                            label={
+                                // The field's own label, in the questions' voice rather than the eyebrow's.
+                                <span className={`${QUESTION_CLASS} normal-case tracking-normal`}>
+                                    {detailQuestion}
+                                    <span className="font-normal text-on-surface-variant"> (optional)</span>
+                                </span>
+                            }
+                            value={sourceDetail}
+                            onChange={onSourceDetailChange}
+                        />
                     )}
                 </div>
             </div>
         </StepShell>
     )
 }
+
+/** A survey question's voice: a 15px semibold sentence. */
+const QUESTION_CLASS = 'font-body font-semibold text-[15px] leading-[1.3] text-on-surface'
 
 /** A question with its single-choice answers: a radiogroup named by the question, one Tab stop, arrows move. */
 function ChoiceRow({
@@ -594,7 +621,7 @@ function ChoiceRow({
     )
     return (
         <div className="flex flex-col gap-2.5">
-            <span id={labelId} className="font-body font-semibold text-[15px] leading-[1.3] text-on-surface">
+            <span id={labelId} className={QUESTION_CLASS}>
                 {label}
             </span>
             <div role="radiogroup" aria-labelledby={labelId} className="flex flex-wrap gap-2">
@@ -612,7 +639,10 @@ function ChoiceRow({
     )
 }
 
-/** One answer: the soft fill when chosen, and an 18px ring that fills with a check, so the choice never rests on colour alone. */
+/**
+ * One answer: an outlined 18px ring at rest on the tile fill; chosen, the selected fill and a
+ * SelectedMark in the ring's place, so the choice never rests on colour alone.
+ */
 function ChoiceChip({
     radio,
     checked,
@@ -634,15 +664,18 @@ function ChoiceChip({
             className={[
                 'inline-flex items-center gap-2 rounded-full border-0 pl-2.5 pr-4 py-2 min-h-9 pointer-coarse:min-h-10 cursor-pointer text-left',
                 'font-body font-medium text-[14px] leading-tight transition-colors duration-150 ease-solkey focus-ring',
-                checked ? 'bg-primary-soft text-on-primary-soft' : 'bg-surface-container text-on-surface hover:bg-surface-container-high',
+                checked
+                    ? 'bg-(--color-selected) text-(--color-on-selected)'
+                    : 'bg-surface-container-low text-on-surface hover:bg-surface-container-high',
             ].join(' ')}>
+            {/* The ring's 18px slot holds the mark too, so the label never shifts when picked. */}
             <span
                 aria-hidden="true"
                 className={[
                     'size-4.5 shrink-0 rounded-full inline-flex items-center justify-center',
-                    checked ? 'bg-primary-container text-on-primary-container' : 'border-2 border-solid border-outline',
+                    checked ? '' : 'border-2 border-solid border-outline',
                 ].join(' ')}>
-                {checked && <Icon name="check" size={12} />}
+                {checked && <SelectedMark size="sm" />}
             </span>
             {children}
         </button>
@@ -676,18 +709,11 @@ export function PlanStep({
     tier: PlanTier['id']
     onTierChange: (id: PlanTier['id']) => void
 }) {
-    // Phones get radio rows, so the chosen plan and the button that acts on it share one screen.
-    const phone = useMediaQuery('(max-width: 767px)')
+    // Radio rows at every width: the chosen plan and the button that acts on it share one screen,
+    // and the white card never holds a pricing page's cards (those are for /pricing and Settings).
     return (
         <StepShell titleRef={titleRef} title="Start free, or pick a plan." subtitle={freePlanSummary(freePlan)}>
-            <PlanPicker
-                plans={plans}
-                billing={billing}
-                onBillingChange={onBillingChange}
-                selected={tier}
-                onSelect={onTierChange}
-                compact={phone}
-            />
+            <PlanPicker plans={plans} billing={billing} onBillingChange={onBillingChange} selected={tier} onSelect={onTierChange} compact />
         </StepShell>
     )
 }
@@ -707,6 +733,7 @@ export function DoneStep({
     destination,
     betaPlanName,
     planLine,
+    firstInstrument,
     creating,
     onRecordFirstMelody,
     onFinish,
@@ -717,6 +744,8 @@ export function DoneStep({
     betaPlanName: string
     /** The 13px line naming the plan the account is on ("You're on Sketch — free, …"); null to leave it out. */
     planLine: string | null
+    /** The instrument the first score starts on, named in its preview (destination 'first-melody'). */
+    firstInstrument: Instrument
     /** The first melody's score is being created. */
     creating: boolean
     onRecordFirstMelody: () => void
@@ -725,10 +754,9 @@ export function DoneStep({
 }) {
     return (
         <div className="flex flex-col gap-5 items-start pt-4">
-            <div className="w-14 h-14 rounded-full bg-primary-container text-on-primary-container inline-flex items-center justify-center">
-                <Icon name="check" size={28} />
-            </div>
-            <ModalTitle ref={titleRef} tabIndex={-1}>
+            {/* Ending on the score the button opens, not on a receipt; elsewhere the quiet success mark. */}
+            {destination === 'first-melody' ? <FirstScorePreview instrument={firstInstrument} /> : <SuccessMark size={56} />}
+            <ModalTitle ref={titleRef} tabIndex={-1} as="h1">
                 You&apos;re all set, {name.trim().split(/\s+/)[0] || 'there'}.
             </ModalTitle>
             <div className="flex flex-col gap-2">
@@ -748,14 +776,14 @@ export function DoneStep({
             </div>
             {destination === 'first-melody' ? (
                 <div className="flex gap-x-5 gap-y-2 mt-2 items-center flex-wrap">
-                    <PrimaryButton emphasis="pop" icon="arrow-right" onClick={onRecordFirstMelody} disabled={creating}>
+                    <PrimaryButton size="lg" emphasis="pop" icon="arrow-right" onClick={onRecordFirstMelody} disabled={creating}>
                         {creating ? 'Getting it ready…' : 'Record my first melody'}
                     </PrimaryButton>
                     <TertiaryButton onClick={onFinish}>Go to my library</TertiaryButton>
                 </div>
             ) : (
                 <div className="flex gap-3 mt-2">
-                    <PrimaryButton emphasis="pop" icon="arrow-right" onClick={onFinish}>
+                    <PrimaryButton size="lg" emphasis="pop" icon="arrow-right" onClick={onFinish}>
                         {destination === 'beta' ? 'View my status' : 'Open my library'}
                     </PrimaryButton>
                 </div>
@@ -763,6 +791,46 @@ export function DoneStep({
         </div>
     )
 }
+
+/**
+ * The score the done screen's button opens, previewed: a white sheet in a tonal well, titled like
+ * the score will be, the instrument it starts on as its identity pill, an empty staff in notation
+ * ink and the record dot. Not interactive (aria-hidden; the button carries the meaning). It fades
+ * in over 200ms, at once under reduced motion.
+ */
+export function FirstScorePreview({ instrument }: { instrument: Instrument }) {
+    return (
+        <div
+            aria-hidden="true"
+            className="bg-surface-container-low rounded-lg p-3 w-full max-w-100 animate-[solkey-step-in_200ms_var(--ease-solkey)_both]">
+            <div className="bg-surface-container-lowest rounded-md px-5 pt-4 pb-5 flex flex-col gap-3">
+                <div className="flex items-center justify-between gap-3">
+                    <span className="font-display font-semibold text-[15px] leading-tight text-on-surface truncate">
+                        {defaultScoreTitle(true)}
+                    </span>
+                    <span className="shrink-0 rounded-full bg-secondary-soft text-on-secondary-soft px-2.5 py-1 font-label font-semibold text-[12px] leading-none">
+                        {instrument.displayName}
+                    </span>
+                </div>
+                {/* One staff, the notation grid's 10px spacing, the G clef on its line. The clef reaches
+                    about 44px above its line and 27px below, so the box leaves it that room. */}
+                <svg viewBox="0 0 336 80" width="100%" className="block">
+                    {PREVIEW_STAFF_LINES.map((y) => (
+                        <line key={y} x1={0} x2={336} y1={y} y2={y} stroke={NOTATION_INK} strokeWidth={1} />
+                    ))}
+                    <Glyph name="gClef" x={6} y={PREVIEW_STAFF_LINES[3]} />
+                </svg>
+                <div className="flex items-center justify-end gap-2">
+                    <span className="size-2 shrink-0 rounded-full bg-record" />
+                    <span className="font-body font-normal text-[13px] leading-none text-on-surface-variant">Ready to record</span>
+                </div>
+            </div>
+        </div>
+    )
+}
+
+/** The preview staff's five lines, 10px apart, centred in the 80px box (the clef spans about 6 to 77). */
+const PREVIEW_STAFF_LINES = [20, 30, 40, 50, 60]
 
 // Building blocks of the steps above
 
@@ -778,8 +846,8 @@ function StepShell({
 }) {
     return (
         <div className="flex flex-col gap-5">
-            {/* Focusable by script only (no ring): the page moves focus here when the step opens. */}
-            <ModalTitle ref={titleRef} tabIndex={-1}>
+            {/* The page's h1. Focusable by script only (no ring): the page moves focus here when the step opens. */}
+            <ModalTitle ref={titleRef} tabIndex={-1} as="h1">
                 {title}
             </ModalTitle>
             <SubHeadline>{subtitle}</SubHeadline>

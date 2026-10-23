@@ -1,5 +1,6 @@
 'use client'
 
+import { TEXT_LINK_CLASS } from '@mushee/ui'
 import { useState } from 'react'
 
 import { PlanPicker } from '@/components/PlanPicker'
@@ -126,17 +127,16 @@ export function ChangePlanDialog({ billing: state, initialTier, onClose, onShowP
             }
             subtitle={phase === 'choose' ? "Pick how much you'd like to record each day. Switch or cancel any time." : undefined}
             onClose={locked ? undefined : onClose}
-            width={720}
+            width={800}
             footer={
                 phase === 'choose' ? (
                     canApply ? (
-                        // One wrapping row, so a long "Switch to … — $90 a year" drops under "Keep my plan" on a phone.
-                        <div className="flex flex-wrap justify-end items-center gap-x-3 gap-y-2 min-w-0">
+                        <>
                             <TertiaryButton onClick={onClose}>Keep my plan</TertiaryButton>
                             <PrimaryButton danger={isCancel} icon={needsCheckout ? 'external-link' : undefined} onClick={apply}>
                                 {ctaLabel}
                             </PrimaryButton>
-                        </div>
+                        </>
                     ) : (
                         <TertiaryButton onClick={onClose}>Close</TertiaryButton>
                     )
@@ -165,7 +165,7 @@ export function ChangePlanDialog({ billing: state, initialTier, onClose, onShowP
                             <button
                                 type="button"
                                 onClick={onShowPacks}
-                                className="border-0 bg-transparent p-0 cursor-pointer font-body font-medium text-[12px] text-primary underline rounded-sm focus-ring">
+                                className={`border-0 bg-transparent p-0 cursor-pointer font-body ${TEXT_LINK_CLASS}`}>
                                 Buy extra minutes
                             </button>
                         </p>

@@ -1,5 +1,6 @@
 'use client'
 
+import { Skeleton } from '@mushee/ui'
 import { useEffect, useState } from 'react'
 
 import { Alert, Icon, PrimaryButton, SecondaryButton, TertiaryButton } from '@/components/ui'
@@ -50,7 +51,7 @@ export function BillingSection({
     if (isPending) {
         return (
             <SettingsSection title="Plan & billing" subtitle="Loading your plan…">
-                <div className="h-20 bg-surface-container-low rounded-md animate-pulse" />
+                <PlanCardSkeleton />
             </SettingsSection>
         )
     }
@@ -80,8 +81,8 @@ export function BillingSection({
                 <span className="w-11 h-11 shrink-0 rounded-full bg-primary-soft text-on-primary-soft inline-flex items-center justify-center">
                     <Icon name={isBeta ? BETA_PLAN.icon : plan.icon} size={20} />
                 </span>
-                <div className="flex flex-col gap-0.5 flex-1 min-w-0">
-                    <span className="font-body font-semibold text-[15px] leading-[1.3] text-on-surface">{billing.tierName}</span>
+                <div className="flex flex-col gap-1 flex-1 min-w-0">
+                    <span className="font-headline font-semibold text-[20px] leading-tight text-on-surface">{billing.tierName}</span>
                     <span className="font-body font-normal text-[13px] leading-[1.4] text-on-surface-variant">{copy.priceLine}</span>
                 </div>
                 {/* Sketch's one step is to look at the plans; a paying account's is a quieter "change". */}
@@ -93,11 +94,10 @@ export function BillingSection({
                     ))}
             </div>
 
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-3">
                 <RecordingMeterView copy={copy} />
-                {scoresLine && (
-                    <span className="font-body font-normal text-[12px] leading-[1.4] text-on-surface-variant">{scoresLine}</span>
-                )}
+                {/* Plain words, no second bar: a used-up score meter would read the opposite way to the time gauge above. */}
+                {scoresLine && <span className={`${METER_LABEL_CLASS} tabular-nums text-on-surface-variant`}>{scoresLine}</span>}
             </div>
 
             {(canPurchase || hasSubscription || billing.cancelAtPeriodEnd) && (
@@ -151,10 +151,33 @@ export function BillingSection({
     )
 }
 
+/** The plan card while the billing state loads: the plan row (its 44px mark, two lines) and the meter, in their own geometry. */
+function PlanCardSkeleton() {
+    return (
+        <div aria-hidden="true" className="flex flex-col gap-5">
+            <div className="flex items-center gap-4">
+                <Skeleton className="size-11 rounded-full" />
+                <div className="flex flex-col gap-2 flex-1 min-w-0">
+                    <Skeleton className="h-5 w-28 rounded-sm" />
+                    <Skeleton className="h-3 w-44 max-w-full rounded-sm" />
+                </div>
+            </div>
+            <div className="flex flex-col gap-1.5">
+                <Skeleton className="h-3 w-36 rounded-sm" />
+                <Skeleton className="h-2 w-full rounded-full" />
+            </div>
+        </div>
+    )
+}
+
+/** The meter's label rows (time today, the score count): 13px, one line height. */
+const METER_LABEL_CLASS = 'font-body font-normal text-[13px] leading-[1.3]'
+
 /**
- * Today's recording as a small meter in plain units — time left, and when it refills in
- * the viewer's own time — plus any purchased pack minutes waiting behind it. A plan without
- * a daily limit gets one line instead.
+ * Today's recording as a fuel gauge in plain units — the bar is the time left, draining as the
+ * day is used and simply empty once it is spent (never red: a limit is not a fault), with when it
+ * refills in the viewer's own time — plus any purchased pack minutes waiting behind it. A plan
+ * without a daily limit gets one line instead.
  */
 function RecordingMeterView({ copy }: { copy: PlanCardCopy }) {
     const { meter, packLine } = copy
@@ -174,21 +197,21 @@ function RecordingMeterView({ copy }: { copy: PlanCardCopy }) {
     }
     return (
         <div className="flex flex-col gap-1.5">
-            <div className="flex justify-between gap-x-3 gap-y-1 flex-wrap font-body text-[12px] leading-[1.3]">
+            <div className={`flex justify-between gap-x-3 gap-y-1 flex-wrap ${METER_LABEL_CLASS}`}>
                 <span className="text-on-surface-variant">Recording time today</span>
-                <span className="font-medium text-on-surface">{meter.value}</span>
+                <span className="font-medium tabular-nums text-on-surface">{meter.value}</span>
             </div>
             <div
-                className="h-1.5 rounded-full bg-surface-container overflow-hidden"
+                className="h-2 rounded-full bg-surface-container overflow-hidden"
                 role="progressbar"
-                aria-label="Recording time used today"
+                aria-label="Recording time left today"
                 aria-valuemin={0}
                 aria-valuemax={100}
-                aria-valuenow={Math.round(meter.percent)}
+                aria-valuenow={Math.round(meter.percentLeft)}
                 aria-valuetext={meter.value}>
                 <div
-                    className={meter.percent >= 100 ? 'h-full bg-error-container' : 'h-full bg-primary-container'}
-                    style={{ width: `${meter.percent}%` }}
+                    className="h-full rounded-full bg-primary-container transition-[width] duration-300 ease-solkey motion-reduce:transition-none"
+                    style={{ width: `${meter.percentLeft}%` }}
                 />
             </div>
             <span className="font-body font-normal text-[12px] leading-[1.4] text-on-surface-variant">{meter.helper}</span>

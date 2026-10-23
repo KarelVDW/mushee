@@ -311,7 +311,7 @@ export function planCtaLabel(plan: Pick<PlanTier, 'name' | 'priceMonthly'>): str
 /** Human line for a score cap; null = no cap. */
 function scoreLimitLabel(maxScores: number | null): string {
     if (maxScores === null) return 'As many scores as you like'
-    return `Up to ${maxScores} scores`
+    return `Up to ${maxScores}\u00a0scores`
 }
 
 /**

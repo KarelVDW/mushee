@@ -1,12 +1,14 @@
 'use client'
 
-import { useState } from 'react'
+import { PriceTag, SelectedMark } from '@mushee/ui'
+import { useId, useState } from 'react'
 
-import { Badge, Eyebrow, Icon } from '@/components/ui'
+import { Badge, Eyebrow, Icon, Segmented } from '@/components/ui'
 import type { BillingInterval } from '@/lib/api'
 import { type Currency, formatMoney } from '@/lib/currency'
-import { planFeatures, planPriceParts, type PlanTier } from '@/lib/plans'
+import { planFeatures, planPriceParts, planSavingsPercent, type PlanTier } from '@/lib/plans'
 import { useDisplayCurrency } from '@/lib/useDisplayCurrency'
+import { useMediaQuery } from '@/lib/useMediaQuery'
 import { type RadioProps, useRadioGroup } from '@/lib/useRadioGroup'
 
 interface PlanPickerProps {
@@ -29,8 +31,9 @@ interface PlanPickerProps {
     currentTierId?: string
     /**
      * Radio rows (name, price, a one-line tagline) instead of cards — the selection and the
-     * flow's button then fit one phone screen. Feature lists open behind "Compare plans", and
-     * professional tiers behind "Recording for work? See …". For onboarding's plan step.
+     * flow's button then fit one screen. From md each row carries its features as one line;
+     * on phones they open behind "Compare plans". Professional tiers wait behind "Recording for
+     * work? See …". For onboarding's plan step, at every width.
      */
     compact?: boolean
 }
@@ -50,7 +53,7 @@ export function PlanPicker(props: PlanPickerProps) {
     const professional = plans.filter((p) => p.professional)
     return (
         <>
-            <BillingToggle value={billing} onChange={onBillingChange} />
+            <BillingToggle plans={plans} value={billing} onChange={onBillingChange} />
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 {consumer.map((p) => (
                     <TierCard
@@ -104,10 +107,11 @@ function PlanBadge({ current, bestValue, className }: { current?: boolean; bestV
 }
 
 /**
- * The plans as radio rows: name and tagline, the price at the right, an 18px ring that fills
- * with a check when chosen (so the choice never rests on the fill colour alone). "Compare
- * plans" opens every row's feature list; professional tiers wait behind their own link and
- * show from the start when one of them is the chosen tier.
+ * The plans as radio rows: name and tagline, the price at the right, an 18px ring that takes a
+ * SelectedMark when chosen (so the choice never rests on the fill colour alone). From md the
+ * features run as one line under the tagline; on phones "Compare plans" opens every row's list.
+ * Professional tiers wait behind their own link and show from the start when one of them is
+ * the chosen tier.
  */
 function CompactPlanPicker({
     plans,
@@ -121,6 +125,8 @@ function CompactPlanPicker({
 }: PlanPickerProps & { currency: Currency }) {
     const consumer = plans.filter((p) => !p.professional)
     const professional = plans.filter((p) => p.professional)
+    // From md a row has the room to carry its features inline, so there is nothing to open.
+    const wide = useMediaQuery('(min-width: 768px)')
     const [comparing, setComparing] = useState(false)
     const [showProfessional, setShowProfessional] = useState(() => professional.some((p) => p.id === selected))
     const shown = showProfessional ? plans : consumer
@@ -139,7 +145,7 @@ function CompactPlanPicker({
 
     return (
         <>
-            <BillingToggle value={billing} onChange={onBillingChange} />
+            <BillingToggle plans={plans} value={billing} onChange={onBillingChange} />
             <div role="radiogroup" aria-label="Plans" className="flex flex-col gap-2">
                 {shown.map((p, index) => (
                     <PlanRow
@@ -151,19 +157,23 @@ function CompactPlanPicker({
                         active={selected === p.id}
                         current={isCurrent?.(p)}
                         bestValue={marksBestValue(plans, p, currentTierId)}
-                        expanded={comparing}
+                        features={wide ? 'inline' : comparing ? 'list' : 'none'}
                         onSelect={() => onSelect(p.id)}
                     />
                 ))}
             </div>
             <div className="flex items-center justify-between gap-x-4 flex-wrap -mt-1">
-                <button type="button" aria-expanded={comparing} onClick={() => setComparing((c) => !c)} className={DISCLOSURE_CLASS}>
-                    Compare plans
-                    <span
-                        className={['inline-flex transition-transform duration-200 ease-solkey', comparing ? 'rotate-180' : ''].join(' ')}>
-                        <Icon name="chevron-down" size={14} />
-                    </span>
-                </button>
+                {!wide && (
+                    <button type="button" aria-expanded={comparing} onClick={() => setComparing((c) => !c)} className={DISCLOSURE_CLASS}>
+                        Compare plans
+                        <span
+                            className={['inline-flex transition-transform duration-200 ease-solkey', comparing ? 'rotate-180' : ''].join(
+                                ' ',
+                            )}>
+                            <Icon name="chevron-down" size={14} />
+                        </span>
+                    </button>
+                )}
                 {!showProfessional && professional[0] && (
                     <button type="button" onClick={revealProfessional} className={DISCLOSURE_CLASS}>
                         Recording for work? See {professional[0].name}
@@ -183,8 +193,8 @@ const DISCLOSURE_CLASS = [
 ].join(' ')
 
 /** The price a compact row shows: the amount per month, or per year once yearly is picked. */
-function rowPrice(plan: PlanTier, billing: BillingInterval, currency: Currency): { amount: string; cadence: string } {
-    if (plan.priceMonthly === 0) return { amount: 'Free', cadence: '' }
+function rowPrice(plan: PlanTier, billing: BillingInterval, currency: Currency): { amount: string; cadence?: string } {
+    if (plan.priceMonthly === 0) return { amount: 'Free' }
     return billing === 'yearly'
         ? { amount: formatMoney(plan.priceYearly, currency), cadence: '/year' }
         : { amount: formatMoney(plan.priceMonthly, currency), cadence: '/month' }
@@ -198,26 +208,35 @@ function PlanRow({
     active,
     current,
     bestValue,
-    expanded,
+    features,
     onSelect,
-}: TierCardProps & { radio: RadioProps; expanded: boolean }) {
+}: TierCardProps & {
+    radio: RadioProps
+    /** `inline`: one ' · ' line under the tagline (md up); `list`: the opened comparison (phones); `none`. */
+    features: 'inline' | 'list' | 'none'
+}) {
     const price = rowPrice(plan, billing, currency)
+    const featuresId = useId()
     return (
         <button
             {...radio}
             type="button"
             role="radio"
             aria-checked={active}
+            // The inline features describe the row rather than name it: aria-hidden in the content
+            // (so the name stays plan, tagline, price) and read out through this reference.
+            aria-describedby={features === 'inline' ? featuresId : undefined}
             onClick={onSelect}
-            className={`${cardShell(active)} px-4 py-3.5 flex flex-col gap-3`}>
+            className={`${cardShell(active)} px-5 py-4 flex flex-col gap-3`}>
             <span className="flex items-center gap-3 w-full">
+                {/* The ring's 18px slot holds the mark when chosen. */}
                 <span
                     aria-hidden="true"
                     className={[
                         'size-4.5 shrink-0 rounded-full inline-flex items-center justify-center',
-                        active ? 'bg-primary-container text-on-primary-container' : 'border-2 border-solid border-outline',
+                        active ? '' : 'border-2 border-solid border-outline',
                     ].join(' ')}>
-                    {active && <Icon name="check" size={12} />}
+                    {active && <SelectedMark />}
                 </span>
                 <span className="flex flex-col gap-0.5 flex-1 min-w-0">
                     <span className="flex items-center gap-2 flex-wrap">
@@ -225,14 +244,19 @@ function PlanRow({
                         <PlanBadge current={current} bestValue={bestValue} />
                     </span>
                     <span className="font-body font-normal text-[12px] leading-[1.3] opacity-80">{plan.tagline}</span>
+                    {features === 'inline' && (
+                        <span
+                            id={featuresId}
+                            aria-hidden="true"
+                            className={`mt-1 font-body font-normal text-[13px] leading-[1.4] text-pretty ${active ? 'opacity-85' : 'text-on-surface-variant'}`}>
+                            {planFeatures(plan).join(' · ')}
+                        </span>
+                    )}
                 </span>
-                <span className="flex items-baseline gap-0.5 shrink-0">
-                    <span className="font-mono font-semibold text-[18px] leading-none tracking-[-0.01em]">{price.amount}</span>
-                    {price.cadence && <span className="font-body font-normal text-[12px] leading-none opacity-80">{price.cadence}</span>}
-                </span>
+                <PriceTag amount={price.amount} cadence={price.cadence} size="md" className="shrink-0" />
             </span>
             {/* Spans, not a list: a button may only hold phrasing content. */}
-            {expanded && (
+            {features === 'list' && (
                 <span className="pl-7.5 flex flex-col gap-1.5">
                     {planFeatures(plan).map((f) => (
                         <span key={f} className="flex items-start gap-2 font-body font-normal text-[13px] leading-[1.4]">
@@ -248,41 +272,32 @@ function PlanRow({
     )
 }
 
-const BILLING_OPTIONS = [
-    ['monthly', 'Monthly'],
-    ['yearly', 'Yearly · save 17%'],
-] as const satisfies readonly (readonly [BillingInterval, string])[]
+/**
+ * What paying yearly saves, for the toggle's label: the smallest saving among the paid plans on
+ * offer, so the label never promises more than any one of them gives (today they all save the
+ * same). 0 when none is cheaper by the year.
+ */
+function yearlySavingsPercent(plans: PlanTier[]): number {
+    const savings = plans.map(planSavingsPercent).filter((n) => n > 0)
+    return savings.length === 0 ? 0 : Math.min(...savings)
+}
 
-function BillingToggle({ value, onChange }: { value: BillingInterval; onChange: (v: BillingInterval) => void }) {
-    const radios = useRadioGroup(
-        BILLING_OPTIONS.map(([k]) => k),
-        value,
-        onChange,
-    )
+/** Monthly or yearly: a radio Segmented on the inset track (the picker sits on a white card or dialog). */
+function BillingToggle({ plans, value, onChange }: { plans: PlanTier[]; value: BillingInterval; onChange: (v: BillingInterval) => void }) {
+    const savings = yearlySavingsPercent(plans)
     return (
-        <div
-            role="radiogroup"
-            aria-label="How often you pay"
-            className="inline-flex p-0.75 rounded-full bg-surface-container-low self-start">
-            {BILLING_OPTIONS.map(([k, label], index) => {
-                const active = value === k
-                return (
-                    <button
-                        key={k}
-                        {...radios.radioProps(index)}
-                        type="button"
-                        role="radio"
-                        aria-checked={active}
-                        onClick={() => onChange(k)}
-                        className={[
-                            'border-0 px-3.5 py-1.75 rounded-full cursor-pointer font-label font-semibold text-[12px] leading-none transition-all duration-150 ease-solkey',
-                            'focus-ring',
-                            active ? 'bg-primary-container text-on-primary-container' : 'bg-transparent text-on-surface-variant',
-                        ].join(' ')}>
-                        {label}
-                    </button>
-                )
-            })}
+        <div className="self-start">
+            <Segmented<BillingInterval>
+                mode="radio"
+                tone="inset"
+                ariaLabel="How often you pay"
+                value={value}
+                onChange={onChange}
+                options={[
+                    { value: 'monthly', label: 'Monthly' },
+                    { value: 'yearly', label: savings > 0 ? `Yearly · save ${savings}%` : 'Yearly' },
+                ]}
+            />
         </div>
     )
 }
@@ -298,55 +313,51 @@ interface TierCardProps {
     onSelect: () => void
 }
 
+/**
+ * A tier card or row. The picker always sits inside a white card or dialog, and a card never sits
+ * on a card: no glow, a tonal step down at rest and a further one on hover. Chosen, the selected
+ * fill, paired with a SelectedMark wherever it renders — never colour alone.
+ */
 function cardShell(active: boolean): string {
     return [
-        'relative text-left border-0 rounded-lg cursor-pointer transition-all duration-150 ease-solkey',
+        'relative text-left border-0 rounded-lg cursor-pointer transition-colors duration-150 ease-solkey',
         'focus-ring',
         active
-            ? 'bg-primary-soft text-on-primary-soft'
-            : 'bg-surface-container-lowest text-on-surface tonal-layer-glow hover:bg-surface-container',
+            ? 'bg-(--color-selected) text-(--color-on-selected)'
+            : 'bg-surface-container-low text-on-surface hover:bg-surface-container-high',
     ].join(' ')
 }
 
 /** Where a tier card pins its badge: straddling the top edge, near the right corner. */
 const CARD_BADGE = 'absolute -top-2.5 right-3.5'
 
-/** Amount, cadence note, savings — the same three lines in both cadences,
- *  so the card never changes height when the billing toggle flips. */
+/** Amount, cadence note, savings — the same three lines in both cadences and on every tier (a free
+ *  plan's note is an invisible placeholder line), so the ladder lines up across the cards and a
+ *  card never changes height when the billing toggle flips. */
 function PriceBlock({
     plan,
     billing,
     currency,
     active,
-    size,
 }: {
     plan: PlanTier
     billing: BillingInterval
     currency: Currency
     active: boolean
-    size: 'lg' | 'sm'
 }) {
     const price = planPriceParts(plan, billing, currency)
     return (
         <div className="flex flex-col gap-1">
-            <div className="flex items-baseline gap-1.5">
-                <span
-                    className={[
-                        'font-mono font-semibold leading-none',
-                        size === 'lg' ? 'text-[28px] tracking-[-0.02em]' : 'text-[22px] tracking-[-0.01em]',
-                    ].join(' ')}>
-                    {price.amount}
-                </span>
-                <span className="font-body font-normal text-[12px] leading-[1.3] opacity-80">{price.cadence}</span>
-            </div>
-            {price.note && <span className="font-body font-normal text-[12px] leading-[1.3] opacity-80">{price.note}</span>}
-            {/* On monthly the line stays as invisible placeholder, so the card
-                keeps its height when the billing toggle flips. */}
-            {price.savings > 0 && (
-                <Eyebrow className={billing === 'yearly' ? (active ? '' : 'text-primary') : 'invisible'}>
-                    Saving {formatMoney(price.savings, currency)}/yr
-                </Eyebrow>
-            )}
+            <PriceTag amount={price.amount} cadence={price.cadence} note={price.note || null} size="md" />
+            {/* On monthly the line stays as an invisible placeholder, so the card keeps its height
+                when the billing toggle flips; on a plan with nothing to save it holds the line from
+                sm, where the cards sit side by side, so every feature list starts level. */}
+            <Eyebrow
+                className={
+                    price.savings <= 0 ? 'invisible max-sm:hidden' : billing === 'yearly' ? (active ? '' : 'text-primary') : 'invisible'
+                }>
+                {price.savings > 0 ? `Saving ${formatMoney(price.savings, currency)}/yr` : ' '}
+            </Eyebrow>
         </div>
     )
 }
@@ -357,7 +368,7 @@ function TierCard({ plan, billing, currency, active, current, bestValue, onSelec
             onClick={onSelect}
             type="button"
             aria-pressed={active}
-            className={`${cardShell(active)} px-4.5 pt-5 pb-4.5 flex flex-col gap-3.5`}>
+            className={`${cardShell(active)} px-5 pt-5 pb-4.5 flex flex-col gap-3.5`}>
             <PlanBadge current={current} bestValue={bestValue} className={CARD_BADGE} />
             <div className="flex items-center gap-2.5">
                 <span
@@ -367,15 +378,16 @@ function TierCard({ plan, billing, currency, active, current, bestValue, onSelec
                     ].join(' ')}>
                     <Icon name={plan.icon} size={18} />
                 </span>
-                <div className="flex flex-col">
+                <div className="flex flex-col min-w-0">
                     <span className="font-body font-semibold text-[15px] leading-[1.2]">{plan.name}</span>
                     <span className="font-body font-normal text-[12px] leading-[1.3] opacity-80">{plan.tagline}</span>
                 </div>
+                {active && <SelectedMark className="ml-auto self-start" />}
             </div>
-            <PriceBlock plan={plan} billing={billing} currency={currency} active={active} size="lg" />
+            <PriceBlock plan={plan} billing={billing} currency={currency} active={active} />
             <ul className="list-none p-0 m-0 flex flex-col gap-2">
                 {planFeatures(plan).map((f) => (
-                    <li key={f} className="flex items-start gap-2 font-body font-normal text-[13px] leading-[1.4]">
+                    <li key={f} className="flex items-start gap-2 font-body font-normal text-[13px] leading-[1.4] text-pretty">
                         <span className="mt-px opacity-80">
                             <Icon name="check" size={14} />
                         </span>
@@ -400,7 +412,7 @@ function ProfessionalTierCard({ plan, billing, currency, active, current, bestVa
             <span
                 className={[
                     'w-10 h-10 rounded-full shrink-0 inline-flex items-center justify-center',
-                    active ? 'bg-on-primary-soft text-primary-soft' : 'bg-secondary-soft text-on-secondary-soft',
+                    active ? 'bg-on-primary-soft text-primary-soft' : 'bg-surface-container text-primary',
                 ].join(' ')}>
                 <Icon name={plan.icon} size={18} />
             </span>
@@ -415,7 +427,11 @@ function ProfessionalTierCard({ plan, billing, currency, active, current, bestVa
                     {planFeatures(plan).join(' · ')}
                 </span>
             </div>
-            <PriceBlock plan={plan} billing={billing} currency={currency} active={active} size="sm" />
+            <PriceBlock plan={plan} billing={billing} currency={currency} active={active} />
+            {/* The mark's 18px slot is always there, so picking the card never re-wraps its text. */}
+            <span aria-hidden="true" className="size-4.5 shrink-0 self-start">
+                {active && <SelectedMark />}
+            </span>
         </button>
     )
 }

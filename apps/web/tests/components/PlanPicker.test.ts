@@ -6,7 +6,7 @@ vi.mock('@/lib/useDisplayCurrency', () => ({ useDisplayCurrency: () => 'usd' }))
 
 import { PlanPicker } from '@/components/PlanPicker'
 import type { BillingInterval } from '@/lib/api'
-import { PLAN_TIERS, type PlanTier } from '@/lib/plans'
+import { PLAN_TIERS, planFeatures, type PlanTier } from '@/lib/plans'
 
 // React's act() refuses to run outside a test-aware environment.
 ;(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
@@ -16,7 +16,20 @@ let unmount: (() => void) | undefined
 afterEach(() => {
     unmount?.()
     unmount = undefined
+    vi.unstubAllGlobals()
 })
+
+/** A viewport `width` CSS px wide, as the picker's min-width media query sees it. */
+function stubWidth(width: number) {
+    vi.stubGlobal('matchMedia', (query: string) => {
+        const min = /min-width:\s*(\d+)px/.exec(query)
+        return {
+            matches: min ? width >= Number(min[1]) : false,
+            addEventListener: () => undefined,
+            removeEventListener: () => undefined,
+        }
+    })
+}
 
 function renderCompact(selected: PlanTier['id'] | null, billing: BillingInterval = 'monthly', onSelect = vi.fn()) {
     const host = document.createElement('div')
@@ -61,14 +74,27 @@ describe('PlanPicker compact', () => {
         expect(rows(renderCompact('free', 'yearly'))[1]?.textContent).toContain('$90/year')
     })
 
-    it('opens the feature lists behind "Compare plans"', () => {
+    it('opens the feature lists behind "Compare plans" on a phone', () => {
+        stubWidth(390)
         const host = renderCompact('free')
         const compare = button(host, /^Compare plans$/)
         expect(compare?.getAttribute('aria-expanded')).toBe('false')
-        expect(host.textContent).not.toContain('Up to 5 scores')
+        expect(host.textContent).not.toContain('Up to 5\u00a0scores')
         act(() => compare?.click())
         expect(compare?.getAttribute('aria-expanded')).toBe('true')
-        expect(host.textContent).toContain('Up to 5 scores')
+        expect(host.textContent).toContain('Up to 5\u00a0scores')
+    })
+
+    it('from md, runs each row’s features as one line that describes the row rather than naming it', () => {
+        stubWidth(1024)
+        const host = renderCompact('free')
+        expect(button(host, /^Compare plans$/)).toBeUndefined()
+        const sketch = rows(host)[0]
+        const description = document.getElementById(sketch?.getAttribute('aria-describedby') ?? '')
+        expect(description?.textContent).toBe(planFeatures(PLAN_TIERS[0]).join(' · '))
+        // Out of the radio's name: hidden from the content, read only through the reference.
+        expect(description?.getAttribute('aria-hidden')).toBe('true')
+        expect(sketch?.contains(description ?? null)).toBe(true)
     })
 
     it('reveals the professional tier on request, and from the start when it is the chosen one', () => {

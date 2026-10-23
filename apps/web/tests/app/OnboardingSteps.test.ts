@@ -15,6 +15,8 @@ vi.mock('@/lib/Microphone', () => ({ Microphone: { open: openMic, endSession } }
 import { LEGACY_STEP_NAMES, onboardingSteps } from '@/app/onboarding/onboarding-data'
 import {
     AboutStep,
+    type DoneDestination,
+    DoneStep,
     InstrumentsStep,
     MIC_GRANTED_ADVANCE_MS,
     type MicState,
@@ -462,10 +464,15 @@ describe('MicStep', () => {
 
         expect(host.textContent).toContain('Microphone blocked.')
         expect(host.textContent).toContain('No problem — the editor works without a mic, and recording will ask again when you need it.')
-        expect(host.textContent).toContain(
-            'To allow it now: Click the icon left of the web address, then set Microphone to Allow. Then Try again.',
-        )
+        // The fix as numbered steps, one action each, after its lead line.
+        expect(host.textContent).toContain('To allow it now:')
+        expect([...host.querySelectorAll('ol li')].map((li) => li.textContent)).toEqual([
+            '1Click the icon left of the web address.',
+            '2Set Microphone to Allow.',
+        ])
         expect(host.textContent).not.toContain('site settings')
+        // A block is a choice, not a fault: no red well.
+        expect(host.innerHTML).not.toContain('bg-error-container')
         expect(host.textContent).not.toContain('or just Continue')
         // A text button, not a second capsule beside the footer's Continue.
         const retry = buttons(host).find((b) => b.textContent === 'Try again')
@@ -504,5 +511,41 @@ describe('MicStep', () => {
         expect(stop).toHaveBeenCalled()
         expect(host.isConnected).toBe(false)
         expect(window.localStorage.getItem('solkey:mic-mode-guide')).toBeNull()
+    })
+})
+
+describe('DoneStep', () => {
+    function renderDone(destination: DoneDestination) {
+        return mount(
+            createElement(DoneStep, {
+                titleRef,
+                name: 'Robin Vale',
+                destination,
+                betaPlanName: 'Beta',
+                planLine: null,
+                firstInstrument: Instrument.Violin,
+                creating: false,
+                onRecordFirstMelody: () => {},
+                onFinish: () => {},
+            }),
+        )
+    }
+
+    it('ends on a preview of the score the button opens, on the instrument it starts on, under the page h1', () => {
+        const host = renderDone('first-melody')
+        expect(host.querySelector('h1')?.textContent).toBe("You're all set, Robin.")
+        const preview = host.querySelector('[aria-hidden="true"]')
+        expect(preview?.textContent).toContain('My first melody')
+        expect(preview?.textContent).toContain('Violin')
+        expect(preview?.textContent).toContain('Ready to record')
+        expect(preview?.querySelectorAll('line')).toHaveLength(5)
+        // Only the closing CTA pops.
+        expect(buttonNamed(host, 'Record my first melody')?.className).toContain('shadow-(--shadow-offset-3)')
+    })
+
+    it('shows the quiet success mark, not the preview, for the other ways out', () => {
+        const host = renderDone('next')
+        expect(host.textContent).not.toContain('Ready to record')
+        expect(host.querySelector('span.bg-primary-soft')).not.toBeNull()
     })
 })

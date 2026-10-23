@@ -120,6 +120,24 @@ describe('AuthCard', () => {
         expect(live?.textContent).toBe('')
     })
 
+    it('sets a credentials mix-up in the quiet form alert, and a real failure in the fault slab', () => {
+        const typo = render({ mode: 'signin', error: error('INVALID_EMAIL_OR_PASSWORD') })
+        expect(typo.querySelector('[role="alert"]')?.className).toContain('bg-error-soft')
+        unmount?.()
+        const offline = render({ mode: 'signin', error: AuthErrorCopy.NETWORK })
+        expect(offline.querySelector('[role="alert"]')?.className).toContain('bg-error-container')
+    })
+
+    it('has one h1 at every width: the strip line on phones, the two-line headline from md', () => {
+        const host = render({ mode: 'signin' })
+        const headings = host.querySelectorAll('h1')
+        expect(headings).toHaveLength(1)
+        const [phone, wide] = [...(headings[0]?.children ?? [])]
+        expect(phone?.className).toContain('md:hidden')
+        expect(phone?.textContent).toBe('Welcome back.')
+        expect(wide?.className).toContain('max-md:hidden')
+    })
+
     it("links an error's next step in place, keeping ?next=, and never shows the library's words", () => {
         const host = render({ mode: 'signup', error: error('USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL'), next: '/s/token' })
         const alert = host.querySelector('[role="alert"]')

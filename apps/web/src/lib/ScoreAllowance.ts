@@ -44,8 +44,12 @@ export class ScoreAllowance {
         if (this.cap === null) return null
         // The free tier's scores are "free scores"; another capped tier names itself.
         const free = this.tierId === 'free'
-        if (this.atCap) return free ? `You've used all ${this.cap} free scores.` : `You've used all ${this.cap} scores on ${this.tierName}.`
-        return free ? `${this.count} of ${this.cap} free scores` : `${this.count} of ${this.cap} scores on ${this.tierName}`
+        // The cap stays with its noun at a line end (U+00A0): never "5 / free scores".
+        if (this.atCap)
+            return free
+                ? `You've used all ${this.cap}\u00a0free\u00a0scores.`
+                : `You've used all ${this.cap}\u00a0scores on ${this.tierName}.`
+        return free ? `${this.count} of ${this.cap}\u00a0free\u00a0scores` : `${this.count} of ${this.cap}\u00a0scores on ${this.tierName}`
     }
 
     /** The library's count line: the summary once the cap is near (two below it), so a first score never reads as an upsell. */

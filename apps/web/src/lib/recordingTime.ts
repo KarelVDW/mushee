@@ -41,7 +41,8 @@ export function formatAllowance(seconds: number): string {
 
 /**
  * An allowance in short words, for meters and one-line readouts: 180 → "3 min",
- * 156 → "2 min 36 sec", 45 → "45 sec", 10740 → "2 h 59 min". Below an hour it counts
+ * 156 → "2 min 36 sec", 45 → "45 sec", 10740 → "2 h 59 min" (each number bound to its unit
+ * by U+00A0). Below an hour it counts
  * minutes and seconds; from an hour on, hours and minutes (seconds no longer matter).
  * Rounded down, so a "left" figure never promises a second that isn't there.
  */
@@ -50,8 +51,9 @@ export function formatAllowanceShort(seconds: number): string {
     const h = Math.floor(total / 3600)
     const m = Math.floor((total % 3600) / 60)
     const s = total % 60
-    const parts = h ? [`${h} h`, m && `${m} min`] : [m && `${m} min`, s && `${s} sec`]
-    return parts.filter(Boolean).join(' ') || '0 sec'
+    // A number never leaves its unit at a line end: each pair is held by a no-break space.
+    const parts = h ? [`${h}\u00a0h`, m && `${m}\u00a0min`] : [m && `${m}\u00a0min`, s && `${s}\u00a0sec`]
+    return parts.filter(Boolean).join(' ') || '0\u00a0sec'
 }
 
 /** What is left of today's recording: "1 min left today", "30 sec left today". */
@@ -122,6 +124,7 @@ function wholeSeconds(seconds: number): number {
     return Math.max(0, Math.floor(seconds))
 }
 
+/** "3 minutes", the number held to its unit by a no-break space. */
 function plural(count: number, unit: string): string {
-    return `${count} ${unit}${count === 1 ? '' : 's'}`
+    return `${count}\u00a0${unit}${count === 1 ? '' : 's'}`
 }

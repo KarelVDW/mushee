@@ -43,7 +43,7 @@ describe('Pricing', () => {
     it('reads as plans: taglines, allowances in words, the free budget pictured, "Start free" and "Choose …"', () => {
         const [sketch, songwriter, studio] = cards()
         expect(sketch.text).toContain('For trying things out')
-        expect(sketch.text).toContain('3 minutes of recording a day')
+        expect(sketch.text).toContain('3\u00a0minutes of recording a day')
         expect(sketch.text).toContain('Enough for about six 30-second recordings.')
         expect(songwriter.text).not.toContain('Enough for about')
         expect([sketch.cta, songwriter.cta, studio.cta]).toEqual(['Start free', 'Choose Songwriter', 'Choose Studio'])
@@ -75,7 +75,7 @@ describe('Pricing', () => {
     it('sets Arranger out as one wide card: its lines as checks, the same price block, its own button', () => {
         const arranger = cards().find((card) => card.name === 'Arranger')
         expect(arranger?.text).toContain('For transcribing every day')
-        for (const line of ['8 hours of recording a day', 'Everything in Studio', 'Direct support from the maker'])
+        for (const line of ['8\u00a0hours of recording a day', 'Everything in Studio', 'Direct support from the maker'])
             expect(arranger?.text).toContain(line)
         expect(arranger?.text).toContain('or $490 a year — save 17%')
         expect(arranger?.cta).toBe('Choose Arranger')

@@ -1,13 +1,16 @@
 'use client'
 
+import { Instrument } from '@mushee/notation/model'
+import { SuccessMark, TextLink } from '@mushee/ui'
 import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'
 
+import { FirstScorePreview } from '@/app/onboarding/OnboardingSteps'
 import { BetaPlanCard } from '@/components/BetaPlanCard'
 import { FunnelShell } from '@/components/FunnelShell'
 import { Eyebrow, Icon, ModalTitle, PrimaryButton, SubHeadline, TertiaryButton } from '@/components/ui'
 import { useSession } from '@/lib/auth-client'
-import { useBetaGate, usePlanCatalogue, useScores, useSignOut, useStartFirstMelody } from '@/lib/queries'
+import { useBetaGate, useOnboarding, usePlanCatalogue, useScores, useSignOut, useStartFirstMelody } from '@/lib/queries'
 
 /**
  * Closed-beta waiting room. Pending users land here after signup; the page
@@ -36,7 +39,7 @@ export default function BetaWaitingPage() {
             ) : (
                 <>
                     <Eyebrow className="text-secondary">Closed beta</Eyebrow>
-                    <ModalTitle>You&apos;re on the waitlist.</ModalTitle>
+                    <ModalTitle as="h1">You&apos;re on the waitlist.</ModalTitle>
                     <SubHeadline>
                         Solkey is in a closed beta, so access is granted personally. We&apos;ll email{' '}
                         <strong className="text-on-surface">{session?.user?.email ?? 'you'}</strong> the moment your account is approved —
@@ -57,19 +60,19 @@ export default function BetaWaitingPage() {
                      * The page already checks by itself, so checking by hand stays a quiet option. It
                      * is disabled while a check runs (refetch would cancel it and start over).
                      */}
-                    <div className="flex items-center gap-x-4 gap-y-1 flex-wrap">
+                    <div className="flex flex-col items-start gap-1">
                         <TertiaryButton disabled={gate.isFetching} onClick={() => void gate.refetch()}>
                             <span className="inline-flex items-center gap-1.5">
                                 <Icon name="refresh-cw" size={13} />
                                 {gate.isFetching ? 'Checking…' : 'Check my status'}
                             </span>
                         </TertiaryButton>
-                        <span className="font-body font-normal text-[12px] leading-[1.4] text-on-surface-variant">
-                            This page checks automatically every 30 seconds. Questions?{' '}
-                            <a href="mailto:support@solkey.io" className="text-primary underline">
-                                support@solkey.io
-                            </a>
-                        </span>
+                        <p className="m-0 font-body font-normal text-[12px] leading-[1.4] text-on-surface-variant text-pretty">
+                            This page checks automatically every 30 seconds.
+                        </p>
+                        <p className="m-0 font-body font-normal text-[13px] leading-[1.4] text-on-surface-variant">
+                            Questions? <TextLink href="mailto:support@solkey.io">support@solkey.io</TextLink>
+                        </p>
                     </div>
                 </>
             )}
@@ -85,22 +88,38 @@ export default function BetaWaitingPage() {
 function ApprovedWelcome() {
     const library = useScores()
     const firstMelody = useStartFirstMelody()
+    const { data: onboarding } = useOnboarding()
     const count = library.data?.length
+    // The instrument a first score starts on: the saved onboarding pick (percussion skipped),
+    // else the voice. The button hands this same one to useStartFirstMelody, so the preview's
+    // pill always names the instrument the new score starts on.
+    const instrument =
+        onboarding?.instruments
+            ?.map((name) => Instrument.findByDisplayName(name))
+            .find((i): i is Instrument => i !== undefined && i.category !== 'Percussion') ?? Instrument.VoiceLead
     return (
         <>
-            <div className="w-14 h-14 rounded-full bg-primary-soft text-on-primary-soft inline-flex items-center justify-center">
-                <Icon name="check" size={28} />
-            </div>
-            <ModalTitle>You&apos;re in.</ModalTitle>
+            {/* An empty library previews the score the button makes; its room held while the library is counted. */}
+            {count === 0 ? (
+                <FirstScorePreview instrument={instrument} />
+            ) : count === undefined && !library.isError ? (
+                <div className="invisible w-full">
+                    <FirstScorePreview instrument={instrument} />
+                </div>
+            ) : (
+                <SuccessMark size={56} />
+            )}
+            <ModalTitle as="h1">You&apos;re in.</ModalTitle>
             <SubHeadline>Your beta access has been approved. Have fun — and tell us everything that feels rough.</SubHeadline>
             {/* Its height held until the library is counted, so no button swaps in under a tap. */}
-            <div className="flex items-center gap-x-5 gap-y-2 flex-wrap min-h-8.5 pointer-coarse:min-h-11">
+            <div className="flex items-center gap-x-5 gap-y-2 flex-wrap min-h-(--control-lg)">
                 {count === 0 ? (
                     <>
                         <PrimaryButton
+                            size="lg"
                             emphasis="pop"
                             icon="arrow-right"
-                            onClick={() => firstMelody.start()}
+                            onClick={() => firstMelody.start(instrument)}
                             disabled={firstMelody.creating}>
                             {firstMelody.creating ? 'Getting it ready…' : 'Record my first melody'}
                         </PrimaryButton>
@@ -108,7 +127,7 @@ function ApprovedWelcome() {
                     </>
                 ) : (
                     (count !== undefined || library.isError) && (
-                        <PrimaryButton emphasis="pop" icon="arrow-right" href="/scores">
+                        <PrimaryButton size="lg" emphasis="pop" icon="arrow-right" href="/scores">
                             Open my library
                         </PrimaryButton>
                     )

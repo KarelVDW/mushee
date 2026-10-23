@@ -54,6 +54,21 @@ describe('CookieConsent', () => {
         expect(classes).toContain('pb-[max(1rem,env(safe-area-inset-bottom))]')
     })
 
+    it('is a corner card from sm up, bottom right, rising in, with the two choices sharing one row equally', () => {
+        render()
+        const classes = banner()?.className.split(/\s+/) ?? []
+        expect(classes).toEqual(
+            expect.arrayContaining(['sm:right-5', 'sm:left-auto', 'sm:bottom-5', 'sm:max-w-[26rem]', 'sm:shadow-overlay']),
+        )
+        expect(classes).toContain('sm:animate-[popover-sheet-in_200ms_var(--ease-solkey)]')
+        expect(classes).toContain('motion-reduce:animate-none')
+        // No centred slab any more.
+        expect(classes).not.toContain('sm:mx-auto')
+        const choices = button('Essential only')?.parentElement
+        expect(choices?.className).toContain('grid-cols-2')
+        expect([...(choices?.children ?? [])].map((b) => b.textContent)).toEqual(['Essential only', 'Accept all'])
+    })
+
     it('says what it asks in plain words: a short version on phones, the full one from sm up', () => {
         render()
         const [phone, desktop] = [...(banner()?.querySelectorAll('p > span') ?? [])]
