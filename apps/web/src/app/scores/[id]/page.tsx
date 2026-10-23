@@ -152,7 +152,7 @@ export default function ScoreEditorPage() {
     const showSelectionTip = useCallback(() => {
         if (!selectionTip.pending) return
         selectionTip.markSeen()
-        selectionTipToast.current = showToast('Tap the note again to copy or delete it.', 'info', { duration: SELECTION_TIP_MS })
+        selectionTipToast.current = showToast('Tap the note again to copy or delete it.', 'info', { icon: 'info', duration: SELECTION_TIP_MS })
         setSelectionTipUp(true)
         // The tap that selected the note is still in flight: listen from the next one on.
         setTimeout(() => document.addEventListener('pointerdown', dismissSelectionTip, { once: true }), 0)
@@ -333,7 +333,9 @@ export default function ScoreEditorPage() {
         }
         manipulator.onUndoOffer = (offer) => {
             retire()
+            // A done edit: the check, like every other "that happened" toast.
             const toast = showToast(offer.message, 'info', {
+                icon: 'check',
                 duration: UNDO_TOAST_MS,
                 action: { label: 'Undo', ariaLabel: offer.undoLabel, onClick: () => manipulator.undoStep(offer.step) },
             })

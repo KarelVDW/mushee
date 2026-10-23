@@ -134,7 +134,7 @@ export function TakesList({ takes, scoreTitleFor, scroll = true, numbered = fals
             onSuccess: () => {
                 setConfirming(null)
                 track('take_deleted')
-                showToast('Recording deleted.', 'info')
+                showToast('Recording deleted.', 'info', { icon: 'check' })
             },
         })
     }
