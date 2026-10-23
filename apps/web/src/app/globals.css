@@ -78,8 +78,12 @@
 }
 
 /* Tooltips (components/ui/Tooltip.tsx) fade in; phone popover sheets (Popover variant
-   "sheet") rise 16px as they fade in, so the sheet reads as coming from the dock. Both
-   appear at once under reduced motion. */
+   "sheet") rise 16px as they fade in, so the sheet reads as coming from the dock, and the
+   phone bottom-sheet dialogs (DialogPanel under sm) rise the same way. Both appear at once
+   under reduced motion. A closing sheet leaves an inert copy playing theme.css's sheet-out
+   (animate-sheet-out), and anchored popovers arrive with theme.css's .popover-enter; neither
+   is turned off here, since the copy waits for its animationend — the theme's reduced-motion
+   rule shortens both to an instant. */
 @keyframes tooltip-in {
     from {
         opacity: 0;

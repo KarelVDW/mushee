@@ -110,7 +110,7 @@ describe('Popover surfaces', () => {
 
     const option = () => createElement('button', { type: 'button' }, 'Treble')
 
-    it('anchored: an opaque card with the eyebrow and the one-line hint under it', () => {
+    it('anchored: an opaque card with a plain title and the one-line hint under it', () => {
         act(() => {
             root.render(
                 createElement(Popover, {
@@ -118,6 +118,7 @@ describe('Popover surfaces', () => {
                     title: 'Clef',
                     hint: 'Which notes the lines stand for.',
                     onDismiss: vi.fn(),
+                    className: 'w-80 gap-2 right-0 top-full',
                     children: option(),
                 }),
             )
@@ -126,10 +127,47 @@ describe('Popover surfaces', () => {
         expect(panel.className).toContain('bg-surface-container-lowest')
         expect(panel.className).toContain('shadow-overlay')
         expect(panel.className).not.toContain('glass-panel')
-        const [eyebrow, hint] = Array.from(panel.children)
-        expect(eyebrow.textContent).toBe('Clef')
+        // It arrives from its anchor (the entrance animates `translate`, never `transform`).
+        expect(panel.className).toContain('popover-enter')
+        const [header, content] = Array.from(panel.children) as HTMLElement[]
+        // The title is a sentence-case h2 — no eyebrow — and the hint sits under it.
+        const title = header.querySelector('h2') as HTMLElement
+        expect(title.textContent).toBe('Clef')
+        expect(title.className).toContain('type-label')
+        expect(header.querySelector('span')).toBeNull()
+        const hint = header.querySelector('p') as HTMLElement
         expect(hint.textContent).toBe('Which notes the lines stand for.')
         expect(hint.className).toContain('text-[13px]')
+        // The content starts 12px under the heading; the call site's gap spaces the content only.
+        expect(header.className).toContain('mb-3')
+        expect(content.className).toContain('gap-2')
+        expect(panel.className).not.toContain('gap-2')
+        expect(panel.className).toContain('w-80')
+        expect(content.textContent).toBe('Treble')
+    })
+
+    it('anchored: travels in from the side it opened on', () => {
+        const anchorRef = { current: document.createElement('div') }
+        document.body.appendChild(anchorRef.current)
+        const rect = (top: number, bottom: number) => ({ top, bottom, left: 0, right: 100, width: 100, height: bottom - top }) as DOMRect
+        vi.spyOn(anchorRef.current, 'getBoundingClientRect').mockReturnValue(rect(500, 540))
+        const panelRect = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect')
+        const render = () =>
+            act(() =>
+                root.render(createElement(Popover, { ariaLabel: 'More', title: 'More', onDismiss: vi.fn(), anchorRef, children: option() })),
+            )
+        // Above the chip (the dock): it rises the last 6px.
+        panelRect.mockReturnValue(rect(300, 488))
+        render()
+        const panel = () => host.querySelector<HTMLElement>('[role="dialog"]') as HTMLElement
+        expect(panel().style.getPropertyValue('--pop-from')).toBe('6px')
+        act(() => root.render(null))
+        // Below the chip (the header): it drops the last 6px.
+        panelRect.mockReturnValue(rect(548, 700))
+        render()
+        expect(panel().style.getPropertyValue('--pop-from')).toBe('-6px')
+        panelRect.mockRestore()
+        anchorRef.current.remove()
     })
 
     describe('sheet', () => {
@@ -210,6 +248,65 @@ describe('Popover surfaces', () => {
             expect(document.activeElement?.textContent).toBe('Treble')
             renderSheet(vi.fn(), false)
             expect(document.activeElement).toBe(trigger)
+        })
+
+        it('heads the sheet with a 20px title, the hint 4px under it and content 12px below', () => {
+            renderSheet(vi.fn())
+            const sheet = host.querySelector<HTMLElement>('[role="dialog"]') as HTMLElement
+            const header = sheet.querySelector<HTMLElement>('[data-popover-header]') as HTMLElement
+            expect(header.className).toContain('pb-3')
+            expect(header.querySelector('h2')?.className).toContain('text-[20px]')
+            expect(header.querySelector('p')?.className).toContain('mt-1')
+        })
+
+        it('leaves an inert, role-less copy behind on a full close, which fades out and goes', () => {
+            vi.useFakeTimers()
+            renderSheet(vi.fn())
+            renderSheet(vi.fn(), false)
+            const frame = host.querySelector<HTMLElement>('[data-popover-sheet-host]') as HTMLElement
+            expect(frame.querySelectorAll('[role="dialog"]')).toHaveLength(0)
+            const ghost = frame.querySelector<HTMLElement>('[data-popover-sheet-leaving]') as HTMLElement
+            expect(ghost).not.toBeNull()
+            expect(ghost.getAttribute('aria-hidden')).toBe('true')
+            expect(ghost.hasAttribute('inert')).toBe(true)
+            expect(ghost.hasAttribute('aria-label')).toBe(false)
+            expect(ghost.querySelector('[id]')).toBeNull()
+            expect(ghost.className).toContain('animate-sheet-out')
+            expect(ghost.className).toContain('pointer-events-none')
+            expect(ghost.className).not.toContain('popover-sheet-enter')
+            // Gone once its exit has played.
+            act(() => ghost.dispatchEvent(new Event('animationend')))
+            expect(frame.querySelector('[data-popover-sheet-leaving]')).toBeNull()
+            // And, should animationend never come, shortly after anyway.
+            renderSheet(vi.fn())
+            renderSheet(vi.fn(), false)
+            expect(frame.querySelector('[data-popover-sheet-leaving]')).not.toBeNull()
+            act(() => vi.advanceTimersByTime(400))
+            expect(frame.querySelector('[data-popover-sheet-leaving]')).toBeNull()
+            vi.useRealTimers()
+        })
+
+        it('shows no exit when one sheet replaces another in the same commit', () => {
+            const sheetOf = (title: string) =>
+                createElement(Popover, { variant: 'sheet', ariaLabel: title, title, onDismiss: vi.fn(), children: option() })
+            act(() => root.render(createElement(PopoverSheetHost, { children: sheetOf('More tools') })))
+            act(() =>
+                root.render(
+                    createElement(PopoverSheetHost, {
+                        children: createElement(Popover, {
+                            variant: 'sheet',
+                            ariaLabel: 'Select clef',
+                            title: 'Clef',
+                            lead: createElement('button', { type: 'button' }, 'Back'),
+                            onDismiss: vi.fn(),
+                            children: option(),
+                        }),
+                    }),
+                ),
+            )
+            const frame = host.querySelector<HTMLElement>('[data-popover-sheet-host]') as HTMLElement
+            expect(frame.querySelector('[data-popover-sheet-leaving]')).toBeNull()
+            expect([...frame.querySelectorAll('[role="dialog"]')].map((d) => d.getAttribute('aria-label'))).toEqual(['Select clef'])
         })
 
         it('without a host, still portals out of the chrome into <body>', () => {
