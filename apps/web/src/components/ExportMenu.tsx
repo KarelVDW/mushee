@@ -35,6 +35,8 @@ interface ExportMenuProps {
     menuTitle?: string
     /** The chip's size: `lg` beside a page's big CTA (the shared score page). */
     size?: 'default' | 'lg'
+    /** The phone header's form: the panel opens as the full-width header card (HeaderMenu `sheet`). */
+    sheet?: boolean
 }
 
 /**
@@ -51,6 +53,7 @@ export function ExportMenu({
     ariaLabel = 'Export score',
     menuTitle = 'Download as',
     size,
+    sheet = false,
 }: ExportMenuProps) {
     // Held here, not in the panel: an export keeps running (and blocks a second one) after Escape closes the menu.
     const [busy, setBusy] = useState<ExportFormat | null>(null)
@@ -94,7 +97,15 @@ export function ExportMenu({
     )
 
     return (
-        <HeaderMenu icon="download" label={label} compact={compact} ariaLabel={ariaLabel} title={menuTitle} size={size} className="gap-2">
+        <HeaderMenu
+            icon="download"
+            label={label}
+            compact={compact}
+            sheet={sheet}
+            ariaLabel={ariaLabel}
+            title={menuTitle}
+            size={size}
+            className="gap-2">
             {({ close }) => (
                 <div role="group" aria-label="Export format" className="flex flex-col gap-1.5">
                     {FORMATS.map(({ format, label: formatLabel, description, extension }) => (

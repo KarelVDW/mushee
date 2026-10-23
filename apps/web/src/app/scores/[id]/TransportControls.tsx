@@ -120,7 +120,7 @@ export function TransportControls({
                     tooltip="Stop"
                     tooltipSide={side}
                     disabled={!canStop}>
-                    <Icon name="square" size={14} />
+                    <Icon name="square" size={large ? 16 : 14} />
                 </TransportBtn>
             </span>
             <TransportBtn

@@ -115,7 +115,7 @@ export function EditorHeader({
     const narrow = !compact && fit === 'narrow'
 
     return (
-        <header className="relative z-10 flex items-center gap-2 sm:gap-4 px-3 sm:px-5 py-2">
+        <header className="relative z-10 flex items-center gap-2 sm:gap-4 px-2 sm:px-5 py-2">
             <span
                 aria-hidden
                 className="pointer-events-none absolute inset-0 -z-10 bg-surface-container-low/85 backdrop-blur-xl tonal-layer-glow"
@@ -124,20 +124,22 @@ export function EditorHeader({
                 title's mirror wraps, so it can't widen that floor), so a crowded header compacts
                 (fit) rather than the transport painting over the title and the instrument chip. */}
             <div className={`flex items-center gap-1.5 sm:gap-2.5 flex-1 ${compact ? 'min-w-0' : ''}`}>
+                {/* The arrow's ink (its tip 12.6px into the 40px button) lands on the paper's 8px
+                    edge on phones: -12px against the header's 8px padding. */}
                 <button
                     onClick={() => router.push('/scores')}
                     aria-label="Back to library"
                     className={[
-                        'bg-transparent border-0 cursor-pointer text-on-surface-variant size-10 -ml-2.5 shrink-0',
+                        'bg-transparent border-0 cursor-pointer text-on-surface-variant size-10 -ml-3 sm:-ml-2.5 shrink-0',
                         'inline-flex items-center justify-center rounded-full',
                         'hover:text-on-surface transition-colors duration-150 ease-solkey',
                         'focus-ring',
                     ].join(' ')}>
-                    <Icon name="arrow-left" size={20} />
+                    <Icon name="arrow-left" size={compact ? 18 : 20} />
                 </button>
-                {/* Gone below 1280px (HEADER_FIT_QUERIES.medium), where the chips start to compact. */}
+                {/* Gone below 1280px (HEADER_FIT_QUERIES.medium), where the chips start to compact;
+                    the title then sits a little apart from it, no divider between. */}
                 <Wordmark size={19} className="max-[80rem]:hidden" />
-                <div className="w-px h-5 bg-outline-variant/15 max-[80rem]:hidden" />
                 <TitleField
                     value={title}
                     onChange={onTitleChange}
@@ -156,7 +158,10 @@ export function EditorHeader({
                 </div>
             </div>
             {!compact && <TransportControls {...transport} collapseStop={narrow} />}
-            <div inert={takenOver} className={`flex items-center gap-2 shrink-0 sm:flex-1 justify-end ${fade}`}>
+            {/* Three groups, a step apart (16px; 8px within each): Transpose, then the history well
+                with the shortcuts list (one chip on a narrow header), then Share, Recordings and
+                Export. Phones keep only the last, its round chips 6px apart, each opening a sheet. */}
+            <div inert={takenOver} className={`flex items-center shrink-0 sm:flex-1 justify-end ${compact ? 'gap-1.5' : 'gap-4'} ${fade}`}>
                 {/* Pitch and history tools are document-level chrome (see PitchTools /
                     HistoryTools); on phones they move into the dock instead. A score of rests
                     has nothing to transpose: the chip — and its jargon — waits for the first note. */}
@@ -170,20 +175,24 @@ export function EditorHeader({
                     />
                 )}
                 {narrow && <HistoryMenu manipulator={manipulator} onOpenShortcuts={onOpenShortcuts} />}
-                {!compact && !narrow && <HistoryTools manipulator={manipulator} />}
                 {!compact && !narrow && (
-                    <ChipToggle
-                        active={shortcutsOpen}
-                        onClick={onOpenShortcuts}
-                        ariaLabel="Keyboard shortcuts"
-                        shortcut={[SHOW_SHORTCUTS_KEY.label]}
-                        tooltipSide="bottom">
-                        <Icon name="keyboard" size={16} />
-                    </ChipToggle>
+                    <div className="flex items-center gap-2">
+                        <HistoryTools manipulator={manipulator} />
+                        <ChipToggle
+                            active={shortcutsOpen}
+                            onClick={onOpenShortcuts}
+                            ariaLabel="Keyboard shortcuts"
+                            shortcut={[SHOW_SHORTCUTS_KEY.label]}
+                            tooltipSide="bottom">
+                            <Icon name="keyboard" size={16} />
+                        </ChipToggle>
+                    </div>
                 )}
-                <ShareMenu scoreId={scoreId} shareToken={shareToken} compact={iconChips} />
-                <RecordingsMenu scoreId={scoreId} compact={iconChips} />
-                <ExportMenu score={score} title={title} compact={iconChips} getSvg={getSvg} />
+                <div className={`flex items-center ${compact ? 'gap-1.5' : 'gap-2'}`}>
+                    <ShareMenu scoreId={scoreId} shareToken={shareToken} compact={iconChips} sheet={compact} />
+                    <RecordingsMenu scoreId={scoreId} compact={iconChips} sheet={compact} />
+                    <ExportMenu score={score} title={title} compact={iconChips} sheet={compact} getSvg={getSvg} />
+                </div>
             </div>
         </header>
     )
@@ -303,7 +312,7 @@ function TitleField({ value, onChange, onDone, compact, onEditingChange }: Title
     // on one line (clamped there) but may break anywhere, so the title adds only its 6rem floor
     // to the header's minimum width, never its whole length.
     return (
-        <div className="flex min-w-24 max-w-[min(32rem,40vw)] shrink [&>span]:min-w-0 [&>span]:shrink">
+        <div className="flex min-w-24 max-w-[min(32rem,40vw)] shrink xl:ml-3 [&>span]:min-w-0 [&>span]:shrink">
             <Tooltip label="Rename" side="bottom">
                 <div ref={wrapperRef} className="group relative min-w-0 w-full">
                     <span
@@ -371,18 +380,23 @@ function InstrumentSlot({ instrumentName, onChangeInstrument, locked, autosave, 
             </>
         )
     }
+    // While a take writes into the score it saves all the time: the status stays quiet (its room
+    // kept, so nothing shifts) and comes back when the take ends. A failing save still speaks up.
     return (
         <>
             <InstrumentChip name={instrumentName} onClick={onChangeInstrument} locked={locked} />
-            {!compact &&
-                (state === 'saving' ? (
-                    <span className="shrink-0 font-body font-normal text-[12px] leading-none text-on-surface-variant whitespace-nowrap">
-                        Saving…
-                    </span>
-                ) : (
-                    // A save that just landed says so in a word; the check alone stays after.
-                    <SavedMark key={landed} justLanded={landed > 0} />
-                ))}
+            {!compact && (
+                <span className={`shrink-0 inline-flex ${locked ? 'invisible' : ''}`}>
+                    {state === 'saving' ? (
+                        <span className="font-body font-normal text-[12px] leading-none text-on-surface-variant whitespace-nowrap">
+                            Saving…
+                        </span>
+                    ) : (
+                        // A save that just landed says so in a word; the check alone stays after.
+                        <SavedMark key={landed} justLanded={landed > 0} />
+                    )}
+                </span>
+            )}
         </>
     )
 }

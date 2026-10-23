@@ -2,7 +2,7 @@
 
 import { useId, useSyncExternalStore } from 'react'
 
-import { ChipToggle, HeaderMenu, Icon, type IconName, type TooltipShortcut, TransportBtn } from '@/components/ui'
+import { ChipToggle, HeaderMenu, Icon, type IconName, ToolGroup, type TooltipShortcut, TransportBtn } from '@/components/ui'
 import { shortcutText } from '@/components/ui/Tooltip'
 
 import { SHOW_SHORTCUTS_KEY } from './commands'
@@ -21,9 +21,11 @@ export function HistoryTools({ manipulator, compact = false }: { manipulator: Sc
     const keybindings = manipulator.keybindings
 
     if (compact) return <PhoneUndo manipulator={manipulator} />
+    // One white well for the pair, so a disabled Undo still shows its place (its glyph fades, the well stays).
     return (
-        <div role="group" aria-label="History" className="flex items-center gap-1">
+        <ToolGroup ariaLabel="History" size="header">
             <ChipToggle
+                plain
                 onClick={() => manipulator.undo()}
                 disabled={!manipulator.canUndo}
                 ariaLabel="Undo"
@@ -32,6 +34,7 @@ export function HistoryTools({ manipulator, compact = false }: { manipulator: Sc
                 <Icon name="undo" size={16} />
             </ChipToggle>
             <ChipToggle
+                plain
                 onClick={() => manipulator.redo()}
                 disabled={!manipulator.canRedo}
                 ariaLabel="Redo"
@@ -39,7 +42,7 @@ export function HistoryTools({ manipulator, compact = false }: { manipulator: Sc
                 tooltipSide="bottom">
                 <Icon name="redo" size={16} />
             </ChipToggle>
-        </div>
+        </ToolGroup>
     )
 }
 

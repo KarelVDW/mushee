@@ -10,6 +10,8 @@ interface RecordingsMenuProps {
     scoreId: string
     /** Icon-only trigger (the mobile header). */
     compact?: boolean
+    /** The phone header's form: the panel opens as the full-width header card (HeaderMenu `sheet`). */
+    sheet?: boolean
 }
 
 /**
@@ -19,12 +21,13 @@ interface RecordingsMenuProps {
  * which stops any playback. Deletion is the user-facing half of the privacy policy's
  * "recordings are yours, delete them any time".
  */
-export function RecordingsMenu({ scoreId, compact = false }: RecordingsMenuProps) {
+export function RecordingsMenu({ scoreId, compact = false, sheet = false }: RecordingsMenuProps) {
     return (
         <HeaderMenu
             icon="audio-lines"
             label="Recordings"
             compact={compact}
+            sheet={sheet}
             ariaLabel="Recordings"
             title="Recordings of this score"
             className="gap-2 w-80 max-w-[calc(100vw-1.5rem)]">
