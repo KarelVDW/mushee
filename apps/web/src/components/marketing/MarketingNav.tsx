@@ -56,7 +56,8 @@ export function MarketingNav({ sectionLinks, ctaLocation = 'nav', children }: Ma
                         aria-label="Solkey home">
                         <Wordmark size={28} />
                     </Link>
-                    <div className="flex items-center gap-4 sm:gap-6">
+                    {/* At least the CTA's height (--control-md), so the bar is one height whatever the page puts here (a quiet link, a CTA). */}
+                    <div className="flex items-center gap-4 sm:gap-6 min-h-(--control-md)">
                         {sectionLinks && (
                             <>
                                 {/* Plain <a>: a same-page anchor has no route to navigate, and from /pricing it is a full jump home. */}

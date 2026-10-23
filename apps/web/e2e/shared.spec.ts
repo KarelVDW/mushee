@@ -159,8 +159,9 @@ test('a visitor without an account is sent to signup with the score as the way b
         return route.continue()
     })
     await page.goto(`/s/${MOCK_SHARE_TOKEN}`)
-    // Under the score, one plain line about what made it, with the same way in.
-    await expect(page.getByText('Made with Solkey — hum, sing or play a melody and get sheet music like this.')).toBeVisible()
+    // Under the score, a closing card: what made it (the eyebrow), the invitation, and the same way in.
+    await expect(page.getByText('Made with Solkey', { exact: true })).toBeVisible()
+    await expect(page.getByText('Hum, sing or play a melody and get sheet music like this.')).toBeVisible()
     await expect(page.getByRole('link', { name: 'Try it free' })).toHaveAttribute(
         'href',
         `/signup?next=${encodeURIComponent(`/s/${MOCK_SHARE_TOKEN}`)}`,
