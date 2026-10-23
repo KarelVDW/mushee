@@ -300,9 +300,15 @@ export function TakesList({ takes, scoreTitleFor, scroll = true, numbered = fals
                                         </>
                                     ) : (
                                         <>
-                                            <span className="font-body font-medium text-[14px] leading-[1.3] text-on-surface truncate">
-                                                {number !== undefined && `Recording ${number} · `}
-                                                {formatTakeDate(take.startedAt)}
+                                            {/* Never ellipsized: the time is what tells two takes apart. A narrow row
+                                                breaks between the number and the date, never inside either. */}
+                                            <span className="min-w-0 font-body font-medium text-[14px] leading-[1.3] text-on-surface text-pretty">
+                                                {number !== undefined && (
+                                                    <>
+                                                        <span className="whitespace-nowrap">Recording {number} ·</span>{' '}
+                                                    </>
+                                                )}
+                                                <span className="whitespace-nowrap">{formatTakeDate(take.startedAt)}</span>
                                             </span>
                                             {/* The score name rides the length line, outside any clipping box, so the
                                                 link's focus ring shows whole; the name truncates inside the link. */}

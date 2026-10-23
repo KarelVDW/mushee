@@ -94,6 +94,54 @@ test('recordings tab: links each score, labels orphans "Deleted score", and disa
     await expect(rows.getByRole('button', { name: 'Play recording', disabled: false })).toHaveCount(3)
 })
 
+test.describe('on a phone-sized screen', () => {
+    test.use({ viewport: { width: 390, height: 844 } })
+
+    test('recordings tab: a row never cuts into the time that tells two takes apart', async ({ page }) => {
+        const at = (daysAgo: number, hours: number, minutes: number) => {
+            const date = new Date()
+            date.setDate(date.getDate() - daysAgo)
+            date.setHours(hours, minutes, 0, 0)
+            return date.toISOString()
+        }
+        const takes = [
+            { id: 'take-today', scoreId: MOCK_SCORE_ID, startedAt: at(0, 20, 16), endedAt: null, seconds: 12, hasAudio: true },
+            { id: 'take-yesterday', scoreId: MOCK_SCORE_ID, startedAt: at(1, 20, 16), endedAt: null, seconds: 9, hasAudio: true },
+            { id: 'take-older', scoreId: MOCK_SCORE_ID, startedAt: at(40, 20, 16), endedAt: null, seconds: 5, hasAudio: true },
+        ]
+        await page.route(
+            (url) => url.port === '4999' && url.pathname.endsWith('/recordings'),
+            (route) =>
+                route.request().method() === 'GET'
+                    ? route.fulfill({
+                          json: takes,
+                          headers: {
+                              'access-control-allow-origin': route.request().headers()['origin'] ?? '*',
+                              'access-control-allow-credentials': 'true',
+                          },
+                      })
+                    : route.fallback(),
+        )
+        await page.goto('/settings?tab=recordings')
+        const rows = page.getByRole('list', { name: 'Recordings' }).getByRole('listitem')
+        await expect(rows).toHaveCount(3)
+        await expect(rows.nth(1)).toContainText('Yesterday, ')
+        // Each title's two unbreakable parts (the number, the date) sit wholly inside the title's box.
+        const clipped = await rows.evaluateAll((items) =>
+            items.flatMap((item) => {
+                const title = item.querySelector<HTMLElement>('.text-pretty')
+                if (!title) return ['no title line']
+                const box = title.getBoundingClientRect()
+                const cut = [...title.querySelectorAll('.whitespace-nowrap')].some(
+                    (part) => part.getBoundingClientRect().right > box.right + 1,
+                )
+                return cut || title.scrollWidth > title.clientWidth + 1 ? [title.textContent ?? ''] : []
+            }),
+        )
+        expect(clipped).toEqual([])
+    })
+})
+
 test('account tab: "Download my data" produces a zip archive of the account', async ({ page }) => {
     await page.getByRole('tab', { name: 'Account' }).click()
     const download = page.waitForEvent('download')
