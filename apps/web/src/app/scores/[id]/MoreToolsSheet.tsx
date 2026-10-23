@@ -2,7 +2,7 @@
 
 import { AccidentalIcon, BeatUnitIcon } from '@mushee/notation/components'
 import type { Accidental } from '@mushee/notation/model'
-import { type ReactNode, useEffect, useId, useRef, useState, useSyncExternalStore } from 'react'
+import { type ReactNode, useEffect, useId, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react'
 
 import { ClefPopover } from '@/components/editor/ClefPopover'
 import { KeySignaturePopover } from '@/components/editor/KeySignaturePopover'
@@ -15,8 +15,10 @@ import {
     Eyebrow,
     Icon,
     type IconName,
+    Keycap,
     Popover,
     Segmented,
+    SHEET_SYSTEM_ROOM,
     Switch,
     type TooltipShortcut,
     usePickConfirmation,
@@ -159,11 +161,7 @@ function ToolRow({ icon, label, hint, shortcut, state, toggle = false, onClick }
                     {state.reason ?? hint}
                 </span>
             </span>
-            {keys && (
-                <kbd className="shrink-0 font-label font-semibold text-[11px] leading-none text-on-surface bg-surface-container rounded-sm px-1.5 py-1">
-                    {keys}
-                </kbd>
-            )}
+            {keys && <Keycap className="shrink-0">{keys}</Keycap>}
         </button>
     )
 }
@@ -378,6 +376,49 @@ function BackLink({ onClick }: { onClick: () => void }) {
     )
 }
 
+/**
+ * A section label in the More sheet's body ('This note', 'Whole score'): it pins to the top of the
+ * scrolling body on the sheet's white, so a scrolled sheet always names its section.
+ */
+const STICKY_EYEBROW = 'sticky top-0 z-1 -mx-4 px-4 py-2 bg-surface-container-lowest'
+
+/** How far the folded menu shows past 'This note': the 20px section gap and 24px of the 'Whole score' label. */
+const FOLD_PEEK_PX = 44
+
+/**
+ * The More sheet's own fit, set on its panel (the Popover's dialog) as the body's content
+ * changes size:
+ * - the top fade sits under the pinned section label (`--sheet-fade-top`, its height), so the
+ *   label is never washed out;
+ * - with a note selected the sheet folds just past 'This note' (`--sheet-peek-h`: that section's
+ *   bottom plus {@link FOLD_PEEK_PX}), never taller than the one-system room above it allows —
+ *   so the bottom fade lands on the 'Whole score' label, which also says there is more below,
+ *   and never across a control.
+ */
+function useMenuSheetFold(section: HTMLElement | null, eyebrow: HTMLElement | null, fold: boolean) {
+    useLayoutEffect(() => {
+        const panel = section?.closest<HTMLElement>('[role="dialog"]')
+        if (!section || !panel) return
+        const body = section.closest<HTMLElement>('[data-popover-body]')
+        const measure = () => {
+            if (eyebrow) panel.style.setProperty('--sheet-fade-top', `${eyebrow.offsetHeight}px`)
+            if (!fold) {
+                panel.style.removeProperty('--sheet-peek-h')
+                panel.style.removeProperty('max-height')
+                return
+            }
+            const bottom = section.getBoundingClientRect().bottom + (body?.scrollTop ?? 0) - panel.getBoundingClientRect().top
+            panel.style.setProperty('--sheet-peek-h', `${Math.ceil(bottom + FOLD_PEEK_PX)}px`)
+            panel.style.maxHeight = `min(100% - ${SHEET_SYSTEM_ROOM.px}px, var(--sheet-peek-h))`
+        }
+        measure()
+        const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(measure)
+        observer?.observe(section)
+        // The fit stays on the panel as it closes: its leaving copy keeps the same height.
+        return () => observer?.disconnect()
+    }, [section, eyebrow, fold])
+}
+
 interface MoreToolsMenuProps {
     manipulator: ScoreManipulator
     words: ScoreSettingsWords
@@ -391,11 +432,14 @@ interface MoreToolsMenuProps {
 
 /** The More sheet's menu: the note tools for the selection, then the whole score's settings and tools. */
 function MoreToolsMenu({ manipulator, words, anchorRef, metronome, onMetronomeToggle, onOpen, onTranspose, onClose }: MoreToolsMenuProps) {
+    const [thisNote, setThisNote] = useState<HTMLElement | null>(null)
+    const [eyebrow, setEyebrow] = useState<HTMLElement | null>(null)
     const tools = new NoteToolStates(manipulator)
     const accidental = tools.accidental
     // The clef / key / time / tempo rows: off while a recording writes into the score, saying so.
     const settingsState = tools.scoreSettings
     const nothingSelected = !manipulator.selectedNote
+    useMenuSheetFold(thisNote, eyebrow, !nothingSelected)
     // A score of rests has nothing to transpose yet.
     const emptyScore = !manipulator.score?.hasPitchedNotes
 
@@ -409,8 +453,8 @@ function MoreToolsMenu({ manipulator, words, anchorRef, metronome, onMetronomeTo
             // The note being fixed stays in view above the sheet ("This note" leads, so it is whole).
             leaveRoomAbove={!nothingSelected}
             className="gap-5">
-            <section aria-label="This note" className="flex flex-col gap-2.5">
-                <div className="flex items-baseline justify-between gap-3">
+            <section ref={setThisNote} aria-label="This note" className="flex flex-col gap-2.5">
+                <div ref={setEyebrow} className={`flex items-baseline justify-between gap-3 ${STICKY_EYEBROW}`}>
                     <Eyebrow>This note</Eyebrow>
                     {nothingSelected && (
                         <span className="font-body text-[12px] leading-tight text-on-surface-variant">Select a note first.</span>
@@ -475,7 +519,9 @@ function MoreToolsMenu({ manipulator, words, anchorRef, metronome, onMetronomeTo
             </section>
 
             <section aria-label="Whole score" className="flex flex-col gap-1">
-                <Eyebrow>Whole score</Eyebrow>
+                <div className={STICKY_EYEBROW}>
+                    <Eyebrow>Whole score</Eyebrow>
+                </div>
                 <div className="flex flex-col -mx-2">
                     {/* First, in reach without scrolling: one Undo too many after fixing notes is
                         taken back from here (Undo itself leads the tool row). */}
@@ -573,7 +619,10 @@ interface NoteTileProps {
 }
 
 /**
- * A "This note" toggle: its glyph, a 15px name and an 11px plain caption. Off, it stays
+ * A "This note" toggle: its glyph, a 15px name and an 11px plain caption. The glyph's 18px box
+ * sits on the name's line and the block hangs from the top, so the names in a row share a line
+ * however their captions wrap. At rest it is a tile (the tile fill); pressed it takes the dock's
+ * loud pressed fill — these are the dock's live toggles, not picked values. Off, it stays
  * focusable (aria-disabled); a tool that is off for a reason of its own (Tie, a run of notes)
  * says that reason in place of the caption.
  */
@@ -590,17 +639,19 @@ function NoteTile({ icon, label, caption, state, onClick }: NoteTileProps) {
             aria-describedby={captionId}
             onClick={state.disabled ? undefined : onClick}
             className={[
-                'min-h-14 flex items-center gap-2.5 px-3 py-2 rounded-lg border-0 text-left',
+                'min-h-17 flex items-start gap-2.5 px-3 py-2 rounded-lg border-0 text-left',
                 'transition-colors duration-150 ease-solkey focus-ring select-none',
-                state.active ? 'bg-primary-container text-on-primary-container' : 'bg-surface-container-low text-on-surface',
+                state.active
+                    ? 'bg-primary-container text-on-primary-container'
+                    : `bg-(--tile-fill) text-on-surface ${state.disabled ? '' : 'hover:bg-(--tile-fill-hover)'}`,
                 state.disabled ? 'cursor-not-allowed opacity-40' : 'cursor-pointer',
             ].join(' ')}>
-            <span aria-hidden className="w-6 shrink-0 inline-flex justify-center">
+            <span aria-hidden className="w-6 h-4.5 mt-px shrink-0 inline-flex items-center justify-center">
                 {icon}
             </span>
             <span className="flex-1 min-w-0 flex flex-col gap-0.5">
                 <span className="font-label font-semibold text-[15px] leading-tight">{label}</span>
-                <span id={captionId} className="font-body text-[11px] leading-tight opacity-80">
+                <span id={captionId} className="font-body text-[11px] leading-tight opacity-80 text-pretty">
                     {ownReason ?? caption}
                 </span>
             </span>
