@@ -1,8 +1,16 @@
 import { act, createElement, StrictMode } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
+import { renderToStaticMarkup } from 'react-dom/server'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { Popover, PopoverSheetHost, SHEET_PICK_CONFIRM_MS, usePickConfirmation } from '@/components/ui/Popover'
+import {
+    inferOptionLayout,
+    Popover,
+    PopoverOption,
+    PopoverSheetHost,
+    SHEET_PICK_CONFIRM_MS,
+    usePickConfirmation,
+} from '@/components/ui/Popover'
 
 // React's act() refuses to run outside a test-aware environment.
 ;(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
@@ -324,6 +332,73 @@ describe('Popover surfaces', () => {
             expect(host.querySelector('[role="dialog"]')).toBeNull()
             expect(document.body.querySelector('body > div > [role="dialog"][aria-label="Set tempo"]')).not.toBeNull()
         })
+    })
+})
+
+describe('PopoverOption', () => {
+    const markup = (props: Partial<Parameters<typeof PopoverOption>[0]> = {}) =>
+        renderToStaticMarkup(
+            createElement(PopoverOption, { active: false, onClick: () => undefined, ariaLabel: 'Set Treble clef', children: 'Treble', ...props }),
+        )
+    const button = (props: Partial<Parameters<typeof PopoverOption>[0]> = {}) => {
+        const box = document.createElement('div')
+        box.innerHTML = markup(props)
+        return box.querySelector('button') as HTMLButtonElement
+    }
+
+    it('rests on the tile fill and, picked, takes the selected fill — never the loud primary', () => {
+        const rest = button()
+        expect(rest.getAttribute('aria-pressed')).toBe('false')
+        expect(rest.className).toContain('bg-(--tile-fill)')
+        expect(rest.className).toContain('hover:bg-(--tile-fill-hover)')
+        expect(rest.className).toContain('active:bg-(--tile-fill-press)')
+        const picked = button({ active: true })
+        expect(picked.getAttribute('aria-pressed')).toBe('true')
+        expect(picked.className).toContain('bg-(--color-selected) text-(--color-on-selected)')
+        expect(picked.className).not.toContain('bg-primary-container')
+    })
+
+    it('reads its layout off its size classes', () => {
+        expect(inferOptionLayout('w-full h-14 gap-3 px-3 text-left')).toBe('row')
+        expect(inferOptionLayout('flex-col justify-center gap-1 w-18 h-18 px-1')).toBe('tile')
+        expect(inferOptionLayout('flex-col justify-center gap-1 w-23 h-19 px-1')).toBe('tile')
+        expect(inferOptionLayout('flex-col justify-end gap-0.5 w-12 h-14 px-1 py-1.5')).toBe('cell')
+        expect(inferOptionLayout('flex-col justify-end gap-0.5 w-full min-w-0 h-12 px-0.5 py-1')).toBe('cell')
+        expect(inferOptionLayout('justify-center w-full min-w-0 h-10 text-[13px] font-medium')).toBe('cell')
+        expect(inferOptionLayout('justify-center px-3 h-10 text-[13px] font-medium')).toBe('cell')
+    })
+
+    it('shows a picked row by a trailing mark, a tile by a corner mark, a cell by a check by its label', () => {
+        const mark = (el: Element) => el.querySelector('[aria-hidden="true"]') as HTMLElement | null
+        const row = button({ active: true, className: 'w-full h-14 gap-3 px-3 text-left' })
+        expect(mark(row)?.className).toContain('ml-auto')
+        expect(mark(button({ className: 'w-full h-14 gap-3 px-3 text-left' }))).toBeNull()
+
+        const tile = button({ active: true, className: 'flex-col justify-center gap-1 w-18 h-18 px-1' })
+        expect(tile.className).toContain('relative')
+        expect(mark(tile)?.className).toContain('absolute top-1 right-1')
+        expect(mark(tile)?.className).toContain('size-3.5')
+
+        // A lone label: the check follows it.
+        const quality = button({ active: true, className: 'justify-center px-3 h-10', children: 'Major' })
+        expect(quality.textContent).toBe('Major')
+        expect(quality.lastElementChild?.querySelector('svg')).not.toBeNull()
+
+        // A glyph over its label: the check leads the label's line, clear of the glyph.
+        const key = button({
+            active: true,
+            className: 'flex-col justify-end gap-0.5 w-12 h-14',
+            children: [createElement('span', { key: 'g', 'data-glyph': '' }), createElement('span', { key: 'l' }, 'C')],
+        })
+        const [glyph, line] = Array.from(key.children)
+        expect(glyph.hasAttribute('data-glyph')).toBe(true)
+        expect(line.firstElementChild?.getAttribute('aria-hidden')).toBe('true')
+        expect(line.textContent).toBe('C')
+    })
+
+    it('shrinks a little when pressed — cells and tiles only, and only when motion is welcome', () => {
+        expect(button({ className: 'justify-center px-3 h-10' }).className).toContain('motion-safe:active:scale-[0.97]')
+        expect(button({ className: 'w-full h-14 gap-3 px-3 text-left' }).className).not.toContain('scale-')
     })
 })
 

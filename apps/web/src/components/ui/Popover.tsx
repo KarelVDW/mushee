@@ -1,7 +1,8 @@
 'use client'
 
-import { Icon, TertiaryButton } from '@mushee/ui'
+import { Icon, SelectedMark, TertiaryButton } from '@mushee/ui'
 import {
+    Children,
     createContext,
     type CSSProperties,
     type ReactNode,
@@ -522,6 +523,15 @@ function isTextEntry(target: EventTarget | null): boolean {
     return target instanceof HTMLElement && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)
 }
 
+/**
+ * Where a picked option's check sits. `row`: a SelectedMark trailing the row (the clef rows).
+ * `tile`: a 14px SelectedMark in the top-right corner of a tile at least 64px wide (time
+ * signatures, the further clefs). `cell`: an inline 12px check beside the label of a small cell
+ * (keys, interval sizes and qualities) — before the label under a glyph, after a lone label —
+ * never over the glyph.
+ */
+export type PopoverOptionLayout = 'row' | 'tile' | 'cell'
+
 interface PopoverOptionProps {
     active: boolean
     onClick: () => void
@@ -529,11 +539,19 @@ interface PopoverOptionProps {
     title?: string
     /** Size/layout classes (e.g. `justify-center w-11 h-11`). */
     className?: string
+    /** Where the picked check sits; inferred from `className` (see {@link inferOptionLayout}) when left out. */
+    layout?: PopoverOptionLayout
     children: ReactNode
 }
 
-/** A selectable cell in a popover option grid; `active` carries the loud primary fill. */
-export function PopoverOption({ active, onClick, ariaLabel, title, className, children }: PopoverOptionProps) {
+/**
+ * A selectable option in a popover grid or list. At rest it sits on the tile fill, stepping a
+ * tone on hover and press; picked, it takes the selected fill (primary-soft) and a check, so the
+ * choice never rides on colour alone and the popover's one loud cyan stays its commit button.
+ * Cells and tiles shrink a little when pressed (not full-width rows, not under reduced motion).
+ */
+export function PopoverOption({ active, onClick, ariaLabel, title, className, layout, children }: PopoverOptionProps) {
+    const placement = layout ?? inferOptionLayout(className)
     return (
         <button
             type="button"
@@ -543,16 +561,91 @@ export function PopoverOption({ active, onClick, ariaLabel, title, className, ch
             onClick={onClick}
             className={[
                 'flex items-center rounded-md cursor-pointer border-0 shrink-0',
-                'transition-[background-color,color] duration-150 ease-solkey',
+                'transition-[background-color,color,scale] duration-150 ease-solkey',
                 'focus-ring',
+                placement === 'tile' ? 'relative' : '',
+                placement === 'row' ? '' : 'motion-safe:active:scale-[0.97]',
                 active
-                    ? 'bg-primary-container text-on-primary-container'
-                    : 'bg-surface-container-low text-on-surface hover:bg-surface-container',
+                    ? 'bg-(--color-selected) text-(--color-on-selected)'
+                    : 'bg-(--tile-fill) text-on-surface hover:bg-(--tile-fill-hover) active:bg-(--tile-fill-press)',
                 className ?? '',
             ]
                 .filter(Boolean)
                 .join(' ')}>
-            {children}
+            <PickedContent active={active} placement={placement} column={hasClass(className, 'flex-col')}>
+                {children}
+            </PickedContent>
         </button>
     )
+}
+
+/** An option's content plus, while picked, its check where {@link PopoverOptionLayout} puts it. */
+function PickedContent({
+    active,
+    placement,
+    column,
+    children,
+}: {
+    active: boolean
+    placement: PopoverOptionLayout
+    column: boolean
+    children: ReactNode
+}) {
+    if (placement === 'row') {
+        return (
+            <>
+                {children}
+                {active && <SelectedMark className="ml-auto" />}
+            </>
+        )
+    }
+    if (placement === 'tile') {
+        return (
+            <>
+                {children}
+                {active && <SelectedMark size="sm" className="absolute top-1 right-1" />}
+            </>
+        )
+    }
+    const check = active && (
+        <span aria-hidden="true" className="inline-flex shrink-0 motion-safe:animate-pick-in">
+            <Icon name="check" size={12} />
+        </span>
+    )
+    if (!column) {
+        return (
+            <>
+                {children}
+                {check && <span className="ml-0.5 inline-flex">{check}</span>}
+            </>
+        )
+    }
+    // A glyph over its label: the check joins the label's line, ahead of it.
+    const parts = Children.toArray(children)
+    const label = parts.pop()
+    return (
+        <>
+            {parts}
+            <span className="inline-flex items-center gap-0.5">
+                {check}
+                {label}
+            </span>
+        </>
+    )
+}
+
+/**
+ * The layout an option's size classes imply: a fixed width of 64px or more is a `tile`, a
+ * full-width row of content that isn't centred is a `row`, and everything else a `cell`.
+ */
+export function inferOptionLayout(className: string | undefined): PopoverOptionLayout {
+    const tokens = (className ?? '').split(/\s+/)
+    const width = tokens.map((token) => /^w-(\d+(?:\.\d+)?)$/.exec(token)).find(Boolean)
+    if (width && Number(width[1]) * 4 >= 64) return 'tile'
+    if (tokens.includes('w-full') && !tokens.includes('flex-col') && !tokens.includes('justify-center')) return 'row'
+    return 'cell'
+}
+
+function hasClass(className: string | undefined, token: string): boolean {
+    return (className ?? '').split(/\s+/).includes(token)
 }
