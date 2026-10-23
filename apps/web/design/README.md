@@ -101,7 +101,7 @@ There is **one product**: the web app. The UI kit covers Landing → Auth → On
 | Hero headline              | `The fastest way to get a melody on the page.`                                                                                                                                                                                |
 | Hero sub                   | `Hum it, sing it, or play it — Solkey listens and writes the sheet music in front of your eyes.`                                                                                                                              |
 | Hero line under the CTA    | `Free to start — no card, nothing to install.`                                                                                                                                                                                |
-| Pricing free tier          | `Sketch` — `Free` · tagline `For trying things out` · CTA `Start free`; paid cards `Choose {plan}`, every card shows its tagline                                                                                              |
+| Pricing free tier          | `Sketch` — `Free` · tagline `For trying things out` · CTA `Start free`; paid cards `Choose {plan}`, every card shows its tagline; under a paid price the yearly line `or {yearly} a year — save {n}%`                         |
 | Library page title         | `Your scores`                                                                                                                                                                                                                 |
 | Library offline            | `Can't connect right now` / `Check your internet connection and try again. Your scores are safe.`                                                                                                                             |
 | Tab titles                 | `Your scores — Solkey` · the editor `{score title} — Solkey` (`Untitled score — Solkey` while it has none)                                                                                                                    |
@@ -284,6 +284,9 @@ Call sites move to the roles as their files are touched; new code starts on them
 - **Three containers** (`Container`, `src/components/ui/Container.tsx`): app 1536, marketing 1280, reading 760. Padding always sits outside the max width, so content is exactly as wide as its grid says at every viewport. Gutters: app 16px on phones; marketing and reading 20px; 32px from sm. App pages share the app width, so the title never moves between tabs; narrow content (Settings) left-aligns inside it rather than centring a narrower frame.
 - **Dialogs** set their own width (`DialogPanel width`), at most 90vw; below `sm` a dialog is a full-width bottom sheet.
 - Sections breathe — 56px (88px from `sm`) vertical padding on marketing rows (`py-14 sm:py-22`), `64px` between major content groups.
+- **Marketing section header** (`SectionHeading`, the same on the landing page and /pricing): eyebrow (primary, optional), a 34/48 h2 (`type-page`), a 17px sub; content sections start-aligned (How it works, Features, the FAQ), conversion sections centred (pricing, the closing CTA).
+- **Plan pickers:** Onboarding's plan step is radio rows at every width (features inline from md, professional tiers behind their link); tier cards are for /pricing and Settings.
+- **Cookie banner:** on phones a compact bottom sheet with the page padded underneath; on desktop the cookie banner is a 26rem card in the bottom-right corner, never a centred slab, never over a page's primary CTA.
 
 ### Mobile (< 768px)
 
@@ -304,7 +307,7 @@ Phones get the same design language, restructured — never a shrunken desktop. 
 - Durations are tokens in `packages/ui/src/theme.css`: `--t-press` 100ms (a press), `--t-quick` 150ms (tints, small entrances), `--t-snap` 200ms (lifts, dialogs, toasts), `--t-flow` 300ms (strokes and sweeps). Three transition utilities bundle them with the ease: `transition-tint` (colour and opacity, 150ms), `transition-lift` (a press or hover that moves or casts a shadow, 200ms) and `transition-sweep` (strokes and progress fills, 300ms). Never hand-type a duration the scale names.
 - **Selected & hovered states must shift _away_ from the page background, not toward it.** Hovered list rows go from `surface_container_lowest` (#fff) up to `surface_container_high` (#e1e3e3) — never to `surface_container_low` (#f0f1f1), which is too close to the page's `surface` (#f6f6f6) and reads as blended. The same rule applies to split-panel layouts (auth, settings): the standout panel uses `surface_container_high`, not `low`, to register clearly against the page.
 
-**The signature interaction (reserved):** the hero CTA on each surface — opt-in via `emphasis="pop"` — translates `-2px` on hover and grows its magenta drop-shadow from `3px 3px` to `5px 5px`. Aim for **at most one pop visible per viewport**: the landing hero and final CTA, the "create" action in the top nav of authenticated views, a flow's single closing CTA. Dialog confirms (Change plan and the limit dialogs included), section actions, and utility buttons stay flat. Don't pop every primary button.
+**The signature interaction (reserved):** the hero CTA on each surface — opt-in via `emphasis="pop"` — translates `-2px` on hover and grows its magenta drop-shadow from `3px 3px` to `5px 5px`; pressed, it sinks onto its plate. Aim for **at most one pop visible per viewport**: the landing hero and final CTA, the "create" action in the top nav of authenticated views, the shared-score page's closing CTA (signed out), a flow's single closing CTA (an auth card's submit, the onboarding done screen). On an empty library the pop moves from the nav's New score to the empty card's. Onboarding: only the done screen's CTA (and beta approved's) pops; every Continue, the plan step's payment button included, stays flat. Funnel primaries are size lg. A disabled pop button drops its shadow. Dialog confirms (Change plan and the limit dialogs included), section actions, and utility buttons stay flat. Don't pop every primary button.
 
 - Input fields animate a **2px `primary` (dark teal) bar** from the centre out to full width along the bottom on focus (300ms; instant under reduced motion).
 - No bounces, no spring physics, no fade-up-on-scroll. Motion is sharp and quiet.
@@ -432,7 +435,11 @@ Tinted rgb(45 47 47 / a), never black: raised at 6%, overlay at 5% and 12% over 
 
 ### Cards
 
-A Solkey card is **`surface_container_lowest` + `--shadow-tonal` + `--radius-lg`**. _No border._ On hover, a list-style card may receive a left-side cyan accent stripe slide-in. Padding: `24–28px`. Cards never sit on each other directly — always with `0.8rem` (12.8px) of gap.
+A Solkey card is **`surface_container_lowest` + `--shadow-raised` (`tonal-layer-glow`) + `--radius-lg`**. _No border._ On hover, a list-style card may receive a left-side cyan accent stripe slide-in. Padding: `24–28px`. Cards never sit on each other directly — always with `0.8rem` (12.8px) of gap.
+
+- On a white marketing band, feature lists are open (no tile fill); cards are white on the page tone, never grey on white; cards inside a white container rest on surface_container_low with no glow (a plan or pack card in a dialog, a tier row in onboarding).
+- Marketing step vignettes: radius-xl white tiles with tonal glow, h-32/sm:h-40, drawn from real UI parts, static, aria-hidden, never illustrations (How it works: the record button and count-in, the staff filling in, a selected note beside the Pitch well).
+- A picked card (a plan or pack) is primary_soft with a SelectedMark, like every picked option.
 
 ---
 
