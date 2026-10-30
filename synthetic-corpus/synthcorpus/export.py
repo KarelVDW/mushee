@@ -24,6 +24,9 @@ ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / 'out'
 DEST = ROOT.parent / 'apps' / 'api' / 'scripts' / 'fixtures' / 'eval-synth'
 CONDITIONS = ('dry', 'studio', 'room', 'home-phone', 'noisy-phone')
+# The corpus version this export writes into every dataset.json, so a result can be tied to
+# the audio it was scored on. Bump it with any change to what out/ renders.
+CORPUS_VERSION = 'v1.1'
 
 SOURCE_LICENCES = {
     'apple': 'Apple GarageBand content (licensed on this machine; royalty-free for created audio, samples never redistributed)',
@@ -72,6 +75,7 @@ def export(log=print) -> None:
             'instrumentId': 'voice-lead' if voice else (t.app_ids[0] if t else name),
             'appInstrumentIds': ['voice-lead'] if voice else (t.app_ids if t else [name]),
             'tier': 'synthetic',
+            'corpusVersion': CORPUS_VERSION,
             'license': '; '.join(lic),
             'licenceRestricted': False,
             'clips': len(clips),
@@ -92,7 +96,7 @@ def export(log=print) -> None:
                     os.link(f, d / f.name)
                     total += 1
         log(f'{ds:28s} {len(clips):3d} clips  sources={",".join(srcs)}')
-    log(f'exported {sum(len(v) for v in groups.values())} clips / {total} wavs into {DEST}')
+    log(f'exported {sum(len(v) for v in groups.values())} clips / {total} wavs ({CORPUS_VERSION}) into {DEST}')
 
 
 if __name__ == '__main__':

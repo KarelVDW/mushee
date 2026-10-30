@@ -80,17 +80,27 @@ part of anything we ship. Delete the directory if the decision changes.
 
 ## Context corpora (`eval-real/context/`)
 
-| Dataset                                                                   | Why it cannot gate                                                                                                                                                                                                                                | What it is for                                                                                                               |
-| ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| `humtrans` (769 / ~13k, the corpus's own test split) + `humtrans-aligned` | **CC BY-NC 4.0 → `licenceRestricted`**; truth is the reference MIDI the hummer followed (exact identity, nominal timing) — the aligned sibling takes onsets from the audio via `fetch/align-prescribed-truth.ts`, so both stay `noteTruthDerived` | **The only real humming with note truth anywhere.** 10 hummers, 44.1 kHz. Drives the benchmark's _provisional_ humming row   |
-| `mir-qbsh` (50 / 1,082)                                                   | Note events are OUR derivation of self-labelled frame pitch ("no guarantee for their correctness"); licence is academic/research-only → `licenceRestricted`                                                                                       | Low-fi (8 kHz/8-bit) hummed/sung realism checks; f0/melody metrics only                                                      |
-| `tinysol-*` (6 instruments, 64 / 512)                                     | `constructedPerformance`: real Ircam tone, but WE spliced the melodies — no human phrasing, truth exact by construction                                                                                                                           | The only real audio in the `very-high` band (measured 0.654 vs 0.924 high); register questions                               |
-| `whistle-real` (117 / 2,777)                                              | Draft labels from `lib/sineTrack.ts`, zero clips human-verified → `noteTruthDerived`                                                                                                                                                              | The only real whistling we may use; **promotes to benchmark/ via `fetch/import-note-labels.ts --verified-by` once reviewed** |
-| `whistle-vintage` (6 / 249)                                               | Same unverified drafts; accompanied 78-rpm sides, adverse by nature                                                                                                                                                                               | Real whistling + real accompaniment + real surface noise; never pool with whistle-real                                       |
+| Dataset                                                                   | Why it cannot gate                                                                                                                                                                                                                                | What it is for                                                                                                                             |
+| ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `humtrans` (769 / ~13k, the corpus's own test split) + `humtrans-aligned` | **CC BY-NC 4.0 → `licenceRestricted`**; truth is the reference MIDI the hummer followed (exact identity, nominal timing) — the aligned sibling takes onsets from the audio via `fetch/align-prescribed-truth.ts`, so both stay `noteTruthDerived` | **The only real humming with note truth anywhere.** 10 hummers, 44.1 kHz. Drives the benchmark's _provisional_ humming row                 |
+| `mir-qbsh` (50 / 1,082)                                                   | Note events are OUR derivation of self-labelled frame pitch ("no guarantee for their correctness"); licence is academic/research-only → `licenceRestricted`                                                                                       | Low-fi (8 kHz/8-bit) hummed/sung realism checks; f0/melody metrics only                                                                    |
+| `tinysol-*` (6 instruments, 64 / 512)                                     | `constructedPerformance`: real Ircam tone, but WE spliced the melodies — no human phrasing, truth exact by construction                                                                                                                           | The only real audio in the `very-high` band (measured 0.654 vs 0.924 high); register questions                                             |
+| `whistle-real` (117 / 2,777)                                              | Draft labels from `lib/sineTrack.ts`, zero clips human-verified → `noteTruthDerived`                                                                                                                                                              | The only real whistling we may use; **promotes to benchmark/ via `fetch/import-note-labels.ts --verified-by` once reviewed**               |
+| `whistle-vintage` (6 / 249)                                               | Same unverified drafts; accompanied 78-rpm sides, adverse by nature                                                                                                                                                                               | Real whistling + real accompaniment + real surface noise; never pool with whistle-real                                                     |
+| `whistled-high-register` (6 / 57)                                         | Our own takes (apps/eval, 2026-08-22), but the truth is the PRESCRIBED melody: whistled 12–13 semitones above it and off the metronome grid by a median 90 ms → `noteTruthDerived`; scores COnP 0.00 as recorded                                  | The audio: our only whistling through our own capture path, high register (f0 958–1838 Hz). Reported, not in the provisional whistling row |
+| `whistled-high-register-aligned` (6 / 57)                                 | The same audio; note identity from the prescribed melody (key fitted per clip), onsets from the audio via `fetch/align-prescribed-truth.ts`; unverified → `noteTruthDerived`                                                                      | Feeds the provisional whistling row with whistle-real and whistle-vintage                                                                  |
 
-The **synthetic corpus** (`fixtures/eval/`, generate.ts) is a third thing:
-truth exact by construction, phrasing synthetic, used for controlled-condition
-tiers (adverse, intonation, capture-codec) — see the README's corpus layout.
+Two **synthetic corpora** are a third thing: truth exact by construction, never
+in the real tiers — see the README's corpus layout.
+
+- `fixtures/eval/` (generate.ts): the original toy corpus, fluidsynth and additive
+  voices, used for controlled-condition tiers (adverse, intonation, capture-codec).
+- `fixtures/eval-synth/` (the standalone `synthetic-corpus/` project, `EVAL_SYNTH=1`,
+  `benchmark.ts --synth`): the **realistic synthetic corpus**, v1.1, 463 clips over
+  36 instrument timbres and 8 voice types. It is rendered from real recordings
+  (sample libraries, VocalSet singers), performed along the click and recorded
+  through measured rooms and phone microphones. Changes found on it ship only once
+  the real corpus agrees (FINDINGS.md, 2026-09-27).
 
 ## Gaps in the benchmark tier
 
@@ -120,8 +130,11 @@ capability", not "find another dataset".
   nothing to acquire. Two exits, both ours: (1) verify the drafted labels —
   `annotations/whistle-real/VERIFY-WORKLIST.md` stages 30 stratified clips plus a
   pipeline-disagreement triage section (`fetch/triage-verify-worklist.ts`), then
-  `fetch/import-note-labels.ts --verified-by=<name>` promotes automatically; (2) volume —
+  `fetch/import-note-labels.ts --dataset=whistle-real --verified-by=<name> --verified-list=<worklist>`
+  stamps the ticked clips and promotes the dataset once every clip is stamped; (2) volume —
   record our own per the capture protocol in research/research-whistle-corpus.md §6.
+  Since 2026-10-30, exit (1) is superseded by resynth truth (`meta/test-data-2026-10.md`,
+  `synthetic-corpus/RESYNTH.md`): no clip was ever human-verified.
 - **The `very-high` band / piccolo** — only TinySOL splices (context). A real
   _performance_ above ~700 Hz is unrepresented; piccolo has no permissive
   corpus at all.
@@ -206,11 +219,20 @@ DEMAND noise beds, Arni/OK5 measured RIRs, MUSAN/FSDnoisy18k et al.
 
 ## Corpora recorded via apps/eval
 
-The eval workbench (`apps/eval`, `pnpm dev:eval`) creates corpora of generated
-melodies and records our own performances of them, materializing straight into
+> **Discarded protocol.** Recording prescribed melodies to a click is DISCARDED as
+> measured harmful (RESEARCH-STATUS.md, research-benchmarks.md table, "Perform-to-a-click
+> self-labelling protocol"). Its one corpus, `whistled-high-register`, scored COnP
+> 0.00 as recorded: every take sat 12–13 semitones above the written melody (a
+> different key on 3 of 6 clips), and the metronome grid missed the attacks by a
+> median 90 ms. Since 2026-10-30 `apps/eval` is being reworked into a benchmark-only
+> interface with no corpus generation or recording (`meta/test-data-2026-10.md`).
+> The paragraph below is kept as the record of what the workbench did.
+
+The eval workbench (`apps/eval`, `pnpm dev:eval`) created corpora of generated
+melodies and recorded our own performances of them, materializing straight into
 this tree (`dataset.json` carries `source: "recorded in-house via apps/eval"`).
-Their truth is _prescribed_ — the generated notes are the labels and the
-performer plays to a metronome — so the labels are exact but only as honest as
-the take; the app's expected-vs-derived overlay is the review step. They
-default to `context/`; move one to `benchmark/` (and add it to the table above)
-only after its takes have been reviewed clip by clip. Licence is trivially ours.
+Their truth is _prescribed_: the generated notes are the labels and the
+performer plays to a metronome. The labels were meant to be exact but only as
+honest as the take, with the app's expected-vs-derived overlay as the review
+step; the dogfood whistling showed the take is not honest enough. Such corpora
+stay in `context/` with `noteTruthDerived`. Licence is trivially ours.

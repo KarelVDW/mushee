@@ -20,7 +20,7 @@ PYTHONPATH=. uv run python -m synthcorpus.export                 # → apps/api/
 cd ../apps/api && EVAL_SYNTH=1 EVAL_ADAPTIVE=1 pnpm exec tsx scripts/eval/run-eval.ts
 ```
 
-Assets (`assets/`, ~12 GB), renders (`out/`) and scratch (`work/`) are gitignored;
+Assets (`assets/`, ~10 GB), renders (`out/`) and scratch (`work/`) are gitignored;
 every asset has a fetcher under `synthcorpus/fetch/` (or `assets/apple/packs.txt`).
 
 ## Why it sounds real: the method
@@ -100,7 +100,7 @@ without listeners, is **measured** against real recordings — see _Results_.
 | VSCO-2 CE, VCSL, Karoryfer, sfzinstruments         | CC0 (MTG SoloSax CC-BY-4.0)                                                          | orchestra, recorders, harmonica, ocarina, saxes, bass guitar, cello, bagpipe, erhu                         |
 | Philharmonia Orchestra samples                     | free; not for resale as samples                                                      | orchestra incl. contrabassoon, bass clarinet, cor anglais                                                  |
 | Sonatina Symphonic Orchestra                       | CC Sampling+ 1.0                                                                     | brass/clarinet sections, alto flute, piccolo                                                               |
-| FreePats                                           | CC0                                                                                  | bagpipe (with drones), ocarina, recorder, classical guitar                                                 |
+| FreePats                                           | CC0                                                                                  | bagpipe (chanter; drones not mixed), ocarina, recorder, classical guitar                                   |
 | Salamander Grand Piano                             | CC-BY-3.0                                                                            | piano                                                                                                      |
 | VocalSet                                           | CC-BY-4.0                                                                            | all voices, breaths                                                                                        |
 | music21 corpus (PD works)                          | PD / as distributed                                                                  | melodies                                                                                                   |
@@ -110,12 +110,13 @@ Nothing here is redistributed or ships in the product; everything is internal ev
 
 ## Results
 
-### Corpus (v1, 2026-09-27)
+### Corpus (v1.1, 2026-09-27)
 
-**463 clips** — 382 instrument clips over the 37 timbres that cover every app
-instrument id (8–12 clips each, 1–5 real sample sources per timbre, 90 sources in
-all) + 81 sung clips over 8 voice types (soprano, mezzo, alto, tenor, baritone,
-bass, countertenor, child*) from 20 real singers; each clip = a `dry` render +
+**463 clips** — 382 instrument clips over 36 timbres (8–12 clips each, 1–5 real
+sample sources per timbre, 92 in all), which cover 47 of the app's 48 instrument
+ids (the one left out, woodblock, is unpitched), + 81 sung clips over 8 voice
+types (soprano, mezzo, alto, tenor, baritone, bass, countertenor, child*) from 20
+real singers; each clip = a `dry` render +
 `studio`, `room`, `home-phone`, `noisy-phone` recordings (2 315 WAVs, 48 kHz),
 6–26 s long, 8–85 notes. *child = formant-scaled female singers (flagged
 `derived_timbre`). Every clip passed the quality gate; rejects are logged.
@@ -168,7 +169,8 @@ Reading it honestly:
 
 ### How the app scores on it (baseline, before any app change)
 
-`benchmark.ts run --synth` (production path, adaptive), COnP @ ±100 ms:
+`benchmark.ts run --synth` (production path, adaptive), COnP @ ±100 ms, the mean
+over datasets (as in `RESULTS-SYNTH.md`):
 
 | condition   | COnP  | COnPOff |
 | ----------- | ----- | ------- |
@@ -217,13 +219,22 @@ test apart, including the harness's reverberant real conditions. Full record:
    0.5 by the take's reverberance, because a heavy room fills tongued repeats.
 2. **One note per grid slot.** Split fragments snapping onto one slot became chords;
    they are now folded (`collapseCoincident`).
-3. **Two real notes never share a slot.** The quantiser's coarse-grid prior pulled a
-   late sixteenth back onto the beat its predecessor held, so one of two correctly
-   heard notes was lost (pedal-point figures: B5-D5-C6-D5…).
+
+Measured null, not shipped: **giving the second of two colliding notes its own
+slot.** The quantiser's coarse-grid prior pulls a late sixteenth back onto the beat its
+predecessor holds, so the collapse above keeps only one of two correctly heard
+notes (pedal-point figures: B5-D5-C6-D5…). Pushing the later note to the next slot
+was tried in three forms; none helped the synthetic corpus and the real corpus was
+flat, except GuitarSet (+0.012\*, no second source). Most collisions turned out to
+be a held note's tail fragment, not two real notes. The lead left is a joint (DP)
+quantiser; see FINDINGS.md, "Two real notes on one slot (measured null, not
+shipped)".
 
 Result on this corpus, `benchmark.ts compare` v1.1 baseline → after (COnP,
 paired over the 463 clips, all CIs exclude zero; dev and test agree, room dev
-+0.028*, test +0.035*):
++0.028*, test +0.035*). The cells are means over clips, not over datasets as in
+the baseline table above and in `RESULTS-SYNTH.md`, which is why the noisy-phone
+baseline reads 0.720 here and 0.717 there:
 
 | condition   | all                        | singing                | instruments            |
 | ----------- | -------------------------- | ---------------------- | ---------------------- |
@@ -247,9 +258,9 @@ The reverberant real guard is in FINDINGS.md. Two small significant regressions:
 GuitarSet −0.004\* (the collapse pass drops one of two real notes in fast runs)
 and n20emv2 −0.003\*.
 
-Known realism gap (v1.2 work): the synthetic voices sing fast notes too
-precisely. Only 1 % of their notes under 0.25 s sit more than 50 cents off the
-label, against 12–30 % in real annotated singing (vocadito, HUST, n20emv2, CSD),
+Known realism gap (v1.2 work, deferred; see _Status_ below): the synthetic voices
+sing fast notes too precisely. Only 1 % of their notes under 0.25 s sit more than
+50 cents off the label, against 12–30 % in real annotated singing (vocadito, HUST, n20emv2, CSD),
 and their in-note pitch spread is 20 c against 34–59 c.
 
 Caveat for reading per-timbre numbers: piccolo, one of the two weakest, renders
@@ -258,6 +269,18 @@ modulation has a median of 7.3 dB, against 3.8–5.2 dB for the Philharmonia and
 flutes and 3.7 dB on real URMP flute notes. So even the dry render splits mid-note
 on that player's vibrato. With no real piccolo recording to check against, the app
 is not tuned for it.
+
+The other weak one, alto flute, keeps a source the v1.1 audit scored as unstable.
+That audit (`work/sustain-audit.txt`, gitignored) scored the sustain stability of
+all 88 sustained sample sources; higher is less stable (the v1.1 commit describes
+SSO piccolo's 10.3 as "intrinsic 10 % dips"). v1.1 dropped SSO English horn (13.2,
+the worst) and SSO piccolo (10.3) but kept SSO alto flute (12.6, the second worst),
+next to Iowa alto flute (9.0). The keep was not recorded at the time. The
+2026-10-30 close-out confirmed it: v1.1 is final (see _Status_), and dropping the
+source would change the corpus under every committed v1.1 result and leave
+alto flute on a single source. So read alto-flute numbers with that source in
+mind. After the onset-policy change it is the weakest synthetic dataset on
+noisy-phone (COnP 0.468 vs piccolo 0.473; at baseline 0.456 vs 0.450).
 
 ### Findings that changed the corpus (worth knowing when reading eval numbers)
 
@@ -281,3 +304,32 @@ is not tuned for it.
   amplitude contour into ~3 Hz pulsing that the app's onset detector read as
   re-articulations; v1 normalises grain loudness per period and adds irregular
   shimmer + vibrato-coupled AM instead.
+
+## Status (2026-10-30)
+
+**v1.1 is the final corpus of this effort.** It is what `fixtures/eval-synth`
+holds (each `dataset.json` now records `"corpusVersion": "v1.1"`) and what the
+results at the top of `benchmarks/results-synth/` were scored on (its `v0-corpus/`
+and `v1-corpus/` folders hold the older corpora's runs). No re-export is planned.
+
+Deferred (the v1.2 realism leads, none started):
+
+- **Fast sung notes are too precise**: 1 % of synthetic notes under 0.25 s sit
+  more than 50 cents off, against 12–30 % in real singing.
+- **Voices are vowel-only**: no consonant re-onsets, so they cannot test those
+  (FINDINGS: their extra gain at a 0.25 voice dip ratio is partly this).
+- **No humming or whistling synthesis**: those materials have no synthetic tier.
+- **Euphonium is rendered from tuba samples**: no permissive euphonium recording
+  exists.
+- **No free-tempo tier**: `Performer.perform(tempo='free')` exists, but no
+  corpus has been built with it.
+- **Bagpipe drones are not mixed in**: the chanter is rendered alone.
+
+Open for Karel: the listening check of `out/_showcase/` (20 clips). Nothing
+records that it happened, so the realism claims above rest on the measured
+proxies alone (PANNs tagging, and the error profile against the real corpus).
+
+Next: [`RESYNTH.md`](RESYNTH.md) describes `synthcorpus.resynth`, a new tool in
+this package. It reuses this package's singer (`voice.py`) and sampler to give
+**real** recordings note truth: it renders a synthetic copy of each one, iterates
+until the copy matches, and reads the notes from the copy.

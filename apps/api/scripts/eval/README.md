@@ -39,9 +39,18 @@ label files in `annotations/`.
 
 ## Corpus layout
 
-- `scripts/fixtures/eval/` — **synthetic** corpus, built by `generate.ts`:
+- `scripts/fixtures/eval/` — the original (toy) **synthetic** corpus, built by `generate.ts`:
   one clean clip plus degraded variants per (scenario × melody), each with
   `<melody>.truth.json`.
+- `scripts/fixtures/eval-synth/<dataset>/` — the **realistic synthetic** corpus
+  (v1.1, 44 datasets, 463 clips), exported by the standalone `synthetic-corpus/`
+  project (its README is the method record): real melodies performed by a
+  performer model, rendered from real recordings of each instrument or singer,
+  with exact truth. Each clip is `<clip>.truth.json` plus one
+  `<clip>__<condition>.wav` per condition (`dry`, `studio`, `room`, `home-phone`,
+  `noisy-phone`). Scored with `EVAL_SYNTH=1` (run-eval) or `benchmark.ts --synth`.
+  Its own result history is `benchmarks/results-synth/`; the diagnosis tools are
+  listed under _Realistic synthetic tier_ below.
 - `scripts/fixtures/eval-real/<tier>/<dataset>/` — **real** recorded corpora
   (singing _and_ monophonic instruments), built by the `fetch-*.ts` scripts:
   `<clip>__real.wav` + `<clip>.truth.json` + `dataset.json` manifest.
@@ -60,7 +69,8 @@ label files in `annotations/`.
     corpus that spans instruments is split per instrument — hence `urmp-violin`,
     `urmp-flute`, … rather than one `urmp/`.
 
-Both fixture trees are gitignored; regenerate them locally with the scripts below.
+All three fixture trees are gitignored; regenerate them locally with the scripts
+below (`eval-synth` with `synthcorpus.export`, see `synthetic-corpus/README.md`).
 
 ### Degradation conditions (scenarios.ts)
 
@@ -108,22 +118,42 @@ explicit `sourceKind` per dataset — except under `EVAL_NO_HINT`, which is how
 to exercise it end-to-end. `probe-source-classifier.ts` measures it directly
 (98.7 % decided / 11.8 % abstain over the 1,148 labeled real clips).
 
+### Onset-policy kill-switches and A/B levers (2026-09-27)
+
+The per-family onset policy (`profile-resolver.ts` `applyOnsetPolicy`) and the
+extractor's collapse pass shipped together in d77db1d. Two kill-switches restore
+the pre-2026-09-27 output; `pre-onset-policy` in the benchmark history is both set
+at once. The other four variables are numeric or flat overrides kept for A/B runs
+only. They are in production code but are not meant to be set there. Numbers are
+COnP, paired over clips, from FINDINGS.md "Findings log (2026-09-27…)".
+
+| Variable                          | Kind        | What it does                                                                                          | Measured status                                                                                                                                                                                                                                 |
+| --------------------------------- | ----------- | ----------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ONSET_POLICY=legacy`             | kill-switch | Detector default dip ratio (0.5) for every source; no per-family policy                               | The policy shipped. With the collapse pass, the product benchmark gained +0.007 [+0.005, +0.008]\* (singing +0.007\*, instruments +0.000)                                                                                                       |
+| `EXTRACTOR_COLLAPSE_COINCIDENT=0` | kill-switch | Turns off `NoteExtractor.collapseCoincident` (one note per grid slot)                                 | Shipped: synthetic voices +0.012\*, real singing +0.0016\*, never negative per dataset; it costs GuitarSet −0.004\* in the benchmark (fast runs put two real notes on one slot)                                                                 |
+| `VOICE_ONSET_DIP_RATIO=<x>`       | A/B only    | Overrides the voice dip ratio (shipped 0.35)                                                          | 0.5 → 0.35: synthetic +0.068\*, real singing +0.009\*. 0.35 → 0.25: synthetic +0.013\*, real +0.001 (null; vocadito declines), so 0.35 stays                                                                                                    |
+| `ONSET_DIP_RATIO=<x>`             | A/B only    | Overrides the sustained-instrument dry ratio (shipped 0.35); struck and plucked instruments ignore it | 0.5 → 0.35: synthetic +0.006\*, URMP +0.005 (n.s.). The same deeper dip on plucked/struck cost synthetic −0.006\* and GuitarSet −0.008\*, which is why the policy leaves them at 0.5                                                            |
+| `SUSTAINED_ONSET_REVERB_RAMP=0`   | A/B only    | Keeps the sustained ratio flat instead of ramping it back to 0.5 with the take's reverberance         | Ramp vs flat: synthetic +0.001 (n.s.). In echoey-room / distant-mic, flat 0.35 left URMP at −0.001 (n.s.) while the ramp gained +0.004\* over keeping 0.5; flat merged tongued repeats (URMP horn "Für Elise" 0.86 → 0.40), so the ramp shipped |
+| `VOICE_ONSET_MIN_TROUGH_SEC=<s>`  | A/B only    | Overrides the voice decode's `onsetMinTroughSec`                                                      | No measurement recorded                                                                                                                                                                                                                         |
+
+`STAGES_REAL=1` (`stages-synth.ts`) is an eval-only switch, not a pipeline lever.
+
 ## Scripts
 
 ### Harness core
 
-| Script                                    | Purpose                                                                                                                                                                                                                                                                                                                              |
-| ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `types.ts`, `melodies.ts`, `scenarios.ts` | The evaluation matrix: register-agnostic melodies placed into scenario registers (whistle-high, voice-bass, trumpet-mid control, …).                                                                                                                                                                                                 |
-| `generate.ts`                             | Build the synthetic corpus (fluidsynth/direct synthesis + degradations). Idempotent.                                                                                                                                                                                                                                                 |
-| `run-eval.ts`                             | Score the pipeline over a corpus (env-driven: `EVAL_REAL`, `EVAL_ADAPTIVE`, `EVAL_PROVIDER`, `EVAL_MIN_FREQ`, …) and print the full diagnostic report. The everyday tuning entry point; the scorer itself is `lib/evalRun.ts`.                                                                                                       |
-| `benchmark.ts`                            | **The product benchmark**: `run` scores the production path over every real corpus and records the result with its git provenance under `benchmarks/results/`; `compare` pairs two results with bootstrap CIs per material / dataset / condition; `render` regenerates `benchmarks/RESULTS.md`. See `benchmarks/README.md`.          |
-| `lib/evalRun.ts`                          | The corpus scorer shared by `run-eval.ts` and `benchmark.ts`: transcribe → score → aggregate per dataset, per condition and per **material** (`lib/realCorpus.ts` `Material`, from `dataset.json`).                                                                                                                                  |
-| `lib/`                                    | Shared plumbing: synthesis (`synth.ts`, `midi.ts`, `wav.ts`), degradations (`degrade.ts`), scoring (`metrics.ts`, mir_eval-style, incl. COnPOff), corpus discovery (`groundTruth.ts`, `realCorpus.ts`), and `pipelineRun.ts` (drives the production `RecordingPipeline` end-to-end).                                                 |
-| `lib/trackCache.ts`                       | Caches each clip's frame-level pitch trajectory (+ energy, onsets, resolved profile) to disk. Model inference dominates a corpus run, but everything worth tuning is downstream of it — so this turns a 40-minute experiment into a sub-second one. Bump `CACHE_VERSION` when the decoder, resolver or CREPE decode changes meaning. |
-| `lib/stats.ts`                            | Paired-bootstrap confidence intervals, resampling **clips** (not notes) and pairing configs on the same clips. Also reports measured σ, ρ and the minimum detectable effect, so a null result can be told apart from an underpowered one.                                                                                            |
-| `lib/split.ts`                            | Deterministic dev/test split drawn over **performer/piece groups**, not clips — one Annotated-VocalSet singer has dozens of clips, so a per-clip split puts the same voice in both halves. Tune on `dev`, confirm on `test` once.                                                                                                    |
-| `lib/notation.ts`                         | Notation metrics **in beats**: onset-in-beats F1 (with the metrical scale searched and reported, so half/double-tempo errors surface), note-value accuracy, and reference-free readability counters. Needed because seconds-based F1 rewards _not_ quantising — see the Findings log below.                                          |
+| Script                                    | Purpose                                                                                                                                                                                                                                                                                                                                                                                                   |
+| ----------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `types.ts`, `melodies.ts`, `scenarios.ts` | The evaluation matrix: register-agnostic melodies placed into scenario registers (whistle-high, voice-bass, trumpet-mid control, …).                                                                                                                                                                                                                                                                      |
+| `generate.ts`                             | Build the synthetic corpus (fluidsynth/direct synthesis + degradations). Idempotent.                                                                                                                                                                                                                                                                                                                      |
+| `run-eval.ts`                             | Score the pipeline over a corpus (env-driven: `EVAL_REAL`, `EVAL_SYNTH`, `EVAL_ADAPTIVE`, `EVAL_PROVIDER`, `EVAL_MIN_FREQ`, …) and print the full diagnostic report. The everyday tuning entry point; the scorer itself is `lib/evalRun.ts`.                                                                                                                                                              |
+| `benchmark.ts`                            | **The product benchmark**: `run` scores the production path over every real corpus and records the result with its git provenance under `benchmarks/results/` (`--synth`: the realistic synthetic corpus, into `benchmarks/results-synth/`); `compare` pairs two results with bootstrap CIs per material / dataset / condition; `render` regenerates `benchmarks/RESULTS.md`. See `benchmarks/README.md`. |
+| `lib/evalRun.ts`                          | The corpus scorer shared by `run-eval.ts` and `benchmark.ts`: transcribe → score → aggregate per dataset, per condition and per **material** (`lib/realCorpus.ts` `Material`, from `dataset.json`).                                                                                                                                                                                                       |
+| `lib/`                                    | Shared plumbing: synthesis (`synth.ts`, `midi.ts`, `wav.ts`), degradations (`degrade.ts`), scoring (`metrics.ts`, mir_eval-style, incl. COnPOff), corpus discovery (`groundTruth.ts`, `realCorpus.ts`), and `pipelineRun.ts` (drives the production `RecordingPipeline` end-to-end).                                                                                                                      |
+| `lib/trackCache.ts`                       | Caches each clip's frame-level pitch trajectory (+ energy, onsets, resolved profile) to disk. Model inference dominates a corpus run, but everything worth tuning is downstream of it — so this turns a 40-minute experiment into a sub-second one. Bump `CACHE_VERSION` when the decoder, resolver or CREPE decode changes meaning.                                                                      |
+| `lib/stats.ts`                            | Paired-bootstrap confidence intervals, resampling **clips** (not notes) and pairing configs on the same clips. Also reports measured σ, ρ and the minimum detectable effect, so a null result can be told apart from an underpowered one.                                                                                                                                                                 |
+| `lib/split.ts`                            | Deterministic dev/test split drawn over **performer/piece groups**, not clips — one Annotated-VocalSet singer has dozens of clips, so a per-clip split puts the same voice in both halves. Tune on `dev`, confirm on `test` once.                                                                                                                                                                         |
+| `lib/notation.ts`                         | Notation metrics **in beats**: onset-in-beats F1 (with the metrical scale searched and reported, so half/double-tempo errors surface), note-value accuracy, and reference-free readability counters. Needed because seconds-based F1 rewards _not_ quantising — see the Findings log below.                                                                                                               |
 
 ### Real-corpus fetchers (`fetch/`)
 
@@ -204,6 +234,20 @@ unattended. If whistling stays a supported input, record and annotate a corpus
 | `bench-onset-detector.ts`    | **The re-attack detector in isolation** on real human-placed onsets — AVP (vocal percussion) and JaCRC (syllable onsets), from the cached 10 ms envelope, at the shipping constants and over a small grid. The isolated onset benchmark `run-eval` cannot give (its path emits onsets only where CREPE finds a note); `ONSET_TOL`, `ONSET_DATASETS`, `EVAL_SPLIT`.                                                                   |
 | `probe-source-classifier.ts` | Measures the stock-YAMNet voice/instrument classifier over every labeled real clip: forced-choice accuracy and the abstain-band trade table.                                                                                                                                                                                                                                                                                         |
 | `sweep-bands.ts`             | Does any gated feature want a PER-BAND (`PROFILE_BANDS`) setting? Paired Δ vs the production config within band × path strata over the cached corpus; `BAND_STRATA=band-rev\|ds-band` swaps in the confound strata (reverb flag / dataset) that decide whether an apparent band effect is real.                                                                                                                                      |
+
+### Realistic synthetic tier (`fixtures/eval-synth`, `EVAL_SYNTH=1`)
+
+The corpus knows every note's exact truth and how it was performed, so these
+tools say which pipeline stage loses which kind of note. Findings made with them
+are only accepted once the real corpus agrees (FINDINGS.md, 2026-09-27).
+
+| Script             | Purpose                                                                                                                                                                                                                                                     |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `inspect-synth.ts` | One synthetic clip through the production path, printed next to its truth: which notes matched, split, merged or went missing. `<dataset> <clip> [condition=room]`.                                                                                         |
+| `stages-synth.ts`  | Stage dump for one clip: resolved profile, the `OnsetDetector`'s re-attacks, the provider's raw notes and the extractor's deduced notes, next to the truth. `STAGES_REAL=1` points it at a real clip and degrades it on the fly for the adverse conditions. |
+| `analyze-synth.ts` | Per-note error census over the corpus (ok / late / early / split / merged / pitch / missed), as JSONL; `synthetic-corpus/synthcorpus/census.py` joins it with how each note was performed.                                                                  |
+| `voice-exp.sh`     | One voice A/B through the production path: the synthetic voices in all four conditions plus the real singing corpora, in parallel. `voice-exp.sh <label> [ENV=VALUE …]`.                                                                                    |
+| `inst-exp.sh`      | The instrument-side counterpart: synthetic instruments (room, home-phone) plus URMP and GuitarSet as the real guard.                                                                                                                                        |
 
 ## Pruning log
 

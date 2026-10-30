@@ -180,8 +180,25 @@ the shipped settings, but the eval scripts still keep their own copies:
   redundant pitch-option overrides (`AudioConverter.pitchOptionsFor` already applies them).
   The detect decodes (`sweep-real`, `diagnose-real`, `sweep-voice`, `sweep-reverb`,
   `stages-synth`, the probes) should use `DETECT_DECODE`/`DETECT_SAMPLE_RATE` from
-  `profiles/profile-resolver.ts`. Every one of these moves numbers, so each needs a
+  `profiles/profile-resolver.ts`. That sub-item does **not** move numbers (checked
+  2026-10-30): the local `DETECT_SR = 16000` / literal 16000 and
+  `{ loudnorm: false, highpassHz: 30 }` copies equal the shared constants, so it is
+  de-duplication only. Every other item here moves numbers, so each needs a
   measurement-correction note in `scripts/eval/FINDINGS.md`.
+- **Cached onsets are not the shipped per-family onset policy** (found 2026-10-30, not
+  yet measured). `lib/trackCache.ts` detects onsets with a default `OnsetDetector`
+  (dip ratio 0.5, `trackCache.ts:155,232`), and `lib/decodeCached.ts:100` feeds them to
+  the extractor as if they were production's. Since 2026-09-27 production uses the
+  per-family policy (`profile-resolver.ts` `applyOnsetPolicy`: voice 0.35, sustained
+  instruments 0.35 ramped to 0.5 by reverberance). So the cached sweeps (`sweep-*`,
+  `notation-eval`, `ablate`, …) measure onsets that no longer ship. The benchmark is
+  unaffected: it runs the production path (`lib/evalRun.ts`). `RESOLVER_ENV_KEYS`
+  (`trackCache.ts:77-91`) also lacks `ONSET_POLICY`, `VOICE_ONSET_DIP_RATIO`,
+  `ONSET_DIP_RATIO`, `SUSTAINED_ONSET_REVERB_RAMP` and `VOICE_ONSET_MIN_TROUGH_SEC`,
+  so a cache built under one setting is silently reused under another. All 4,274
+  `eval-cache` entries predate 2026-09-27. Fix: take the onset ratio from the
+  resolved profile when building the cache, add those keys, bump `CACHE_VERSION`, and
+  measure the size of the change with a FINDINGS note.
 - `scripts/eval/lib/trackCache.ts` should import `type TrajectoryProvider` from
   `src/recordings/pipeline/providers/pitch-provider` and drop its local interface.
   Re-add a shared type guard only together with its caller, replacing `hasTrack`.

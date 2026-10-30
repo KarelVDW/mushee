@@ -34,11 +34,21 @@
  * says "there is sound here but it is not a note" without deleting the evidence.
  *
  * Env / flags:
- *   --dataset=<id>         only this dataset (default: all under annotations/)
- *   --verified-by="<name>" stamp every clip processed as verified by <name>.
- *                          Use this ONLY after actually checking them.
+ *   --dataset=<id>           only this dataset (default: all under annotations/)
+ *   --verified-by="<name>"   stamp the SELECTED clips as verified by <name>. Use
+ *                            this ONLY after actually checking them. Refused
+ *                            without --dataset and a clip selection, so one run
+ *                            can never stamp clips nobody looked at.
+ *   --clips=<a,b,…>|all      the clips --verified-by stamps (`all` = every clip
+ *                            in the dataset)
+ *   --verified-list=<file>   the same, read from a file: one clip id per line, or
+ *                            a worklist whose ticked `- [x] \`<clip>\`` items are
+ *                            the checked clips (unticked items are skipped)
  *
- * Run: pnpm --filter api exec tsx scripts/eval/fetch/import-note-labels.ts
+ * Every clip in the dataset is still imported; the selection only decides which
+ * `.meta.json` files get the stamp.
+ *
+ * Run: pnpm --filter @mushee/api exec tsx scripts/eval/fetch/import-note-labels.ts
  */
 
 import { createHash } from 'crypto'
@@ -154,10 +164,50 @@ interface ClipMetaFile {
     provenance?: { licence?: string; attribution?: string; source?: string }
 }
 
+function refuse(message: string): never {
+    console.error(message)
+    process.exit(1)
+}
+
+function flag(argv: string[], name: string): string | undefined {
+    return argv.find((a) => a.startsWith(`--${name}=`))?.slice(`--${name}=`.length)
+}
+
+/**
+ * The clips `--verified-by` may stamp, from `--clips` and/or `--verified-list`
+ * (see the header); undefined when neither flag is given. A worklist line counts
+ * only when its box is ticked, so passing VERIFY-WORKLIST.md itself stamps exactly
+ * what the reviewer ticked.
+ */
+function readClipSelection(argv: string[]): Set<string> | 'all' | undefined {
+    const clipsArg = flag(argv, 'clips')
+    const listArg = flag(argv, 'verified-list')
+    if (clipsArg === undefined && listArg === undefined) return undefined
+    if (clipsArg?.trim() === 'all') {
+        if (listArg !== undefined) refuse('--clips=all and --verified-list contradict each other; pass one.')
+        return 'all'
+    }
+    const ids = new Set<string>()
+    for (const id of clipsArg?.split(',') ?? []) if (id.trim()) ids.add(id.trim())
+    if (listArg !== undefined) {
+        const listPath = resolve(listArg)
+        if (!existsSync(listPath)) refuse(`--verified-list: no file at ${listPath}`)
+        for (const line of readFileSync(listPath, 'utf8').split('\n')) {
+            const row = line.trim()
+            const ticked = /^[-*] \[[xX]\] `([^`]+)`/.exec(row)
+            if (ticked) ids.add(ticked[1])
+            else if (/^[\w.-]+$/.test(row)) ids.add(row)
+        }
+    }
+    if (!ids.size) refuse('The clip selection is empty (no ids, or no ticked worklist items); nothing would be stamped.')
+    return ids
+}
+
 function main(): void {
     const argv = process.argv.slice(2)
-    const wantDataset = argv.find((a) => a.startsWith('--dataset='))?.slice('--dataset='.length)
-    const verifiedBy = argv.find((a) => a.startsWith('--verified-by='))?.slice('--verified-by='.length)
+    const wantDataset = flag(argv, 'dataset')
+    const verifiedBy = flag(argv, 'verified-by')
+    const selection = readClipSelection(argv)
     // Label times only mean something against the exact bytes they were made on.
     const allowDrift = argv.includes('--allow-audio-drift')
 
@@ -165,6 +215,31 @@ function main(): void {
         console.error(`No annotations at ${ANNOTATIONS} — run fetch/draft-note-labels.ts first.`)
         process.exit(1)
     }
+
+    // The stamp is the one thing this script writes into tracked files, and it is
+    // what lets a dataset into the pooled numbers. Until 2026-10 a bare
+    // `--verified-by` stamped every clip of every dataset it processed, so checking
+    // the 30 worklist clips and running it would have marked every staged clip under
+    // annotations/ as human-verified. Scope it to one dataset and the clips actually
+    // checked, and refuse anything looser.
+    if (verifiedBy !== undefined || selection !== undefined) {
+        if (!verifiedBy) refuse('--clips / --verified-list choose which clips --verified-by stamps; pass --verified-by="<name>" too.')
+        if (!wantDataset) refuse('--verified-by needs --dataset=<id>: it stamps clips of ONE dataset only.')
+        if (!selection) refuse('--verified-by needs the clips you checked: --clips=<a,b,…>, --verified-list=<file>, or --clips=all.')
+        const annDir = join(ANNOTATIONS, wantDataset)
+        if (!existsSync(annDir)) refuse(`No annotations/${wantDataset}/ to verify.`)
+        if (selection !== 'all') {
+            const known = new Set(
+                readdirSync(annDir)
+                    .filter((f) => f.endsWith('.labels.tsv'))
+                    .map((f) => f.replace(/\.labels\.tsv$/, '')),
+            )
+            const unknown = [...selection].filter((clip) => !known.has(clip))
+            if (unknown.length) refuse(`Not clips of annotations/${wantDataset}/: ${unknown.join(', ')}`)
+        }
+    }
+    const shouldStamp = (clip: string): boolean => !!verifiedBy && selection !== undefined && (selection === 'all' || selection.has(clip))
+    const stamped = new Set<string>()
 
     for (const ds of readdirSync(ANNOTATIONS, { withFileTypes: true })) {
         if (!ds.isDirectory()) continue
@@ -232,10 +307,11 @@ function main(): void {
                 )
                 if (!allowDrift) continue
             }
-            if (verifiedBy) {
-                meta.verifiedBy = verifiedBy
+            if (shouldStamp(clip)) {
+                meta.verifiedBy = verifiedBy ?? null
                 meta.verifiedAt = new Date().toISOString()
                 writeFileSync(metaPath, `${JSON.stringify(meta, null, 2)}\n`)
+                stamped.add(clip)
             }
             if (!meta.verifiedBy) unverified += 1
             if (meta.provenance?.licence) licences.add(meta.provenance.licence)
@@ -299,6 +375,14 @@ function main(): void {
                     ? ` — ⚠ ${unverified} UNVERIFIED, dataset marked noteTruthDerived (not pooled)`
                     : ' — all verified, pooled normally'),
         )
+    }
+
+    if (verifiedBy) {
+        console.log(`\nStamped ${stamped.size} clip(s) verified by ${verifiedBy}.`)
+        // A selected clip that was skipped above (no staged audio, empty labels,
+        // audio drift) keeps its old stamp: say so rather than let it pass silently.
+        const missed = selection instanceof Set ? [...selection].filter((clip) => !stamped.has(clip)) : []
+        if (missed.length) console.warn(`  ! selected but not stamped (skipped above): ${missed.join(', ')}`)
     }
 
     console.log('\nRun: EVAL_REAL=1 EVAL_ADAPTIVE=1 pnpm --filter api exec tsx scripts/eval/run-eval.ts')

@@ -171,11 +171,16 @@ behind a profile flag, never as a swap. 1–2 weeks: torch sidecar through the
 `ModelBackend` seam (still single-key), a 2AFC listen, and the training-data
 provenance check. The single largest accuracy lever left; a team decision.
 
-**B. Verify the 30 staged whistle clips** (`annotations/whistle-real/VERIFY-WORKLIST.md`,
-~1 h of a human in Audacity). Unblocks four parked whistling questions
-(segmenter setting, the split investigation, the FFT tracker, the note floor)
-and promotes 117 clips to benchmark grade. Nothing else in whistling can move
-until this happens.
+**B. ~~Verify the 30 staged whistle clips~~ — SUPERSEDED 2026-10-30 by resynth truth.**
+The human pass (`annotations/whistle-real/VERIFY-WORKLIST.md`, ~1 h in Audacity)
+never happened: 0 of the 898 label files under `annotations/` are verified. It would also not have done
+what this entry claimed. Verifying the 30 staged clips does not promote the 117:
+`fetch/import-note-labels.ts` keeps a dataset in `context/` while any clip is
+unverified. Real whistle truth now comes from resynthesis instead: a synthetic
+copy of each clip is iterated until it matches the original, and the notes are
+read from the copy (`synthetic-corpus/RESYNTH.md`, `meta/test-data-2026-10.md`).
+The four parked whistling questions it was meant to unblock (segmenter setting,
+the split investigation, the FFT tracker, the note floor) wait on that truth.
 
 **C. A real humming corpus.** Partly addressed 2026-09-01: under the
 defensible-use licence standard, HumTrans (CC BY-NC, the only hummed audio with
@@ -210,9 +215,10 @@ editor Join/Split actions; the "if notes run together, try ta-ta-ta" tip;
 surface the already-computed recording-quality verdict; a split↔merge
 sensitivity control.
 
-**J. Cheap harness items:** AVP wired directly to `OnsetDetector` (isolated
-onset benchmark); 50-cent pitch gate on un-rounded truth; "notes to fix"
-median/P90; §20.5 drift/vibrato separation for whistled sustains (after B).
+**J. Cheap harness items:** ~~AVP wired directly to `OnsetDetector` (isolated
+onset benchmark)~~ done in 8173811c (`bench-onset-detector.ts`, AVP + JaCRC);
+50-cent pitch gate on un-rounded truth; "notes to fix" median/P90; §20.5
+drift/vibrato separation for whistled sustains (after B's replacement truth).
 
 **Do not revive** (measured, mechanisms logged): the pitch-estimator family,
 multi-candidate emission, transition pricing in any shape, absolute-dBFS gates,
@@ -240,3 +246,34 @@ match the code. Where they lag reality:
   clips exist; labels are unverified), HumTrans "unverified" (verified, rejected).
 - rhythm/daw: `notation-eval.ts` no longer has the median-IOI / residual+complexity
   tempo strategies its README row advertised (fixed in the README 2026-09-01).
+
+## 5. Addendum (2026-10-30): the 2026-09-27 onset-policy ship and its leads
+
+This audit predates the realistic synthetic corpus (`synthetic-corpus/`, v1.1).
+That corpus led to one shipped change in d77db1d, confirmed on the real corpus.
+Details are in FINDINGS.md, "Findings log (2026-09-27: the realistic synthetic corpus)".
+
+- **SHIPPED: per-family onset policy.** Vibrato in a room was read as
+  re-articulation. The re-attack dip ratio is now 0.35 for voice, and 0.35 for
+  sustained instruments, ramped back to 0.5 with the take's reverberance.
+  Struck and plucked instruments keep 0.5. Kill-switch `ONSET_POLICY=legacy`.
+- **SHIPPED: one note per grid slot** (`NoteExtractor.collapseCoincident`).
+  Kill-switch `EXTRACTOR_COLLAPSE_COINCIDENT=0`.
+- **Result, product benchmark** (`benchmark.ts run --quick`): +0.007 [+0.005, +0.008]\*
+  (0.766 → 0.770; singing +0.007\*, instruments +0.000). Synthetic: +0.017 to
+  +0.034\* per condition. Two small real regressions: GuitarSet −0.004\* and
+  n20emv2 −0.003\*.
+- **Measured, not shipped**: voice ramped by reverberance (−0.020\* real
+  singing in rooms); voice dip 0.25 (real +0.001); letting two real notes take
+  separate grid slots (three variants, synthetic −0.008\* to +0.001, real flat).
+- **Leads, NOT PURSUED**:
+    - A joint quantiser, a DP over grid positions instead of the greedy snap. It is
+      the one real signal from the null above (GuitarSet +0.012 [+0.004, +0.023]\*),
+      and GuitarSet is where to measure it.
+    - The voice decode's note-change cost on short notes. 9 % of synthetic sung
+      notes come out at a wrong pitch, mostly notes under 0.3 s, while the audio is
+      on target. Measure it on the real sets with fast notes (vocadito, n20emv2)
+      first.
+    - Corpus v1.2 realism leads (vowel-only voices, fast sung notes too precise, no
+      humming/whistling synthesis, no free-tempo tier). DEFERRED; see
+      `synthetic-corpus/README.md` "Status (2026-10-30)".

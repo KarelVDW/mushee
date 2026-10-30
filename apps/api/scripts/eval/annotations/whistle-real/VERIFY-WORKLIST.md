@@ -1,8 +1,17 @@
 # whistle-real verification worklist (stratified subset)
 
+> **SUPERSEDED 2026-10-30 — kept as history.** No clip on this list was ever verified
+> (0 of 40 boxes ticked, every `.meta.json` still `verifiedBy: null`). whistle-real's truth
+> now comes from the resynth pass instead (a synthetic copy of each clip, iterated until it
+> matches the original, with the notes read from the copy; truthSource `resynth`, see
+> `meta/test-data-2026-10.md` and `synthetic-corpus/RESYNTH.md`). The draft TSVs here remain
+> the prior that pass starts from. Section 4 was last refreshed from the 2026-09-27
+> `onset-policy` run.
+
 Protocol: research/research-whistle-corpus.md §6 — Audacity spectrogram view, correct the TSV in
-`scripts/eval/annotations/whistle-real/<clip>.labels.tsv`, then
-`pnpm --filter @mushee/api exec tsx scripts/eval/fetch/import-note-labels.ts --verified-by=karel`.
+`scripts/eval/annotations/whistle-real/<clip>.labels.tsv`, tick the clip's box below, then
+`pnpm --filter @mushee/api exec tsx scripts/eval/fetch/import-note-labels.ts --dataset=whistle-real --verified-by=karel --verified-list=scripts/eval/annotations/whistle-real/VERIFY-WORKLIST.md`
+(stamps exactly the ticked clips; every other clip stays unverified).
 Budget ~2–4 min per 10 s clip; this subset ≈ 40–60 min.
 
 ## 1. Mid/low routings (4) — is the whistle even the loudest thing here?
@@ -47,16 +56,16 @@ Budget ~2–4 min per 10 s clip; this subset ≈ 40–60 min.
 <!-- triage:begin -->
 ## 4. Lowest pipeline agreement (10) — where a verified label changes the most
 
-Ranked by per-clip COnP in benchmark run `2026-09-01T23-32-44_2b83e00_baseline-2026-09-01` (regenerate with `fetch/triage-verify-worklist.ts`). A low score here is EITHER a wrong draft or a real pipeline failure; verifying these clips settles which, and either outcome moves a number.
+Ranked by per-clip COnP in benchmark run `2026-09-27T06-23-29_d77db1d_onset-policy` (regenerate with `fetch/triage-verify-worklist.ts`). A low score here is EITHER a wrong draft or a real pipeline failure; verifying these clips settles which, and either outcome moves a number.
 
 - [ ] `commons-human` — COnP 0.00 (P 0.00 / R 0.00), 3 draft notes
+- [ ] `freesound-497892` — COnP 0.21 (P 0.19 / R 0.24), 46 draft notes
 - [ ] `freesound-494517` — COnP 0.22 (P 1.00 / R 0.13), 8 draft notes
-- [ ] `freesound-497892` — COnP 0.22 (P 0.19 / R 0.28), 46 draft notes
 - [ ] `freesound-523207` — COnP 0.25 (P 0.33 / R 0.20), 5 draft notes
-- [ ] `freesound-233569` — COnP 0.32 (P 0.19 / R 1.00), 4 draft notes
-- [ ] `freesound-499702` — COnP 0.33 (P 0.26 / R 0.45), 29 draft notes
-- [ ] `freesound-558265` — COnP 0.33 (P 0.20 / R 1.00), 4 draft notes
+- [ ] `freesound-233569` — COnP 0.26 (P 0.16 / R 0.75), 4 draft notes
+- [ ] `freesound-558265` — COnP 0.26 (P 0.16 / R 0.75), 4 draft notes
+- [ ] `freesound-499702` — COnP 0.35 (P 0.30 / R 0.41), 29 draft notes
 - [ ] `freesound-754956` — COnP 0.35 (P 0.29 / R 0.44), 9 draft notes
 - [ ] `freesound-795020` — COnP 0.36 (P 0.40 / R 0.33), 6 draft notes
-- [ ] `freesound-74388` — COnP 0.38 (P 0.75 / R 0.25), 12 draft notes
+- [ ] `freesound-250718` — COnP 0.36 (P 0.59 / R 0.26), 72 draft notes
 <!-- triage:end -->

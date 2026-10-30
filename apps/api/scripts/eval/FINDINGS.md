@@ -1972,8 +1972,9 @@ that **no provider transcribes anything through it** (COnP ≈ 0.001 under all t
    Cost: one extra full-take inference at stop, paid only where the alternative was an empty score.
 
 Pinned by `test/recordings/recording-pipeline-profile-lock.test.ts`. Not measurable in
-`run-eval` (which resolves over whole clips) — the harness instrument for this is
-`probe-realpath.ts` with a silent lead-in prepended, still to be run.
+`run-eval` (which resolves over whole clips). It has since been measured with a silent lead-in
+prepended (`probe-leadin.ts`): see "The profile lock, measured through the live pipeline with a
+silent lead-in" below.
 
 ### Benchmark infrastructure
 
@@ -2164,8 +2165,8 @@ onset-detector bench (F1 0.651).
 ## Findings log (2026-09-27: the realistic synthetic corpus)
 
 A second synthetic tier, built by the standalone `synthetic-corpus/` project (its
-README is the method record): every app instrument (37 timbres) and eight voice
-types, **rendered from real recordings** (90 sample sources; VocalSet singers via
+README is the method record): every pitched app instrument (36 timbres) and eight voice
+types, **rendered from real recordings** (92 sample sources in v1.1; VocalSet singers via
 TD-PSOLA), performed by a performer model along the app's click, and recorded
 through measured rooms, measured phone microphones, real noise and the browser's
 Opus round trip. Truth is exact by construction and every clip passed an
