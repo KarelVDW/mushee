@@ -202,6 +202,9 @@ DATASETS: dict[str, DatasetConfig] = {
         DatasetConfig('humtrans', 'context', 'humming', prior='aligned'),
         DatasetConfig('dagstuhl-choir', 'benchmark', 'singing', voice_parts=True),
         DatasetConfig('jacrc-students', 'benchmark', 'singing', prior='syllables', f0_range=(90.0, 1100.0), export_id='jacrc-notes'),
+        # real takes through the app's own recording chain (local dev server, triaged 2026-10-30)
+        DatasetConfig('app-takes-singing', 'benchmark', 'singing', prior='segment'),
+        DatasetConfig('app-takes-whistling', 'benchmark', 'whistling', prior='segment'),
         # ---------------------------------------------------------- calibration (blind only)
         DatasetConfig('vocadito', 'benchmark', 'singing', role='calibration'),
         DatasetConfig('n20emv2', 'benchmark', 'singing', role='calibration'),
