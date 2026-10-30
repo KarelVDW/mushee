@@ -268,8 +268,10 @@ class MonoSampler:
         dur = (t1 - t0) + rel_len + (0.06 if next_legato else 0.0)
         n_out = int(dur * self.sr) + 1
         t = np.arange(n_out, dtype=np.float64) / self.sr
-        # pitch trajectory (cents relative to target)
-        cents = np.full(n_out, note.cents, dtype=np.float64)
+        # pitch trajectory (cents relative to target). A note may carry an explicit contour
+        # (a callable: absolute seconds → fractional MIDI; resynth copies follow a measured f0)
+        contour = getattr(note, 'contour', None)
+        cents = (contour(t0 + t) - note.midi) * 100.0 if contour is not None else np.full(n_out, note.cents, dtype=np.float64)
         if note.glide_in > 0 and prev is not None:
             g = note.glide_in
             d = (prev.midi - note.midi) * 100.0
