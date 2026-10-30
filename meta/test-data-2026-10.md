@@ -135,3 +135,12 @@ decided and recorded without changing behaviour. "Open" means left with a reason
   log `apps/api/scripts/eval/.cache/timeline/run.log`).
 - 2026-10-30 17:44: pilot wave launched (17 clips: 6 whistled-high-register, 4 calibration, 7 targets);
   usage before: session 26 %, week 31 %.
+- 2026-10-30 19:55: pilot done — 16/16 real clips passed (12 in round 1, 4 in round 2); 52 agents / 4.5 M agent
+  tokens (12 of them wasted on a non-existent clip-06 ref → loop now stops on non-actionable status). Cost
+  ≈ 1.9 % of a session window per clip, driven by ad-hoc Python (judges median 44 tool calls). Calibration
+  (blind resynth vs human, COnP@100): vocadito_3 0.81 (A2-vs-A1 0.85), vocadito_14 0.61 (A2-vs-A1 0.73;
+  resynth-vs-A2 0.75), n20emv2 0.95, hust 0.88.
+- 2026-10-30 21:00: resynth upgrade (efef927b): inspect/zoom/note commands, sung-syllable evidence; wave
+  script v2 (tool budget, generator at medium effort, syllable convention).
+- 2026-10-30 21:21: wave 1 launched (45 clips: whistled-high-register/clip-08, whistle-vintage ×6, whistle-real
+  ×30, calibration ×8); usage before: session 0 % (fresh window), week 39 %.
