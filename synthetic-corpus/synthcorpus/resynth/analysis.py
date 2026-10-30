@@ -9,7 +9,10 @@ Per 10 ms frame (centred at k·10 ms):
 - their consensus: confident (2) where both are voiced within 50 c, uncertain (1) where
   only one is voiced or they disagree (the primary tracker's value is kept), else 0;
 - RMS level (dB), a superflux onset envelope and backtracked onset events, each with the
-  energy rise and the re-articulation dip around it.
+  energy rise and the re-articulation dip around it;
+- sung material only: a timbre-novelty envelope and its syllable events (`SyllableTracker`),
+  where the spectral envelope changes while the voice carries on (a new sung syllable on the
+  same pitch shows no energy dip and no pitch change, only a consonant or a vowel change).
 
 No CREPE and no apps/api code: the truth must not lean towards the system under test.
 """
@@ -24,7 +27,6 @@ from pathlib import Path
 
 import numpy as np
 import soundfile as sf
-from scipy.signal import resample_poly
 
 from .datasets import REPO
 
@@ -45,6 +47,8 @@ def load_audio(path: Path) -> tuple[np.ndarray, int]:
 def resample(y: np.ndarray, sr: int, to: int) -> np.ndarray:
     if sr == to:
         return y.astype(np.float32)
+    from scipy.signal import resample_poly  # lazy: scipy.signal costs ~0.5 s of import, the read-only views never resample
+
     g = math.gcd(sr, to)
     return resample_poly(y, to // g, sr // g).astype(np.float32)
 
@@ -120,6 +124,69 @@ class SineTracker:
         return midi
 
 
+class SyllableTracker:
+    """Sung syllables as timbre novelty: the distance between the mean MFCCs (c1–c16, a 32 ms
+    STFT, 40 mel bands 60–7800 Hz) of the 20 ms before and the 20 ms after each frame. A new
+    syllable changes the spectral envelope (a consonant, then a new vowel) while the pitch and,
+    often, the level carry on, so it is invisible to the energy and pitch events.
+
+    Events are local maxima (±40 ms, ≥ 50 ms apart) at or above `MIN_STRENGTH`, where the voice
+    persists: ≥ 30 ms voiced in the 150 ms before and in the 100 ms after, across an unvoiced gap
+    of at most 150 ms (a consonant), not in the noise floor and not a fade-out (the level after
+    > 10 dB below the level before: a release changes the timbre too). Strength is the novelty over `SCALE`
+    (35); the evidence counts ≥ 1.25 as a syllable (`evidence.SYL_STRONG`).
+
+    Tuned on vocadito (38 clips, both annotators; vocadito_3 / _14 held out) against the
+    annotators' boundaries between two same-pitch notes and their held notes that no annotator
+    splits (RESYNTH.md, "Syllable evidence"): ≥ 1.25 within ±50 ms finds 38 % of the boundaries
+    at 0.13 false events per second of held note (5 % of held notes); ≥ 1.0 within ±60 ms, 63 %
+    at 0.46 / s (16 %). Events sit a median 6 ms before the annotated boundary."""
+
+    VERSION = 1  # part of the analyzer config of sung material: bump when the events change
+    N_FFT, N_MELS, FMIN, FMAX, N_MFCC, HALF = 512, 40, 60.0, 7800.0, 16, 2
+    SCALE = 35.0
+    FADE_DB = 10.0  # level 30–100 ms after this far below the level 20–100 ms before: a fade-out
+    MIN_STRENGTH = 0.85  # stored (and shown by inspect / zoom); the evidence uses ≥ 1.25 (strong) and 1.0–1.25 (weak)
+
+    def novelty(self, y16: np.ndarray, n: int) -> np.ndarray:
+        import librosa
+
+        S = np.abs(librosa.stft(y16, n_fft=self.N_FFT, hop_length=160, center=True)) ** 2
+        mel = librosa.feature.melspectrogram(S=S, sr=SR_A, n_mels=self.N_MELS, fmin=self.FMIN, fmax=self.FMAX)
+        M = librosa.feature.mfcc(S=librosa.power_to_db(mel), n_mfcc=self.N_MFCC + 1)[1:]
+        M = M[:, :n] if M.shape[1] >= n else np.pad(M, ((0, 0), (0, n - M.shape[1])), mode='edge')
+        k = self.HALF
+        nov = np.zeros(n)
+        if n > 2 * k + 1:
+            cs = np.cumsum(np.pad(M, ((0, 0), (1, 0))), axis=1)
+            t = np.arange(k, n - k)
+            nov[t] = np.linalg.norm((cs[:, t + 1 + k] - cs[:, t + 1]) - (cs[:, t] - cs[:, t - k]), axis=0) / k
+        return nov / self.SCALE
+
+    def events(self, nov: np.ndarray, voiced: np.ndarray, rms_db: np.ndarray, peak: float) -> tuple[np.ndarray, np.ndarray]:
+        import librosa
+
+        n = len(nov)
+        if n < 10:
+            return np.zeros(0), np.zeros(0)
+        times, strengths = [], []
+        for p in librosa.util.peak_pick(nov, pre_max=4, post_max=4, pre_avg=1, post_avg=1, delta=0.0, wait=5):
+            if nov[p] < self.MIN_STRENGTH or voiced[max(0, p - 15) : p].sum() < 3 or voiced[p + 1 : p + 11].sum() < 3:
+                continue  # the voice must carry on (≥ 30 ms voiced in the 150 ms before and the 100 ms after)
+            lo, hi = p, p
+            while lo > 0 and not voiced[lo]:
+                lo -= 1
+            while hi < n - 1 and not voiced[hi]:
+                hi += 1
+            if (hi - lo) * HOP > 0.17 or np.median(rms_db[p : p + 10]) < peak - 35:
+                continue  # a phrase break (the attack is evidence there), or the noise floor
+            if np.median(rms_db[p + 3 : p + 11]) < np.median(rms_db[max(0, p - 10) : max(1, p - 2)]) - self.FADE_DB:
+                continue  # the voice fading out (a note's release changes its timbre too), not a new syllable
+            times.append(p * HOP)
+            strengths.append(round(float(nov[p]), 3))
+        return np.asarray(times), np.asarray(strengths)
+
+
 @dataclass
 class Analysis:
     family: str
@@ -137,6 +204,10 @@ class Analysis:
     level_ref_db: float  # 90th percentile level over voiced frames
     trackers: tuple[str, str] = ('swiftf0', 'pyin')
     meta: dict = field(default_factory=dict)
+    # sung material only (else empty): timbre novelty (1.0 = support strength) and its events
+    syl_nov: np.ndarray = field(default_factory=lambda: np.zeros(0))
+    syl: np.ndarray = field(default_factory=lambda: np.zeros(0))
+    syl_strength: np.ndarray = field(default_factory=lambda: np.zeros(0))
 
     @property
     def n(self) -> int:
@@ -169,15 +240,18 @@ class Analysis:
         meta = {'family': self.family, 'sr': self.sr, 'dur': self.dur, 'level_ref_db': self.level_ref_db, 'trackers': list(self.trackers), 'meta': self.meta}
         np.savez_compressed(tmp, f0a=self.f0a.astype(np.float32), f0b=self.f0b.astype(np.float32), f0=self.f0.astype(np.float32), conf=self.conf.astype(np.int8),
                             rms_db=self.rms_db.astype(np.float32), flux=self.flux.astype(np.float32), onsets=self.onsets, onset_rise=self.onset_rise,
-                            onset_dip=self.onset_dip, meta=np.frombuffer(json.dumps(meta).encode(), np.uint8))
+                            onset_dip=self.onset_dip, syl_nov=self.syl_nov.astype(np.float32), syl=self.syl, syl_strength=self.syl_strength,
+                            meta=np.frombuffer(json.dumps(meta).encode(), np.uint8))
         tmp.replace(path)
 
     @classmethod
     def load(cls, path: Path) -> 'Analysis':
         z = np.load(path)
         m = json.loads(bytes(z['meta']).decode())
+        opt = lambda k: z[k].astype(float) if k in z.files else np.zeros(0)  # noqa: E731 (caches without the syllable channel)
         return cls(m['family'], m['sr'], m['dur'], z['f0a'].astype(float), z['f0b'].astype(float), z['f0'].astype(float), z['conf'].astype(np.int8),
-                   z['rms_db'].astype(float), z['flux'].astype(float), z['onsets'], z['onset_rise'], z['onset_dip'], m['level_ref_db'], tuple(m['trackers']), m.get('meta', {}))
+                   z['rms_db'].astype(float), z['flux'].astype(float), z['onsets'], z['onset_rise'], z['onset_dip'], m['level_ref_db'], tuple(m['trackers']),
+                   m.get('meta', {}), opt('syl_nov'), opt('syl'), opt('syl_strength'))
 
 
 class Analyzer:
@@ -185,14 +259,23 @@ class Analyzer:
 
     LEVEL_GATE_DB = {'whistle': -32.0, 'voice': -38.0, 'instrument': -40.0}
 
-    def __init__(self, family: str, f0_range: tuple[float, float]):
+    def __init__(self, family: str, f0_range: tuple[float, float], syllables: bool = False):
         self.family = family
         self.fmin, self.fmax = f0_range
+        self.syllables = syllables and family == 'voice'
+
+    @classmethod
+    def for_clip(cls, cfg, clip: str) -> 'Analyzer':
+        """The dataset's analyzer for one clip (sung material adds the syllable channel)."""
+        return cls(cfg.family, cfg.f0_range_for(clip), syllables=cfg.material == 'singing')
 
     VERSION = 2  # bump when the analysis changes: cached orig.npz / synth.npz are recomputed
 
     def config(self) -> dict:
-        return {'family': self.family, 'f0_range': [self.fmin, self.fmax], 'gate_db': self.LEVEL_GATE_DB[self.family], 'version': self.VERSION}
+        c = {'family': self.family, 'f0_range': [self.fmin, self.fmax], 'gate_db': self.LEVEL_GATE_DB[self.family], 'version': self.VERSION}
+        if self.syllables:  # its own version: whistle, humming and instrument caches stay valid
+            c['syllables'] = SyllableTracker.VERSION
+        return c
 
     def analyse(self, y: np.ndarray, sr: int) -> Analysis:
         import librosa
@@ -229,7 +312,12 @@ class Analyzer:
         env = _fit(env, n, 0.0)
         env = np.clip(env / max(float(np.percentile(env, 98)), 1e-6), 0, 3)  # one click must not flatten the rest
         onsets, rise, dip = self._onsets(env, rms_db, peak)
-        return Analysis(self.family, sr, len(y) / sr, fa, fb, f0, conf, rms_db, env, onsets, rise, dip, ref, trackers, {'analyzer': self.config()})
+        an = Analysis(self.family, sr, len(y) / sr, fa, fb, f0, conf, rms_db, env, onsets, rise, dip, ref, trackers, {'analyzer': self.config()})
+        if self.syllables:
+            st = SyllableTracker()
+            an.syl_nov = st.novelty(y16, n)
+            an.syl, an.syl_strength = st.events(an.syl_nov, conf >= 1, rms_db, peak)
+        return an
 
     OCTAVE_RUN_VOTE = 0.3  # a run is decided when its frame votes lean this far one way
     OCTAVE_UP_RATIO = 0.08  # instruments: agreed frames whose odd harmonics are this weak are an octave up

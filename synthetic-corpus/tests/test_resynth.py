@@ -361,3 +361,185 @@ def test_export_skips_a_spec_the_judge_never_saw(sandbox):
     assert any('never judged' in x for x in out), out
     assert json.loads((d / 'c1.truth.json').read_text()) == prior, 'nothing was exported'
     assert not (ann / 'resynth' / 'tws' / 'c1.resynth.json').exists()
+
+
+def test_export_into_a_new_dataset_stays_out_of_the_pool_until_complete(sandbox, monkeypatch):
+    """A new dataset (jacrc-notes) holds only the exported clips: partial → pooled:false + partial:true."""
+    import shutil
+
+    from synthcorpus.resynth.export import Exporter
+    from synthcorpus.resynth.session import ClipSession
+
+    cfg, d, ann, prior = sandbox
+    shutil.copy(d / 'c1__real.wav', d / 'c2__real.wav')
+    shutil.copy(d / 'c1.truth.json', d / 'c2.truth.json')
+    cfg = DatasetConfig('tws', 'context', 'whistling', prior='syllables', export_id='tws-notes')
+    monkeypatch.setitem(datasets.DATASETS, 'tws', cfg)
+    out = d.parent / 'tws-notes'
+    for k, clip in enumerate(('c1', 'c2')):
+        s = ClipSession(cfg, clip)
+        s.init()
+        s.judge_view()
+        s.verdict({'verdict': 'pass'})
+        Exporter(cfg).export()
+        ds = json.loads((out / 'dataset.json').read_text())
+        assert ds['truthSource'] == 'resynth' and ds['clips'] == k + 1
+        if k == 0:
+            assert ds['pooled'] is False and ds['partial'] is True and ds['resynth']['pending'] == 1, ds
+        else:
+            assert 'pooled' not in ds and 'partial' not in ds and ds['noteTruthDerived'] is False and ds['resynth']['pending'] == 0, ds
+    again = Exporter(cfg).export()
+    assert not [x for x in again if x.startswith(('write', 'move', 'link', 'remove'))], again
+
+
+# ------------------------------------------------------------------ read-only views (inspect / note / zoom)
+
+
+def test_inspect_note_and_zoom_views(sandbox, monkeypatch, capsys):
+    from synthcorpus.resynth.__main__ import main
+    from synthcorpus.resynth.probe import ClipProbe
+    from synthcorpus.resynth.session import ClipSession
+
+    cfg, d, ann, prior = sandbox
+    s = ClipSession(cfg, 'c1')
+    s.init()
+    capsys.readouterr()
+    work = s.store.dir
+    before = {p: p.read_bytes() for p in work.rglob('*') if p.is_file()}
+
+    main(['inspect', 'tws/c1', '--t0', '0.9', '--t1', '1.9'])
+    lines = capsys.readouterr().out.splitlines()
+    assert lines[0].startswith('tws/c1  0.90–1.90 s  hop 0.02  spec v1')
+    assert 'n3 1.00–1.40 E6' in lines[1] and 'n4 1.40–1.70 E6' in lines[1]
+    rows = {ln.split()[0]: ln for ln in lines[4:]}
+    assert len(rows) == 50 and all(len(ln) < 160 for ln in lines[3:])
+    assert '[n3' in rows['1.00'] and 'n3]' in rows['1.40'] and '[n4' in rows['1.40']
+    assert rows['1.20'].split()[1].startswith('E6') and 'n3 E6' in rows['1.20'], rows['1.20']
+    assert any(' E1.' in ln and ' r' in ln and ' d' in ln for ln in rows.values()), 'the energy events with rise / dip'
+    out = ClipProbe(s).inspect(0.0, 4.5)
+    assert 'coarsened' in out.splitlines()[0] and len(out.splitlines()) - 4 <= ClipProbe.MAX_ROWS
+    monkeypatch.setattr(ClipProbe, 'HOPS', (0.01,))
+    with pytest.raises(SystemExit):
+        ClipProbe(s).inspect(0.0, 4.0)
+
+    main(['note', 'tws/c1', 'n4,n5'])
+    out = capsys.readouterr().out
+    blocks = out.split('\nn5  ')
+    assert out.startswith('n4  1.400–1.700') and len(blocks) == 2 and all(len(b.splitlines()) <= 15 for b in blocks)
+    assert 'same-pitch repeat after n3' in blocks[0] and 'orig pitch: stable E6' in blocks[0] and 'prev n3' in blocks[0]
+    onset = next(ln for ln in blocks[1].splitlines() if ln.startswith('  onset'))
+    assert 'attack from silence' in onset and '*' in onset, onset
+    with pytest.raises(SystemExit):
+        main(['note', 'tws/c1', 'n99'])
+    assert {p: p.read_bytes() for p in work.rglob('*') if p.is_file()} == before, 'inspect and note write nothing'
+
+    monkeypatch.setattr(ClipProbe, 'KEEP_ZOOMS', 1)
+    main(['zoom', 'tws/c1', '--t0', '0.5', '--t1', '6'])
+    out = capsys.readouterr().out
+    first = s.store.panels / 'zoom-0.50-4.50.png'
+    assert out.startswith(str(first)) and 'clamped' in out and first.read_bytes()[:8] == b'\x89PNG\r\n\x1a\n'
+    main(['zoom', 'tws/c1', '--t0', '1.0', '--t1', '2.0'])
+    capsys.readouterr()
+    assert sorted(p.name for p in s.store.panels.glob('zoom-*.png')) == ['zoom-1.00-2.00.png'], 'only the latest zooms are kept'
+
+    assert s.show().splitlines()[-1].startswith('deeper looks: rs inspect tws/c1 --t0')
+    assert s.judge_view().splitlines()[-1].startswith('deeper looks: rs inspect tws/c1 --t0')
+
+
+def test_note_view_counts_onset_evidence_as_the_report_does(sandbox):
+    """Evidence the previous note's onset matched cannot start the next note too: the report says
+    `unsupported`, so `note` must not star it (it marks it ^ instead)."""
+    from synthcorpus.resynth.probe import ClipProbe
+    from synthcorpus.resynth.session import ClipSession
+
+    cfg, d, ann, prior = sandbox
+    s = ClipSession(cfg, 'c1')
+    s.init()
+    s.edit([{'op': 'split', 'id': 'n5', 'at': 1.96, 'midi': 84}], None)  # n9 starts 70 ms after n5's attack, no pitch change there
+    rep = s.compare(panels=False)
+    assert [x for x in rep['diffs'] if x['type'] == 'unsupported' and x['note'] == 'n9'], rep['diffs']
+    sp = s.store.spec()
+    assert Comparison(sp, s.orig(), None, s.evidence()).onset_support()['n9'] == []
+    assert s.evidence().onset_candidates(sp.by_id('n9'), sp.by_id('n5')), 'raw candidates include n5\'s attack'
+    on5, on9 = (ln for ln in ClipProbe(s).note(['n5', 'n9']).splitlines() if ln.startswith('  onset'))
+    assert ')*' in on5, on5
+    assert '*' not in on9.split('(*')[0] and ')^' in on9 and "n5's onset" in on9, on9
+
+
+def test_reanalysis_keeps_the_rendered_copy(sandbox, monkeypatch):
+    """An analyzer change re-analyses the existing copy; it does not re-render (hard links stay valid)."""
+    from synthcorpus.resynth.analysis import Analyzer
+    from synthcorpus.resynth.session import ClipSession
+
+    cfg, d, ann, prior = sandbox
+    s = ClipSession(cfg, 'c1')
+    s.init()
+    flac = s.store.path('synth.flac')
+    ino, data = flac.stat().st_ino, flac.read_bytes()
+    monkeypatch.setattr(Analyzer, 'VERSION', 99)
+    s2 = ClipSession(cfg, 'c1')
+    c, fresh = s2.render()
+    assert not fresh and c.meta['analyzer']['version'] == 99 and c.meta['specVersion'] == 1
+    assert flac.stat().st_ino == ino and flac.read_bytes() == data
+    assert s2.copy_analysis(1) is not None
+
+
+def test_analysis_cache_without_the_syllable_channel_loads(original, tmp_path):
+    from synthcorpus.resynth.analysis import Analysis
+
+    _, an = original
+    p = tmp_path / 'a.npz'
+    an.save(p)
+    z = np.load(p)
+    old = tmp_path / 'old.npz'
+    np.savez_compressed(old, **{k: z[k] for k in z.files if not k.startswith('syl')})
+    b = Analysis.load(old)
+    assert len(b.syl) == 0 and len(b.syl_strength) == 0 and len(b.syl_nov) == 0 and np.array_equal(b.f0, Analysis.load(p).f0, equal_nan=True)
+
+
+# ------------------------------------------------------------------ sung syllables (timbre novelty)
+
+
+def _sung(segments, f0=220.0, sr=16000):
+    """A sung line on ONE pitch at a constant level: each segment is one vowel (formants), so the
+    only articulation is the vowel change (no energy dip, no pitch change). 0.3 s silence around."""
+    out, ph = [np.zeros(int(0.3 * sr), np.float32)], 0.0
+    for dur, formants in segments:
+        t = np.arange(int(dur * sr)) / sr
+        phase = ph + np.cumsum(2 * np.pi * f0 * (1 + 0.004 * np.sin(2 * np.pi * 5.5 * t)) / sr)
+        ph = phase[-1]
+        y = sum((sum(np.exp(-0.5 * ((h * f0 - fc) / bw) ** 2) for fc, bw in formants) + 0.02) / h ** 0.5 * np.sin(h * phase)
+                for h in range(1, int(4000 / f0)))
+        out.append((0.1 * y / np.max(np.abs(y))).astype(np.float32))
+    out.append(np.zeros(int(0.3 * sr), np.float32))
+    return np.concatenate(out)
+
+
+@pytest.fixture(scope='module')
+def sung():
+    A = [(700, 130), (1220, 150), (2600, 200)]
+    I = [(300, 80), (2300, 200), (3000, 250)]  # noqa: E741
+    y = _sung([(0.8, A), (0.8, I), (0.8, I)])  # a vowel change at 1.10 s; 1.90 s is no change at all
+    return Analyzer('voice', (65.0, 1100.0), syllables=True).analyse(y, 16000)
+
+
+def test_syllable_events_mark_a_vowel_change_on_one_pitch(sung):
+    an = sung
+    strong = [(t, s) for t, s in zip(an.syl, an.syl_strength) if s >= 1.25]
+    assert any(abs(t - 1.10) <= 0.03 for t, _ in strong), list(zip(an.syl, an.syl_strength))
+    assert not [t for t in an.syl if 1.25 < t < 2.6], 'no events where the vowel holds'
+    assert 'syllables' in an.meta['analyzer'] and 'syllables' not in Analyzer('voice', (65.0, 1100.0)).config()
+    assert not [e for e in an.onsets if 1.0 < e < 1.2 and an.onset_dip[list(an.onsets).index(e)] >= 2], 'no energy evidence there: only the timbre'
+
+
+def test_syllable_evidence_supports_a_split_and_flags_a_merge(sung):
+    an = sung
+    mk = lambda notes: spec_from_notes('test', 'v', {'kind': 'voice'}, 1, [{'on': a, 'off': b, 'midi': 57, 'legato': False} for a, b in notes], {})  # noqa: E731
+    report = lambda sp: Comparison(sp, an, an, Evidence(an)).report()['diffs']  # noqa: E731
+    merged = report(mk([(0.3, 2.7)]))
+    syl = [d for d in merged if d['type'] == 'syllable']
+    assert len(syl) == 1 and abs(syl[0]['t0'] - 1.10) <= 0.03 and syl[0]['op']['op'] == 'split', merged
+    split = report(mk([(0.3, 1.1), (1.1, 2.7)]))
+    assert not [d for d in split if d['type'] in ('unsupported', 'syllable', 'timing')], split
+    wrong = report(mk([(0.3, 1.1), (1.1, 1.9), (1.9, 2.7)]))
+    assert [d for d in wrong if d['type'] == 'unsupported' and d['note'] == 'n3'], 'a split where the vowel holds is still unsupported'

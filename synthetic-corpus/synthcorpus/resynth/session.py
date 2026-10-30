@@ -13,7 +13,6 @@ from .analysis import SR_A, Analysis, Analyzer, load_audio, resample
 from .compare import Comparison, Panels, report_text
 from .datasets import DatasetConfig
 from .evidence import Evidence
-from .render import SR, VoiceRenderer, render, seed_for
 from .segment import F0Segmenter
 from .spec import AutoFixer, Spec, SpecError, spec_from_notes
 from .store import CLOSED, MAX_ROUNDS, ClipStore
@@ -24,7 +23,7 @@ class ClipSession:
         self.cfg = cfg
         self.clip = clip
         self.store = ClipStore(cfg, clip)
-        self.analyzer = Analyzer(cfg.family, cfg.f0_range_for(clip))
+        self.analyzer = Analyzer.for_clip(cfg, clip)
         self._orig: Analysis | None = None
         self._ev: Evidence | None = None
 
@@ -77,6 +76,8 @@ class ClipSession:
         st = self.store
         if st.exists() and not force:
             return f'{self.ref}: already initialised ({st.state()["status"]}); --force to start over'
+        from .render import VoiceRenderer, seed_for  # lazy (with render.py's imports): the read-only views never render
+
         t_start = time.time()
         st.wipe()
         st.dir.mkdir(parents=True)
@@ -159,11 +160,24 @@ class ClipSession:
 
     # ------------------------------------------------------------ render / compare
     def render(self, force: bool = False) -> tuple[Analysis, bool]:
-        """Render the current spec (unless already rendered) and analyse the copy."""
+        """Render the current spec (unless already rendered) and analyse the copy.
+
+        When only the analysis is stale (an analyzer change) the existing copy of this spec
+        version is re-analysed, not re-rendered: the copy and its hard links stay the same file."""
         sp = self.store.spec()
         cached = None if force else self.copy_analysis(sp.version)
-        if cached is not None and self.store.path('synth.flac').exists():
+        flac = self.store.path('synth.flac')
+        if cached is not None and flac.exists():
             return cached, False
+        if not force and flac.exists() and self.store.state().get('renderedVersion') == sp.version:
+            y, sr = sf.read(str(flac), dtype='float32')
+            c = self.analyzer.analyse(y, sr)
+            c.meta['specVersion'] = sp.version
+            c.save(self.store.path('synth.npz'))
+            self.store.log('reanalyse', specVersion=sp.version, analyzer=self.analyzer.config())
+            return c, False
+        from .render import SR, render
+
         t = time.time()
         y = render(sp, self.orig())
         tmp = self.store.path('synth.tmp.flac')
@@ -179,6 +193,8 @@ class ClipSession:
         return c, True
 
     def compare(self, panels: bool = True) -> dict:
+        from .render import SR
+
         sp = self.store.spec()
         c, _ = self.render()
         cmp = Comparison(sp, self.orig(), c, self.evidence())
@@ -207,6 +223,11 @@ class ClipSession:
         st = self.store.state()
         return report_text(rep, {'ref': self.ref, 'round': st.get('round', 1), 'status': st['status'], 'specVersion': st['specVersion']}, str(self.store.panels))
 
+    def hint(self) -> str:
+        """The one line that points agents at the deeper views (instead of ad-hoc analysis)."""
+        return (f'deeper looks: rs inspect {self.ref} --t0 A --t1 B (numbers per 20 ms: trackers, dB, events, copy, note) · '
+                f'rs zoom {self.ref} --t0 A --t1 B (close-up PNG ≤ 4 s) · rs note {self.ref} n1[,n2] (one note\'s evidence)')
+
     # ------------------------------------------------------------ views
     def show(self, t0: float = 0.0, t1: float = float('inf')) -> str:
         st = self.store.state()
@@ -221,6 +242,7 @@ class ClipSession:
             lines.append(f'JUDGE r{v.get("round")} FAIL: {v.get("summary", "")}')
             lines += [f'  {i}. {_fb(f)}' for i, f in enumerate(v.get('feedback', []), 1)]
         lines.append(self.report_text())
+        lines.append(self.hint())
         return '\n'.join(lines)
 
     # ------------------------------------------------------------ judge
@@ -250,6 +272,7 @@ class ClipSession:
         if prev:
             lines.append('previous verdicts: ' + ' · '.join(f'r{v.get("round")} {v.get("verdict", "").upper()} v{v.get("specVersion")}: {v.get("summary", "")[:80]}'
                                                             for v in prev[-3:]))
+        lines.append(self.hint())
         return '\n'.join(lines)
 
     def verdict(self, v: dict) -> str:

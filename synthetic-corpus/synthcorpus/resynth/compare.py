@@ -9,7 +9,8 @@ Global metrics (copy vs original, both measured by `Analyzer` with the same sett
 
 Diffs (spec vs original evidence, see evidence.py), most severe first: missing-sound,
 extra-sound, pitch, extra-onset, unsupported, timing (> 40 ms), offset (> 80 ms before
-silence), uncertain-region. Each carries a suggested edit op (`edit --apply D3`).
+silence), syllable (sung material: a new syllable inside a held note, a possible same-pitch
+split), uncertain-region. Each carries a suggested edit op (`edit --apply D3`).
 """
 
 from __future__ import annotations
@@ -19,7 +20,7 @@ from dataclasses import asdict, dataclass
 import numpy as np
 
 from .analysis import HOP, Analysis, hz_to_midi
-from .evidence import SCOOP, Evidence, _runs
+from .evidence import SCOOP, Event, Evidence, _runs
 from .segment import F0Segmenter
 from .spec import Spec, pitch_name
 
@@ -106,21 +107,37 @@ class Comparison:
         return {'pitch': round(pitch, 4), 'voicingRecall': round(recall, 4), 'voicingPrecision': round(precision, 4), 'onsetF1': round(f1, 4),
                 'explained': round(explained, 4), 'notes': len(self.notes), 'durSec': round(o.dur, 3)}
 
+    EXTRA_SOUND_VF = 0.35  # a note the original voices over less than this is an extra sound
+
+    def onset_support(self) -> dict[str, list[Event]]:
+        """Per note id: the evidence that counts for its onset, nearest first (empty = unsupported).
+        Evidence matching the previous note's onset (its nearest candidate, within TOL_TIMING) cannot
+        be this note's onset too; an extra-sound note claims nothing and is left out. The one rule
+        for `diffs` and the `note` view."""
+        ev, out, claimed = self.ev, {}, None
+        for i, n in enumerate(self.notes):
+            if ev.voiced_fraction(n) < self.EXTRA_SOUND_VF:
+                claimed = None
+                continue
+            cands = [e for e in ev.onset_candidates(n, self.notes[i - 1] if i else None) if claimed is None or abs(e.t - claimed) > 0.01]
+            claimed = cands[0].t if cands and abs(cands[0].t - n.on) <= TOL_TIMING else None
+            out[n.id] = cands
+        return out
+
     # ------------------------------------------------------------ diffs
     def diffs(self) -> list[Diff]:
         ev = self.ev
         notes = self.notes
         out: list[Diff] = []
         pitch_flagged: set[str] = set()
-        claimed = None  # the evidence matching the previous note's onset: it cannot be this note's onset too
+        support = self.onset_support()
         for i, n in enumerate(notes):
             prev = notes[i - 1] if i else None
             nxt = notes[i + 1] if i + 1 < len(notes) else None
             vf = ev.voiced_fraction(n)
-            if vf < 0.35:
+            if vf < self.EXTRA_SOUND_VF:
                 out.append(Diff('extra-sound', n.on, n.off, f'note sounds, orig voiced over {vf:.0%} of it', n.id, f'delete {n.id}?',
                                 {'op': 'delete', 'id': n.id}, 2 * n.dur * (1 - vf)))
-                claimed = None
                 continue
             p = ev.note_pitch(n)
             # a note flagged uncertain-pitch within 15 c of the boundary is a decided call (convention 2)
@@ -151,18 +168,22 @@ class Comparison:
                 else:
                     out.append(Diff('extra-onset', e.t, e.t, f'orig re-articulation inside {n.id} (dip {e.dip:.0f} dB)', n.id,
                                     f'split at {e.t:.2f}?', {'op': 'split', 'id': n.id, 'at': round(e.t, 3)}, 0.1 + 0.02 * min(e.dip, 10)))
-            cands = [e for e in ev.onset_candidates(n, prev) if claimed is None or abs(e.t - claimed) > 0.01]
-            claimed = cands[0].t if cands and abs(cands[0].t - n.on) <= TOL_TIMING else None
+            cands = support[n.id]
             if not cands:
                 touching = prev is not None and not ev.detached(n, prev)
                 hint, op = (f'merge with {prev.id}?', {'op': 'merge', 'ids': [prev.id, n.id]}) if touching else ('', None)
                 kind = 're-articulation' if touching and prev.midi == n.midi else 'onset/pitch change'
-                out.append(Diff('unsupported', n.on, n.on, f'no orig {kind} near {n.on:.2f}', n.id, hint, op, 0.15))
+                weak = ev.weak_syllable(n.on) if touching and prev.midi == n.midi else None
+                if weak is not None:  # a sung syllable too weak to count: the agents decide by eye
+                    out.append(Diff('unsupported', n.on, n.on, f'no orig re-articulation near {n.on:.2f}, only a weak syllable change {weak.t:.2f} '
+                                    f'({weak.strength:.2f})', n.id, f'merge with {prev.id}, unless a new syllable starts there?', op, 0.08))
+                else:
+                    out.append(Diff('unsupported', n.on, n.on, f'no orig {kind} near {n.on:.2f}', n.id, hint, op, 0.15))
             else:
                 best = cands[0]
                 dt = best.t - n.on
                 if abs(dt) > TOL_TIMING:
-                    out.append(Diff('timing', min(n.on, best.t), max(n.on, best.t), f'note {n.on:.2f}, orig {best.kind} {best.t:.2f} ({dt * 1000:+.0f} ms)', n.id,
+                    out.append(Diff('timing', min(n.on, best.t), max(n.on, best.t), f'note {n.on:.2f}, orig {best.label} {best.t:.2f} ({dt * 1000:+.0f} ms)', n.id,
                                     f'on {best.t:.2f}?', {'op': 'set', 'id': n.id, 'on': round(best.t, 3)}, 2 * abs(dt)))
             if nxt is None or nxt.on - n.off >= 0.1:
                 end = ev.sound_end(n, nxt)
@@ -189,11 +210,39 @@ class Comparison:
             if d.type == 'extra-onset':
                 split_at.setdefault(d.note, []).append(d.t0)
         out += self._render_mismatch(pitch_flagged, split_at)
+        out += self._syllables(out)
         for t0, t1, what in ev.uncertain(notes):
             out.append(Diff('uncertain-region', t0, t1, what, None, 'judge by eye', None, 0.05 + 0.3 * (t1 - t0)))
         out.sort(key=lambda d: (-d.severity, d.t0))
         for k, d in enumerate(out, 1):
             d.id = f'D{k}'
+        return out
+
+    def _syllables(self, found: list[Diff]) -> list[Diff]:
+        """Sung material: a strong syllable event inside a note on ONE pitch (the original's median
+        pitch over the note's parts before and after it, ≤ 250 ms each, is within 50 c) that
+        nothing else splits there — a new syllable on the same pitch, which annotators make a new
+        note (truth convention 6). The judge decides by eye (a consonant gap or burst, a formant
+        change); the op splits it."""
+        ev, o = self.ev, self.orig
+        if not ev.syllables:
+            return []
+        split_at: dict[str, list[float]] = {}
+        for d in found:
+            if d.type in ('extra-onset', 'extra-sound') and d.note:
+                split_at.setdefault(d.note, []).extend((d.t0, d.t1))
+        out = []
+        for n in self.notes:
+            for e in ev.syllables_inside(n, split_at.get(n.id, ())):
+                sides = []
+                for a, b in ((max(n.on, e.t - 0.25), e.t - 0.03), (e.t + 0.03, min(n.off, e.t + 0.25))):
+                    sl = o.span(a, b)
+                    f = o.f0[sl][o.conf[sl] >= 1]
+                    sides.append(float(np.median(f)) if len(f) else None)
+                if None not in sides and abs(sides[0] - sides[1]) >= 0.5:
+                    continue  # the pitch moves there: a pitch question, not a same-pitch syllable
+                out.append(Diff('syllable', e.t, e.t, f'orig syllable change inside {n.id} (strength {e.strength:.1f}, same pitch)', n.id,
+                                f'split at {e.t:.2f} if a new syllable starts?', {'op': 'split', 'id': n.id, 'at': round(e.t, 3)}, 0.05 + 0.04 * min(e.strength, 3.0)))
         return out
 
     def _render_mismatch(self, skip: set[str], split_at: dict[str, list[float]]) -> list[Diff]:
@@ -273,8 +322,9 @@ def report_text(rep: dict, header: dict, panel_dir: str | None = None) -> str:
 # ======================================================================== panels
 
 
-def _save_png(fig, path) -> None:
-    """dpi 100, quantised to a 256-colour palette: ~3x smaller, still legible."""
+def _save_png(fig, path, quantize: bool = True) -> None:
+    """dpi 100, quantised to a 256-colour palette: ~3x smaller, still legible (a zoom keeps its
+    exact colours: its small markers would be merged into the spectrogram's palette)."""
     import io
 
     from PIL import Image
@@ -282,7 +332,9 @@ def _save_png(fig, path) -> None:
     buf = io.BytesIO()
     fig.savefig(buf, format='png', dpi=100)
     buf.seek(0)
-    img = Image.open(buf).convert('RGB').quantize(colors=256, method=Image.Quantize.MEDIANCUT)
+    img = Image.open(buf).convert('RGB')
+    if quantize:
+        img = img.quantize(colors=256, method=Image.Quantize.MEDIANCUT)
     tmp = path.with_name(path.name + '.tmp')
     img.save(tmp, format='PNG', optimize=True)
     tmp.replace(path)
@@ -290,10 +342,13 @@ def _save_png(fig, path) -> None:
 
 class Panels:
     """One PNG per ≤ 8 s window: original spectrogram + f0 + note boxes + diff markers, the
-    copy's spectrogram + f0 + the same boxes, and both onset envelopes with their events."""
+    copy's spectrogram + f0 + the same boxes, and both onset envelopes with their events.
+    `zoom` draws the same three rows for one short window (≤ 4 s) with a finer time axis and
+    the event strengths written next to the markers."""
 
     WINDOW = 8.0
     STEP = 7.5
+    ZOOM_MAX = 4.0
 
     def __init__(self, spec: Spec, orig: Analysis, copy: Analysis, y_orig16: np.ndarray, y_copy16: np.ndarray, diffs: list[dict], f0_range: tuple[float, float],
                  anchors: list[float] | tuple = ()):
@@ -336,9 +391,25 @@ class Panels:
             res.append({'file': name, 't0': round(t0, 2), 't1': round(t1, 2)})
         return res
 
+    def zoom(self, path, t0: float, t1: float) -> None:
+        """One close-up PNG of [t0, t1] (≤ ZOOM_MAX s); only that stretch is transformed."""
+        import matplotlib
+
+        matplotlib.use('Agg')
+        import matplotlib.pyplot as plt
+
+        base = max(0, int(t0 / HOP) - self.nfft // 160)  # the STFT's first frame (its window reaches back nfft/2)
+        end = int(np.ceil(t1 / HOP)) + self.nfft // 160 + 2
+        so, sc = self._spec(self.yo[base * 160 : end * 160]), self._spec(self.yc[base * 160 : end * 160])
+        fig = self._figure(plt, so, sc, t0, t1, base=base, zoom=True)
+        _save_png(fig, path, quantize=False)
+        plt.close(fig)
+
     def _spec(self, y16: np.ndarray):
         import librosa
 
+        if len(y16) < self.nfft // 2 + 1:
+            y16 = np.pad(y16, (0, self.nfft // 2 + 1 - len(y16)))
         return np.abs(librosa.stft(y16, n_fft=self.nfft, hop_length=160, center=True)).astype(np.float32)
 
     def _logspec(self, S: np.ndarray, f0: int, f1: int, m_lo: float, m_hi: float) -> np.ndarray:
@@ -366,21 +437,24 @@ class Panels:
             lo, hi = c - 7, c + 7
         return float(np.floor(lo)), float(np.ceil(hi))
 
-    def _figure(self, plt, so, sc, t0, t1):
+    def _figure(self, plt, so, sc, t0, t1, base: int = 0, zoom: bool = False):
+        """`so` / `sc`: STFT magnitudes whose column 0 is analysis frame `base`."""
         from matplotlib import patheffects
         from matplotlib.patches import Rectangle
 
         stroke = [patheffects.withStroke(linewidth=2.2, foreground='black')]
         m_lo, m_hi = self._range(t0, t1)
-        fig, axs = plt.subplots(3, 1, figsize=(16, 10), sharex=True, gridspec_kw={'height_ratios': [4, 4, 1.5], 'hspace': 0.12})
+        fig, axs = plt.subplots(3, 1, figsize=(16, 10), sharex=True, gridspec_kw={'height_ratios': [4, 4, 1.7 if zoom else 1.5], 'hspace': 0.12})
         f0i, f1i = int(t0 / HOP), int(np.ceil(t1 / HOP)) + 1
         notes = [n for n in sorted(self.spec.notes, key=lambda n: n.on) if n.off > t0 and n.on < t1]
         diffs = [d for d in self.diffs if d['t1'] >= t0 - 0.05 and d['t0'] <= t1 + 0.05]
+        label_size = 10 if zoom else 7.5
         for ax, S, a, other, title in ((axs[0], so, self.orig, self.copy, 'ORIGINAL'), (axs[1], sc, self.copy, None, 'COPY')):
-            img = self._logspec(S, min(f0i, S.shape[1] - 1), min(f1i, S.shape[1]), m_lo, m_hi)
+            c0 = min(max(0, f0i - base), S.shape[1] - 1)
+            img = self._logspec(S, c0, min(f1i - base, S.shape[1]), m_lo, m_hi)
             vmax = float(np.percentile(img, 99.7)) if img.size else 0.0
             ax.imshow(img, origin='lower', aspect='auto', cmap='magma', vmin=vmax - 65, vmax=vmax,
-                      extent=(f0i * HOP, f0i * HOP + img.shape[1] * HOP, m_lo, m_hi), interpolation='nearest')
+                      extent=((base + c0) * HOP, (base + c0) * HOP + img.shape[1] * HOP, m_lo, m_hi), interpolation='nearest')
             t = a.t
             sel = (t >= t0) & (t <= t1)
             ok, un = sel & (a.conf == 2), sel & (a.conf == 1)
@@ -395,7 +469,7 @@ class Panels:
                 ax.add_patch(Rectangle((n.on, n.midi - 0.5), n.dur, 1.0, fill=False, edgecolor='#00E5FF', lw=1.3, ls='--' if dashed else '-', zorder=5))
                 above = j % 2 == 0 or n.midi + 1.6 >= m_hi
                 y = n.midi + 0.65 if above else n.midi - 1.55
-                ax.text(max(n.on, t0), y, f'{n.id} {pitch_name(n.midi)}', color='#00E5FF', fontsize=7.5, zorder=6, path_effects=stroke, clip_on=True)
+                ax.text(max(n.on, t0), y, f'{n.id} {pitch_name(n.midi)}', color='#00E5FF', fontsize=label_size, zorder=6, path_effects=stroke, clip_on=True)
             if a is self.orig:
                 rows: list[float] = []  # x of the last label in each row: neighbours stack downwards
                 for d in sorted(diffs, key=lambda d: d['t0']):
@@ -403,7 +477,7 @@ class Panels:
                     if a1 - a0 < 0.04:  # a point (an onset): a dashed line through the panel
                         ax.axvline(a0, color='#ff3030', lw=1.0, ls='--', alpha=0.8, zorder=2)
                         a0, a1 = a0 - 0.02, a0 + 0.02
-                    elif a1 - a0 <= 0.6:
+                    elif a1 - a0 <= 0.6 and not zoom:
                         ax.axvspan(a0, a1, color='red', alpha=0.2, zorder=2, lw=0)
                     else:  # a whole note: bracket it at the top, leave the spectrogram readable
                         ax.axvspan(a0, a1, ymin=0.9, ymax=1.0, color='red', alpha=0.3, zorder=2, lw=0)
@@ -418,14 +492,31 @@ class Panels:
             ax.set_ylim(m_lo, m_hi)
             legend = ('white = orig f0 (grey: trackers disagree) · green = copy f0 · cyan = notes (dashed: flagged) · red = diffs'
                       if a is self.orig else 'white = copy f0 · cyan = notes')
-            ax.set_title(f'{title}  {self.spec.dataset}/{self.spec.clip}  spec v{self.spec.version}   {legend}', fontsize=9, loc='left')
+            ax.set_title(f'{"ZOOM " if zoom and a is self.orig else ""}{title}  {self.spec.dataset}/{self.spec.clip}  spec v{self.spec.version}   {legend}',
+                         fontsize=10 if zoom else 9, loc='left')
         ax = axs[2]
         for a, col, mk, y in ((self.orig, '#0040ff', 'v', 1.12), (self.copy, '#ff7f0e', '^', -0.12)):
             t = a.t
             sel = (t >= t0) & (t <= t1)
-            ax.plot(t[sel], np.clip(a.flux[sel], 0, 1.5) / 1.5, color=col, lw=0.9)
-            ev = a.onsets[(a.onsets >= t0) & (a.onsets <= t1)]
-            ax.scatter(ev, np.full(len(ev), y), marker=mk, color=col, s=22, zorder=4)
+            ax.plot(t[sel], np.clip(a.flux[sel], 0, 1.5) / 1.5, color=col, lw=1.2 if zoom else 0.9)
+            k = (a.onsets >= t0) & (a.onsets <= t1)
+            ax.scatter(a.onsets[k], np.full(int(k.sum()), y), marker=mk, color=col, s=40 if zoom else 22, zorder=4)
+            if zoom and a is self.orig:  # each energy event's sustained rise / re-articulation dip (dB)
+                for et, r, dp in zip(a.onsets[k], a.onset_rise[k], a.onset_dip[k]):
+                    ax.text(et + 0.005, 1.0, f'r{r:.0f} d{dp:.0f}', color='#0040ff', fontsize=8, va='top', clip_on=True)
+        syl = (self.orig.syl >= t0) & (self.orig.syl <= t1)
+        if syl.any():  # sung syllables (timbre change): filled from the support strength up
+            from .evidence import SYL_STRONG
+
+            st = self.orig.syl_strength[syl]
+            strong = st >= SYL_STRONG
+            ax.scatter(self.orig.syl[syl][strong], np.full(int(strong.sum()), 0.86), marker='D', facecolors='#00c040', edgecolors='black', linewidths=0.6,
+                       s=40 if zoom else 26, zorder=5)
+            ax.scatter(self.orig.syl[syl][~strong], np.full(int((~strong).sum()), 0.86), marker='D', facecolors='none', edgecolors='#00a030', linewidths=1.2,
+                       s=40 if zoom else 26, zorder=5)
+            if zoom:
+                for et, sv in zip(self.orig.syl[syl], st):
+                    ax.text(et + 0.005, 0.72, f's{sv:.2f}', color='#00803c', fontsize=8, va='top', clip_on=True)  # 2 decimals: 1.25 is the strong cut
         for n in notes:
             ax.axvline(n.on, color='#00A5B8', lw=0.8, alpha=0.7, ymin=0.3, ymax=0.7)
         for t in self.anchors:
@@ -436,12 +527,20 @@ class Panels:
             ax.axvspan(a0, a1, color='red', alpha=0.15, lw=0)
         ax.set_ylim(-0.25, 1.25)
         ax.set_yticks([])
-        ax.set_title('onset envelope: blue = orig (▼ events) · orange = copy (▲ events) · teal = note onsets'
-                     + (' · purple = human syllable onsets' if self.anchors else ''), fontsize=9, loc='left')
+        ax.set_title('onset envelope: blue = orig (▼ events' + (', r = rise / d = dip dB' if zoom else '') + ') · orange = copy (▲ events) · teal = note onsets'
+                     + (' · green ◆ = orig syllable (timbre) events, hollow = weak' if len(self.orig.syl_nov) else '')
+                     + (' · purple = human syllable onsets' if self.anchors else ''), fontsize=10 if zoom else 9, loc='left')
         ax.set_xlim(t0, t1)
-        ax.set_xticks(np.arange(np.ceil(t0 * 2) / 2, t1 + 1e-6, 0.5), minor=False)
-        ax.set_xticks(np.arange(np.ceil(t0 * 10) / 10, t1 + 1e-6, 0.1), minor=True)
-        ax.tick_params(axis='x', labelsize=8)
+        if zoom:
+            ax.set_xticks(np.round(np.arange(np.ceil(t0 * 10) / 10, t1 + 1e-6, 0.1), 2), minor=False)
+            ax.set_xticks(np.arange(np.ceil(t0 * 50) / 50, t1 + 1e-6, 0.02), minor=True)
+            for a_ in axs:
+                a_.grid(axis='x', which='major', color='white', alpha=0.25, lw=0.6)
+            ax.tick_params(axis='x', labelsize=9)
+        else:
+            ax.set_xticks(np.arange(np.ceil(t0 * 2) / 2, t1 + 1e-6, 0.5), minor=False)
+            ax.set_xticks(np.arange(np.ceil(t0 * 10) / 10, t1 + 1e-6, 0.1), minor=True)
+            ax.tick_params(axis='x', labelsize=8)
         ax.set_xlabel('seconds', fontsize=9)
         fig.subplots_adjust(left=0.05, right=0.99, top=0.97, bottom=0.05)
         return fig

@@ -17,6 +17,15 @@ from .segment import F0Segmenter
 WINDOW = 0.15  # onset evidence is searched within ±150 ms of a note onset
 DETACHED_GAP = 0.05  # a note starting this long after the previous one ended is an attack from silence
 SCOOP = 0.12  # pitch movement this close to a note's start or end belongs to the note (scoop, fall)
+# sung syllables (analysis.SyllableTracker; strength 1.0 = MFCC novelty 35). A STRONG event is
+# evidence like a re-articulation: it supports a same-pitch onset within ±SYL_WINDOW (events sit
+# a median 6 ms before annotated boundaries; a tight window keeps a chance event from supporting a
+# wrong split), it ends a note's sound, and inside a held note it is a possible same-pitch split
+# (the `syllable` diff). A WEAK one (1.0–1.25) is only named in an `unsupported` diff, so the
+# agents look before merging; it supports nothing (a merge across it would go unflagged).
+SYL_STRONG = 1.25
+SYL_WEAK = 1.0
+SYL_WINDOW = 0.05
 
 
 @dataclass
@@ -30,11 +39,20 @@ class NotePitch:
 @dataclass
 class Event:
     t: float
-    kind: str  # 'attack' (sound starts) | 'energy' (onset event) | 'pitch' (legato arrival)
+    # 'attack' (sound starts) | 'energy' (onset event) | 'pitch' (legato arrival) |
+    # 'syllable' (timbre change, sung material) | 'anchor' (a human syllable onset, jacrc)
+    kind: str
     rise: float = 0.0
     dip: float = 0.0
     to_midi: int | None = None
     from_midi: int | None = None
+    strength: float = 0.0  # syllable events
+
+    LABELS = {'anchor': 'human onset'}
+
+    @property
+    def label(self) -> str:
+        return self.LABELS.get(self.kind, self.kind)
 
 
 class Evidence:
@@ -45,7 +63,9 @@ class Evidence:
         self.pitch = [Event(t, 'pitch', to_midi=b, from_midi=a0) for t, a0, b in self.seg.pitch_events()]
         self.attacks = [Event(float(t), 'attack') for t in a.voicing_starts(DETACHED_GAP)]
         # human-placed onsets (jacrc syllables) are evidence for any kind of onset
-        self.anchors = [Event(float(t), 'syllable') for t in self.seg.anchors]
+        self.anchors = [Event(float(t), 'anchor') for t in self.seg.anchors]
+        # sung syllables (timbre change; empty for whistling, humming and instruments)
+        self.syllables = [Event(float(t), 'syllable', strength=float(s)) for t, s in zip(a.syl, a.syl_strength)]
 
     # ------------------------------------------------------------ per note
     def note_pitch(self, n) -> NotePitch:
@@ -74,15 +94,42 @@ class Evidence:
         return prev is None or n.on - prev.off >= DETACHED_GAP
 
     def onset_candidates(self, n, prev) -> list[Event]:
-        """Evidence that a note starts here, by the kind of onset the note makes."""
+        """Evidence that a note starts here, by the kind of onset the note makes.
+
+        A strong sung syllable (timbre change within ±50 ms) is evidence for a same-pitch repeat,
+        like a level dip; for any other onset it only stands in when nothing else is there, so it
+        never moves the timing reference of a note that has an attack, energy or pitch onset."""
+        syl = [e for e in self.syllables if e.strength >= SYL_STRONG and abs(e.t - n.on) <= SYL_WINDOW]
         if self.detached(n, prev):
             pool = self.attacks + [e for e in self.energy if e.rise >= 3] + self.pitch
         elif prev is not None and prev.midi != n.midi:
             pool = self.pitch + [e for e in self.energy if e.rise >= 2]
-        else:  # a re-articulated repeat: the level dips (a swell without a dip is not an onset)
-            pool = [e for e in self.energy if e.dip >= 2]
+        else:  # a re-articulated repeat: the level dips (a swell without a dip is not an onset), or a new syllable starts
+            pool = [e for e in self.energy if e.dip >= 2] + syl
+            syl = []
         pool = pool + self.anchors
-        return sorted((e for e in pool if abs(e.t - n.on) <= WINDOW), key=lambda e: abs(e.t - n.on))
+        near = lambda es: sorted((e for e in es if abs(e.t - n.on) <= WINDOW), key=lambda e: abs(e.t - n.on))  # noqa: E731
+        return near(pool) or near(syl)
+
+    def syllables_inside(self, n, explained: list[float] = ()) -> list[Event]:
+        """Strong syllable events inside a note, away from its edges (60 ms) and from anything that
+        already splits it there (`explained`: times of re-articulations / pitch changes, ±100 ms):
+        a new sung syllable on the same pitch, i.e. a possible same-pitch split."""
+        return [e for e in self.syllables if e.strength >= SYL_STRONG and n.on + 0.06 < e.t < n.off - 0.06
+                and not any(abs(e.t - t) <= 0.1 for t in explained)]
+
+    def weak_syllable(self, t: float, window: float = 0.06) -> Event | None:
+        """The strongest WEAK syllable event (SYL_WEAK ≤ strength < SYL_STRONG) within ±window."""
+        c = [e for e in self.syllables if SYL_WEAK <= e.strength < SYL_STRONG and abs(e.t - t) <= window]
+        return max(c, key=lambda e: e.strength) if c else None
+
+    def near(self, t: float, window: float = 0.3) -> dict[str, Event | None]:
+        """The nearest event of each kind within ±window of t (for the `note` view)."""
+        out = {}
+        for kind, es in (('attack', self.attacks), ('energy', self.energy), ('pitch', self.pitch), ('syllable', self.syllables), ('anchor', self.anchors)):
+            cand = [e for e in es if abs(e.t - t) <= window]
+            out[kind] = min(cand, key=lambda e: abs(e.t - t)) if cand else None
+        return out
 
     def inside(self, n, min_dip: float = 3.0) -> list[Event]:
         """Re-articulations and pitch changes of the original strictly inside the note.
@@ -112,8 +159,10 @@ class Evidence:
         return (k + 1) * HOP
 
     def rearticulated(self, t: float, tol: float = 0.05) -> bool:
-        """A re-articulation (dip and rise ≥ 3 dB) within ±tol of t: two notes meet here, not one."""
-        return any(abs(e.t - t) <= tol and e.rise >= 3 and e.dip >= 3 for e in self.energy)
+        """A re-articulation (dip and rise ≥ 3 dB) or a strong sung syllable within ±tol of t: two
+        notes meet here, not one."""
+        return (any(abs(e.t - t) <= tol and e.rise >= 3 and e.dip >= 3 for e in self.energy)
+                or any(abs(e.t - t) <= tol and e.strength >= SYL_STRONG for e in self.syllables))
 
     def sound_end(self, n, nxt) -> float | None:
         """Where the original's sound around the note's end stops (before the next note).
@@ -132,6 +181,10 @@ class Evidence:
                 break
         for e in self.energy:
             if e.t > n.off - 0.02 and e.rise >= 3 and e.dip >= 3:
+                limit = min(limit, a.frame(e.t) - 1)
+                break
+        for e in self.syllables:  # a new sung syllable is another note too
+            if e.t > n.off - 0.02 and e.strength >= SYL_STRONG:
                 limit = min(limit, a.frame(e.t) - 1)
                 break
         k = a.frame(n.off - HOP)

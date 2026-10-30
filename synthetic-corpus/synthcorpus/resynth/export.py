@@ -12,7 +12,9 @@ Per dataset, `dataset.json` gains a `resynth` summary. Only when EVERY clip has 
 does it switch to `truthSource: "resynth"` and `noteTruthDerived: false` (licence-restricted
 sets keep `noteTruthDerived` as it was, and their `licenceRestricted` flag); until then the
 unprocessed clips still carry the old derived truth. `export_id` datasets (jacrc → jacrc-notes)
-write into a NEW dir whose `__real` audio is hard-linked and whose dataset.json documents it.
+write into a NEW dir whose `__real` audio is hard-linked and whose dataset.json documents it;
+until every clip of the source is exported it says `partial: true` and `pooled: false`, so the
+harness never pools a partial subset (the same rule as in place).
 
 Idempotent: a rerun rewrites nothing whose content is unchanged (timestamps included).
 """
@@ -196,12 +198,24 @@ class Exporter:
             base = json.loads(p.read_text()) if p.exists() else {'id': cfg.id}
         doc = dict(base)
         summary = {**TOOL, 'passed': len(passed), 'unresolved': len(unresolved), 'pending': pending}
-        complete = pending == 0 or bool(cfg.export_id)
+        # the dataset switches to resynth truth only when EVERY clip of the source is exported;
+        # a partial dataset must never enter the pooled aggregates
+        complete = pending == 0
         if complete:
             doc['truthSource'] = 'resynth'
             if not doc.get('licenceRestricted'):
                 doc['noteTruthDerived'] = False
+            doc.pop('partial', None)
+            if cfg.export_id and 'pooled' not in cfg.export_meta:
+                doc.pop('pooled', None)  # the partial opt-out below
             doc.update(cfg.export_meta)
+        elif cfg.export_id:
+            # a NEW dataset holds only the exported clips: their truth is resynth, but the set is
+            # partial (the harness would pool a biased subset), so it stays out of every aggregate —
+            # noteTruthDerived too, because the research sweeps skip on that flag alone
+            doc['pooled'] = False
+            doc['partial'] = True
+            doc['noteTruthDerived'] = True
         notes = 0
         for c in clips:
             tp = d / f'{c}.truth.json'

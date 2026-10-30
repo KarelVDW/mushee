@@ -111,6 +111,24 @@ def cmd_show(args) -> None:
     print(_session(args.ref).show(args.t0, args.t1))
 
 
+def _probe(ref: str):
+    from .probe import ClipProbe
+
+    return ClipProbe(_session(ref))
+
+
+def cmd_inspect(args) -> None:
+    print(_probe(args.ref).inspect(args.t0, args.t1, args.hop))
+
+
+def cmd_zoom(args) -> None:
+    print(_probe(args.ref).zoom(args.t0, args.t1))
+
+
+def cmd_note(args) -> None:
+    print(_probe(args.ref).note([x.strip() for x in args.ids.split(',') if x.strip()]))
+
+
 def cmd_edit(args) -> None:
     ops = None
     if args.ops_file:
@@ -211,6 +229,21 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument('--from', dest='t0', type=float, default=0.0)
     p.add_argument('--to', dest='t1', type=float, default=float('inf'))
     p.set_defaults(fn=cmd_show)
+    p = sub.add_parser('inspect', help='frame table over a window: trackers, level, onset envelope + events, copy, covering note (read-only)')
+    p.add_argument('ref')
+    p.add_argument('--t0', type=float, required=True)
+    p.add_argument('--t1', type=float, required=True)
+    p.add_argument('--hop', type=float, default=0.02, help='row step in seconds (coarsened to keep ≤ 120 rows)')
+    p.set_defaults(fn=cmd_inspect)
+    p = sub.add_parser('zoom', help='close-up panel PNG of a short window (≤ 4 s) → panels/zoom-<t0>-<t1>.png')
+    p.add_argument('ref')
+    p.add_argument('--t0', type=float, required=True)
+    p.add_argument('--t1', type=float, required=True)
+    p.set_defaults(fn=cmd_zoom)
+    p = sub.add_parser('note', help="one or more notes' evidence: pitch, voicing, onset evidence, events inside, neighbours (read-only)")
+    p.add_argument('ref')
+    p.add_argument('ids', help='note ids, comma-separated (n12,n13)')
+    p.set_defaults(fn=cmd_note)
     p = sub.add_parser('edit', help='apply edit ops atomically (see spec.py for the op list)')
     p.add_argument('ref')
     p.add_argument('--ops', help='JSON list of ops')

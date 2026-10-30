@@ -39,7 +39,7 @@ from . import store
 from .store import now, write_json
 
 DEFAULT_CLIPS = ('vocadito/vocadito_1', 'vocadito/vocadito_7', 'urmp-flute/03_Dance_fl1')
-NOTE_TYPES = ('missing-sound', 'extra-sound', 'pitch', 'extra-onset', 'unsupported', 'timing', 'offset')
+NOTE_TYPES = ('missing-sound', 'extra-sound', 'pitch', 'extra-onset', 'unsupported', 'timing', 'offset', 'syllable')
 NEAR = 0.1  # a diff points at an error when it lies within ±100 ms of it
 SPACING = 0.8  # targets of one render are at least this far apart (s)
 
@@ -58,7 +58,7 @@ FAMILIES = [
     Family('delete', ('missing-sound',)),
     Family('merge-diff', ('extra-onset',)),
     Family('merge-diff-short', ('extra-onset',)),  # one part 80–120 ms: the scoop / fall / grace-note grey zone
-    Family('merge-same', ('extra-onset',)),
+    Family('merge-same', ('extra-onset', 'syllable')),
     Family('split', ('unsupported',)),
     Family('onset+60', ('timing', 'unsupported', 'missing-sound')),
     Family('onset+100', ('timing', 'unsupported', 'missing-sound')),
@@ -92,7 +92,7 @@ class ClipSelfTest:
         self.ref = f'{cfg.id}/{clip}'
         self.seed, self.per_family = seed, per_family
         self.log = log
-        self.analyzer = Analyzer(cfg.family, cfg.f0_range_for(clip))
+        self.analyzer = Analyzer.for_clip(cfg, clip)
         self.truth = self._truth()
         self.orig = self._orig()
         self.ev = Evidence(self.orig, F0Segmenter(self.orig, anchors=cfg.prior_notes(clip).anchors))
