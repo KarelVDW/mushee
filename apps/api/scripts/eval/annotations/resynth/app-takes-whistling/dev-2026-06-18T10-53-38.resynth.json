@@ -1,0 +1,143 @@
+{
+ "schema": "resynth/1",
+ "dataset": "app-takes-whistling",
+ "clip": "dev-2026-06-18T10-53-38",
+ "role": "target",
+ "audio": {
+  "file": "apps/api/scripts/fixtures/eval-real/benchmark/app-takes-whistling/dev-2026-06-18T10-53-38__real.wav",
+  "sha256": "9bcb15d34fcece022d0ed5e78d7c025f0ea05b295a93f5a283617a37c47c84ae",
+  "sampleRate": 48000,
+  "durationSec": 1.98
+ },
+ "truth": {
+  "bpm": 120,
+  "notes": [
+   {
+    "onsetSec": 0.14,
+    "durSec": 0.28,
+    "midi": 81
+   },
+   {
+    "onsetSec": 0.55,
+    "durSec": 0.4,
+    "midi": 87
+   },
+   {
+    "onsetSec": 1.15,
+    "durSec": 0.41,
+    "midi": 81
+   },
+   {
+    "onsetSec": 1.56,
+    "durSec": 0.43,
+    "midi": 79
+   }
+  ]
+ },
+ "spec": {
+  "schema": "resynth-spec/1",
+  "dataset": "app-takes-whistling",
+  "clip": "dev-2026-06-18T10-53-38",
+  "version": 3,
+  "timbre": {
+   "kind": "whistle"
+  },
+  "render": {
+   "seed": 4136602063,
+   "contour": "copy-detrended",
+   "levelMatch": true
+  },
+  "nextId": 6,
+  "prior": {
+   "source": "segment",
+   "notes": 0
+  },
+  "notes": [
+   {
+    "id": "n1",
+    "on": 0.14,
+    "off": 0.42,
+    "midi": 81,
+    "cents": 39.5,
+    "vel": 80,
+    "legato": false,
+    "flags": [
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n3",
+    "on": 0.55,
+    "off": 0.95,
+    "midi": 87,
+    "cents": -17.0,
+    "vel": 99,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n4",
+    "on": 1.15,
+    "off": 1.56,
+    "midi": 81,
+    "cents": 19.3,
+    "vel": 88,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n5",
+    "on": 1.56,
+    "off": 1.99,
+    "midi": 79,
+    "cents": -11.4,
+    "vel": 89,
+    "legato": true,
+    "flags": []
+   }
+  ]
+ },
+ "verdict": {
+  "status": "passed",
+  "rounds": 1,
+  "summary": "Four whistled notes (A5, D#6, A5, G5) match the original in pitch, onsets and voiced spans; D1 at 1.82 s is a 4 dB vibrato-amplitude dip inside a continuous G5 with no visible gap or re-attack, so no split.",
+  "metrics": {
+   "pitch": 1.0,
+   "voicingRecall": 1.0,
+   "voicingPrecision": 0.8909,
+   "onsetF1": 0.8333,
+   "explained": 1.0,
+   "notes": 4,
+   "durSec": 1.98
+  },
+  "judged": [
+   {
+    "round": 1,
+    "verdict": "pass",
+    "specVersion": 3
+   }
+  ]
+ },
+ "prior": {
+  "source": "segment",
+  "notes": 0
+ },
+ "tool": {
+  "name": "synthcorpus.resynth",
+  "version": "1",
+  "analyzer": {
+   "family": "whistle",
+   "f0_range": [
+    400.0,
+    5000.0
+   ],
+   "gate_db": -32.0,
+   "version": 2
+  },
+  "timbre": {
+   "kind": "whistle"
+  },
+  "seed": 4136602063
+ },
+ "createdAt": "2026-10-30T22:40:32+0100"
+}

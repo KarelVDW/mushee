@@ -150,3 +150,4 @@ decided and recorded without changing behaviour. "Open" means left with a reason
 - 2026-10-30 22:20: wave 2 done — 38/38 passed (mean 1.45 rounds), 110 agents / 5.5 M tokens (≈ 144 k per clip).
   usage after: session 67 %, week 50 %. HumTrans scope (769 clips) put to Karel; held out of the queue until answered.
 - 2026-10-30 22:36: wave 3 done — 50/50 passed (mean 1.34 rounds), 134 agents / 6.5 M tokens (≈ 0.34 % session per whistle clip); whistle-real 116/117 exported. usage: session 85 %, week 52 %.
+- 2026-10-30 22:42: wave 4 (fill-up) done — 10/10 passed; **whistle-real complete (117/117) → resynth truth, poolable**; app-takes-whistling 9/19.

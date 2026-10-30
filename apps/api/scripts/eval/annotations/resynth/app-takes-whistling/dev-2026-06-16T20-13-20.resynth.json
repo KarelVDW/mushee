@@ -1,0 +1,229 @@
+{
+ "schema": "resynth/1",
+ "dataset": "app-takes-whistling",
+ "clip": "dev-2026-06-16T20-13-20",
+ "role": "target",
+ "audio": {
+  "file": "apps/api/scripts/fixtures/eval-real/benchmark/app-takes-whistling/dev-2026-06-16T20-13-20__real.wav",
+  "sha256": "1d14124978946241d4f0dbb677a357592968c30c9a38766caf003ca4d484ec0e",
+  "sampleRate": 48000,
+  "durationSec": 4.98
+ },
+ "truth": {
+  "bpm": 120,
+  "notes": [
+   {
+    "onsetSec": 0.04,
+    "durSec": 0.18,
+    "midi": 91
+   },
+   {
+    "onsetSec": 0.22,
+    "durSec": 0.33,
+    "midi": 90
+   },
+   {
+    "onsetSec": 0.55,
+    "durSec": 0.6,
+    "midi": 95
+   },
+   {
+    "onsetSec": 1.31,
+    "durSec": 0.42,
+    "midi": 90
+   },
+   {
+    "onsetSec": 1.78,
+    "durSec": 0.77,
+    "midi": 89
+   },
+   {
+    "onsetSec": 2.59,
+    "durSec": 0.69,
+    "midi": 95
+   },
+   {
+    "onsetSec": 3.37,
+    "durSec": 0.51,
+    "midi": 88
+   },
+   {
+    "onsetSec": 3.88,
+    "durSec": 0.53,
+    "midi": 87
+   },
+   {
+    "onsetSec": 4.62,
+    "durSec": 0.37,
+    "midi": 95
+   }
+  ]
+ },
+ "spec": {
+  "schema": "resynth-spec/1",
+  "dataset": "app-takes-whistling",
+  "clip": "dev-2026-06-16T20-13-20",
+  "version": 3,
+  "timbre": {
+   "kind": "whistle"
+  },
+  "render": {
+   "seed": 193636179,
+   "contour": "copy-detrended",
+   "levelMatch": true
+  },
+  "nextId": 14,
+  "prior": {
+   "source": "segment",
+   "notes": 0
+  },
+  "notes": [
+   {
+    "id": "n1",
+    "on": 0.04,
+    "off": 0.22,
+    "midi": 91,
+    "cents": -14.6,
+    "vel": 98,
+    "legato": false,
+    "flags": [
+     "uncertain-pitch",
+     "uncertain-split"
+    ]
+   },
+   {
+    "id": "n3",
+    "on": 0.22,
+    "off": 0.55,
+    "midi": 90,
+    "cents": 31.3,
+    "vel": 88,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n4",
+    "on": 0.55,
+    "off": 1.15,
+    "midi": 95,
+    "cents": 44.0,
+    "vel": 96,
+    "legato": true,
+    "flags": [
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n5",
+    "on": 1.31,
+    "off": 1.73,
+    "midi": 90,
+    "cents": 49.5,
+    "vel": 95,
+    "legato": false,
+    "flags": [
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n6",
+    "on": 1.78,
+    "off": 2.55,
+    "midi": 89,
+    "cents": -43.1,
+    "vel": 95,
+    "legato": false,
+    "flags": [
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n8",
+    "on": 2.59,
+    "off": 3.28,
+    "midi": 95,
+    "cents": 25.9,
+    "vel": 91,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n9",
+    "on": 3.37,
+    "off": 3.88,
+    "midi": 88,
+    "cents": -0.2,
+    "vel": 94,
+    "legato": false,
+    "flags": [
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n11",
+    "on": 3.88,
+    "off": 4.41,
+    "midi": 87,
+    "cents": 43.8,
+    "vel": 96,
+    "legato": true,
+    "flags": [
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n12",
+    "on": 4.62,
+    "off": 4.99,
+    "midi": 95,
+    "cents": 23.0,
+    "vel": 95,
+    "legato": false,
+    "flags": []
+   }
+  ]
+ },
+ "verdict": {
+  "status": "passed",
+  "rounds": 1,
+  "summary": "All 9 whistled notes match the original in pitch, onsets and silences. D1 is slow upward drift inside held n6 with no re-attack (median F6-43, already flagged uncertain-pitch). D2/D3 are contour/vibrato render limits with correct note centres.",
+  "metrics": {
+   "pitch": 0.944,
+   "voicingRecall": 1.0,
+   "voicingPrecision": 0.936,
+   "onsetF1": 0.7273,
+   "explained": 1.0,
+   "notes": 9,
+   "durSec": 4.98
+  },
+  "judged": [
+   {
+    "round": 1,
+    "verdict": "pass",
+    "specVersion": 3
+   }
+  ]
+ },
+ "prior": {
+  "source": "segment",
+  "notes": 0
+ },
+ "tool": {
+  "name": "synthcorpus.resynth",
+  "version": "1",
+  "analyzer": {
+   "family": "whistle",
+   "f0_range": [
+    400.0,
+    5000.0
+   ],
+   "gate_db": -32.0,
+   "version": 2
+  },
+  "timbre": {
+   "kind": "whistle"
+  },
+  "seed": 193636179
+ },
+ "createdAt": "2026-10-30T22:40:32+0100"
+}
