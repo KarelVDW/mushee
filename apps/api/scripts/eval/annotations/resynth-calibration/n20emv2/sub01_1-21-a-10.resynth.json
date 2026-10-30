@@ -410,7 +410,8 @@
     1100.0
    ],
    "gate_db": -38.0,
-   "version": 2
+   "version": 2,
+   "syllables": 1
   },
   "timbre": {
    "kind": "voice",
@@ -419,5 +420,5 @@
   },
   "seed": 4004622691
  },
- "createdAt": "2026-10-30T20:07:58+0100"
+ "createdAt": "2026-10-30T22:08:48+0100"
 }

@@ -1,0 +1,139 @@
+{
+ "schema": "resynth/1",
+ "dataset": "whistle-real",
+ "clip": "freesound-126669",
+ "role": "target",
+ "audio": {
+  "file": "apps/api/scripts/fixtures/eval-real/context/whistle-real/freesound-126669__real.wav",
+  "sha256": "793fcf80623c2752463b0710c41e1e8df49dfa68db90692e8ca5159092b371c3",
+  "sampleRate": 44100,
+  "durationSec": 3.2503
+ },
+ "truth": {
+  "bpm": 120,
+  "notes": [
+   {
+    "onsetSec": 1.0,
+    "durSec": 0.31,
+    "midi": 93
+   },
+   {
+    "onsetSec": 1.57,
+    "durSec": 0.88,
+    "midi": 93
+   },
+   {
+    "onsetSec": 2.45,
+    "durSec": 0.05,
+    "midi": 86
+   }
+  ]
+ },
+ "spec": {
+  "schema": "resynth-spec/1",
+  "dataset": "whistle-real",
+  "clip": "freesound-126669",
+  "version": 5,
+  "timbre": {
+   "kind": "whistle"
+  },
+  "render": {
+   "seed": 3094785178,
+   "contour": "copy-detrended",
+   "levelMatch": true
+  },
+  "nextId": 10,
+  "prior": {
+   "source": "truth",
+   "notes": 8,
+   "path": "apps/api/scripts/fixtures/eval-real/context/whistle-real/freesound-126669.truth.json"
+  },
+  "notes": [
+   {
+    "id": "n2",
+    "on": 1.0,
+    "off": 1.31,
+    "midi": 93,
+    "cents": -31.2,
+    "vel": 100,
+    "legato": false,
+    "flags": [
+     "uncertain-split"
+    ]
+   },
+   {
+    "id": "n4",
+    "on": 1.57,
+    "off": 2.45,
+    "midi": 93,
+    "cents": 0.0,
+    "vel": 91,
+    "legato": false,
+    "flags": [
+     "uncertain-split"
+    ]
+   },
+   {
+    "id": "n8",
+    "on": 2.45,
+    "off": 2.5,
+    "midi": 86,
+    "cents": 10.7,
+    "vel": 68,
+    "legato": true,
+    "flags": [
+     "uncertain-exists"
+    ]
+   }
+  ]
+ },
+ "verdict": {
+  "status": "passed",
+  "rounds": 2,
+  "summary": "Two whistled phrases correctly transcribed: n2 A6 (1.00-1.31) with a continuous ~130 ms scoop from F#6 that has no held lower pitch, and n4 A6 (1.57-2.45) held ~350 ms then a constant-rate fall (~75 ms/semitone, no plateaus) ending on a brief flagged D6 arrival n8 (2.45-2.50). D1 is the fall pulling the median down (stable part is A6), D2-D4 are pitch-band crossings inside a scoop/glide, not held pitches; onsets match the attacks at 1.00 and 1.57; the 2.97 event is a broadband click and the 1.32-1.45 trace is decay, not notes.",
+  "metrics": {
+   "pitch": 0.4472,
+   "voicingRecall": 1.0,
+   "voicingPrecision": 0.9474,
+   "onsetF1": 0.7273,
+   "explained": 1.0,
+   "notes": 3,
+   "durSec": 3.25
+  },
+  "judged": [
+   {
+    "round": 1,
+    "verdict": "fail",
+    "specVersion": 3
+   },
+   {
+    "round": 2,
+    "verdict": "pass",
+    "specVersion": 5
+   }
+  ]
+ },
+ "prior": {
+  "source": "truth",
+  "notes": 8,
+  "path": "apps/api/scripts/fixtures/eval-real/context/whistle-real/freesound-126669.truth.json"
+ },
+ "tool": {
+  "name": "synthcorpus.resynth",
+  "version": "1",
+  "analyzer": {
+   "family": "whistle",
+   "f0_range": [
+    400.0,
+    5000.0
+   ],
+   "gate_db": -32.0,
+   "version": 2
+  },
+  "timbre": {
+   "kind": "whistle"
+  },
+  "seed": 3094785178
+ },
+ "createdAt": "2026-10-30T22:08:39+0100"
+}

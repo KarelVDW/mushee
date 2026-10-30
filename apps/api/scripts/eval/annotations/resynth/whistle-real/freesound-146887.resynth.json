@@ -1,0 +1,158 @@
+{
+ "schema": "resynth/1",
+ "dataset": "whistle-real",
+ "clip": "freesound-146887",
+ "role": "target",
+ "audio": {
+  "file": "apps/api/scripts/fixtures/eval-real/context/whistle-real/freesound-146887__real.wav",
+  "sha256": "8e43ac5c7dea6f6bc8b66f255b6af722bb141be3cb9e504e880b16a60d169a8b",
+  "sampleRate": 44100,
+  "durationSec": 1.9177
+ },
+ "truth": {
+  "bpm": 120,
+  "notes": [
+   {
+    "onsetSec": 0.16,
+    "durSec": 0.16,
+    "midi": 93
+   },
+   {
+    "onsetSec": 0.41,
+    "durSec": 0.14,
+    "midi": 91
+   },
+   {
+    "onsetSec": 0.58,
+    "durSec": 0.17,
+    "midi": 88
+   },
+   {
+    "onsetSec": 0.87,
+    "durSec": 0.16,
+    "midi": 84
+   },
+   {
+    "onsetSec": 1.12,
+    "durSec": 0.56,
+    "midi": 82
+   }
+  ]
+ },
+ "spec": {
+  "schema": "resynth-spec/1",
+  "dataset": "whistle-real",
+  "clip": "freesound-146887",
+  "version": 2,
+  "timbre": {
+   "kind": "whistle"
+  },
+  "render": {
+   "seed": 1413564581,
+   "contour": "copy-detrended",
+   "levelMatch": true
+  },
+  "nextId": 6,
+  "prior": {
+   "source": "truth",
+   "notes": 5,
+   "path": "apps/api/scripts/fixtures/eval-real/context/whistle-real/freesound-146887.truth.json"
+  },
+  "notes": [
+   {
+    "id": "n1",
+    "on": 0.16,
+    "off": 0.32,
+    "midi": 93,
+    "cents": -0.2,
+    "vel": 105,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n2",
+    "on": 0.41,
+    "off": 0.55,
+    "midi": 91,
+    "cents": -21.4,
+    "vel": 92,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n3",
+    "on": 0.58,
+    "off": 0.75,
+    "midi": 88,
+    "cents": 9.2,
+    "vel": 93,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n4",
+    "on": 0.87,
+    "off": 1.03,
+    "midi": 84,
+    "cents": -0.5,
+    "vel": 82,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n5",
+    "on": 1.12,
+    "off": 1.68,
+    "midi": 82,
+    "cents": 19.4,
+    "vel": 94,
+    "legato": false,
+    "flags": []
+   }
+  ]
+ },
+ "verdict": {
+  "status": "passed",
+  "rounds": 1,
+  "summary": "Five whistled notes A6 G6 E6 C6 A#5 match the original: every attack from silence is covered, pitches are correct (n5 stable median A#5+19 c, not near a boundary), and all onsets are within 30 ms. The energy event at 1.54 s inside n5 has no level dip (rise 0, dip 0 dB), so it is modulation, not a re-attack.",
+  "metrics": {
+   "pitch": 1.0,
+   "voicingRecall": 1.0,
+   "voicingPrecision": 0.9143,
+   "onsetF1": 1.0,
+   "explained": 1.0,
+   "notes": 5,
+   "durSec": 1.918
+  },
+  "judged": [
+   {
+    "round": 1,
+    "verdict": "pass",
+    "specVersion": 2
+   }
+  ]
+ },
+ "prior": {
+  "source": "truth",
+  "notes": 5,
+  "path": "apps/api/scripts/fixtures/eval-real/context/whistle-real/freesound-146887.truth.json"
+ },
+ "tool": {
+  "name": "synthcorpus.resynth",
+  "version": "1",
+  "analyzer": {
+   "family": "whistle",
+   "f0_range": [
+    400.0,
+    5000.0
+   ],
+   "gate_db": -32.0,
+   "version": 2
+  },
+  "timbre": {
+   "kind": "whistle"
+  },
+  "seed": 1413564581
+ },
+ "createdAt": "2026-10-30T22:08:39+0100"
+}

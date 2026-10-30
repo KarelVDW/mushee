@@ -1,0 +1,106 @@
+{
+ "schema": "resynth/1",
+ "dataset": "whistle-real",
+ "clip": "freesound-167065",
+ "role": "target",
+ "audio": {
+  "file": "apps/api/scripts/fixtures/eval-real/context/whistle-real/freesound-167065__real.wav",
+  "sha256": "828269b1b3814b23b74449f51940e7efb1cf882e1bdec7709bdf56d36f706e51",
+  "sampleRate": 44100,
+  "durationSec": 7.0
+ },
+ "truth": {
+  "bpm": 120,
+  "notes": [
+   {
+    "onsetSec": 0.0,
+    "durSec": 6.96,
+    "midi": 77
+   }
+  ]
+ },
+ "spec": {
+  "schema": "resynth-spec/1",
+  "dataset": "whistle-real",
+  "clip": "freesound-167065",
+  "version": 4,
+  "timbre": {
+   "kind": "whistle"
+  },
+  "render": {
+   "seed": 1113954887,
+   "contour": "copy-detrended",
+   "levelMatch": true
+  },
+  "nextId": 17,
+  "prior": {
+   "source": "truth",
+   "notes": 16,
+   "path": "apps/api/scripts/fixtures/eval-real/context/whistle-real/freesound-167065.truth.json"
+  },
+  "notes": [
+   {
+    "id": "n1",
+    "on": 0.0,
+    "off": 6.96,
+    "midi": 77,
+    "cents": -47.2,
+    "vel": 93,
+    "legato": false,
+    "flags": [
+     "uncertain-pitch",
+     "uncertain-split"
+    ]
+   }
+  ]
+ },
+ "verdict": {
+  "status": "passed",
+  "rounds": 2,
+  "summary": "The original is one articulation (attack from silence at 0.01 s, sound ends 7.01 s) carrying a continuous linear siren glide A4->C6 at ~225 c/s with a smooth, perfectly regular ~4 Hz tremolo (5-6 dB dips, never silent). No pitch is ever held and nothing is re-attacked, so per conventions it is a single note; n1 0.00-6.96 with the glide median (F5-48, on the E5/F5 boundary) and flags uncertain-pitch + uncertain-split is the correct conventions-bound transcription. All 35 diffs are semitone crossings of the glide or tremolo troughs (contour/render limit), not note errors.",
+  "metrics": {
+   "pitch": 0.0646,
+   "voicingRecall": 0.9986,
+   "voicingPrecision": 0.9986,
+   "onsetF1": 0.04,
+   "explained": 0.9957,
+   "notes": 1,
+   "durSec": 7.0
+  },
+  "judged": [
+   {
+    "round": 1,
+    "verdict": "fail",
+    "specVersion": 2
+   },
+   {
+    "round": 2,
+    "verdict": "pass",
+    "specVersion": 4
+   }
+  ]
+ },
+ "prior": {
+  "source": "truth",
+  "notes": 16,
+  "path": "apps/api/scripts/fixtures/eval-real/context/whistle-real/freesound-167065.truth.json"
+ },
+ "tool": {
+  "name": "synthcorpus.resynth",
+  "version": "1",
+  "analyzer": {
+   "family": "whistle",
+   "f0_range": [
+    400.0,
+    5000.0
+   ],
+   "gate_db": -32.0,
+   "version": 2
+  },
+  "timbre": {
+   "kind": "whistle"
+  },
+  "seed": 1113954887
+ },
+ "createdAt": "2026-10-30T22:08:39+0100"
+}

@@ -1,0 +1,602 @@
+{
+ "schema": "resynth/1",
+ "dataset": "whistle-vintage",
+ "clip": "shaw-1",
+ "role": "target",
+ "audio": {
+  "file": "apps/api/scripts/fixtures/eval-real/context/whistle-vintage/shaw-1__real.wav",
+  "sha256": "d043b8156c14516f30b8b0874601a105daae9fed3c41bfbc068afa1e1e599dbd",
+  "sampleRate": 44100,
+  "durationSec": 30.0
+ },
+ "truth": {
+  "bpm": 120,
+  "notes": [
+   {
+    "onsetSec": 14.73,
+    "durSec": 0.14,
+    "midi": 92
+   },
+   {
+    "onsetSec": 14.93,
+    "durSec": 0.09,
+    "midi": 90
+   },
+   {
+    "onsetSec": 15.19,
+    "durSec": 0.08,
+    "midi": 87
+   },
+   {
+    "onsetSec": 19.09,
+    "durSec": 0.09,
+    "midi": 91
+   },
+   {
+    "onsetSec": 19.25,
+    "durSec": 0.11,
+    "midi": 92
+   },
+   {
+    "onsetSec": 19.36,
+    "durSec": 0.1,
+    "midi": 95
+   },
+   {
+    "onsetSec": 19.46,
+    "durSec": 0.14,
+    "midi": 97
+   },
+   {
+    "onsetSec": 19.87,
+    "durSec": 0.08,
+    "midi": 94
+   },
+   {
+    "onsetSec": 19.99,
+    "durSec": 0.23,
+    "midi": 96
+   },
+   {
+    "onsetSec": 20.22,
+    "durSec": 0.4,
+    "midi": 99
+   },
+   {
+    "onsetSec": 20.89,
+    "durSec": 0.25,
+    "midi": 95
+   },
+   {
+    "onsetSec": 21.23,
+    "durSec": 0.09,
+    "midi": 97
+   },
+   {
+    "onsetSec": 21.57,
+    "durSec": 0.18,
+    "midi": 96
+   },
+   {
+    "onsetSec": 21.86,
+    "durSec": 0.19,
+    "midi": 97
+   },
+   {
+    "onsetSec": 22.69,
+    "durSec": 0.29,
+    "midi": 103
+   },
+   {
+    "onsetSec": 23.24,
+    "durSec": 0.07,
+    "midi": 103
+   },
+   {
+    "onsetSec": 23.64,
+    "durSec": 0.14,
+    "midi": 102
+   },
+   {
+    "onsetSec": 24.38,
+    "durSec": 0.18,
+    "midi": 99
+   },
+   {
+    "onsetSec": 24.87,
+    "durSec": 0.07,
+    "midi": 94
+   },
+   {
+    "onsetSec": 24.98,
+    "durSec": 0.17,
+    "midi": 97
+   },
+   {
+    "onsetSec": 25.15,
+    "durSec": 0.15,
+    "midi": 93
+   },
+   {
+    "onsetSec": 25.37,
+    "durSec": 0.16,
+    "midi": 91
+   },
+   {
+    "onsetSec": 25.8,
+    "durSec": 0.44,
+    "midi": 96
+   },
+   {
+    "onsetSec": 26.49,
+    "durSec": 0.13,
+    "midi": 93
+   },
+   {
+    "onsetSec": 26.62,
+    "durSec": 0.41,
+    "midi": 96
+   },
+   {
+    "onsetSec": 27.44,
+    "durSec": 0.08,
+    "midi": 91
+   },
+   {
+    "onsetSec": 27.57,
+    "durSec": 0.1,
+    "midi": 95
+   },
+   {
+    "onsetSec": 27.67,
+    "durSec": 0.08,
+    "midi": 96
+   },
+   {
+    "onsetSec": 28.13,
+    "durSec": 0.07,
+    "midi": 93
+   },
+   {
+    "onsetSec": 28.22,
+    "durSec": 0.14,
+    "midi": 95
+   },
+   {
+    "onsetSec": 28.36,
+    "durSec": 0.24,
+    "midi": 96
+   }
+  ]
+ },
+ "spec": {
+  "schema": "resynth-spec/1",
+  "dataset": "whistle-vintage",
+  "clip": "shaw-1",
+  "version": 6,
+  "timbre": {
+   "kind": "whistle"
+  },
+  "render": {
+   "seed": 3741026888,
+   "contour": "copy-detrended",
+   "levelMatch": true
+  },
+  "nextId": 58,
+  "prior": {
+   "source": "truth",
+   "notes": 37,
+   "path": "apps/api/scripts/fixtures/eval-real/context/whistle-vintage/shaw-1.truth.json"
+  },
+  "notes": [
+   {
+    "id": "n12",
+    "on": 14.73,
+    "off": 14.87,
+    "midi": 92,
+    "cents": -45.7,
+    "vel": 81,
+    "legato": false,
+    "flags": [
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n13",
+    "on": 14.93,
+    "off": 15.02,
+    "midi": 90,
+    "cents": -37.1,
+    "vel": 88,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n14",
+    "on": 15.19,
+    "off": 15.27,
+    "midi": 87,
+    "cents": -47.9,
+    "vel": 85,
+    "legato": false,
+    "flags": [
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n18",
+    "on": 19.09,
+    "off": 19.18,
+    "midi": 91,
+    "cents": 3.3,
+    "vel": 84,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n47",
+    "on": 19.25,
+    "off": 19.36,
+    "midi": 92,
+    "cents": 5.3,
+    "vel": 86,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n48",
+    "on": 19.36,
+    "off": 19.46,
+    "midi": 95,
+    "cents": 36.2,
+    "vel": 82,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n19",
+    "on": 19.46,
+    "off": 19.6,
+    "midi": 97,
+    "cents": -26.5,
+    "vel": 82,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n53",
+    "on": 19.87,
+    "off": 19.95,
+    "midi": 94,
+    "cents": -9.1,
+    "vel": 89,
+    "legato": false,
+    "flags": [
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n21",
+    "on": 19.99,
+    "off": 20.22,
+    "midi": 96,
+    "cents": -8.3,
+    "vel": 91,
+    "legato": false,
+    "flags": [
+     "uncertain-pitch",
+     "uncertain-split"
+    ]
+   },
+   {
+    "id": "n54",
+    "on": 20.22,
+    "off": 20.62,
+    "midi": 99,
+    "cents": 0.0,
+    "vel": 86,
+    "legato": true,
+    "flags": [
+     "uncertain-pitch",
+     "uncertain-split"
+    ]
+   },
+   {
+    "id": "n22",
+    "on": 20.89,
+    "off": 21.14,
+    "midi": 95,
+    "cents": 18.8,
+    "vel": 88,
+    "legato": false,
+    "flags": [
+     "uncertain-onset",
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n23",
+    "on": 21.23,
+    "off": 21.32,
+    "midi": 97,
+    "cents": -41.1,
+    "vel": 87,
+    "legato": false,
+    "flags": [
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n24",
+    "on": 21.57,
+    "off": 21.75,
+    "midi": 96,
+    "cents": 0.0,
+    "vel": 86,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n25",
+    "on": 21.86,
+    "off": 22.05,
+    "midi": 97,
+    "cents": 16.7,
+    "vel": 87,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n26",
+    "on": 22.69,
+    "off": 22.98,
+    "midi": 103,
+    "cents": 0.0,
+    "vel": 77,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n50",
+    "on": 23.24,
+    "off": 23.31,
+    "midi": 103,
+    "cents": 12.2,
+    "vel": 76,
+    "legato": false,
+    "flags": [
+     "uncertain-exists"
+    ]
+   },
+   {
+    "id": "n51",
+    "on": 23.64,
+    "off": 23.78,
+    "midi": 102,
+    "cents": 0.0,
+    "vel": 75,
+    "legato": false,
+    "flags": [
+     "uncertain-exists",
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n52",
+    "on": 24.38,
+    "off": 24.56,
+    "midi": 99,
+    "cents": 0.0,
+    "vel": 73,
+    "legato": false,
+    "flags": [
+     "uncertain-exists",
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n55",
+    "on": 24.87,
+    "off": 24.94,
+    "midi": 94,
+    "cents": 11.5,
+    "vel": 89,
+    "legato": false,
+    "flags": [
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n56",
+    "on": 24.98,
+    "off": 25.15,
+    "midi": 97,
+    "cents": -24.5,
+    "vel": 84,
+    "legato": false,
+    "flags": [
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n27",
+    "on": 25.15,
+    "off": 25.3,
+    "midi": 93,
+    "cents": -19.8,
+    "vel": 85,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n28",
+    "on": 25.37,
+    "off": 25.53,
+    "midi": 91,
+    "cents": 39.8,
+    "vel": 90,
+    "legato": false,
+    "flags": [
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n29",
+    "on": 25.8,
+    "off": 26.24,
+    "midi": 96,
+    "cents": 0.0,
+    "vel": 87,
+    "legato": false,
+    "flags": [
+     "uncertain-onset"
+    ]
+   },
+   {
+    "id": "n31",
+    "on": 26.49,
+    "off": 26.62,
+    "midi": 93,
+    "cents": 4.2,
+    "vel": 86,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n32",
+    "on": 26.62,
+    "off": 27.03,
+    "midi": 96,
+    "cents": -4.8,
+    "vel": 91,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n33",
+    "on": 27.44,
+    "off": 27.52,
+    "midi": 91,
+    "cents": -19.5,
+    "vel": 90,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n34",
+    "on": 27.57,
+    "off": 27.67,
+    "midi": 95,
+    "cents": -38.0,
+    "vel": 84,
+    "legato": false,
+    "flags": [
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n35",
+    "on": 27.67,
+    "off": 27.75,
+    "midi": 96,
+    "cents": -37.9,
+    "vel": 82,
+    "legato": true,
+    "flags": [
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n36",
+    "on": 28.13,
+    "off": 28.2,
+    "midi": 93,
+    "cents": 16.3,
+    "vel": 88,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n37",
+    "on": 28.22,
+    "off": 28.36,
+    "midi": 95,
+    "cents": 30.3,
+    "vel": 89,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n57",
+    "on": 28.36,
+    "off": 28.6,
+    "midi": 96,
+    "cents": 29.0,
+    "vel": 88,
+    "legato": true,
+    "flags": [
+     "uncertain-split"
+    ]
+   }
+  ]
+ },
+ "verdict": {
+  "status": "passed",
+  "rounds": 4,
+  "summary": "Round 3's items are fixed. The orchestral F5-C5 run at 15.65-16.92 is deleted, so 15.3-19.05 is silent like the band intro, n29 now starts at the 25.80 swoop and n25 runs to 22.05. The whistle line holds up: the 14.73 pickup (G#6 F#6 D#6), the 19.1-22.05 phrase with its correct steps (n24 is a stable C7 after a scoop, n25 is C#7), the soft G7/F#7/D#7 traces at 22.7-24.6, and the 24.87-28.6 phrase (A#6 chirp, C#7, A6, G6, C7, A6, C7, G6, B6, C7, A6, B6, C7). Every remaining diff is speech (0-8 s), orchestra, bleed, or a glide or contour limit on a flagged note. The slow C7-to-G7 gliss at 20.2-20.7 (n54) and the 25.8 swoop (n29) are flagged genuine ambiguities. The faint wavering ~G7-G#7 lines at 29.0-29.9 come with parallel high partials, have no attack of their own and sit over a sustained C7 orchestral chord, so they are read as accompaniment, not a missing whistle note. Minor non-blocking offset notes: n24 could run to the n25 onset at 21.85 (the original stays voiced through the gap), and the rising tails after n19 (to about 19.72) and n57 (to about 28.75) could be folded into those notes' offsets.",
+  "metrics": {
+   "pitch": 0.8393,
+   "voicingRecall": 0.1778,
+   "voicingPrecision": 0.8,
+   "onsetF1": 0.272,
+   "explained": 0.181,
+   "notes": 31,
+   "durSec": 30.0
+  },
+  "judged": [
+   {
+    "round": 1,
+    "verdict": "fail",
+    "specVersion": 2
+   },
+   {
+    "round": 2,
+    "verdict": "fail",
+    "specVersion": 4
+   },
+   {
+    "round": 3,
+    "verdict": "fail",
+    "specVersion": 5
+   },
+   {
+    "round": 4,
+    "verdict": "pass",
+    "specVersion": 6
+   }
+  ]
+ },
+ "prior": {
+  "source": "truth",
+  "notes": 37,
+  "path": "apps/api/scripts/fixtures/eval-real/context/whistle-vintage/shaw-1.truth.json"
+ },
+ "tool": {
+  "name": "synthcorpus.resynth",
+  "version": "1",
+  "analyzer": {
+   "family": "whistle",
+   "f0_range": [
+    400.0,
+    5000.0
+   ],
+   "gate_db": -32.0,
+   "version": 2
+  },
+  "timbre": {
+   "kind": "whistle"
+  },
+  "seed": 3741026888
+ },
+ "createdAt": "2026-10-30T22:08:38+0100"
+}

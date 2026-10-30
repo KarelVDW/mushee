@@ -1,0 +1,145 @@
+{
+ "schema": "resynth/1",
+ "dataset": "whistle-real",
+ "clip": "commons-human",
+ "role": "target",
+ "audio": {
+  "file": "apps/api/scripts/fixtures/eval-real/context/whistle-real/commons-human__real.wav",
+  "sha256": "6218a15ee5ee21984b79fa83ac991f86b6b5d3df71e50a46bcf1ce321e30f8f7",
+  "sampleRate": 44100,
+  "durationSec": 1.4745
+ },
+ "truth": {
+  "bpm": 120,
+  "notes": [
+   {
+    "onsetSec": 0.19,
+    "durSec": 0.17,
+    "midi": 95
+   },
+   {
+    "onsetSec": 0.47,
+    "durSec": 0.11,
+    "midi": 86
+   },
+   {
+    "onsetSec": 0.58,
+    "durSec": 0.07,
+    "midi": 84
+   },
+   {
+    "onsetSec": 0.73,
+    "durSec": 0.67,
+    "midi": 95
+   }
+  ]
+ },
+ "spec": {
+  "schema": "resynth-spec/1",
+  "dataset": "whistle-real",
+  "clip": "commons-human",
+  "version": 2,
+  "timbre": {
+   "kind": "whistle"
+  },
+  "render": {
+   "seed": 2933989964,
+   "contour": "copy-detrended",
+   "levelMatch": true
+  },
+  "nextId": 6,
+  "prior": {
+   "source": "truth",
+   "notes": 3,
+   "path": "apps/api/scripts/fixtures/eval-real/context/whistle-real/commons-human.truth.json"
+  },
+  "notes": [
+   {
+    "id": "n5",
+    "on": 0.19,
+    "off": 0.36,
+    "midi": 95,
+    "cents": 0.0,
+    "vel": 90,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n1",
+    "on": 0.47,
+    "off": 0.58,
+    "midi": 86,
+    "cents": -23.0,
+    "vel": 85,
+    "legato": false,
+    "flags": [
+     "uncertain-split"
+    ]
+   },
+   {
+    "id": "n2",
+    "on": 0.58,
+    "off": 0.65,
+    "midi": 84,
+    "cents": 15.0,
+    "vel": 78,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n3",
+    "on": 0.73,
+    "off": 1.4,
+    "midi": 95,
+    "cents": 0.0,
+    "vel": 94,
+    "legato": false,
+    "flags": []
+   }
+  ]
+ },
+ "verdict": {
+  "status": "passed",
+  "rounds": 1,
+  "summary": "Three whistled glide gestures transcribed as B6 (rising glide, top B6+10), D6->C6 legato (flagged uncertain-split; C6 held ~50 ms at 0.59-0.64), and B6 (peak 0.85-0.94 median ~B6+19) whose 430 ms continuous fall to C6 has no stable pitch (~25 st/s, ~40 ms per semitone) and fades out unlanded. All onsets (0.19/0.47/0.73, legato 0.58) within 10-20 ms of orig attacks; offsets match. D1/D2 are moving-contour medians (stable centres B6 correct), D3 is the glide passing E6, D4 is the genuine flagged legato D6->C6 split; no missing, extra or mis-pitched notes.",
+  "metrics": {
+   "pitch": 0.3425,
+   "voicingRecall": 1.0,
+   "voicingPrecision": 0.8534,
+   "onsetF1": 0.75,
+   "explained": 1.0,
+   "notes": 4,
+   "durSec": 1.474
+  },
+  "judged": [
+   {
+    "round": 1,
+    "verdict": "pass",
+    "specVersion": 2
+   }
+  ]
+ },
+ "prior": {
+  "source": "truth",
+  "notes": 3,
+  "path": "apps/api/scripts/fixtures/eval-real/context/whistle-real/commons-human.truth.json"
+ },
+ "tool": {
+  "name": "synthcorpus.resynth",
+  "version": "1",
+  "analyzer": {
+   "family": "whistle",
+   "f0_range": [
+    400.0,
+    5000.0
+   ],
+   "gate_db": -32.0,
+   "version": 2
+  },
+  "timbre": {
+   "kind": "whistle"
+  },
+  "seed": 2933989964
+ },
+ "createdAt": "2026-10-30T22:08:39+0100"
+}
