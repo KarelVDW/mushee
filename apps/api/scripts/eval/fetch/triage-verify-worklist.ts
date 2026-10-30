@@ -6,7 +6,7 @@
  * real, benchmark-grade failure case). Agreeing clips teach nothing new.
  *
  * Reads per-clip COnP for the dataset from the latest committed benchmark result
- * (`benchmarks/results/`), so the ranking reflects the shipping pipeline, and
+ * (`apps/eval/data/benchmarks/real/`), so the ranking reflects the shipping pipeline, and
  * rewrites the "Lowest pipeline agreement" section of the dataset's
  * `VERIFY-WORKLIST.md` between its markers — the stratified sections above it
  * are left exactly as staged.
@@ -17,7 +17,7 @@
 import { existsSync, readdirSync, readFileSync, writeFileSync } from 'fs'
 import { join, resolve } from 'path'
 
-const RESULTS_DIR = resolve(__dirname, '../benchmarks/results')
+const RESULTS_DIR = resolve(__dirname, '../../../../eval/data/benchmarks/real')
 const ANNOTATIONS = resolve(__dirname, '../annotations')
 const BEGIN = '<!-- triage:begin -->'
 const END = '<!-- triage:end -->'

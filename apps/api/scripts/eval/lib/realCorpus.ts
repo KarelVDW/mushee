@@ -13,9 +13,10 @@
  *                                    bars product-relevant use; NEVER gates
  *
  * The tier is PLACEMENT AND DOCUMENTATION, not mechanism: what actually keeps a
- * dataset out of pooled numbers are the per-dataset flags below
- * (`noteTruthDerived`, `constructedPerformance`, `pitchless`, `corpusSplit`),
- * exactly as before the tiering existed. A dataset can sit in `benchmark/` and
+ * dataset out of pooled numbers are the per-dataset flags below — the rule is
+ * `isPooled()` (`noteTruthDerived`, `pitchless`, `constructedPerformance`,
+ * `licenceRestricted`, and the explicit `pooled: false` opt-out), exactly as
+ * before the tiering existed. A dataset can sit in `benchmark/` and
  * still carry `noteTruthDerived` (dagstuhl-choir: its hand-tapped beat grid is
  * the benchmark axis, its DTW-aligned notes are not). Changing a dataset's tier
  * therefore never changes a measured number — it changes where humans and
@@ -31,6 +32,7 @@
  * dataset's fetcher migrates it.
  */
 
+import { createHash } from 'crypto'
 import { existsSync, readdirSync, readFileSync } from 'fs'
 import { join } from 'path'
 
@@ -46,6 +48,24 @@ export type CorpusTier = 'benchmark' | 'context' | 'synthetic'
  * falls back to a derivation from `kind` for manifests that predate it.
  */
 export type Material = 'singing' | 'humming' | 'whistling' | 'instrument' | 'vocal-percussion'
+
+/**
+ * Where a dataset's note truth came from — reported beside every number, and the
+ * axis of the benchmark's second headline (human truth only, the one continuous
+ * with the history before resynthesised truth existed):
+ *
+ *   human        annotated by people (the corpus's own labels, or our verified ones)
+ *   resynth      read from a synthetic copy iterated until it matches the original
+ *                (synthetic-corpus/RESYNTH.md) — benchmark-grade once calibrated
+ *   derived      machine-derived and unverified (frame pitch, score alignment, drafts)
+ *   constructed  exact because we built the performance (TinySOL splices, rendered corpora)
+ *   onsets       onset times only, no pitch (`pitchless`)
+ *
+ * Declared as `truthSource` in dataset.json; inferred from the older flags when absent.
+ */
+export type TruthSource = 'human' | 'resynth' | 'derived' | 'constructed' | 'onsets'
+
+const TRUTH_SOURCES: TruthSource[] = ['human', 'resynth', 'derived', 'constructed', 'onsets']
 
 export interface RealDataset {
     id: string
@@ -120,6 +140,65 @@ export interface RealDataset {
      * Declared by `constructedPerformance` in dataset.json.
      */
     constructedPerformance?: boolean
+    /** See `TruthSource`. Always set: declared in dataset.json or inferred (`inferTruthSource`). */
+    truthSource: TruthSource
+    /**
+     * Explicit opt-out from every pooled aggregate (`"pooled": false` in
+     * dataset.json) for a set whose truth is fine but whose audio is not the
+     * product's input — whistle-vintage: accompanied 78 rpm transfers. Absent means
+     * the flags above decide alone.
+     */
+    pooled?: boolean
+    /**
+     * Version of the generated corpus the clips came from (the realistic synthetic
+     * export writes it), recorded in benchmark provenance. Absent for real corpora.
+     */
+    corpusVersion?: string
+}
+
+/**
+ * The truth source a manifest without `truthSource` implies. The rendered
+ * synthetic corpora carry none of the flags but are constructed all the same.
+ */
+export function inferTruthSource(d: {
+    noteTruthDerived?: boolean
+    constructedPerformance?: boolean
+    pitchless?: boolean
+    tier?: CorpusTier
+}): TruthSource {
+    if (d.noteTruthDerived) return 'derived'
+    if (d.constructedPerformance) return 'constructed'
+    if (d.pitchless) return 'onsets'
+    if (d.tier === 'synthetic') return 'constructed'
+    return 'human'
+}
+
+/**
+ * Whether a dataset enters the pooled aggregates (headline, per material, per
+ * condition, `compare`). Restricted-licence sets stay out whatever the quality
+ * of their truth (CORPORA.md, "Licence standard"); `pooled: false` is the
+ * explicit opt-out. Everything else is reported per row only.
+ */
+export function isPooled(d: RealDataset): boolean {
+    return !d.noteTruthDerived && !d.pitchless && !d.constructedPerformance && !d.licenceRestricted && d.pooled !== false
+}
+
+/**
+ * What a run scored, in a form that changes when the truth does: the clip
+ * count and a sha1 over every `<clip>.truth.json` in name order (name and
+ * contents). Benchmark provenance stores it per dataset, so two results whose
+ * numbers differ can be told apart from a truth change.
+ */
+export function truthFingerprint(dir: string): { clips: number; truthHash: string } {
+    const files = readdirSync(dir)
+        .filter((f) => f.endsWith('.truth.json'))
+        .sort()
+    const hash = createHash('sha1')
+    for (const f of files)
+        hash.update(`${f}\n`)
+            .update(readFileSync(join(dir, f)))
+            .update('\n')
+    return { clips: files.length, truthHash: hash.digest('hex') }
 }
 
 const TIER_DIRS: CorpusTier[] = ['benchmark', 'context']
@@ -141,7 +220,16 @@ function readDataset(dir: string, id: string, tier: CorpusTier | null): RealData
     const m = existsSync(manifestPath) ? (JSON.parse(readFileSync(manifestPath, 'utf8')) as Partial<RealDataset>) : {}
     const noteTruthDerived = m.noteTruthDerived ?? false
     const constructedPerformance = m.constructedPerformance ?? false
+    const pitchless = m.pitchless ?? false
     const kind = m.kind ?? 'voice'
+    // Legacy flat layout: infer the tier from the flags that were always the
+    // pooling mechanism, so an un-migrated checkout behaves identically.
+    // A manifest may name its tier outright (the realistic synthetic corpus under
+    // fixtures/eval-synth is flat and says `"tier": "synthetic"`).
+    const resolvedTier = tier ?? m.tier ?? (noteTruthDerived || constructedPerformance ? 'context' : 'benchmark')
+    if (m.truthSource !== undefined && !TRUTH_SOURCES.includes(m.truthSource)) {
+        throw new Error(`${manifestPath}: truthSource must be one of ${TRUTH_SOURCES.join(', ')} (got ${String(m.truthSource)})`)
+    }
     return {
         id,
         dir,
@@ -152,15 +240,14 @@ function readDataset(dir: string, id: string, tier: CorpusTier | null): RealData
         license: m.license,
         licenceRestricted: m.licenceRestricted ?? false,
         derivedFrom: m.derivedFrom,
-        // Legacy flat layout: infer the tier from the flags that were always the
-        // pooling mechanism, so an un-migrated checkout behaves identically.
-        // A manifest may name its tier outright (the realistic synthetic corpus under
-        // fixtures/eval-synth is flat and says `"tier": "synthetic"`).
-        tier: tier ?? m.tier ?? (noteTruthDerived || constructedPerformance ? 'context' : 'benchmark'),
+        tier: resolvedTier,
         corpusSplit: m.corpusSplit,
         noteTruthDerived,
-        pitchless: m.pitchless ?? false,
+        pitchless,
         constructedPerformance,
+        truthSource: m.truthSource ?? inferTruthSource({ noteTruthDerived, constructedPerformance, pitchless, tier: resolvedTier }),
+        pooled: m.pooled,
+        corpusVersion: m.corpusVersion === undefined ? undefined : String(m.corpusVersion),
     }
 }
 

@@ -21,6 +21,8 @@ export default tseslint.config(
             // Local Python venvs (apps/api's CREPE and pitch-bench tooling, synthetic-corpus) ship their own JS assets
             '**/.venv/**',
             '**/.venv-*/**',
+            // Historical pipeline source trees extracted by scripts/eval/timeline/prepare.ts
+            'apps/api/scripts/eval/.cache/**',
             // Claude Code scratch worktrees are throwaway repo copies, not source
             '**/.claude/**',
         ],

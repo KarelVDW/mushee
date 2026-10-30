@@ -2,8 +2,8 @@
  * The product benchmark: ONE command that scores the production transcription
  * path over every real recording we hold, grouped by what the user is doing —
  * singing, humming, whistling, playing an instrument — records the result with
- * its provenance under `scripts/eval/benchmarks/results/`, and compares two such
- * results with paired confidence intervals.
+ * its provenance under `apps/eval/data/benchmarks/real/` (git-tracked, read by the
+ * eval app), and compares two such results with paired confidence intervals.
  *
  *   tsx scripts/eval/benchmark.ts run [--label <name>] [--conditions real,echoey-room,…]
  *                                     [--datasets a,b] [--quick]
@@ -15,8 +15,11 @@
  * would (the number that corresponds to what a user hears: resolver, routing,
  * decode, cleanup and the quantisation round-trip), then writes
  *
- *   benchmarks/results/<UTC timestamp>_<git sha>_<label>.json   compact, committed
- *   benchmarks/RESULTS.md                                       regenerated from every result
+ *   apps/eval/data/benchmarks/real/<UTC timestamp>_<git sha>_<label>.json   compact, committed
+ *   scripts/eval/benchmarks/RESULTS.md        regenerated from every result
+ *   scripts/eval/.cache/notes/<result id>.jsonl   the notes the pipeline produced, one line
+ *                                             per clip × condition (gitignored; the eval app's
+ *                                             comparison view reads them)
  *
  * `--quick` scores only the `real` condition (the adverse variants roughly double
  * the run). `compare` pairs the two results clip-by-clip (dataset, clip,
@@ -26,35 +29,57 @@
  * Conventions (see benchmarks/README.md): headline metric COnP@±100 ms (onset +
  * pitch, no offset gate); COnPOff at the same window is the secondary,
  * publication-comparable column; pooled numbers are means of DATASET means over
- * the benchmark-grade datasets only — `noteTruthDerived`, `pitchless` and
- * `constructedPerformance` corpora are reported per row and never pooled.
+ * the benchmark-grade datasets only — `noteTruthDerived`, `pitchless`,
+ * `constructedPerformance`, `licenceRestricted` and `pooled: false` corpora are
+ * reported per row and never pooled (`isPooled`, lib/realCorpus.ts). The headline
+ * is reported twice: over every pooled dataset and over those with human truth.
+ *
+ * The module also exports the committed result schema and `compact()`, so a
+ * scorer of notes produced elsewhere (lib/evalRun.ts `scoreClip` +
+ * `aggregateEval`) writes results this file can render and compare.
  */
 
 import { execSync } from 'child_process'
-import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'fs'
-import { basename, join, resolve } from 'path'
+import { appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync, renameSync, writeFileSync } from 'fs'
+import { basename, dirname, join, relative, resolve } from 'path'
 
-import { conditionsFor, defaultEvalOptions, type EvalReport, runEval } from './lib/evalRun'
-import type { Material } from './lib/realCorpus'
+import { conditionsFor, defaultEvalOptions, type EvalReport, mean, REAL_ROOT, runEval, SYNTH_REALISTIC_ROOT } from './lib/evalRun'
+import {
+    discoverRealDatasets,
+    inferTruthSource,
+    type Material,
+    type RealDataset,
+    truthFingerprint,
+    type TruthSource,
+} from './lib/realCorpus'
 import { formatComparison, pairedDiffCI } from './lib/stats'
 import { printReport } from './run-eval'
 
 const BENCH_DIR = resolve(__dirname, 'benchmarks')
 /**
+ * The committed result JSON lives with the eval app, which reads it (git-tracked,
+ * one file per run); the generated markdown stays here beside the method doc.
+ */
+const DATA_DIR = resolve(__dirname, '../../../eval/data/benchmarks')
+/**
  * `--synth` scores the REALISTIC synthetic corpus (fixtures/eval-synth: every app
  * instrument + eight voice types, rendered from real recordings with exact truth)
- * instead of the real one. Its history is kept apart — results-synth/ and
+ * instead of the real one. Its history is kept apart — data/benchmarks/synth/ and
  * RESULTS-SYNTH.md — so the real benchmark's trend line never mixes corpora.
+ * Results scored on superseded corpus versions sit in synth/archive/, which
+ * `render` does not read.
  */
 const SYNTH = process.argv.includes('--synth')
-const RESULTS_DIR = join(BENCH_DIR, SYNTH ? 'results-synth' : 'results')
+const RESULTS_DIR = join(DATA_DIR, SYNTH ? 'synth' : 'real')
 const RESULTS_MD = join(BENCH_DIR, SYNTH ? 'RESULTS-SYNTH.md' : 'RESULTS.md')
+/** Per-run pipeline notes, `<result id>.jsonl` — gitignored with the rest of .cache. */
+const NOTES_DIR = resolve(__dirname, '.cache/notes')
 
 /** Display order: the product's inputs first, the special axis last. */
 const MATERIAL_ORDER: Material[] = ['singing', 'humming', 'whistling', 'instrument', 'vocal-percussion']
 
 /** One scored clip × condition, compacted for the committed file. */
-interface BenchClip {
+export interface BenchClip {
     d: string // dataset
     c: string // clip
     cond: string
@@ -67,7 +92,21 @@ interface BenchClip {
     onR: number // COn recall
 }
 
-interface BenchResult {
+/** What a result records about one scored dataset's truth (see `corpusProvenance`). */
+export interface CorpusFingerprint {
+    truthSource: TruthSource
+    /** Clips in the dataset (truth files), whether or not a filter scored them all. */
+    clips: number
+    /** sha1 over the dataset's truth files — `truthFingerprint` in lib/realCorpus.ts. */
+    truthHash: string
+    corpusVersion?: string
+}
+
+/**
+ * The committed result. Fields marked "since 2026-10-30" are absent from earlier
+ * files; readers fall back as `render` does (`truthSourceOf`, `humanHeadline`).
+ */
+export interface BenchResult {
     meta: {
         id: string
         label: string
@@ -81,9 +120,18 @@ interface BenchResult {
         /** Dataset ids actually scored (clips > 0). */
         datasets: string[]
         matchTol: EvalReport['matchTol']
+        /** Pipeline / eval env overrides set for the run (`pipelineEnv`); `{}` = defaults. Since 2026-10-30. */
+        env?: Record<string, string>
+        /** Per scored dataset: where its truth came from and a hash of it. Since 2026-10-30. */
+        corpus?: Record<string, CorpusFingerprint>
+        /** The generated corpus's version, when every scored dataset declares the same one. */
+        corpusVersion?: string
     }
     overallF1: number
     overallF1Off: number
+    /** Human-truth-only headline (`EvalReport.overallF1Human`). Since 2026-10-30. */
+    overallF1Human?: number
+    overallF1OffHuman?: number
     perMaterial: EvalReport['perMaterial']
     perScenario: Array<
         Pick<
@@ -107,7 +155,11 @@ interface BenchResult {
             | 'onsetF1'
             | 'onsetRecall'
             | 'repairSecondsPer100'
-        > & { seg: { split: number; merged: number; missed: number; spurious: number; refTotal: number } }
+        > & {
+            /** Since 2026-10-30. */
+            truthSource?: TruthSource
+            seg: { split: number; merged: number; missed: number; spurious: number; refTotal: number }
+        }
     >
     perCondition: EvalReport['perCondition']
     clips: BenchClip[]
@@ -124,6 +176,13 @@ function arg(name: string): string | undefined {
 function flag(name: string): boolean {
     return process.argv.includes(`--${name}`)
 }
+/** The options that take a value — everything else after the command is a flag or a positional. */
+const VALUED = ['--label', '--conditions', '--datasets', '--split']
+/** Positional arguments after the command (`render --synth <x>` must not read `--synth` as a path). */
+function positionals(): string[] {
+    const rest = process.argv.slice(3)
+    return rest.filter((a, i) => !a.startsWith('--') && !VALUED.includes(rest[i - 1]))
+}
 function list(v: string | undefined): string[] | undefined {
     return v
         ? v
@@ -132,6 +191,16 @@ function list(v: string | undefined): string[] | undefined {
               .filter(Boolean)
         : undefined
 }
+
+/**
+ * What `gitDirty` watches: the pipeline and the harness CODE. Markdown (the
+ * generated RESULTS*.md included) and the label/annotation files (their effect
+ * reaches a run only through the truth files, which `meta.corpus` fingerprints)
+ * are left out; the result JSON lives in apps/eval. Regenerating the markdown or
+ * leaving an earlier result uncommitted therefore no longer flags every later
+ * run as dirty. Relative to this directory.
+ */
+const DIRTY_PATHSPEC = ['../../src', '.', "':(exclude,glob)**/*.md'", "':(exclude)annotations'", "':(exclude)benchmarks'"].join(' ')
 
 function git(cmd: string): string {
     try {
@@ -151,11 +220,57 @@ function round(x: number): number {
     return Math.round(x * 1000) / 1000
 }
 
-function compact(report: EvalReport, meta: BenchResult['meta']): BenchResult {
+/**
+ * Env knobs that can move a number: the pipeline's overrides (src/recordings/
+ * pipeline — `RECORDING_*`, the onset-policy and extractor switches) and the
+ * harness's own (`EVAL_*`, `CREPE_*`).
+ */
+const PIPELINE_ENV = /^(RECORDING_|EVAL_|CREPE_|VOICE_ONSET_|EXTRACTOR_|SUSTAINED_ONSET_)|^ONSET_(POLICY|DIP_RATIO)$/
+
+/**
+ * Every pipeline / eval override set for this process. The pipeline reads an
+ * empty value as unset, so only non-empty ones are recorded; `{}` means the run
+ * measured the defaults. (Labels like `pre-onset-policy` used to be the only
+ * record of an A/B run's env.)
+ */
+export function pipelineEnv(): Record<string, string> {
+    return Object.fromEntries(
+        Object.entries(process.env)
+            .filter((e): e is [string, string] => PIPELINE_ENV.test(e[0]) && !!e[1])
+            .sort(([a], [b]) => a.localeCompare(b)),
+    )
+}
+
+/** Truth provenance per dataset (`meta.corpus`): its truth source, clip count and truth hash. */
+export function corpusFingerprints(datasets: RealDataset[]): Record<string, CorpusFingerprint> {
+    return Object.fromEntries(
+        datasets.map((d) => [
+            d.id,
+            { truthSource: d.truthSource, ...truthFingerprint(d.dir), ...(d.corpusVersion ? { corpusVersion: d.corpusVersion } : {}) },
+        ]),
+    )
+}
+
+/** The fingerprints of the scored datasets, plus `corpusVersion` when they all declare the same one. */
+export function corpusProvenance(
+    fingerprints: Record<string, CorpusFingerprint>,
+    scored: string[],
+): Pick<BenchResult['meta'], 'corpus' | 'corpusVersion'> {
+    const corpus = Object.fromEntries(scored.filter((id) => fingerprints[id]).map((id) => [id, fingerprints[id]]))
+    const versions = new Set(Object.values(corpus).map((f) => f.corpusVersion))
+    const [only] = [...versions]
+    return { corpus, ...(versions.size === 1 && only ? { corpusVersion: only } : {}) }
+}
+
+/** An `EvalReport` reduced to the committed result (3-decimal metrics, one compact row per clip). */
+export function compact(report: EvalReport, meta: BenchResult['meta']): BenchResult {
     return {
         meta,
         overallF1: round(report.overallF1),
         overallF1Off: round(report.overallF1Off),
+        ...(report.overallF1Human !== undefined && report.overallF1OffHuman !== undefined
+            ? { overallF1Human: round(report.overallF1Human), overallF1OffHuman: round(report.overallF1OffHuman) }
+            : {}),
         perMaterial: report.perMaterial.map((m) => ({
             ...m,
             f1: round(m.f1),
@@ -163,6 +278,9 @@ function compact(report: EvalReport, meta: BenchResult['meta']): BenchResult {
             precision: round(m.precision),
             recall: round(m.recall),
             repairSecondsPer100: Math.round(m.repairSecondsPer100),
+            ...(m.f1Human !== undefined && m.f1OffHuman !== undefined
+                ? { f1Human: round(m.f1Human), f1OffHuman: round(m.f1OffHuman) }
+                : {}),
         })),
         perScenario: report.perScenario
             .filter((s) => s.clips > 0)
@@ -172,6 +290,7 @@ function compact(report: EvalReport, meta: BenchResult['meta']): BenchResult {
                 tier: s.tier,
                 license: s.license,
                 licenceRestricted: s.licenceRestricted,
+                truthSource: s.truthSource,
                 clips: s.clips,
                 pooled: s.pooled,
                 noteTruthDerived: s.noteTruthDerived,
@@ -230,8 +349,24 @@ async function run(): Promise<void> {
             : quick
               ? ['real']
               : conditionsFor(true).map((c) => c.id))
+    const datasetFilter = list(arg('datasets'))
     const started = Date.now()
     console.log(`benchmark: label=${label} conditions=${conditions.join(',')}`)
+
+    // Provenance is taken before scoring: the code and truth a run loads at the
+    // start are what it measures, whatever changes in the tree during a 3 h run.
+    const sha = git('rev-parse --short HEAD') || 'nogit'
+    const dirty = git(`status --porcelain -- ${DIRTY_PATHSPEC}`) !== ''
+    const env = pipelineEnv()
+    const fingerprints = corpusFingerprints(
+        discoverRealDatasets(SYNTH ? SYNTH_REALISTIC_ROOT : REAL_ROOT).filter((d) => !datasetFilter || datasetFilter.includes(d.id)),
+    )
+
+    // The notes go to a partial file while the run lasts; the result id (which
+    // carries the finish time) names it at the end.
+    mkdirSync(NOTES_DIR, { recursive: true })
+    const partialNotes = join(NOTES_DIR, `.partial-${started}-${process.pid}.jsonl`)
+    writeFileSync(partialNotes, '')
 
     const report = await runEval(
         defaultEvalOptions({
@@ -240,16 +375,26 @@ async function run(): Promise<void> {
             adaptive: true,
             label,
             conditionFilter: conditions,
-            scenarioFilter: list(arg('datasets')),
+            scenarioFilter: datasetFilter,
             onProgress: (line) => console.log(line),
+            onClip: (c) =>
+                appendFileSync(
+                    partialNotes,
+                    JSON.stringify({
+                        d: c.datasetId,
+                        c: c.clipId,
+                        cond: c.condition,
+                        notes: c.notes.map((n) => ({ onsetSec: n.onsetSec, durSec: n.durSec, midi: n.midi })),
+                        ...(c.error ? { error: c.error } : {}),
+                    }) + '\n',
+                ),
         }),
     )
     printReport(report)
 
-    const sha = git('rev-parse --short HEAD') || 'nogit'
-    const dirty = git('status --porcelain -- ../../src ../../scripts/eval') !== ''
     const date = new Date().toISOString()
     const id = `${date.replace(/[:.]/g, '-').slice(0, 19)}_${sha}_${label}`
+    const scored = report.perScenario.filter((s) => s.clips > 0).map((s) => s.scenario)
     const result = compact(report, {
         id,
         label,
@@ -260,14 +405,19 @@ async function run(): Promise<void> {
         durationSec: Math.round((Date.now() - started) / 1000),
         conditions,
         quick,
-        datasets: report.perScenario.filter((s) => s.clips > 0).map((s) => s.scenario),
+        datasets: scored,
         matchTol: report.matchTol,
+        env,
+        ...corpusProvenance(fingerprints, scored),
     })
 
     mkdirSync(RESULTS_DIR, { recursive: true })
     const out = join(RESULTS_DIR, `${id}.json`)
     writeFileSync(out, JSON.stringify(result))
+    const notes = join(NOTES_DIR, `${id}.jsonl`)
+    renameSync(partialNotes, notes)
     console.log(`\nResult written to ${out}${dirty ? '  (working tree DIRTY — label it as such)' : ''}`)
+    console.log(`Notes written to ${notes}`)
     render(out)
 }
 
@@ -299,6 +449,26 @@ function materialOf(r: BenchResult, m: Material): BenchResult['perMaterial'][num
     return r.perMaterial.find((x) => x.material === m)
 }
 
+/** A row's truth source; results recorded before 2026-10-30 carry only the flags it is inferred from. */
+function truthSourceOf(s: BenchResult['perScenario'][number]): TruthSource {
+    return s.truthSource ?? inferTruthSource(s)
+}
+
+/**
+ * The human-truth headline and how many datasets it rests on. Results recorded
+ * before it existed pooled human truth only (every other source was unpooled),
+ * so for them it is the headline itself.
+ */
+function humanHeadline(r: BenchResult): { f1: number; f1Off: number; datasets: number } | undefined {
+    const pooled = r.perScenario.filter((s) => s.pooled && s.clips > 0)
+    const human = pooled.filter((s) => truthSourceOf(s) === 'human')
+    if (!human.length) return undefined
+    if (r.overallF1Human !== undefined && r.overallF1OffHuman !== undefined)
+        return { f1: r.overallF1Human, f1Off: r.overallF1OffHuman, datasets: human.length }
+    if (human.length === pooled.length) return { f1: r.overallF1, f1Off: r.overallF1Off, datasets: human.length }
+    return { f1: mean(human.map((s) => s.f1)), f1Off: mean(human.map((s) => s.f1Off)), datasets: human.length }
+}
+
 /** Markdown for one result — the "current numbers" half of RESULTS.md. */
 function renderResult(r: BenchResult): string {
     const lines: string[] = []
@@ -311,11 +481,22 @@ function renderResult(r: BenchResult): string {
         `- **Conditions** ${r.meta.conditions.join(', ')}${r.meta.quick ? ' (quick: real only)' : ''} · ` +
             `**match** onset ±${Math.round(r.meta.matchTol.onsetTolSec * 1000)} ms, exact MIDI; COnPOff adds offset within max(50 ms, 20 %)`,
     )
+    const pooledCount = r.perScenario.filter((s) => s.pooled).length
+    // The conditions actually scored: a full run requests every condition, but only the variants on disk count.
+    const conds = [...new Set(r.clips.map((c) => c.cond))].map((c) => `\`${c}\``)
     lines.push(
         `- **Headline** COnP **${fmt(r.overallF1)}** · COnPOff ${fmt(r.overallF1Off)} — mean of dataset means over the ` +
-            `${r.perScenario.filter((s) => s.pooled).length} benchmark-grade datasets, \`real\` and adverse conditions pooled`,
-        '',
+            `${pooledCount} ${SYNTH ? 'synthetic datasets (rendered performances, exact truth)' : 'benchmark-grade datasets'}, ` +
+            `${conds.length > 1 ? `conditions ${conds.join(', ')} pooled` : `condition ${conds[0]} only`}`,
     )
+    const human = humanHeadline(r)
+    if (human) {
+        lines.push(
+            `- **Human-truth headline** COnP **${fmt(human.f1)}** · COnPOff ${fmt(human.f1Off)} — the same over the ` +
+                `${human.datasets} pooled datasets whose truth is human-annotated (the number continuous with runs before resynthesised truth)`,
+        )
+    }
+    lines.push('')
 
     lines.push('### By material', '')
     lines.push(
@@ -334,7 +515,12 @@ function renderResult(r: BenchResult): string {
             ? '**none**'
             : x.provisional
               ? `**none — PROVISIONAL row** from ${x.datasets.length} context dataset(s): ${x.datasets.join(', ')} (${x.clips} clip×cond)`
-              : `${x.datasets.length} (${x.clips} clip×cond)`
+              : `${x.datasets.length} (${x.clips} clip×cond)` +
+                (!x.humanDatasets
+                    ? ''
+                    : x.f1Human === undefined
+                      ? '; none with human truth'
+                      : `; human truth only: COnP ${fmt(x.f1Human)} · COnPOff ${fmt(x.f1OffHuman)} over ${x.humanDatasets.length}`)
         const f = (v: number, d = 3): string => (!has ? '—' : x.provisional ? `_${fmt(v, d)}_` : d === 3 ? `**${fmt(v)}**` : fmt(v, d))
         lines.push(
             `| ${m} | ${f(x.f1)} | ${!has ? '—' : x.provisional ? `_${fmt(x.f1Off)}_` : fmt(x.f1Off)} | ` +
@@ -345,9 +531,9 @@ function renderResult(r: BenchResult): string {
 
     lines.push('### By dataset', '')
     lines.push(
-        '| dataset | material | tier | licence | clip×cond | COnP | COnPOff | COn | COn recall | octErr | split / merged / missed / spurious per 100 | repair s/100 | pooled |',
+        '| dataset | material | tier | licence | truth | clip×cond | COnP | COnPOff | COn | COn recall | octErr | split / merged / missed / spurious per 100 | repair s/100 | pooled |',
     )
-    lines.push('|---|---|---|---|---|---|---|---|---|---|---|---|---|')
+    lines.push('|---|---|---|---|---|---|---|---|---|---|---|---|---|---|')
     const rows = [...r.perScenario].sort(
         (a, b) =>
             MATERIAL_ORDER.indexOf(a.material) - MATERIAL_ORDER.indexOf(b.material) ||
@@ -361,9 +547,14 @@ function renderResult(r: BenchResult): string {
               ? 'no (constructed performance)'
               : s.noteTruthDerived
                 ? 'no (derived truth)'
-                : 'yes'
+                : s.pooled
+                  ? 'yes'
+                  : s.licenceRestricted
+                    ? 'no (restricted licence)'
+                    : 'no (opted out)'
         lines.push(
-            `| ${s.scenario} | ${s.material} | ${s.tier} | ${s.license ?? '—'}${s.licenceRestricted ? ' ⚠ internal eval only' : ''} | ${s.clips} | ${s.pitchless ? '—' : fmt(s.f1, 2)} | ${s.pitchless ? '—' : fmt(s.f1Off, 2)} | ` +
+            `| ${s.scenario} | ${s.material} | ${s.tier} | ${s.license ?? '—'}${s.licenceRestricted ? ' ⚠ internal eval only' : ''} | ${truthSourceOf(s)} | ` +
+                `${s.clips} | ${s.pitchless ? '—' : fmt(s.f1, 2)} | ${s.pitchless ? '—' : fmt(s.f1Off, 2)} | ` +
                 `${fmt(s.onsetF1, 2)} | ${fmt(s.onsetRecall, 2)} | ${s.pitchless ? '—' : fmt(s.octaveErrorRate, 2)} | ` +
                 `${per100(s.seg.split, s.seg.refTotal)} / ${per100(s.seg.merged, s.seg.refTotal)} / ${per100(s.seg.missed, s.seg.refTotal)} / ${per100(s.seg.spurious, s.seg.refTotal)} | ` +
                 `${s.repairSecondsPer100} | ${why} |`,
@@ -385,6 +576,11 @@ function renderResult(r: BenchResult): string {
     return lines.join('\n')
 }
 
+/** The result file as a link relative to the markdown that lists it. */
+function resultLink(r: BenchResult): string {
+    return `${relative(dirname(RESULTS_MD), RESULTS_DIR)}/${r.meta.id}.json`
+}
+
 function renderHistory(results: BenchResult[]): string {
     const lines: string[] = []
     lines.push('## History', '')
@@ -393,10 +589,13 @@ function renderHistory(results: BenchResult[]): string {
             'reading anything into a difference — per-clip σ is ~0.2–0.3, so only a paired interval that excludes zero is a result.',
         '',
     )
+    // The human-truth headline gets a column once any run has human-truth datasets (never, on the synthetic corpus).
+    const withHuman = results.some((r) => humanHeadline(r))
     lines.push(
-        '| date (UTC) | commit | label | conditions | overall COnP | singing | humming | whistling | instrument | vocal-perc. COn | file |',
+        `| date (UTC) | commit | label | conditions | overall COnP |${withHuman ? ' human-truth COnP |' : ''} ` +
+            'singing | humming | whistling | instrument | vocal-perc. COn | file |',
     )
-    lines.push('|---|---|---|---|---|---|---|---|---|---|---|')
+    lines.push(`|---|---|---|---|---|${withHuman ? '---|' : ''}---|---|---|---|---|---|`)
     for (const r of results) {
         const m = (mat: Material): string => {
             const x = materialOf(r, mat)
@@ -408,8 +607,9 @@ function renderHistory(results: BenchResult[]): string {
         const vpOn = vp.length ? fmt(vp.reduce((a, s) => a + s.onsetF1, 0) / vp.length, 2) : '—'
         lines.push(
             `| ${r.meta.date.slice(0, 16).replace('T', ' ')} | \`${r.meta.gitSha}\`${r.meta.gitDirty ? '*' : ''} | ${r.meta.label} | ` +
-                `${r.meta.quick ? 'real' : r.meta.conditions.length + ' cond.'} | **${fmt(r.overallF1)}** | ${m('singing')} | ${m('humming')} | ` +
-                `${m('whistling')} | ${m('instrument')} | ${vpOn} | \`results/${r.meta.id}.json\` |`,
+                `${r.meta.quick ? 'real' : r.meta.conditions.length + ' cond.'} | **${fmt(r.overallF1)}** | ` +
+                `${withHuman ? `${fmt(humanHeadline(r)?.f1)} | ` : ''}${m('singing')} | ${m('humming')} | ` +
+                `${m('whistling')} | ${m('instrument')} | ${vpOn} | [\`${r.meta.id}.json\`](${resultLink(r)}) |`,
         )
     }
     lines.push('', '`*` = working tree was dirty when the run was recorded. _Italic_ = provisional (context-tier truth only).', '')
@@ -432,7 +632,7 @@ function render(current?: string): void {
         renderHistory(results),
     ].join('\n')
     writeFileSync(RESULTS_MD, md)
-    console.log(`RESULTS.md regenerated (${results.length} runs) → ${RESULTS_MD}`)
+    console.log(`${basename(RESULTS_MD)} regenerated (${results.length} runs) → ${RESULTS_MD}`)
 }
 
 // ---------------------------------------------------------------------------
@@ -449,6 +649,7 @@ function compare(aPath: string, bPath: string): void {
     const split = (arg('split') ?? 'all') as 'dev' | 'test' | 'all'
     const bByKey = new Map(b.clips.map((c) => [keyOf(c), c]))
     const pooledIds = new Set(b.perScenario.filter((s) => s.pooled).map((s) => s.scenario))
+    const humanIds = new Set(b.perScenario.filter((s) => s.pooled && truthSourceOf(s) === 'human').map((s) => s.scenario))
     const materialById = new Map(b.perScenario.map((s) => [s.scenario, s.material]))
 
     type Pair = { key: string; d: string; cond: string; material: Material; a: BenchClip; b: BenchClip }
@@ -501,6 +702,11 @@ function compare(aPath: string, bPath: string): void {
             pairs.filter((p) => p.material === m),
         )
     row('ALL', pairs)
+    if (humanIds.size < pooledIds.size)
+        row(
+            'ALL (human truth)',
+            pairs.filter((p) => humanIds.has(p.d)),
+        )
 
     console.log('\n--- by dataset ---')
     for (const d of [...new Set(pairs.map((p) => p.d))].sort())
@@ -525,6 +731,8 @@ function compare(aPath: string, bPath: string): void {
         return ps.reduce((s, x) => s + x.f1, 0) / Math.max(1, ps.length)
     }
     console.log(`\nheadline (dataset-mean COnP): ${headline(a).toFixed(3)} → ${headline(b).toFixed(3)}`)
+    const [ha, hb] = [humanHeadline(a), humanHeadline(b)]
+    if (ha && hb) console.log(`human-truth headline: ${ha.f1.toFixed(3)} → ${hb.f1.toFixed(3)}`)
 }
 
 // ---------------------------------------------------------------------------
@@ -532,16 +740,16 @@ function compare(aPath: string, bPath: string): void {
 async function main(): Promise<void> {
     const cmd = process.argv[2]
     if (cmd === 'run') return run()
-    if (cmd === 'render') return render(process.argv[3])
+    if (cmd === 'render') return render(positionals()[0] && resolveResult(positionals()[0]))
     if (cmd === 'compare') {
-        const [aPath, bPath] = [process.argv[3], process.argv[4]]
+        const [aPath, bPath] = positionals()
         if (!aPath || !bPath) throw new Error('compare needs two result files')
         return compare(resolveResult(aPath), resolveResult(bPath))
     }
     console.log(
-        'usage: benchmark.ts run [--label X] [--conditions a,b] [--datasets a,b] [--quick]\n' +
-            '       benchmark.ts compare <a.json> <b.json> [--split dev|test|all]\n' +
-            '       benchmark.ts render [<result.json>]',
+        'usage: benchmark.ts run [--label X] [--conditions a,b] [--datasets a,b] [--quick] [--synth]\n' +
+            '       benchmark.ts compare <a.json> <b.json> [--split dev|test|all] [--synth]\n' +
+            '       benchmark.ts render [<result.json>] [--synth]',
     )
 }
 
@@ -550,13 +758,20 @@ function resolveResult(p: string): string {
     if (existsSync(p)) return p
     const inDir = join(RESULTS_DIR, p.endsWith('.json') ? p : `${p}.json`)
     if (existsSync(inDir)) return inDir
-    // Prefix match on the id (e.g. the sha or the label).
-    const hit = existsSync(RESULTS_DIR) ? readdirSync(RESULTS_DIR).find((f) => f.includes(basename(p))) : undefined
-    if (hit) return join(RESULTS_DIR, hit)
+    // An exact label first (`onset-policy` must not resolve to `pre-onset-policy`),
+    // then any unique substring of the id (e.g. the sha).
+    const files = existsSync(RESULTS_DIR) ? readdirSync(RESULTS_DIR).filter((f) => f.endsWith('.json')) : []
+    const key = basename(p)
+    const byLabel = files.filter((f) => f.endsWith(`_${key}.json`))
+    const hits = byLabel.length ? byLabel : files.filter((f) => f.includes(key))
+    if (hits.length > 1) throw new Error(`${p} matches ${hits.length} results: ${hits.join(', ')}`)
+    if (hits.length) return join(RESULTS_DIR, hits[0])
     throw new Error(`no result matches ${p}`)
 }
 
-main().catch((err) => {
-    console.error(err)
-    process.exit(1)
-})
+if (require.main === module) {
+    main().catch((err) => {
+        console.error(err)
+        process.exit(1)
+    })
+}

@@ -19,9 +19,8 @@ synthetic-corpus/engines
 **/next-env.d.ts
 apps/api/model-*
 apps/api/scripts/eval/annotations
-# Benchmark outputs, rewritten by scripts/eval/benchmark.ts
-apps/api/scripts/eval/benchmarks/results
-apps/api/scripts/eval/benchmarks/results-synth
+# Benchmark outputs, rewritten by scripts/eval/benchmark.ts (results and timeline JSON now live with the eval app)
+apps/eval/data
 apps/api/scripts/eval/benchmarks/RESULTS*.md
 apps/web/design/preview
 apps/web/design/ui_kits

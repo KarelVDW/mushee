@@ -8,13 +8,21 @@
  * run-eval.ts only adds env parsing and console printing, benchmark.ts only adds
  * provenance (git SHA, date) and the committed results/compare machinery.
  *
+ * `runEval()` is three steps that are exported on their own, so a scorer of
+ * notes produced elsewhere (an older pipeline, a cache) lands in the same
+ * report: `selectCorpus()` + `scenarioClips()` enumerate what is scored,
+ * `scoreClip()` scores one clip's notes against its truth, and `aggregateEval()`
+ * builds the report. `EvalOptions.transcribe` swaps the pipeline itself.
+ *
  * Two scoring rules keep the headline number honest:
  *   - A clip carrying several independent annotations is scored against the one
  *     it matches best (`scoreNotesBest`): annotators disagree about ornament
  *     grouping, and charging the pipeline for that measures taste, not accuracy.
- *   - Datasets whose truth is derived (`noteTruthDerived`), pitchless, or a
- *     constructed performance are reported per-dataset but excluded from every
- *     pooled aggregate — see lib/realCorpus.ts for each flag's reasoning.
+ *   - Datasets whose truth is derived (`noteTruthDerived`), pitchless, a
+ *     constructed performance, or under a restricted licence are reported
+ *     per-dataset but excluded from every pooled aggregate — `isPooled()` in
+ *     lib/realCorpus.ts. The headline is reported twice: over every pooled
+ *     dataset, and over those whose truth is human-annotated only.
  */
 
 import { existsSync, readdirSync, readFileSync } from 'fs'
@@ -22,7 +30,7 @@ import { join, resolve } from 'path'
 
 import { AudioConverter } from '../../../src/recordings/pipeline/audio-converter'
 import { AudioDecoder } from '../../../src/recordings/pipeline/audio-decoder'
-import { ProfileResolver } from '../../../src/recordings/pipeline/profiles/profile-resolver'
+import { type ProfileHint, ProfileResolver } from '../../../src/recordings/pipeline/profiles/profile-resolver'
 import { CrepePitchdownProvider } from '../../../src/recordings/pipeline/providers/crepe-pitchdown-provider'
 import { CrepeProvider } from '../../../src/recordings/pipeline/providers/crepe-provider'
 import { LocalModelBackend } from '../../../src/recordings/pipeline/providers/local-model-backend'
@@ -32,7 +40,7 @@ import { CONDITIONS, SCENARIOS, SYNTH_CONDITIONS } from '../scenarios'
 import type { Condition, GroundTruth, Scenario } from '../types'
 import { type EstNote, type MatchOptions, type Metrics, scoreNotesBest, scoreOnsets, type TimingStats, timingStats } from './metrics'
 import { addOnsetClassStats, emptyOnsetClassStats, type OnsetClassStats, onsetRecallByClass } from './onsetClasses'
-import { discoverRealDatasets, type Material, type RealDataset } from './realCorpus'
+import { discoverRealDatasets, isPooled, type Material, type RealDataset, type TruthSource } from './realCorpus'
 import { repairSecondsPer100, type SegErrorCounts, segErrors } from './segErrors'
 import { splitOf } from './split'
 
@@ -77,11 +85,37 @@ export interface EvalOptions {
     onsetSplit: boolean
     label: string
     matchOpts: MatchOptions
-    /** Pool derived / pitchless / constructed datasets into the headline anyway. */
+    /** Pool derived / pitchless / constructed / restricted datasets into the headline anyway. */
     includeUntrusted: boolean
     /** Progress line per finished dataset. */
     onProgress?: (line: string) => void
+    /**
+     * Replace the pipeline: called once per clip × condition with everything the
+     * production path would be given. Unset = this checkout's production path
+     * (or the fixed config), built once per run by `buildTranscriber`.
+     */
+    transcribe?: TranscribeFn
+    /** Restrict to these clips, as `<dataset>/<clip>` keys (every condition of each). */
+    clipFilter?: Set<string>
+    /** Called with each clip's notes as scored, before scoring (benchmark.ts records them). */
+    onClip?: (clip: { datasetId: string; clipId: string; condition: string; notes: EstNote[]; error?: string }) => void
 }
+
+/** One clip × condition, as a transcriber sees it. */
+export interface TranscribeJob {
+    datasetId: string
+    clipId: string
+    condition: string
+    wavPath: string
+    wav: Buffer
+    bpm: number
+    /** The hints as the production path receives them (`hintsFor`): both undefined under `noHint`. */
+    instrumentId?: string
+    sourceKind?: ProfileHint['sourceKind']
+    scenario: Scenario
+}
+
+export type TranscribeFn = (job: TranscribeJob) => Promise<EstNote[]>
 
 export function defaultEvalOptions(over: Partial<EvalOptions> = {}): EvalOptions {
     return {
@@ -128,6 +162,7 @@ export interface ScenarioAggregate {
     tier: 'benchmark' | 'context' | 'synthetic'
     license?: string
     licenceRestricted: boolean
+    truthSource: TruthSource
     clips: number
     /** False = reported for information only, kept out of the aggregates. */
     pooled: boolean
@@ -187,6 +222,15 @@ export interface MaterialAggregate {
     repairSecondsPer100: number
     /** Datasets of this material that are reported but never pooled. */
     contextDatasets: string[]
+    /**
+     * The human-truth-only variant, present only where it differs: a pooled
+     * (non-provisional) row resting partly on non-human truth (resynth).
+     * `f1Human` / `f1OffHuman` are absent when no dataset of the material has
+     * human truth.
+     */
+    humanDatasets?: string[]
+    f1Human?: number
+    f1OffHuman?: number
 }
 
 export interface EvalReport {
@@ -197,11 +241,21 @@ export interface EvalReport {
     matchTol: MatchOptions
     overallF1: number
     overallF1Off: number
+    /**
+     * The headline over the pooled datasets whose truth is human-annotated — the
+     * number continuous with results recorded before resynthesised truth.
+     * Absent when no such dataset was scored (the synthetic corpora).
+     */
+    overallF1Human?: number
+    overallF1OffHuman?: number
     notePooling: {
         includeUntrusted: boolean
         derivedNoteTruth: string[]
         pitchless: string[]
         constructedPerformance: string[]
+        licenceRestricted: string[]
+        /** `pooled: false` in dataset.json. */
+        optedOut: string[]
         excludedFromOverall: string[]
     }
     overallTiming: TimingStats
@@ -219,12 +273,13 @@ export interface EvalReport {
     >
 }
 
-type EvalScenario = Scenario & {
+export type EvalScenario = Scenario & {
     dir?: string
     material: Material
     tier: ScenarioAggregate['tier']
     license?: string
     licenceRestricted: boolean
+    truthSource: TruthSource
 }
 
 function buildProvider(name: string): PitchProvider {
@@ -257,6 +312,7 @@ function realScenarios(datasets: RealDataset[]): EvalScenario[] {
         tier: d.tier,
         license: d.license,
         licenceRestricted: d.licenceRestricted ?? false,
+        truthSource: d.truthSource,
     }))
 }
 
@@ -266,6 +322,8 @@ function syntheticScenarios(): EvalScenario[] {
         material: s.kind === 'whistle' ? 'whistling' : s.kind === 'instrument' ? 'instrument' : 'singing',
         tier: 'synthetic',
         licenceRestricted: false,
+        // Written notes rendered by generate.ts: exact because we built them.
+        truthSource: 'constructed',
     }))
 }
 
@@ -305,6 +363,21 @@ export function mean(xs: number[]): number {
 
 type Transcribe = (scenario: Scenario, buf: Buffer, bpm: number) => Promise<EstNote[]>
 
+/**
+ * The source declaration the production path is given for a dataset. The corpus
+ * knows what each dataset is; in the app this is either the client's declaration
+ * or (since the source classifier) the audio itself. ALWAYS explicit here —
+ * including for instruments — so eval numbers measure the pipeline, not the
+ * classifier's day. Suppressed under noHint, which is also how to exercise the
+ * classifier end-to-end.
+ */
+export function hintsFor(scenario: Scenario, noHint: boolean): ProfileHint {
+    return {
+        instrumentId: noHint ? undefined : scenario.instrumentId,
+        sourceKind: noHint ? undefined : scenario.kind === 'voice' ? 'voice' : 'instrument',
+    }
+}
+
 export async function buildTranscriber(o: EvalOptions, decoder: AudioDecoder): Promise<Transcribe> {
     if (o.adaptive) {
         const registry = new ProviderRegistry({ crepeTiny: MODELS.crepeTiny })
@@ -312,15 +385,7 @@ export async function buildTranscriber(o: EvalOptions, decoder: AudioDecoder): P
         const resolver = new ProfileResolver()
         return async (scenario, buf, bpm) => {
             const det = await decoder.decode(buf, DETECT_SR, { loudnorm: false, highpassHz: 30 })
-            const profile = resolver.resolve(det.samples, DETECT_SR, {
-                instrumentId: o.noHint ? undefined : scenario.instrumentId,
-                // The corpus knows what each dataset is; in the app this is either the
-                // client's declaration or (since the source classifier) the audio
-                // itself. ALWAYS explicit here — including for instruments — so eval
-                // numbers measure the pipeline, not the classifier's day. Suppressed
-                // under noHint, which is also how to exercise the classifier end-to-end.
-                sourceKind: o.noHint ? undefined : scenario.kind === 'voice' ? 'voice' : 'instrument',
-            })
+            const profile = resolver.resolve(det.samples, DETECT_SR, hintsFor(scenario, o.noHint))
             const provider = registry.get(profile.providerName)
             const decoded = await decoder.decode(buf, provider.sampleRate, {
                 loudnorm: provider.normalizeLoudness,
@@ -370,62 +435,139 @@ export function conditionsFor(real: boolean, synth = false): Condition[] {
     return real ? [REAL_CONDITION, ...CONDITIONS.filter((c) => c.id !== 'clean')] : CONDITIONS
 }
 
-export async function runEval(o: EvalOptions): Promise<EvalReport> {
+/** What a run scores: the corpus root, its datasets, and the scenarios × conditions selected. */
+export interface EvalCorpus {
+    root: string
+    /** Discovered datasets (empty for the legacy synthetic matrix). */
+    datasets: RealDataset[]
+    scenarios: EvalScenario[]
+    conditions: Condition[]
+}
+
+export function selectCorpus(o: EvalOptions): EvalCorpus {
     const discovered = o.real || !!o.synth
-    const evalRoot = o.synth ? SYNTH_REALISTIC_ROOT : o.real ? REAL_ROOT : SYNTH_ROOT
-    const decoder = new AudioDecoder()
-    const transcribe = await buildTranscriber(o, decoder)
-
-    const datasets = discovered ? discoverRealDatasets(evalRoot) : []
-    const derivedNoteTruth = new Set(datasets.filter((d) => d.noteTruthDerived).map((d) => d.id))
-    const pitchlessIds = new Set(datasets.filter((d) => d.pitchless).map((d) => d.id))
-    const constructedIds = new Set(datasets.filter((d) => d.constructedPerformance).map((d) => d.id))
-    const pooled = (scenarioId: string): boolean =>
-        o.includeUntrusted || (!derivedNoteTruth.has(scenarioId) && !pitchlessIds.has(scenarioId) && !constructedIds.has(scenarioId))
-
+    const root = o.synth ? SYNTH_REALISTIC_ROOT : o.real ? REAL_ROOT : SYNTH_ROOT
+    const datasets = discovered ? discoverRealDatasets(root) : []
     const allScenarios = discovered ? realScenarios(datasets) : syntheticScenarios()
-    const scenarios = allScenarios.filter((s) => !o.scenarioFilter || o.scenarioFilter.includes(s.id))
-    const conditions = conditionsFor(o.real, !!o.synth).filter((c) => !o.conditionFilter || o.conditionFilter.includes(c.id))
+    return {
+        root,
+        datasets,
+        scenarios: allScenarios.filter((s) => !o.scenarioFilter || o.scenarioFilter.includes(s.id)),
+        conditions: conditionsFor(o.real, !!o.synth).filter((c) => !o.conditionFilter || o.conditionFilter.includes(c.id)),
+    }
+}
+
+/** One scoreable clip × condition: the truth and the WAV it is scored on. */
+export interface CorpusClip {
+    scenario: EvalScenario
+    clipId: string
+    condition: Condition
+    truth: GroundTruth
+    wavPath: string
+}
+
+/** Every clip × condition of one scenario that has audio on disk (and passes `clipFilter`). */
+export function scenarioClips(corpus: EvalCorpus, scenario: EvalScenario, clipFilter?: Set<string>): CorpusClip[] {
+    const dir = scenario.dir ?? join(corpus.root, scenario.id)
+    if (!existsSync(dir)) return []
+    const out: CorpusClip[] = []
+    for (const truthFile of readdirSync(dir).filter((f) => f.endsWith('.truth.json'))) {
+        const clipId = truthFile.replace('.truth.json', '')
+        if (clipFilter && !clipFilter.has(`${scenario.id}/${clipId}`)) continue
+        const truth = JSON.parse(readFileSync(join(dir, truthFile), 'utf8')) as GroundTruth
+        for (const condition of corpus.conditions) {
+            const wavPath = join(dir, `${clipId}__${condition.id}.wav`)
+            if (existsSync(wavPath)) out.push({ scenario, clipId, condition, truth, wavPath })
+        }
+    }
+    return out
+}
+
+/** Score one clip's notes against its truth — every per-clip number the report aggregates. */
+export function scoreClip(
+    clip: { datasetId: string; clipId: string; condition: string; truth: GroundTruth },
+    est: EstNote[],
+    matchOpts: MatchOptions,
+): ClipResult {
+    const { truth } = clip
+    return {
+        scenario: clip.datasetId,
+        melody: clip.clipId,
+        condition: clip.condition,
+        split: splitOf(clip.datasetId, clip.clipId),
+        metrics: scoreNotesBest(truth, est, matchOpts),
+        seg: segErrors(truth.notes, est),
+        onsets: onsetRecallByClass(truth.notes, est, matchOpts.onsetTolSec),
+        onsetOnly: scoreOnsets(truth.notes, est, matchOpts.onsetTolSec),
+    }
+}
+
+export async function runEval(o: EvalOptions): Promise<EvalReport> {
+    const corpus = selectCorpus(o)
+    const transcribe = o.transcribe ?? (await productionTranscribe(o))
 
     const results: ClipResult[] = []
-    for (const scenario of scenarios) {
-        const dir = scenario.dir ?? join(evalRoot, scenario.id)
+    for (const scenario of corpus.scenarios) {
+        const dir = scenario.dir ?? join(corpus.root, scenario.id)
         if (!existsSync(dir)) continue
-        const truths = readdirSync(dir).filter((f) => f.endsWith('.truth.json'))
+        const clips = scenarioClips(corpus, scenario, o.clipFilter)
+        if (o.clipFilter && !clips.length) continue
 
-        for (const truthFile of truths) {
-            const melody = truthFile.replace('.truth.json', '')
-            const truth = JSON.parse(readFileSync(join(dir, truthFile), 'utf8')) as GroundTruth
-
-            for (const condition of conditions) {
-                const wav = join(dir, `${melody}__${condition.id}.wav`)
-                if (!existsSync(wav)) continue
-
-                let est: EstNote[] = []
-                try {
-                    est = await transcribe(scenario, readFileSync(wav), truth.bpm)
-                } catch (err) {
-                    // A clip that won't decode/convert scores as zero rather than
-                    // aborting the whole run.
-                    console.warn(`  ! ${scenario.id}/${melody}__${condition.id}: ${String(err)}`)
-                }
-                results.push({
-                    scenario: scenario.id,
-                    melody,
+        for (const clip of clips) {
+            const { clipId, condition, truth, wavPath } = clip
+            let est: EstNote[] = []
+            let error: string | undefined
+            try {
+                est = await transcribe({
+                    datasetId: scenario.id,
+                    clipId,
                     condition: condition.id,
-                    split: splitOf(scenario.id, melody),
-                    metrics: scoreNotesBest(truth, est, o.matchOpts),
-                    seg: segErrors(truth.notes, est),
-                    onsets: onsetRecallByClass(truth.notes, est, o.matchOpts.onsetTolSec),
-                    onsetOnly: scoreOnsets(truth.notes, est, o.matchOpts.onsetTolSec),
+                    wavPath,
+                    wav: readFileSync(wavPath),
+                    bpm: truth.bpm,
+                    ...hintsFor(scenario, o.noHint),
+                    scenario,
                 })
+            } catch (err) {
+                // A clip that won't decode/convert scores as zero rather than
+                // aborting the whole run.
+                error = String(err)
+                console.warn(`  ! ${scenario.id}/${clipId}__${condition.id}: ${error}`)
             }
+            o.onClip?.({ datasetId: scenario.id, clipId, condition: condition.id, notes: est, error })
+            results.push(scoreClip({ datasetId: scenario.id, clipId, condition: condition.id, truth }, est, o.matchOpts))
         }
         const sc = results.filter((r) => r.scenario === scenario.id)
         o.onProgress?.(
             `  ${scenario.id.padEnd(30)} COnP@0.1=${mean(sc.map((r) => r.metrics.f1)).toFixed(2)}` +
                 `  octErr=${mean(sc.map((r) => r.metrics.octaveErrorRate)).toFixed(2)}  (${sc.length} clips)`,
         )
+    }
+    return aggregateEval(o, corpus, results)
+}
+
+/** This checkout's pipeline (or the fixed config) as a `TranscribeFn`. */
+async function productionTranscribe(o: EvalOptions): Promise<TranscribeFn> {
+    const transcribe = await buildTranscriber(o, new AudioDecoder())
+    return (job) => transcribe(job.scenario, job.wav, job.bpm)
+}
+
+/**
+ * The report over scored clips: per dataset, per condition, per material and the
+ * pooled headlines. Takes `ClipResult`s from anywhere (`scoreClip`), so notes
+ * produced outside `runEval` aggregate exactly as a benchmark run does.
+ */
+export function aggregateEval(o: EvalOptions, corpus: EvalCorpus, results: ClipResult[]): EvalReport {
+    const { datasets, scenarios, conditions } = corpus
+    const byId = new Map(datasets.map((d) => [d.id, d]))
+    const ids = (keep: (d: RealDataset) => boolean): string[] => datasets.filter(keep).map((d) => d.id)
+    const derivedNoteTruth = new Set(ids((d) => !!d.noteTruthDerived))
+    const pitchlessIds = new Set(ids((d) => !!d.pitchless))
+    const constructedIds = new Set(ids((d) => !!d.constructedPerformance))
+    // The legacy synthetic matrix has no manifests: every scenario pools.
+    const pooled = (scenarioId: string): boolean => {
+        const d = byId.get(scenarioId)
+        return o.includeUntrusted || !d || isPooled(d)
     }
 
     // Aggregate per scenario. Timing is pooled across the scenario's matched
@@ -441,6 +583,7 @@ export async function runEval(o: EvalOptions): Promise<EvalReport> {
             tier: s.tier,
             license: s.license,
             licenceRestricted: s.licenceRestricted,
+            truthSource: s.truthSource,
             clips: rs.length,
             pooled: pooled(s.id),
             noteTruthDerived: derivedNoteTruth.has(s.id),
@@ -503,6 +646,7 @@ export async function runEval(o: EvalOptions): Promise<EvalReport> {
         const provisional = gated.length === 0
         if (provisional) gated = ds.filter((s) => !s.pitchless && !supersededIds.has(s.scenario))
         const gatedClips = results.filter((r) => gated.some((s) => s.scenario === r.scenario))
+        const human = gated.filter((s) => s.truthSource === 'human')
         return {
             material,
             provisional,
@@ -514,11 +658,18 @@ export async function runEval(o: EvalOptions): Promise<EvalReport> {
             recall: mean(gated.map((s) => s.recall)),
             repairSecondsPer100: repairSecondsPer100(sumSegErrors(gatedClips)),
             contextDatasets: ds.filter((s) => !s.pooled && !gated.includes(s)).map((s) => s.scenario),
+            ...(provisional || human.length === gated.length
+                ? {}
+                : {
+                      humanDatasets: human.map((s) => s.scenario),
+                      ...(human.length ? { f1Human: mean(human.map((s) => s.f1)), f1OffHuman: mean(human.map((s) => s.f1Off)) } : {}),
+                  }),
         }
     })
 
     const pooledResults = results.filter((r) => pooled(r.scenario))
     const pooledScenarios = perScenario.filter((s) => s.pooled && s.clips > 0)
+    const humanScenarios = pooledScenarios.filter((s) => s.truthSource === 'human')
     const excludedScenarios = perScenario.filter((s) => !s.pooled).map((s) => s.scenario)
 
     return {
@@ -529,11 +680,19 @@ export async function runEval(o: EvalOptions): Promise<EvalReport> {
         matchTol: o.matchOpts,
         overallF1: mean(pooledScenarios.map((s) => s.f1)),
         overallF1Off: mean(pooledScenarios.map((s) => s.f1Off)),
+        ...(humanScenarios.length
+            ? {
+                  overallF1Human: mean(humanScenarios.map((s) => s.f1)),
+                  overallF1OffHuman: mean(humanScenarios.map((s) => s.f1Off)),
+              }
+            : {}),
         notePooling: {
             includeUntrusted: o.includeUntrusted,
             derivedNoteTruth: [...derivedNoteTruth],
             pitchless: [...pitchlessIds],
             constructedPerformance: [...constructedIds],
+            licenceRestricted: ids((d) => !!d.licenceRestricted),
+            optedOut: ids((d) => d.pooled === false),
             excludedFromOverall: excludedScenarios,
         },
         // Excluded datasets are dropped from the timing pool too: their onsets are
