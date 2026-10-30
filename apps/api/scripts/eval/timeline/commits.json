@@ -1,0 +1,132 @@
+{
+    "about": "Pipeline states sampled for the benchmark-score timeline (timeline/README.md). Chosen from the pipeline history: one commit per behaviour change that a benchmark could see, plus two controls that should score the same as their predecessor. `era` is the RecordingPipeline entry point (A–D, timeline/worker.ts). `needsLegacyDeps`: the commit still imports @spotify/basic-pitch, so it runs on the shared legacy install (prepare.ts) instead of HEAD's node_modules. prepare.ts verifies every field against git.",
+    "legacyLockfileFrom": "ec173e9ca8ef6f4f5c65ff73fa4d365d1ce41e45",
+    "commits": [
+        {
+            "sha": "bb4d8165e599cd7524926e97c7b4c3696fc104c6",
+            "short": "bb4d8165",
+            "date": "2026-04-25T13:07:47+02:00",
+            "subject": "feat log notes in debug bundle",
+            "era": "A",
+            "why": "First basic-pitch-only pipeline runnable on the shared deps (tfjs 4.22).",
+            "needsLegacyDeps": true
+        },
+        {
+            "sha": "bec075de3d148d96344d463f6ebc567714b9b802",
+            "short": "bec075de",
+            "date": "2026-05-03T20:56:33+02:00",
+            "subject": "feat: take chromaticTranspose into account",
+            "era": "B",
+            "why": "End of the single-provider era (AudioConverter); NoteExtractor and decoder changed since bb4d8165. Code-default provider basic-pitch.",
+            "needsLegacyDeps": true
+        },
+        {
+            "sha": "cf7d61733a792e83a01e7fb7e0c765f456682047",
+            "short": "cf7d6173",
+            "date": "2026-06-13T12:16:19+02:00",
+            "subject": "feat: remove pesto provider",
+            "era": "C",
+            "why": "Adaptive pipeline (ef81d2d0) + OnsetDetector + legato extension, without the onnxruntime import; equivalent to e9a049b1+b6a168bb since the removed providers were unused.",
+            "needsLegacyDeps": true
+        },
+        {
+            "sha": "9771190dd2d0fa532ca9a1d765cef674d4f5feab",
+            "short": "9771190d",
+            "date": "2026-06-20T21:57:02+02:00",
+            "subject": "feat(recording): improve real voice/whistle transcription + real-data eval",
+            "era": "C",
+            "why": "Real-voice fixes: 16th-grid cap, semitone-merge segmentation, smoothing (largest claimed early gain).",
+            "needsLegacyDeps": true
+        },
+        {
+            "sha": "eb323a9735eec6077e0ef34bbf89daa2c32fd9a9",
+            "short": "eb323a97",
+            "date": "2026-06-21T14:56:27+02:00",
+            "subject": "feat: use windowed buffers in BE",
+            "era": "C",
+            "why": "Streaming ffmpeg decode + windowed transcription: a change in the product path only.",
+            "needsLegacyDeps": true
+        },
+        {
+            "sha": "15344df41122d84ba27309cac3f0d0b508a4fe77",
+            "short": "15344df4",
+            "date": "2026-07-11T16:02:36+02:00",
+            "subject": "feat(api): noise-hardened profile scan — correct registers under adverse audio",
+            "era": "D",
+            "why": "Noise-hardened pitch scan; first sample with the recordings/pipeline/ kebab-case layout.",
+            "needsLegacyDeps": true
+        },
+        {
+            "sha": "cfc536769e1228282e526c99480e605b30bf0a97",
+            "short": "cfc53676",
+            "date": "2026-07-25T14:48:21+02:00",
+            "subject": "feat(api): recording-pipeline accuracy pass — measured fixes + eval overhaul",
+            "era": "D",
+            "why": "Accuracy pass: extractor float fix, reverb-adaptive gate, metrical spelling, held-note bar emission, whistle range.",
+            "needsLegacyDeps": true
+        },
+        {
+            "sha": "3e70cb8807295d30594de0d41a3099b9a65d0511",
+            "short": "3e70cb88",
+            "date": "2026-08-08T23:04:27+02:00",
+            "subject": "feat: add separate pipeline for voice audio",
+            "era": "D",
+            "why": "VoiceNoteDecoder + YAMNet source classifier + sourceKind in setMeta.",
+            "needsLegacyDeps": true
+        },
+        {
+            "sha": "0b217b4fe3e6547dc58371b04e486117589f1d6d",
+            "short": "0b217b4f",
+            "date": "2026-08-09T08:33:30+02:00",
+            "subject": "feat: improve rhythm on voice recordings",
+            "era": "D",
+            "why": "Voice rhythm and notation (mxml-builder, voice-notation): visible only on the measure-level path, which is the one the timeline scores.",
+            "needsLegacyDeps": true
+        },
+        {
+            "sha": "ab26a1033da7dd4b1ccf7ff7ce6095095b18bdbf",
+            "short": "ab26a103",
+            "date": "2026-08-19T23:12:29+02:00",
+            "subject": "feat: two-tier absolute silence rule, exactly inert (R25)",
+            "era": "D",
+            "why": "CONTROL: end of the 16-commit plugin-source pass, nearly all off by default or measured nulls. Should score ≈ 0b217b4f.",
+            "needsLegacyDeps": true
+        },
+        {
+            "sha": "61f86a96dc900b9bd1c341731a5956764b7a6691",
+            "short": "61f86a96",
+            "date": "2026-08-22T12:50:39+02:00",
+            "subject": "feat: very-high band joins the track cache; split levers measured, floor trap caught",
+            "era": "D",
+            "why": "basic-pitch deleted (458b3a05): very-high band on octave-down CREPE; first sample on HEAD's deps.",
+            "needsLegacyDeps": false
+        },
+        {
+            "sha": "2b83e008525c0985edb980000e514e613f8269f3",
+            "short": "2b83e008",
+            "date": "2026-09-01T23:34:59+02:00",
+            "subject": "eval: resolver-env signature on both caches; lead-in probe; kill-switches",
+            "era": "D",
+            "why": "Profile lock waits through a silent lead-in + final reroute. Committed benchmark result at this sha (baseline-2026-09-01) for calibration.",
+            "needsLegacyDeps": false
+        },
+        {
+            "sha": "d77db1dbeeade72397667e05981b186737bf53cc",
+            "short": "d77db1db",
+            "date": "2026-09-27T05:36:19+02:00",
+            "subject": "feat(recordings): per-family onset policy + one note per grid slot, from the synthetic corpus",
+            "era": "D",
+            "why": "Per-family onset policy + collapseCoincident. Committed benchmark result at this sha (onset-policy) for calibration.",
+            "needsLegacyDeps": false
+        },
+        {
+            "sha": "f2611442d4bc04645e60584c516bb30b857a3863",
+            "short": "f2611442",
+            "date": "2026-10-23T22:21:20+02:00",
+            "subject": "docs(meta): Phase 3 (aesthetics) section; TL;DR and follow-ups updated",
+            "era": "D",
+            "why": "CONTROL: the 2026-10-22 refactors (claimed behaviour-preserving) and the AudioDecoder loudnorm-default flip; no pipeline change after. Should score ≈ d77db1db.",
+            "needsLegacyDeps": false
+        }
+    ]
+}
