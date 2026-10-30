@@ -7,7 +7,7 @@ import type { ReactNode } from 'react'
  */
 export function Card({ children, className, flush }: { children: ReactNode; className?: string; flush?: boolean }) {
     return (
-        <div className={`bg-surface-container-lowest rounded-lg tonal-layer-glow ${flush ? '' : 'px-5 py-4'} ${className ?? ''}`}>
+        <div className={`min-w-0 bg-surface-container-lowest rounded-lg tonal-layer-glow ${flush ? '' : 'px-5 py-4'} ${className ?? ''}`}>
             {children}
         </div>
     )

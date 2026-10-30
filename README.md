@@ -6,7 +6,7 @@ Sheet-music editor with live audio-to-notation recording. pnpm monorepo:
 | -------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
 | `apps/web`                 | Next.js app (editor UI), dev on **:3200**                                                                                   |
 | `apps/admin`               | Next.js admin console (secret login, hosted at admin.solkey.io), dev on **:3500**                                           |
-| `apps/eval`                | Next.js corpus & benchmarking workbench over the API's eval harness (local only), dev on **:3600**                          |
+| `apps/eval`                | Next.js benchmark workbench: results, score timeline, corpus, original ↔ copy compare (local, no DB), dev on **:3600**      |
 | `apps/api`                 | NestJS API + WebSocket recording pipeline, dev on **:4200**                                                                 |
 | `apps/inference-crepe`     | Python gRPC service: CREPE forward pass (**:50051**)                                                                        |
 | `packages/notation`        | Score domain: semantic model + layout engine + React notation renderer (TS source, compiled by the consuming apps)          |
@@ -267,7 +267,7 @@ are no longer gated.
 - `packages/notation/src/model/ARCHITECTURE.md` — score model/layout architecture
 - `apps/web/e2e/README.md` — e2e test suites
 - `apps/admin/README.md` — admin console
-- `apps/eval/README.md` — corpus & benchmarking workbench
+- `apps/eval/README.md` — benchmark workbench (results, score timeline, corpus and the original ↔ synthetic copy compare view)
 - `apps/api/scripts/eval/README.md` — recording-pipeline eval harness and its findings log
 - `meta/` — developer/agent working notes: `master-todo.md` (beta roadmap),
   `notes.md` (launch runbooks, architecture decisions, known quirks, and the

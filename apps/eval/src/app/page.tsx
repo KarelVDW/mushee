@@ -1,139 +1,283 @@
-'use client'
-
-import { Alert, Chip, Eyebrow, PrimaryButton, SecondaryButton, Spinner } from '@mushee/ui'
+import { TextLink } from '@mushee/ui'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
 
-import { Card } from '@/components/Card'
-import { errorText, type RunDto } from '@/lib/api'
-import { useCorpora, useRuns, useStartRun } from '@/lib/queries'
+import { TimelineCharts } from '@/components/charts/TimelineCharts'
+import { EmptyNote, PageHeading, Section } from '@/components/Layout'
+import { DeltaText, ResynthBar, ResynthLegend, ScoreBar, StatTile, Tag, TruthTag } from '@/components/Marks'
+import { Cell, Head, Row, RowLink, Table } from '@/components/Table'
+import { TRUTH_SOURCES } from '@/lib/dto'
+import { Fmt } from '@/lib/format'
+import { Route } from '@/lib/routes'
+import { EvalData } from '@/server/EvalData'
 
-export default function CorporaPage() {
-    const router = useRouter()
-    const corpora = useCorpora()
-    const runs = useRuns()
-    const startRun = useStartRun()
+export const dynamic = 'force-dynamic'
+
+export default function OverviewPage() {
+    const data = EvalData.overview()
+    const latest = data.latest
+    const points = data.timeline.points
+    const lastPoint = points[points.length - 1]
+    const prevPoint = points[points.length - 2]
 
     return (
-        <div className="flex flex-col gap-6">
-            <div className="flex items-center justify-between gap-4">
-                <h1 className="font-headline font-bold text-[1.6rem] leading-tight text-on-surface m-0">Corpora</h1>
-                <div className="flex items-center gap-3">
-                    <SecondaryButton onClick={() => startRun.mutate(undefined)} disabled={startRun.isPending}>
-                        {startRun.isPending ? 'Scoring full real corpus…' : 'Score full real corpus'}
-                    </SecondaryButton>
-                    <PrimaryButton emphasis="pop" icon="plus" onClick={() => router.push('/corpora/new')}>
-                        New corpus
-                    </PrimaryButton>
-                </div>
-            </div>
+        <>
+            <PageHeading eyebrow="Recording pipeline benchmark" title="Overview">
+                {latest && (
+                    <span className="font-mono text-[13px] text-on-surface-variant">
+                        latest real run{' '}
+                        <Link href={Route.run(latest.summary.id)} className="text-primary no-underline hover:underline">
+                            {latest.summary.label}
+                        </Link>{' '}
+                        · {latest.summary.gitSha}
+                        {latest.summary.gitDirty ? '*' : ''} · {Fmt.dateTime(latest.summary.date)}
+                    </span>
+                )}
+            </PageHeading>
 
-            {startRun.isError && <Alert>{errorText(startRun.error)}</Alert>}
-
-            {corpora.isError && (
-                <Alert onRetry={() => void corpora.refetch()}>Couldn&apos;t load corpora: {errorText(corpora.error)}</Alert>
-            )}
-            {corpora.isPending && (
-                <div className="flex items-center gap-2 text-on-surface-variant font-body text-[13px]">
-                    <Spinner /> Loading corpora…
-                </div>
-            )}
-
-            {corpora.data && corpora.data.length === 0 && (
-                <Card>
-                    <p className="font-body text-[14px] text-on-surface-variant m-0">
-                        No UI-created corpora yet. The script-fetched corpora still live in the fixtures tree — this list holds the ones you
-                        create and record here.
+            {!latest ? (
+                <EmptyNote title="No benchmark results yet">
+                    <p className="m-0">
+                        Run <code>pnpm exec tsx scripts/eval/benchmark.ts run --quick</code> in <code>apps/api</code>; its result lands in{' '}
+                        <code>apps/eval/data/benchmarks/real/</code>.
                     </p>
-                </Card>
-            )}
+                </EmptyNote>
+            ) : (
+                <div className="flex flex-col gap-6">
+                    <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+                        <StatTile
+                            label="COnP · all pooled"
+                            value={Fmt.score(latest.summary.overallF1)}
+                            detail={`Mean of ${latest.summary.pooledCount} pooled datasets · ${Fmt.count(latest.summary.clipCount)} clips`}
+                        />
+                        <StatTile
+                            label="COnP · human truth only"
+                            value={Fmt.score(latest.summary.overallF1Human)}
+                            detail={
+                                latest.summary.humanComputed
+                                    ? 'Computed here: this run predates the split, every pooled set was human truth'
+                                    : 'Continuous with the history before resynth truth'
+                            }
+                        />
+                        <StatTile
+                            label="COnPOff · all pooled"
+                            value={Fmt.score(latest.summary.overallF1Off)}
+                            detail="Onset, pitch and offset all right"
+                        />
+                        <StatTile
+                            label="Synthetic corpus"
+                            value={Fmt.score(data.synth?.meanF1 ?? null)}
+                            detail={
+                                data.synth
+                                    ? `Mean of ${data.synth.runs.length} conditions · ${data.synth.label} · ${data.synth.gitSha}`
+                                    : 'No synthetic run yet'
+                            }
+                        />
+                    </div>
 
-            {corpora.data && corpora.data.length > 0 && (
-                <Card flush className="overflow-hidden">
-                    <table className="w-full border-collapse">
-                        <thead>
-                            <tr className="text-left">
-                                {['Corpus', 'Kind', 'Tier', 'BPM', 'Clips', 'Created'].map((h) => (
-                                    <th
-                                        key={h}
-                                        className="px-5 py-3 font-label text-[11px] font-semibold tracking-[0.12em] uppercase text-on-surface-variant">
-                                        {h}
-                                    </th>
+                    <Section
+                        title="By material — latest real run"
+                        flush
+                        hint="COnP: onset within 100 ms and the exact semitone. A provisional row has no benchmark-grade truth yet: it is built from context datasets and never gates a decision.">
+                        <Table>
+                            <Head
+                                columns={[
+                                    'Material',
+                                    'COnP',
+                                    { label: 'COnPOff', align: 'right' },
+                                    { label: 'Clips', align: 'right' },
+                                    'Truth behind it',
+                                    'Context datasets',
+                                ]}
+                            />
+                            <tbody>
+                                {latest.materials.map((m) => (
+                                    <Row key={m.material}>
+                                        <Cell>
+                                            <span className="font-body font-semibold text-[14px] text-on-surface whitespace-nowrap">
+                                                {m.material}
+                                            </span>
+                                            {m.provisional && (
+                                                <span className="ml-2">
+                                                    <Tag tone="quiet" title="Built from context-tier truth only — never gates">
+                                                        provisional
+                                                    </Tag>
+                                                </span>
+                                            )}
+                                        </Cell>
+                                        <Cell className="w-[30%]">
+                                            <ScoreBar value={m.clips > 0 ? m.f1 : null} muted={m.provisional} />
+                                        </Cell>
+                                        <Cell align="right" mono>
+                                            {m.clips > 0 ? Fmt.score(m.f1Off) : '—'}
+                                        </Cell>
+                                        <Cell align="right" mono>
+                                            {Fmt.count(m.clips)}
+                                        </Cell>
+                                        <Cell>
+                                            <TruthMix mix={m.truthMix} datasets={m.datasets.length} provisional={m.provisional} />
+                                        </Cell>
+                                        <Cell className="text-on-surface-variant text-[12px]">{m.contextDatasets.join(', ') || '—'}</Cell>
+                                    </Row>
                                 ))}
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {corpora.data.map((corpus) => (
-                                <tr
-                                    key={corpus.id}
-                                    className="border-t border-outline-variant/40 hover:bg-surface-container-low cursor-pointer"
-                                    onClick={() => router.push(`/corpora/${corpus.id}`)}>
-                                    <td className="px-5 py-3">
-                                        <Link
-                                            href={`/corpora/${corpus.id}`}
-                                            className="font-body font-semibold text-[14px] text-on-surface no-underline hover:text-primary"
-                                            onClick={(e) => e.stopPropagation()}>
-                                            {corpus.label}
-                                        </Link>
-                                        <span className="block font-mono text-[11px] text-on-surface-variant">{corpus.id}</span>
-                                    </td>
-                                    <td className="px-5 py-3">
-                                        <Chip>{corpus.kind}</Chip>
-                                    </td>
-                                    <td className="px-5 py-3">
-                                        <Chip active={corpus.tier === 'benchmark'}>{corpus.tier}</Chip>
-                                    </td>
-                                    <td className="px-5 py-3 font-mono text-[13px] text-on-surface">{corpus.bpm}</td>
-                                    <td className="px-5 py-3 font-mono text-[13px] text-on-surface">
-                                        {corpus.recordedCount}/{corpus.clipCount}
-                                        <span className="text-on-surface-variant"> recorded</span>
-                                    </td>
-                                    <td className="px-5 py-3 font-body text-[13px] text-on-surface-variant">
-                                        {new Date(corpus.createdAt).toLocaleDateString()}
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </Card>
+                            </tbody>
+                        </Table>
+                    </Section>
+
+                    <div className="grid gap-6 lg:grid-cols-2">
+                        <Section
+                            title="Timeline"
+                            aside={
+                                <TextLink as={Link} href="/timeline">
+                                    Open the timeline
+                                </TextLink>
+                            }>
+                            {points.length === 0 ? (
+                                <p className="font-body text-[14px] text-on-surface-variant m-0">
+                                    No historical commits scored yet.{' '}
+                                    <code className="font-mono text-[13px]">apps/api/scripts/eval/timeline/score.ts</code> fills{' '}
+                                    <code className="font-mono text-[13px]">apps/eval/data/timeline/</code> once{' '}
+                                    <code className="font-mono text-[13px]">run.ts</code> has transcribed the sampled commits.
+                                </p>
+                            ) : (
+                                <div className="flex flex-col gap-3">
+                                    <div className="flex items-baseline gap-3">
+                                        <span className="font-display font-semibold text-[28px] leading-none text-on-surface">
+                                            {Fmt.score(lastPoint?.overall)}
+                                        </span>
+                                        {prevPoint?.overall != null && lastPoint?.overall != null && (
+                                            <DeltaText value={lastPoint.overall - prevPoint.overall} className="text-[13px]" />
+                                        )}
+                                        <span className="font-body text-[13px] text-on-surface-variant">
+                                            at {lastPoint?.short} · {points.length} commits
+                                        </span>
+                                    </div>
+                                    <TimelineCharts points={points} compact />
+                                </div>
+                            )}
+                        </Section>
+
+                        <Section
+                            title="Synthetic corpus — latest run"
+                            flush
+                            aside={
+                                data.synth && (
+                                    <TextLink as={Link} href="/runs?kind=synth">
+                                        All synth runs
+                                    </TextLink>
+                                )
+                            }>
+                            {data.synth ? (
+                                <Table minWidth="min-w-0">
+                                    <Head
+                                        columns={[
+                                            'Condition',
+                                            'COnP',
+                                            { label: 'COnPOff', align: 'right' },
+                                            { label: 'Clips', align: 'right' },
+                                        ]}
+                                    />
+                                    <tbody>
+                                        {data.synth.runs.map((r) => (
+                                            <Row key={r.id}>
+                                                <Cell>
+                                                    <RowLink href={Route.run(r.id)}>{r.condition}</RowLink>
+                                                </Cell>
+                                                <Cell className="w-[45%]">
+                                                    <ScoreBar value={r.overallF1} />
+                                                </Cell>
+                                                <Cell align="right" mono>
+                                                    {Fmt.score(r.overallF1Off)}
+                                                </Cell>
+                                                <Cell align="right" mono>
+                                                    {Fmt.count(r.clipCount)}
+                                                </Cell>
+                                            </Row>
+                                        ))}
+                                    </tbody>
+                                </Table>
+                            ) : (
+                                <p className="font-body text-[14px] text-on-surface-variant m-0 px-5 pb-4">No synthetic benchmark yet.</p>
+                            )}
+                        </Section>
+                    </div>
+                </div>
             )}
 
-            <LatestRun runs={runs.data} />
-        </div>
+            <div className="grid gap-6 lg:grid-cols-2 mt-6">
+                <Section
+                    title="Datasets by truth source"
+                    flush
+                    aside={
+                        <TextLink as={Link} href="/datasets">
+                            {data.datasetCount} real datasets
+                        </TextLink>
+                    }>
+                    <Table minWidth="min-w-0">
+                        <Head
+                            columns={[
+                                'Truth',
+                                { label: 'Datasets', align: 'right' },
+                                { label: 'Pooled', align: 'right' },
+                                { label: 'Clips', align: 'right' },
+                            ]}
+                        />
+                        <tbody>
+                            {TRUTH_SOURCES.map((source) => {
+                                const row = data.truthSources.find((r) => r.source === source)
+                                if (!row) return null
+                                return (
+                                    <Row key={source}>
+                                        <Cell>
+                                            <TruthTag source={source} />
+                                        </Cell>
+                                        <Cell align="right" mono>
+                                            {row.datasets}
+                                        </Cell>
+                                        <Cell align="right" mono>
+                                            {row.pooledDatasets}
+                                        </Cell>
+                                        <Cell align="right" mono>
+                                            {Fmt.count(row.clips)}
+                                        </Cell>
+                                    </Row>
+                                )
+                            })}
+                        </tbody>
+                    </Table>
+                </Section>
+                <Section title="Resynth truth" aside={data.resynth.datasets > 0 ? `${data.resynth.datasets} datasets in scope` : undefined}>
+                    {data.resynth.total === 0 && data.resynth.calibrationClips === 0 ? (
+                        <p className="font-body text-[14px] text-on-surface-variant m-0">
+                            No clip has entered the resynth loop yet (
+                            <code className="font-mono text-[13px]">synthetic-corpus/RESYNTH.md</code>).
+                        </p>
+                    ) : (
+                        <div className="flex flex-col gap-3">
+                            {data.resynth.total > 0 && <ResynthBar progress={{ ...data.resynth, calibration: false }} />}
+                            {data.resynth.total > 0 && <ResynthLegend />}
+                            {data.resynth.calibrationClips > 0 && (
+                                <p className="font-body text-[13px] text-on-surface-variant m-0">
+                                    Plus {data.resynth.calibrationClips} blind calibration clips on human-truth datasets.
+                                </p>
+                            )}
+                        </div>
+                    )}
+                </Section>
+            </div>
+        </>
     )
 }
 
-/** Standing overview: the most recent harness run, per-dataset note F1. */
-function LatestRun({ runs }: { runs?: RunDto[] }) {
-    const latest = runs?.[0]
-    if (!latest) return null
-    const scenarios = latest.summary.perScenario.filter((s) => s.clips > 0)
+function TruthMix({ mix, datasets, provisional }: { mix: Partial<Record<string, number>>; datasets: number; provisional: boolean }) {
+    const entries = Object.entries(mix).filter(([, n]) => (n ?? 0) > 0)
+    if (provisional || !entries.length)
+        return (
+            <span className="font-body text-[12px] text-on-surface-variant">{datasets ? `${datasets} context datasets` : 'no data'}</span>
+        )
     return (
-        <Card>
-            <div className="flex items-baseline justify-between gap-3 mb-1">
-                <Eyebrow>Latest scored run — note F1 per dataset</Eyebrow>
-                <span className="font-mono text-[12px] text-on-surface-variant">
-                    {latest.label} · {new Date(latest.createdAt).toLocaleString()} · overall {latest.summary.overallF1.toFixed(3)}
-                </span>
-            </div>
-            <p className="font-body text-[12px] text-on-surface-variant mt-0 mb-4">
-                Single series (cyan). Unpooled datasets are marked — they never move the headline.
-            </p>
-            <div className="flex flex-col gap-2.5">
-                {scenarios.map((s) => (
-                    <div key={s.scenario} className="grid grid-cols-[11rem_1fr_auto] items-center gap-3">
-                        <span className="font-body text-[13px] leading-none text-on-surface truncate">
-                            {s.scenario}
-                            {!s.pooled && <span className="text-outline"> †</span>}
-                        </span>
-                        {/* Absolute 0–1 scale, the same one the Reports page draws F1 on. */}
-                        <div className="h-4 flex items-center">
-                            <div className="h-4 rounded-r-sm bg-chart-cyan min-w-0.5" style={{ width: `${Math.max(1, s.f1 * 100)}%` }} />
-                        </div>
-                        <span className="font-mono text-[13px] leading-none text-on-surface-variant text-right">{s.f1.toFixed(2)}</span>
-                    </div>
-                ))}
-            </div>
-        </Card>
+        <span className="font-body text-[13px] text-on-surface">
+            {entries.map(([source, n]) => `${n} ${source}`).join(' · ')}
+            <span className="text-on-surface-variant"> pooled</span>
+        </span>
     )
 }

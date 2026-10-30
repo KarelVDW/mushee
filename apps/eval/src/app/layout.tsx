@@ -2,7 +2,8 @@ import './globals.css'
 
 import type { Metadata, Viewport } from 'next'
 import { Geist_Mono, Manrope, Space_Grotesk } from 'next/font/google'
-import Link from 'next/link'
+
+import { Shell } from '@/components/Shell'
 
 import { Providers } from './providers'
 
@@ -22,8 +23,8 @@ const geistMono = Geist_Mono({
 })
 
 export const metadata: Metadata = {
-    title: 'Solkey Eval',
-    description: 'Corpus and benchmarking workbench for the recording pipeline.',
+    title: { default: 'Solkey Eval', template: '%s — Solkey Eval' },
+    description: 'Benchmark results, the score timeline and the test corpus of the recording pipeline.',
     robots: {
         index: false,
         follow: false,
@@ -45,22 +46,7 @@ export default function RootLayout({
         <html lang="en" className={`${manrope.variable} ${spaceGrotesk.variable} ${geistMono.variable}`}>
             <body className="antialiased">
                 <Providers>
-                    <div className="min-h-screen">
-                        <header className="border-b border-outline-variant bg-surface-container-lowest">
-                            <nav className="mx-auto flex max-w-6xl items-center gap-6 px-6 py-3">
-                                <Link href="/" className="font-display text-lg font-bold tracking-tight text-primary">
-                                    Solkey Eval
-                                </Link>
-                                <Link href="/" className="font-label text-sm text-on-surface-variant hover:text-on-surface">
-                                    Corpora
-                                </Link>
-                                <Link href="/reports" className="font-label text-sm text-on-surface-variant hover:text-on-surface">
-                                    Reports
-                                </Link>
-                            </nav>
-                        </header>
-                        <main className="mx-auto max-w-6xl px-6 py-8">{children}</main>
-                    </div>
+                    <Shell>{children}</Shell>
                 </Providers>
             </body>
         </html>

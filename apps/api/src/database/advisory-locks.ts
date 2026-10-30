@@ -6,11 +6,6 @@
  *
  * Decorator-free on purpose — the demo seeder runs under tsx, which cannot
  * load the TypeORM data source, and imports this file directly.
- *
- * One known overlap from outside the API: apps/eval's schema migrator
- * (src/server/db.ts) also takes 727272 against the same database when run
- * locally. It is harmless, since it only makes eval boot and the demo seeder
- * wait for each other, but it is not a key to copy.
  */
 export const ADVISORY_LOCKS = {
     /** runMigrationsLocked: one replica migrates, the rest wait. */
