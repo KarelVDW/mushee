@@ -1,0 +1,697 @@
+{
+    "about": "Benchmark-score timeline: historical pipeline states scored with the current scorer and truth (apps/api/scripts/eval/timeline/README.md). One entry per commit, date order; full results in `file`.",
+    "note": "TEST split only (lib/split.ts), capped clip set (timeline/clipset.json), real condition. Pipeline path: RecordingPipeline with chunked feed and the MusicXML round trip, as the product ran at this commit — not comparable in level to RESULTS.md (converter-level, both halves); compare timeline points with each other.",
+    "clipset": {
+        "hash": "a6aab37256924c0ddf9c831f4ba26ce376a0fa33",
+        "size": 509
+    },
+    "sameTruth": true,
+    "commits": [
+        {
+            "id": "2026-04-25_bb4d8165",
+            "file": "2026-04-25_bb4d8165.json",
+            "sha": "bb4d8165e599cd7524926e97c7b4c3696fc104c6",
+            "short": "bb4d8165",
+            "commitDate": "2026-04-25T13:07:47+02:00",
+            "subject": "feat log notes in debug bundle",
+            "era": "A",
+            "overallF1": 0.536,
+            "overallF1Off": 0.173,
+            "overallF1Human": 0.536,
+            "overallF1OffHuman": 0.173,
+            "perMaterial": {
+                "humming": {
+                    "f1": 0.43,
+                    "f1Off": 0.14,
+                    "provisional": true,
+                    "datasets": 1
+                },
+                "instrument": {
+                    "f1": 0.576,
+                    "f1Off": 0.198,
+                    "provisional": false,
+                    "datasets": 13
+                },
+                "singing": {
+                    "f1": 0.461,
+                    "f1Off": 0.127,
+                    "provisional": false,
+                    "datasets": 7
+                },
+                "whistling": {
+                    "f1": 0.039,
+                    "f1Off": 0.026,
+                    "provisional": true,
+                    "datasets": 2
+                }
+            },
+            "counts": {
+                "scored": 509,
+                "noTruth": 0,
+                "missing": 0,
+                "failed": 0,
+                "pipelineErrors": 0,
+                "emptyOutputs": 45
+            },
+            "truthHash": "ff4766f2fd3bc61acc94346770329850cc5f95a5",
+            "scoredAt": "2026-10-30T20:27:57.600Z"
+        },
+        {
+            "id": "2026-05-03_bec075de",
+            "file": "2026-05-03_bec075de.json",
+            "sha": "bec075de3d148d96344d463f6ebc567714b9b802",
+            "short": "bec075de",
+            "commitDate": "2026-05-03T20:56:33+02:00",
+            "subject": "feat: take chromaticTranspose into account",
+            "era": "B",
+            "overallF1": 0.536,
+            "overallF1Off": 0.173,
+            "overallF1Human": 0.536,
+            "overallF1OffHuman": 0.173,
+            "perMaterial": {
+                "humming": {
+                    "f1": 0.43,
+                    "f1Off": 0.14,
+                    "provisional": true,
+                    "datasets": 1
+                },
+                "instrument": {
+                    "f1": 0.576,
+                    "f1Off": 0.198,
+                    "provisional": false,
+                    "datasets": 13
+                },
+                "singing": {
+                    "f1": 0.461,
+                    "f1Off": 0.127,
+                    "provisional": false,
+                    "datasets": 7
+                },
+                "whistling": {
+                    "f1": 0.039,
+                    "f1Off": 0.026,
+                    "provisional": true,
+                    "datasets": 2
+                }
+            },
+            "counts": {
+                "scored": 509,
+                "noTruth": 0,
+                "missing": 0,
+                "failed": 0,
+                "pipelineErrors": 0,
+                "emptyOutputs": 45
+            },
+            "truthHash": "ff4766f2fd3bc61acc94346770329850cc5f95a5",
+            "scoredAt": "2026-10-30T20:27:57.730Z"
+        },
+        {
+            "id": "2026-06-13_cf7d6173",
+            "file": "2026-06-13_cf7d6173.json",
+            "sha": "cf7d61733a792e83a01e7fb7e0c765f456682047",
+            "short": "cf7d6173",
+            "commitDate": "2026-06-13T12:16:19+02:00",
+            "subject": "feat: remove pesto provider",
+            "era": "C",
+            "overallF1": 0.624,
+            "overallF1Off": 0.303,
+            "overallF1Human": 0.624,
+            "overallF1OffHuman": 0.303,
+            "perMaterial": {
+                "humming": {
+                    "f1": 0.523,
+                    "f1Off": 0.252,
+                    "provisional": true,
+                    "datasets": 1
+                },
+                "instrument": {
+                    "f1": 0.708,
+                    "f1Off": 0.364,
+                    "provisional": false,
+                    "datasets": 13
+                },
+                "singing": {
+                    "f1": 0.468,
+                    "f1Off": 0.191,
+                    "provisional": false,
+                    "datasets": 7
+                },
+                "whistling": {
+                    "f1": 0.169,
+                    "f1Off": 0.066,
+                    "provisional": true,
+                    "datasets": 2
+                }
+            },
+            "counts": {
+                "scored": 509,
+                "noTruth": 0,
+                "missing": 0,
+                "failed": 0,
+                "pipelineErrors": 0,
+                "emptyOutputs": 4
+            },
+            "truthHash": "ff4766f2fd3bc61acc94346770329850cc5f95a5",
+            "scoredAt": "2026-10-30T20:27:57.855Z"
+        },
+        {
+            "id": "2026-06-20_9771190d",
+            "file": "2026-06-20_9771190d.json",
+            "sha": "9771190dd2d0fa532ca9a1d765cef674d4f5feab",
+            "short": "9771190d",
+            "commitDate": "2026-06-20T21:57:02+02:00",
+            "subject": "feat(recording): improve real voice/whistle transcription + real-data eval",
+            "era": "C",
+            "overallF1": 0.678,
+            "overallF1Off": 0.353,
+            "overallF1Human": 0.678,
+            "overallF1OffHuman": 0.353,
+            "perMaterial": {
+                "humming": {
+                    "f1": 0.597,
+                    "f1Off": 0.271,
+                    "provisional": true,
+                    "datasets": 1
+                },
+                "instrument": {
+                    "f1": 0.767,
+                    "f1Off": 0.423,
+                    "provisional": false,
+                    "datasets": 13
+                },
+                "singing": {
+                    "f1": 0.514,
+                    "f1Off": 0.223,
+                    "provisional": false,
+                    "datasets": 7
+                },
+                "whistling": {
+                    "f1": 0.183,
+                    "f1Off": 0.073,
+                    "provisional": true,
+                    "datasets": 2
+                }
+            },
+            "counts": {
+                "scored": 509,
+                "noTruth": 0,
+                "missing": 0,
+                "failed": 0,
+                "pipelineErrors": 0,
+                "emptyOutputs": 4
+            },
+            "truthHash": "ff4766f2fd3bc61acc94346770329850cc5f95a5",
+            "scoredAt": "2026-10-30T20:27:57.978Z"
+        },
+        {
+            "id": "2026-06-21_eb323a97",
+            "file": "2026-06-21_eb323a97.json",
+            "sha": "eb323a9735eec6077e0ef34bbf89daa2c32fd9a9",
+            "short": "eb323a97",
+            "commitDate": "2026-06-21T14:56:27+02:00",
+            "subject": "feat: use windowed buffers in BE",
+            "era": "C",
+            "overallF1": 0.678,
+            "overallF1Off": 0.353,
+            "overallF1Human": 0.678,
+            "overallF1OffHuman": 0.353,
+            "perMaterial": {
+                "humming": {
+                    "f1": 0.597,
+                    "f1Off": 0.271,
+                    "provisional": true,
+                    "datasets": 1
+                },
+                "instrument": {
+                    "f1": 0.767,
+                    "f1Off": 0.423,
+                    "provisional": false,
+                    "datasets": 13
+                },
+                "singing": {
+                    "f1": 0.514,
+                    "f1Off": 0.223,
+                    "provisional": false,
+                    "datasets": 7
+                },
+                "whistling": {
+                    "f1": 0.183,
+                    "f1Off": 0.073,
+                    "provisional": true,
+                    "datasets": 2
+                }
+            },
+            "counts": {
+                "scored": 509,
+                "noTruth": 0,
+                "missing": 0,
+                "failed": 0,
+                "pipelineErrors": 0,
+                "emptyOutputs": 4
+            },
+            "truthHash": "ff4766f2fd3bc61acc94346770329850cc5f95a5",
+            "scoredAt": "2026-10-30T20:27:58.102Z"
+        },
+        {
+            "id": "2026-07-11_15344df4",
+            "file": "2026-07-11_15344df4.json",
+            "sha": "15344df41122d84ba27309cac3f0d0b508a4fe77",
+            "short": "15344df4",
+            "commitDate": "2026-07-11T16:02:36+02:00",
+            "subject": "feat(api): noise-hardened profile scan — correct registers under adverse audio",
+            "era": "D",
+            "overallF1": 0.684,
+            "overallF1Off": 0.362,
+            "overallF1Human": 0.684,
+            "overallF1OffHuman": 0.362,
+            "perMaterial": {
+                "humming": {
+                    "f1": 0.597,
+                    "f1Off": 0.27,
+                    "provisional": true,
+                    "datasets": 1
+                },
+                "instrument": {
+                    "f1": 0.774,
+                    "f1Off": 0.436,
+                    "provisional": false,
+                    "datasets": 13
+                },
+                "singing": {
+                    "f1": 0.515,
+                    "f1Off": 0.224,
+                    "provisional": false,
+                    "datasets": 7
+                },
+                "whistling": {
+                    "f1": 0.154,
+                    "f1Off": 0.057,
+                    "provisional": true,
+                    "datasets": 2
+                }
+            },
+            "counts": {
+                "scored": 509,
+                "noTruth": 0,
+                "missing": 0,
+                "failed": 0,
+                "pipelineErrors": 0,
+                "emptyOutputs": 4
+            },
+            "truthHash": "ff4766f2fd3bc61acc94346770329850cc5f95a5",
+            "scoredAt": "2026-10-30T20:27:58.222Z"
+        },
+        {
+            "id": "2026-07-25_cfc53676",
+            "file": "2026-07-25_cfc53676.json",
+            "sha": "cfc536769e1228282e526c99480e605b30bf0a97",
+            "short": "cfc53676",
+            "commitDate": "2026-07-25T14:48:21+02:00",
+            "subject": "feat(api): recording-pipeline accuracy pass — measured fixes + eval overhaul",
+            "era": "D",
+            "overallF1": 0.676,
+            "overallF1Off": 0.357,
+            "overallF1Human": 0.676,
+            "overallF1OffHuman": 0.357,
+            "perMaterial": {
+                "humming": {
+                    "f1": 0.642,
+                    "f1Off": 0.318,
+                    "provisional": true,
+                    "datasets": 1
+                },
+                "instrument": {
+                    "f1": 0.77,
+                    "f1Off": 0.435,
+                    "provisional": false,
+                    "datasets": 13
+                },
+                "singing": {
+                    "f1": 0.502,
+                    "f1Off": 0.213,
+                    "provisional": false,
+                    "datasets": 7
+                },
+                "whistling": {
+                    "f1": 0.168,
+                    "f1Off": 0.064,
+                    "provisional": true,
+                    "datasets": 2
+                }
+            },
+            "counts": {
+                "scored": 509,
+                "noTruth": 0,
+                "missing": 0,
+                "failed": 0,
+                "pipelineErrors": 0,
+                "emptyOutputs": 4
+            },
+            "truthHash": "ff4766f2fd3bc61acc94346770329850cc5f95a5",
+            "scoredAt": "2026-10-30T20:27:58.344Z"
+        },
+        {
+            "id": "2026-08-08_3e70cb88",
+            "file": "2026-08-08_3e70cb88.json",
+            "sha": "3e70cb8807295d30594de0d41a3099b9a65d0511",
+            "short": "3e70cb88",
+            "commitDate": "2026-08-08T23:04:27+02:00",
+            "subject": "feat: add separate pipeline for voice audio",
+            "era": "D",
+            "overallF1": 0.711,
+            "overallF1Off": 0.376,
+            "overallF1Human": 0.711,
+            "overallF1OffHuman": 0.376,
+            "perMaterial": {
+                "humming": {
+                    "f1": 0.533,
+                    "f1Off": 0.182,
+                    "provisional": true,
+                    "datasets": 1
+                },
+                "instrument": {
+                    "f1": 0.77,
+                    "f1Off": 0.435,
+                    "provisional": false,
+                    "datasets": 13
+                },
+                "singing": {
+                    "f1": 0.599,
+                    "f1Off": 0.266,
+                    "provisional": false,
+                    "datasets": 7
+                },
+                "whistling": {
+                    "f1": 0.168,
+                    "f1Off": 0.064,
+                    "provisional": true,
+                    "datasets": 2
+                }
+            },
+            "counts": {
+                "scored": 509,
+                "noTruth": 0,
+                "missing": 0,
+                "failed": 0,
+                "pipelineErrors": 0,
+                "emptyOutputs": 4
+            },
+            "truthHash": "ff4766f2fd3bc61acc94346770329850cc5f95a5",
+            "scoredAt": "2026-10-30T20:27:58.464Z"
+        },
+        {
+            "id": "2026-08-09_0b217b4f",
+            "file": "2026-08-09_0b217b4f.json",
+            "sha": "0b217b4fe3e6547dc58371b04e486117589f1d6d",
+            "short": "0b217b4f",
+            "commitDate": "2026-08-09T08:33:30+02:00",
+            "subject": "feat: improve rhythm on voice recordings",
+            "era": "D",
+            "overallF1": 0.702,
+            "overallF1Off": 0.364,
+            "overallF1Human": 0.702,
+            "overallF1OffHuman": 0.364,
+            "perMaterial": {
+                "humming": {
+                    "f1": 0.497,
+                    "f1Off": 0.168,
+                    "provisional": true,
+                    "datasets": 1
+                },
+                "instrument": {
+                    "f1": 0.77,
+                    "f1Off": 0.435,
+                    "provisional": false,
+                    "datasets": 13
+                },
+                "singing": {
+                    "f1": 0.574,
+                    "f1Off": 0.234,
+                    "provisional": false,
+                    "datasets": 7
+                },
+                "whistling": {
+                    "f1": 0.168,
+                    "f1Off": 0.064,
+                    "provisional": true,
+                    "datasets": 2
+                }
+            },
+            "counts": {
+                "scored": 509,
+                "noTruth": 0,
+                "missing": 0,
+                "failed": 0,
+                "pipelineErrors": 0,
+                "emptyOutputs": 4
+            },
+            "truthHash": "ff4766f2fd3bc61acc94346770329850cc5f95a5",
+            "scoredAt": "2026-10-30T20:27:58.585Z"
+        },
+        {
+            "id": "2026-08-19_ab26a103",
+            "file": "2026-08-19_ab26a103.json",
+            "sha": "ab26a1033da7dd4b1ccf7ff7ce6095095b18bdbf",
+            "short": "ab26a103",
+            "commitDate": "2026-08-19T23:12:29+02:00",
+            "subject": "feat: two-tier absolute silence rule, exactly inert (R25)",
+            "era": "D",
+            "overallF1": 0.702,
+            "overallF1Off": 0.364,
+            "overallF1Human": 0.702,
+            "overallF1OffHuman": 0.364,
+            "perMaterial": {
+                "humming": {
+                    "f1": 0.497,
+                    "f1Off": 0.168,
+                    "provisional": true,
+                    "datasets": 1
+                },
+                "instrument": {
+                    "f1": 0.77,
+                    "f1Off": 0.435,
+                    "provisional": false,
+                    "datasets": 13
+                },
+                "singing": {
+                    "f1": 0.574,
+                    "f1Off": 0.234,
+                    "provisional": false,
+                    "datasets": 7
+                },
+                "whistling": {
+                    "f1": 0.168,
+                    "f1Off": 0.064,
+                    "provisional": true,
+                    "datasets": 2
+                }
+            },
+            "counts": {
+                "scored": 509,
+                "noTruth": 0,
+                "missing": 0,
+                "failed": 0,
+                "pipelineErrors": 0,
+                "emptyOutputs": 4
+            },
+            "truthHash": "ff4766f2fd3bc61acc94346770329850cc5f95a5",
+            "scoredAt": "2026-10-30T20:27:58.704Z"
+        },
+        {
+            "id": "2026-08-22_61f86a96",
+            "file": "2026-08-22_61f86a96.json",
+            "sha": "61f86a96dc900b9bd1c341731a5956764b7a6691",
+            "short": "61f86a96",
+            "commitDate": "2026-08-22T12:50:39+02:00",
+            "subject": "feat: very-high band joins the track cache; split levers measured, floor trap caught",
+            "era": "D",
+            "overallF1": 0.702,
+            "overallF1Off": 0.364,
+            "overallF1Human": 0.702,
+            "overallF1OffHuman": 0.364,
+            "perMaterial": {
+                "humming": {
+                    "f1": 0.497,
+                    "f1Off": 0.168,
+                    "provisional": true,
+                    "datasets": 1
+                },
+                "instrument": {
+                    "f1": 0.77,
+                    "f1Off": 0.435,
+                    "provisional": false,
+                    "datasets": 13
+                },
+                "singing": {
+                    "f1": 0.574,
+                    "f1Off": 0.234,
+                    "provisional": false,
+                    "datasets": 7
+                },
+                "whistling": {
+                    "f1": 0.307,
+                    "f1Off": 0.125,
+                    "provisional": true,
+                    "datasets": 2
+                }
+            },
+            "counts": {
+                "scored": 509,
+                "noTruth": 0,
+                "missing": 0,
+                "failed": 0,
+                "pipelineErrors": 0,
+                "emptyOutputs": 0
+            },
+            "truthHash": "ff4766f2fd3bc61acc94346770329850cc5f95a5",
+            "scoredAt": "2026-10-30T20:27:58.828Z"
+        },
+        {
+            "id": "2026-09-01_2b83e008",
+            "file": "2026-09-01_2b83e008.json",
+            "sha": "2b83e008525c0985edb980000e514e613f8269f3",
+            "short": "2b83e008",
+            "commitDate": "2026-09-01T23:34:59+02:00",
+            "subject": "eval: resolver-env signature on both caches; lead-in probe; kill-switches",
+            "era": "D",
+            "overallF1": 0.702,
+            "overallF1Off": 0.364,
+            "overallF1Human": 0.702,
+            "overallF1OffHuman": 0.364,
+            "perMaterial": {
+                "humming": {
+                    "f1": 0.497,
+                    "f1Off": 0.168,
+                    "provisional": true,
+                    "datasets": 1
+                },
+                "instrument": {
+                    "f1": 0.77,
+                    "f1Off": 0.435,
+                    "provisional": false,
+                    "datasets": 13
+                },
+                "singing": {
+                    "f1": 0.574,
+                    "f1Off": 0.234,
+                    "provisional": false,
+                    "datasets": 7
+                },
+                "whistling": {
+                    "f1": 0.307,
+                    "f1Off": 0.125,
+                    "provisional": true,
+                    "datasets": 2
+                }
+            },
+            "counts": {
+                "scored": 509,
+                "noTruth": 0,
+                "missing": 0,
+                "failed": 0,
+                "pipelineErrors": 0,
+                "emptyOutputs": 0
+            },
+            "truthHash": "ff4766f2fd3bc61acc94346770329850cc5f95a5",
+            "scoredAt": "2026-10-30T20:27:58.947Z"
+        },
+        {
+            "id": "2026-09-27_d77db1db",
+            "file": "2026-09-27_d77db1db.json",
+            "sha": "d77db1dbeeade72397667e05981b186737bf53cc",
+            "short": "d77db1db",
+            "commitDate": "2026-09-27T05:36:19+02:00",
+            "subject": "feat(recordings): per-family onset policy + one note per grid slot, from the synthetic corpus",
+            "era": "D",
+            "overallF1": 0.702,
+            "overallF1Off": 0.364,
+            "overallF1Human": 0.702,
+            "overallF1OffHuman": 0.364,
+            "perMaterial": {
+                "humming": {
+                    "f1": 0.496,
+                    "f1Off": 0.165,
+                    "provisional": true,
+                    "datasets": 1
+                },
+                "instrument": {
+                    "f1": 0.769,
+                    "f1Off": 0.432,
+                    "provisional": false,
+                    "datasets": 13
+                },
+                "singing": {
+                    "f1": 0.579,
+                    "f1Off": 0.236,
+                    "provisional": false,
+                    "datasets": 7
+                },
+                "whistling": {
+                    "f1": 0.304,
+                    "f1Off": 0.128,
+                    "provisional": true,
+                    "datasets": 2
+                }
+            },
+            "counts": {
+                "scored": 509,
+                "noTruth": 0,
+                "missing": 0,
+                "failed": 0,
+                "pipelineErrors": 0,
+                "emptyOutputs": 0
+            },
+            "truthHash": "ff4766f2fd3bc61acc94346770329850cc5f95a5",
+            "scoredAt": "2026-10-30T20:27:59.109Z"
+        },
+        {
+            "id": "2026-10-23_f2611442",
+            "file": "2026-10-23_f2611442.json",
+            "sha": "f2611442d4bc04645e60584c516bb30b857a3863",
+            "short": "f2611442",
+            "commitDate": "2026-10-23T22:21:20+02:00",
+            "subject": "docs(meta): Phase 3 (aesthetics) section; TL;DR and follow-ups updated",
+            "era": "D",
+            "overallF1": 0.702,
+            "overallF1Off": 0.364,
+            "overallF1Human": 0.702,
+            "overallF1OffHuman": 0.364,
+            "perMaterial": {
+                "humming": {
+                    "f1": 0.496,
+                    "f1Off": 0.165,
+                    "provisional": true,
+                    "datasets": 1
+                },
+                "instrument": {
+                    "f1": 0.769,
+                    "f1Off": 0.432,
+                    "provisional": false,
+                    "datasets": 13
+                },
+                "singing": {
+                    "f1": 0.579,
+                    "f1Off": 0.236,
+                    "provisional": false,
+                    "datasets": 7
+                },
+                "whistling": {
+                    "f1": 0.304,
+                    "f1Off": 0.128,
+                    "provisional": true,
+                    "datasets": 2
+                }
+            },
+            "counts": {
+                "scored": 509,
+                "noTruth": 0,
+                "missing": 0,
+                "failed": 0,
+                "pipelineErrors": 0,
+                "emptyOutputs": 0
+            },
+            "truthHash": "ff4766f2fd3bc61acc94346770329850cc5f95a5",
+            "scoredAt": "2026-10-30T20:27:59.324Z"
+        }
+    ]
+}
