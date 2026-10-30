@@ -1,0 +1,134 @@
+{
+ "schema": "resynth/1",
+ "dataset": "whistle-real",
+ "clip": "freesound-387339",
+ "role": "target",
+ "audio": {
+  "file": "apps/api/scripts/fixtures/eval-real/context/whistle-real/freesound-387339__real.wav",
+  "sha256": "a728cf531d8e764a953fff52f9d5c9f2efc0fd399f7a04d5976b24f120a4e0f4",
+  "sampleRate": 44100,
+  "durationSec": 2.9988
+ },
+ "truth": {
+  "bpm": 120,
+  "notes": [
+   {
+    "onsetSec": 0.4,
+    "durSec": 0.2,
+    "midi": 89
+   },
+   {
+    "onsetSec": 0.6,
+    "durSec": 0.26,
+    "midi": 92
+   },
+   {
+    "onsetSec": 0.9,
+    "durSec": 0.62,
+    "midi": 89
+   }
+  ]
+ },
+ "spec": {
+  "schema": "resynth-spec/1",
+  "dataset": "whistle-real",
+  "clip": "freesound-387339",
+  "version": 4,
+  "timbre": {
+   "kind": "whistle"
+  },
+  "render": {
+   "seed": 1296857253,
+   "contour": "copy-detrended",
+   "levelMatch": true
+  },
+  "nextId": 7,
+  "prior": {
+   "source": "truth",
+   "notes": 6,
+   "path": "apps/api/scripts/fixtures/eval-real/context/whistle-real/freesound-387339.truth.json"
+  },
+  "notes": [
+   {
+    "id": "n1",
+    "on": 0.4,
+    "off": 0.6,
+    "midi": 89,
+    "cents": 39.6,
+    "vel": 98,
+    "legato": false,
+    "flags": [
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n3",
+    "on": 0.6,
+    "off": 0.86,
+    "midi": 92,
+    "cents": 25.0,
+    "vel": 88,
+    "legato": true,
+    "flags": [
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n5",
+    "on": 0.9,
+    "off": 1.52,
+    "midi": 89,
+    "cents": 39.1,
+    "vel": 89,
+    "legato": false,
+    "flags": [
+     "uncertain-onset"
+    ]
+   }
+  ]
+ },
+ "verdict": {
+  "status": "passed",
+  "rounds": 1,
+  "summary": "F6 - upward slide to a weak, noisy ~G#6/A6 hold - gap - long F6: three notes match the original. The n1/n3 split is a real pitch change (D1 is a tracker artefact), the n3 pitch/onset is a flagged genuine ambiguity (only pyin, smeared band at the G#6/A6 border), and n5 starts where sound resumes after the 0.88-0.90 gap (D3 is just the later energy rise).",
+  "metrics": {
+   "pitch": 0.9394,
+   "voicingRecall": 1.0,
+   "voicingPrecision": 0.9231,
+   "onsetF1": 0.5,
+   "explained": 1.0,
+   "notes": 3,
+   "durSec": 2.999
+  },
+  "judged": [
+   {
+    "round": 1,
+    "verdict": "pass",
+    "specVersion": 4
+   }
+  ]
+ },
+ "prior": {
+  "source": "truth",
+  "notes": 6,
+  "path": "apps/api/scripts/fixtures/eval-real/context/whistle-real/freesound-387339.truth.json"
+ },
+ "tool": {
+  "name": "synthcorpus.resynth",
+  "version": "1",
+  "analyzer": {
+   "family": "whistle",
+   "f0_range": [
+    400.0,
+    5000.0
+   ],
+   "gate_db": -32.0,
+   "version": 2
+  },
+  "timbre": {
+   "kind": "whistle"
+  },
+  "seed": 1296857253
+ },
+ "createdAt": "2026-10-30T22:21:04+0100"
+}

@@ -1,0 +1,355 @@
+{
+ "schema": "resynth/1",
+ "dataset": "whistle-real",
+ "clip": "freesound-419788",
+ "role": "target",
+ "audio": {
+  "file": "apps/api/scripts/fixtures/eval-real/context/whistle-real/freesound-419788__real.wav",
+  "sha256": "127068aea8dc9820fc3482de3b60210c8ddb51d297aab76074e9851f4454a473",
+  "sampleRate": 44100,
+  "durationSec": 8.9753
+ },
+ "truth": {
+  "bpm": 120,
+  "notes": [
+   {
+    "onsetSec": 0.3,
+    "durSec": 0.2,
+    "midi": 89
+   },
+   {
+    "onsetSec": 0.66,
+    "durSec": 0.28,
+    "midi": 84
+   },
+   {
+    "onsetSec": 3.22,
+    "durSec": 0.2,
+    "midi": 89
+   },
+   {
+    "onsetSec": 3.55,
+    "durSec": 0.36,
+    "midi": 85
+   },
+   {
+    "onsetSec": 3.91,
+    "durSec": 0.09,
+    "midi": 88
+   },
+   {
+    "onsetSec": 4.14,
+    "durSec": 0.12,
+    "midi": 85
+   },
+   {
+    "onsetSec": 4.26,
+    "durSec": 0.24,
+    "midi": 84
+   },
+   {
+    "onsetSec": 4.53,
+    "durSec": 0.17,
+    "midi": 86
+   },
+   {
+    "onsetSec": 4.81,
+    "durSec": 0.16,
+    "midi": 83
+   },
+   {
+    "onsetSec": 4.97,
+    "durSec": 0.18,
+    "midi": 81
+   },
+   {
+    "onsetSec": 5.22,
+    "durSec": 0.2,
+    "midi": 87
+   },
+   {
+    "onsetSec": 5.81,
+    "durSec": 0.13,
+    "midi": 88
+   },
+   {
+    "onsetSec": 6.26,
+    "durSec": 0.17,
+    "midi": 87
+   },
+   {
+    "onsetSec": 6.66,
+    "durSec": 0.11,
+    "midi": 87
+   },
+   {
+    "onsetSec": 6.95,
+    "durSec": 0.16,
+    "midi": 85
+   },
+   {
+    "onsetSec": 7.18,
+    "durSec": 0.11,
+    "midi": 83
+   },
+   {
+    "onsetSec": 7.44,
+    "durSec": 0.21,
+    "midi": 85
+   }
+  ]
+ },
+ "spec": {
+  "schema": "resynth-spec/1",
+  "dataset": "whistle-real",
+  "clip": "freesound-419788",
+  "version": 5,
+  "timbre": {
+   "kind": "whistle"
+  },
+  "render": {
+   "seed": 2636748385,
+   "contour": "copy-detrended",
+   "levelMatch": true
+  },
+  "nextId": 24,
+  "prior": {
+   "source": "truth",
+   "notes": 22,
+   "path": "apps/api/scripts/fixtures/eval-real/context/whistle-real/freesound-419788.truth.json"
+  },
+  "notes": [
+   {
+    "id": "n1",
+    "on": 0.3,
+    "off": 0.5,
+    "midi": 89,
+    "cents": 0.0,
+    "vel": 88,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n2",
+    "on": 0.66,
+    "off": 0.94,
+    "midi": 84,
+    "cents": -21.4,
+    "vel": 95,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n3",
+    "on": 3.22,
+    "off": 3.42,
+    "midi": 89,
+    "cents": 41.0,
+    "vel": 92,
+    "legato": false,
+    "flags": [
+     "uncertain-onset"
+    ]
+   },
+   {
+    "id": "n4",
+    "on": 3.55,
+    "off": 3.91,
+    "midi": 85,
+    "cents": 44.2,
+    "vel": 99,
+    "legato": false,
+    "flags": [
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n7",
+    "on": 3.91,
+    "off": 4.0,
+    "midi": 88,
+    "cents": 28.3,
+    "vel": 72,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n8",
+    "on": 4.14,
+    "off": 4.26,
+    "midi": 85,
+    "cents": 28.7,
+    "vel": 87,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n9",
+    "on": 4.26,
+    "off": 4.5,
+    "midi": 84,
+    "cents": -51.8,
+    "vel": 93,
+    "legato": true,
+    "flags": [
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n12",
+    "on": 4.53,
+    "off": 4.7,
+    "midi": 86,
+    "cents": -15.2,
+    "vel": 81,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n13",
+    "on": 4.81,
+    "off": 4.97,
+    "midi": 83,
+    "cents": -26.3,
+    "vel": 75,
+    "legato": false,
+    "flags": [
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n14",
+    "on": 4.97,
+    "off": 5.15,
+    "midi": 81,
+    "cents": 20.0,
+    "vel": 76,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n15",
+    "on": 5.22,
+    "off": 5.42,
+    "midi": 87,
+    "cents": -35.9,
+    "vel": 97,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n16",
+    "on": 5.81,
+    "off": 5.94,
+    "midi": 88,
+    "cents": -46.4,
+    "vel": 87,
+    "legato": false,
+    "flags": [
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n23",
+    "on": 6.26,
+    "off": 6.43,
+    "midi": 87,
+    "cents": -31.0,
+    "vel": 90,
+    "legato": false,
+    "flags": [
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n18",
+    "on": 6.66,
+    "off": 6.77,
+    "midi": 87,
+    "cents": 12.6,
+    "vel": 87,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n19",
+    "on": 6.95,
+    "off": 7.11,
+    "midi": 85,
+    "cents": -34.5,
+    "vel": 90,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n21",
+    "on": 7.18,
+    "off": 7.29,
+    "midi": 83,
+    "cents": 3.8,
+    "vel": 76,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n22",
+    "on": 7.44,
+    "off": 7.65,
+    "midi": 85,
+    "cents": 4.2,
+    "vel": 90,
+    "legato": false,
+    "flags": []
+   }
+  ]
+ },
+ "verdict": {
+  "status": "passed",
+  "rounds": 2,
+  "summary": "17 notes match the original in pitch, splits and onsets; no diffs. The faint 5.56-5.65 s blip (~-36 dB, ~23 dB below the melody, single tracker, ~80 ms) reads as an incidental breath-whistle, not a note.",
+  "metrics": {
+   "pitch": 0.9388,
+   "voicingRecall": 0.9964,
+   "voicingPrecision": 0.9297,
+   "onsetF1": 0.8718,
+   "explained": 1.0,
+   "notes": 17,
+   "durSec": 8.975
+  },
+  "judged": [
+   {
+    "round": 1,
+    "verdict": "fail",
+    "specVersion": 4
+   },
+   {
+    "round": 2,
+    "verdict": "pass",
+    "specVersion": 5
+   }
+  ]
+ },
+ "prior": {
+  "source": "truth",
+  "notes": 22,
+  "path": "apps/api/scripts/fixtures/eval-real/context/whistle-real/freesound-419788.truth.json"
+ },
+ "tool": {
+  "name": "synthcorpus.resynth",
+  "version": "1",
+  "analyzer": {
+   "family": "whistle",
+   "f0_range": [
+    400.0,
+    5000.0
+   ],
+   "gate_db": -32.0,
+   "version": 2
+  },
+  "timbre": {
+   "kind": "whistle"
+  },
+  "seed": 2636748385
+ },
+ "createdAt": "2026-10-30T22:21:04+0100"
+}

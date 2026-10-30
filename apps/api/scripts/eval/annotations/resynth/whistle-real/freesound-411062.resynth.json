@@ -1,0 +1,164 @@
+{
+ "schema": "resynth/1",
+ "dataset": "whistle-real",
+ "clip": "freesound-411062",
+ "role": "target",
+ "audio": {
+  "file": "apps/api/scripts/fixtures/eval-real/context/whistle-real/freesound-411062__real.wav",
+  "sha256": "f1108a40dff9fdbe625f742614916091a40126fde51e051871c8abad0f615186",
+  "sampleRate": 44100,
+  "durationSec": 4.3828
+ },
+ "truth": {
+  "bpm": 120,
+  "notes": [
+   {
+    "onsetSec": 0.66,
+    "durSec": 0.08,
+    "midi": 87
+   },
+   {
+    "onsetSec": 0.86,
+    "durSec": 1.24,
+    "midi": 87
+   },
+   {
+    "onsetSec": 2.1,
+    "durSec": 0.34,
+    "midi": 88
+   },
+   {
+    "onsetSec": 2.44,
+    "durSec": 0.15,
+    "midi": 89
+   },
+   {
+    "onsetSec": 2.59,
+    "durSec": 0.06,
+    "midi": 88
+   }
+  ]
+ },
+ "spec": {
+  "schema": "resynth-spec/1",
+  "dataset": "whistle-real",
+  "clip": "freesound-411062",
+  "version": 2,
+  "timbre": {
+   "kind": "whistle"
+  },
+  "render": {
+   "seed": 1396515096,
+   "contour": "copy-detrended",
+   "levelMatch": true
+  },
+  "nextId": 11,
+  "prior": {
+   "source": "truth",
+   "notes": 9,
+   "path": "apps/api/scripts/fixtures/eval-real/context/whistle-real/freesound-411062.truth.json"
+  },
+  "notes": [
+   {
+    "id": "n1",
+    "on": 0.66,
+    "off": 0.74,
+    "midi": 87,
+    "cents": -31.1,
+    "vel": 54,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n2",
+    "on": 0.86,
+    "off": 2.1,
+    "midi": 87,
+    "cents": 44.2,
+    "vel": 95,
+    "legato": false,
+    "flags": [
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n10",
+    "on": 2.1,
+    "off": 2.44,
+    "midi": 88,
+    "cents": -41.6,
+    "vel": 98,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n8",
+    "on": 2.44,
+    "off": 2.59,
+    "midi": 89,
+    "cents": 35.0,
+    "vel": 84,
+    "legato": false,
+    "flags": [
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n9",
+    "on": 2.59,
+    "off": 2.65,
+    "midi": 88,
+    "cents": 29.7,
+    "vel": 67,
+    "legato": true,
+    "flags": [
+     "uncertain-exists"
+    ]
+   }
+  ]
+ },
+ "verdict": {
+  "status": "passed",
+  "rounds": 1,
+  "summary": "Five notes (D#6 blip, long D#6, E6 from the 2.10 level re-attack, F6, short E6 tail) match the original; D2 is the legato grey zone (pitch hovers ~E6-45 from 1.94, tracker crosses the band at 2.29 while the 8 dB swell at 2.11 marks the split), D1 is post-whistle breath noise after the sound ends at 2.66.",
+  "metrics": {
+   "pitch": 0.9714,
+   "voicingRecall": 1.0,
+   "voicingPrecision": 0.9689,
+   "onsetF1": 0.375,
+   "explained": 1.0,
+   "notes": 5,
+   "durSec": 4.383
+  },
+  "judged": [
+   {
+    "round": 1,
+    "verdict": "pass",
+    "specVersion": 2
+   }
+  ]
+ },
+ "prior": {
+  "source": "truth",
+  "notes": 9,
+  "path": "apps/api/scripts/fixtures/eval-real/context/whistle-real/freesound-411062.truth.json"
+ },
+ "tool": {
+  "name": "synthcorpus.resynth",
+  "version": "1",
+  "analyzer": {
+   "family": "whistle",
+   "f0_range": [
+    400.0,
+    5000.0
+   ],
+   "gate_db": -32.0,
+   "version": 2
+  },
+  "timbre": {
+   "kind": "whistle"
+  },
+  "seed": 1396515096
+ },
+ "createdAt": "2026-10-30T22:21:04+0100"
+}

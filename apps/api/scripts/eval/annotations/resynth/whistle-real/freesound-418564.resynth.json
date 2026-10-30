@@ -1,0 +1,98 @@
+{
+ "schema": "resynth/1",
+ "dataset": "whistle-real",
+ "clip": "freesound-418564",
+ "role": "target",
+ "audio": {
+  "file": "apps/api/scripts/fixtures/eval-real/context/whistle-real/freesound-418564__real.wav",
+  "sha256": "a67ba41805cd4e6eaa56a4b305e538dc733cf7b8301fc398fdadd1cefe649173",
+  "sampleRate": 44100,
+  "durationSec": 2.4787
+ },
+ "truth": {
+  "bpm": 120,
+  "notes": [
+   {
+    "onsetSec": 0.68,
+    "durSec": 0.74,
+    "midi": 98
+   }
+  ]
+ },
+ "spec": {
+  "schema": "resynth-spec/1",
+  "dataset": "whistle-real",
+  "clip": "freesound-418564",
+  "version": 2,
+  "timbre": {
+   "kind": "whistle"
+  },
+  "render": {
+   "seed": 3165639607,
+   "contour": "copy-detrended",
+   "levelMatch": true
+  },
+  "nextId": 4,
+  "prior": {
+   "source": "truth",
+   "notes": 3,
+   "path": "apps/api/scripts/fixtures/eval-real/context/whistle-real/freesound-418564.truth.json"
+  },
+  "notes": [
+   {
+    "id": "n1",
+    "on": 0.68,
+    "off": 1.42,
+    "midi": 98,
+    "cents": -9.4,
+    "vel": 96,
+    "legato": false,
+    "flags": []
+   }
+  ]
+ },
+ "verdict": {
+  "status": "passed",
+  "rounds": 1,
+  "summary": "Single held whistled D7 (~0.68-1.42 s) with brief scoop-up and fall-off; one note, correct pitch, onset matches the original attack within a few ms, no diffs.",
+  "metrics": {
+   "pitch": 0.9726,
+   "voicingRecall": 1.0,
+   "voicingPrecision": 0.9873,
+   "onsetF1": 0.5,
+   "explained": 1.0,
+   "notes": 1,
+   "durSec": 2.479
+  },
+  "judged": [
+   {
+    "round": 1,
+    "verdict": "pass",
+    "specVersion": 2
+   }
+  ]
+ },
+ "prior": {
+  "source": "truth",
+  "notes": 3,
+  "path": "apps/api/scripts/fixtures/eval-real/context/whistle-real/freesound-418564.truth.json"
+ },
+ "tool": {
+  "name": "synthcorpus.resynth",
+  "version": "1",
+  "analyzer": {
+   "family": "whistle",
+   "f0_range": [
+    400.0,
+    5000.0
+   ],
+   "gate_db": -32.0,
+   "version": 2
+  },
+  "timbre": {
+   "kind": "whistle"
+  },
+  "seed": 3165639607
+ },
+ "createdAt": "2026-10-30T22:21:04+0100"
+}

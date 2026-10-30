@@ -1,0 +1,147 @@
+{
+ "schema": "resynth/1",
+ "dataset": "whistle-real",
+ "clip": "freesound-255582",
+ "role": "target",
+ "audio": {
+  "file": "apps/api/scripts/fixtures/eval-real/context/whistle-real/freesound-255582__real.wav",
+  "sha256": "396b2ba36afe443a0fa131ca61cb038d0b6f478dc6b296e7375a425ee292598d",
+  "sampleRate": 44100,
+  "durationSec": 2.9605
+ },
+ "truth": {
+  "bpm": 120,
+  "notes": [
+   {
+    "onsetSec": 0.07,
+    "durSec": 0.3,
+    "midi": 84
+   },
+   {
+    "onsetSec": 0.46,
+    "durSec": 0.34,
+    "midi": 87
+   },
+   {
+    "onsetSec": 0.88,
+    "durSec": 1.14,
+    "midi": 88
+   },
+   {
+    "onsetSec": 2.05,
+    "durSec": 0.72,
+    "midi": 91
+   }
+  ]
+ },
+ "spec": {
+  "schema": "resynth-spec/1",
+  "dataset": "whistle-real",
+  "clip": "freesound-255582",
+  "version": 3,
+  "timbre": {
+   "kind": "whistle"
+  },
+  "render": {
+   "seed": 2354545837,
+   "contour": "copy-detrended",
+   "levelMatch": true
+  },
+  "nextId": 8,
+  "prior": {
+   "source": "truth",
+   "notes": 7,
+   "path": "apps/api/scripts/fixtures/eval-real/context/whistle-real/freesound-255582.truth.json"
+  },
+  "notes": [
+   {
+    "id": "n1",
+    "on": 0.07,
+    "off": 0.37,
+    "midi": 84,
+    "cents": 24.7,
+    "vel": 94,
+    "legato": false,
+    "flags": [
+     "uncertain-split"
+    ]
+   },
+   {
+    "id": "n3",
+    "on": 0.46,
+    "off": 0.8,
+    "midi": 87,
+    "cents": -22.0,
+    "vel": 109,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n4",
+    "on": 0.88,
+    "off": 2.02,
+    "midi": 88,
+    "cents": 33.2,
+    "vel": 94,
+    "legato": false,
+    "flags": [
+     "uncertain-split"
+    ]
+   },
+   {
+    "id": "n7",
+    "on": 2.05,
+    "off": 2.77,
+    "midi": 91,
+    "cents": 15.0,
+    "vel": 92,
+    "legato": false,
+    "flags": []
+   }
+  ]
+ },
+ "verdict": {
+  "status": "passed",
+  "rounds": 1,
+  "summary": "Four whistled notes C6, D#6, E6, G6 match the original in pitch, onsets and silences; the flagged C6/E6 pitches are real near-boundary ambiguities. D1 is tracker wobble inside a steady E6, D2/D3 are pyin-only glides between notes, and D4 (-40 ms) falls inside tolerance.",
+  "metrics": {
+   "pitch": 0.9907,
+   "voicingRecall": 1.0,
+   "voicingPrecision": 0.9887,
+   "onsetF1": 0.5455,
+   "explained": 1.0,
+   "notes": 4,
+   "durSec": 2.961
+  },
+  "judged": [
+   {
+    "round": 1,
+    "verdict": "pass",
+    "specVersion": 3
+   }
+  ]
+ },
+ "prior": {
+  "source": "truth",
+  "notes": 7,
+  "path": "apps/api/scripts/fixtures/eval-real/context/whistle-real/freesound-255582.truth.json"
+ },
+ "tool": {
+  "name": "synthcorpus.resynth",
+  "version": "1",
+  "analyzer": {
+   "family": "whistle",
+   "f0_range": [
+    400.0,
+    5000.0
+   ],
+   "gate_db": -32.0,
+   "version": 2
+  },
+  "timbre": {
+   "kind": "whistle"
+  },
+  "seed": 2354545837
+ },
+ "createdAt": "2026-10-30T22:21:04+0100"
+}

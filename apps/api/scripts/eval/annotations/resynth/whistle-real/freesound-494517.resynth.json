@@ -1,0 +1,190 @@
+{
+ "schema": "resynth/1",
+ "dataset": "whistle-real",
+ "clip": "freesound-494517",
+ "role": "target",
+ "audio": {
+  "file": "apps/api/scripts/fixtures/eval-real/context/whistle-real/freesound-494517__real.wav",
+  "sha256": "dadcfcaf083f49944501dc87efcf1a5f3e232ec9ce00288895c7d3906a222a5d",
+  "sampleRate": 44100,
+  "durationSec": 1.0468
+ },
+ "truth": {
+  "bpm": 120,
+  "notes": [
+   {
+    "onsetSec": 0.0,
+    "durSec": 0.11,
+    "midi": 91
+   },
+   {
+    "onsetSec": 0.14,
+    "durSec": 0.13,
+    "midi": 92
+   },
+   {
+    "onsetSec": 0.29,
+    "durSec": 0.065,
+    "midi": 94
+   },
+   {
+    "onsetSec": 0.385,
+    "durSec": 0.095,
+    "midi": 94
+   },
+   {
+    "onsetSec": 0.61,
+    "durSec": 0.16,
+    "midi": 85
+   },
+   {
+    "onsetSec": 0.77,
+    "durSec": 0.08,
+    "midi": 87
+   },
+   {
+    "onsetSec": 0.95,
+    "durSec": 0.06,
+    "midi": 90
+   }
+  ]
+ },
+ "spec": {
+  "schema": "resynth-spec/1",
+  "dataset": "whistle-real",
+  "clip": "freesound-494517",
+  "version": 2,
+  "timbre": {
+   "kind": "whistle"
+  },
+  "render": {
+   "seed": 1286061662,
+   "contour": "copy-detrended",
+   "levelMatch": true
+  },
+  "nextId": 9,
+  "prior": {
+   "source": "truth",
+   "notes": 8,
+   "path": "apps/api/scripts/fixtures/eval-real/context/whistle-real/freesound-494517.truth.json"
+  },
+  "notes": [
+   {
+    "id": "n1",
+    "on": 0.0,
+    "off": 0.11,
+    "midi": 91,
+    "cents": -29.9,
+    "vel": 103,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n2",
+    "on": 0.14,
+    "off": 0.27,
+    "midi": 92,
+    "cents": 23.3,
+    "vel": 95,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n3",
+    "on": 0.29,
+    "off": 0.355,
+    "midi": 94,
+    "cents": -39.1,
+    "vel": 70,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n5",
+    "on": 0.385,
+    "off": 0.48,
+    "midi": 94,
+    "cents": 53.7,
+    "vel": 85,
+    "legato": false,
+    "flags": [
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n6",
+    "on": 0.61,
+    "off": 0.77,
+    "midi": 85,
+    "cents": 35.9,
+    "vel": 84,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n7",
+    "on": 0.77,
+    "off": 0.85,
+    "midi": 87,
+    "cents": 11.8,
+    "vel": 85,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n8",
+    "on": 0.95,
+    "off": 1.01,
+    "midi": 90,
+    "cents": 2.7,
+    "vel": 92,
+    "legato": false,
+    "flags": []
+   }
+  ]
+ },
+ "verdict": {
+  "status": "passed",
+  "rounds": 1,
+  "summary": "7 whistled notes match the original in pitch, splits and timing. D1 (n3 timing) is an energy-detector miss: n3 is clearly audible at 0.29-0.35 s (-26 dB, A#6 on both trackers) and is correctly placed. n5's flagged pitch (A#6, stable part about +40-48 c) is a genuine ambiguity.",
+  "metrics": {
+   "pitch": 0.9333,
+   "voicingRecall": 1.0,
+   "voicingPrecision": 0.7241,
+   "onsetF1": 0.9091,
+   "explained": 1.0,
+   "notes": 7,
+   "durSec": 1.047
+  },
+  "judged": [
+   {
+    "round": 1,
+    "verdict": "pass",
+    "specVersion": 2
+   }
+  ]
+ },
+ "prior": {
+  "source": "truth",
+  "notes": 8,
+  "path": "apps/api/scripts/fixtures/eval-real/context/whistle-real/freesound-494517.truth.json"
+ },
+ "tool": {
+  "name": "synthcorpus.resynth",
+  "version": "1",
+  "analyzer": {
+   "family": "whistle",
+   "f0_range": [
+    400.0,
+    5000.0
+   ],
+   "gate_db": -32.0,
+   "version": 2
+  },
+  "timbre": {
+   "kind": "whistle"
+  },
+  "seed": 1286061662
+ },
+ "createdAt": "2026-10-30T22:21:04+0100"
+}

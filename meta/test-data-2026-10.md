@@ -144,3 +144,8 @@ decided and recorded without changing behaviour. "Open" means left with a reason
   script v2 (tool budget, generator at medium effort, syllable convention).
 - 2026-10-30 21:21: wave 1 launched (45 clips: whistled-high-register/clip-08, whistle-vintage ×6, whistle-real
   ×30, calibration ×8); usage before: session 0 % (fresh window), week 39 %.
+- 2026-10-30 22:06: wave 1 done — 45/45 passed (mean 2.2 rounds; whistle-vintage 3.8), 204 agents / 12 M tokens
+  (≈ 266 k per clip; judge thinking ≈ 2/3 of it). Judge moved to medium effort (wave script v3), queue-driven
+  waves via `work/resynth/_next_wave.py` with 2 calibration canaries per wave.
+- 2026-10-30 22:20: wave 2 done — 38/38 passed (mean 1.45 rounds), 110 agents / 5.5 M tokens (≈ 144 k per clip).
+  usage after: session 67 %, week 50 %. HumTrans scope (769 clips) put to Karel; held out of the queue until answered.

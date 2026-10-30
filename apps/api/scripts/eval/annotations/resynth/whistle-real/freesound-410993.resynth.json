@@ -1,0 +1,228 @@
+{
+ "schema": "resynth/1",
+ "dataset": "whistle-real",
+ "clip": "freesound-410993",
+ "role": "target",
+ "audio": {
+  "file": "apps/api/scripts/fixtures/eval-real/context/whistle-real/freesound-410993__real.wav",
+  "sha256": "d8c31dacf2a7fc22dccefcc8ddd72259df8bc7911505439ff7c0e0e40f0f09f3",
+  "sampleRate": 44100,
+  "durationSec": 4.1796
+ },
+ "truth": {
+  "bpm": 120,
+  "notes": [
+   {
+    "onsetSec": 0.63,
+    "durSec": 0.21,
+    "midi": 94
+   },
+   {
+    "onsetSec": 0.84,
+    "durSec": 0.18,
+    "midi": 93
+   },
+   {
+    "onsetSec": 1.21,
+    "durSec": 0.22,
+    "midi": 91
+   },
+   {
+    "onsetSec": 1.43,
+    "durSec": 0.31,
+    "midi": 88
+   },
+   {
+    "onsetSec": 1.91,
+    "durSec": 0.1,
+    "midi": 94
+   },
+   {
+    "onsetSec": 2.22,
+    "durSec": 0.34,
+    "midi": 92
+   },
+   {
+    "onsetSec": 2.76,
+    "durSec": 0.11,
+    "midi": 91
+   },
+   {
+    "onsetSec": 3.03,
+    "durSec": 0.22,
+    "midi": 91
+   },
+   {
+    "onsetSec": 3.33,
+    "durSec": 0.5,
+    "midi": 88
+   }
+  ]
+ },
+ "spec": {
+  "schema": "resynth-spec/1",
+  "dataset": "whistle-real",
+  "clip": "freesound-410993",
+  "version": 3,
+  "timbre": {
+   "kind": "whistle"
+  },
+  "render": {
+   "seed": 28084529,
+   "contour": "copy-detrended",
+   "levelMatch": true
+  },
+  "nextId": 15,
+  "prior": {
+   "source": "truth",
+   "notes": 14,
+   "path": "apps/api/scripts/fixtures/eval-real/context/whistle-real/freesound-410993.truth.json"
+  },
+  "notes": [
+   {
+    "id": "n1",
+    "on": 0.63,
+    "off": 0.84,
+    "midi": 94,
+    "cents": 0.0,
+    "vel": 96,
+    "legato": false,
+    "flags": [
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n2",
+    "on": 0.84,
+    "off": 1.02,
+    "midi": 93,
+    "cents": -3.0,
+    "vel": 94,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n3",
+    "on": 1.21,
+    "off": 1.43,
+    "midi": 91,
+    "cents": 0.0,
+    "vel": 96,
+    "legato": false,
+    "flags": [
+     "uncertain-split"
+    ]
+   },
+   {
+    "id": "n6",
+    "on": 1.43,
+    "off": 1.74,
+    "midi": 88,
+    "cents": -53.9,
+    "vel": 93,
+    "legato": true,
+    "flags": [
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n8",
+    "on": 1.91,
+    "off": 2.01,
+    "midi": 94,
+    "cents": -11.4,
+    "vel": 92,
+    "legato": false,
+    "flags": [
+     "uncertain-onset"
+    ]
+   },
+   {
+    "id": "n10",
+    "on": 2.22,
+    "off": 2.56,
+    "midi": 92,
+    "cents": -7.5,
+    "vel": 94,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n11",
+    "on": 2.76,
+    "off": 2.87,
+    "midi": 91,
+    "cents": 39.9,
+    "vel": 86,
+    "legato": false,
+    "flags": [
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n13",
+    "on": 3.03,
+    "off": 3.25,
+    "midi": 91,
+    "cents": 30.8,
+    "vel": 91,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n14",
+    "on": 3.33,
+    "off": 3.83,
+    "midi": 88,
+    "cents": -21.9,
+    "vel": 91,
+    "legato": false,
+    "flags": []
+   }
+  ]
+ },
+ "verdict": {
+  "status": "passed",
+  "rounds": 1,
+  "summary": "All 9 whistled notes match the original in pitch, splits and timing. D1 (n3) is a 220 ms G6-to-F6 glide into E6 that is flagged uncertain-split, so it is a genuine ambiguity. D2/D3 are faint pyin-only glide tails, D4 is a +40 ms flagged onset within tolerance, and D5 is a contour/render limit.",
+  "metrics": {
+   "pitch": 0.7296,
+   "voicingRecall": 0.9849,
+   "voicingPrecision": 0.9724,
+   "onsetF1": 0.7407,
+   "explained": 0.9799,
+   "notes": 9,
+   "durSec": 4.18
+  },
+  "judged": [
+   {
+    "round": 1,
+    "verdict": "pass",
+    "specVersion": 3
+   }
+  ]
+ },
+ "prior": {
+  "source": "truth",
+  "notes": 14,
+  "path": "apps/api/scripts/fixtures/eval-real/context/whistle-real/freesound-410993.truth.json"
+ },
+ "tool": {
+  "name": "synthcorpus.resynth",
+  "version": "1",
+  "analyzer": {
+   "family": "whistle",
+   "f0_range": [
+    400.0,
+    5000.0
+   ],
+   "gate_db": -32.0,
+   "version": 2
+  },
+  "timbre": {
+   "kind": "whistle"
+  },
+  "seed": 28084529
+ },
+ "createdAt": "2026-10-30T22:21:04+0100"
+}

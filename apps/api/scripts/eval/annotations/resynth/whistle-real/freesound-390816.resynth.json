@@ -1,0 +1,225 @@
+{
+ "schema": "resynth/1",
+ "dataset": "whistle-real",
+ "clip": "freesound-390816",
+ "role": "target",
+ "audio": {
+  "file": "apps/api/scripts/fixtures/eval-real/context/whistle-real/freesound-390816__real.wav",
+  "sha256": "05134a88fe2bcd223be56df48bc1a356b8c7ed85a863b2024fbde613e63373de",
+  "sampleRate": 44100,
+  "durationSec": 3.2521
+ },
+ "truth": {
+  "bpm": 120,
+  "notes": [
+   {
+    "onsetSec": 0.07,
+    "durSec": 0.41,
+    "midi": 82
+   },
+   {
+    "onsetSec": 0.71,
+    "durSec": 0.17,
+    "midi": 84
+   },
+   {
+    "onsetSec": 1.1,
+    "durSec": 0.13,
+    "midi": 87
+   },
+   {
+    "onsetSec": 1.23,
+    "durSec": 0.26,
+    "midi": 86
+   },
+   {
+    "onsetSec": 1.74,
+    "durSec": 0.1,
+    "midi": 81
+   },
+   {
+    "onsetSec": 1.84,
+    "durSec": 0.11,
+    "midi": 78
+   },
+   {
+    "onsetSec": 1.95,
+    "durSec": 0.11,
+    "midi": 81
+   },
+   {
+    "onsetSec": 2.45,
+    "durSec": 0.12,
+    "midi": 85
+   },
+   {
+    "onsetSec": 2.57,
+    "durSec": 0.32,
+    "midi": 84
+   }
+  ]
+ },
+ "spec": {
+  "schema": "resynth-spec/1",
+  "dataset": "whistle-real",
+  "clip": "freesound-390816",
+  "version": 4,
+  "timbre": {
+   "kind": "whistle"
+  },
+  "render": {
+   "seed": 437348367,
+   "contour": "copy-detrended",
+   "levelMatch": true
+  },
+  "nextId": 12,
+  "prior": {
+   "source": "truth",
+   "notes": 10,
+   "path": "apps/api/scripts/fixtures/eval-real/context/whistle-real/freesound-390816.truth.json"
+  },
+  "notes": [
+   {
+    "id": "n1",
+    "on": 0.07,
+    "off": 0.48,
+    "midi": 82,
+    "cents": 0.9,
+    "vel": 83,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n2",
+    "on": 0.71,
+    "off": 0.88,
+    "midi": 84,
+    "cents": 15.0,
+    "vel": 81,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n4",
+    "on": 1.1,
+    "off": 1.23,
+    "midi": 87,
+    "cents": -26.2,
+    "vel": 94,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n5",
+    "on": 1.23,
+    "off": 1.49,
+    "midi": 86,
+    "cents": -7.4,
+    "vel": 96,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n7",
+    "on": 1.74,
+    "off": 1.84,
+    "midi": 81,
+    "cents": -34.2,
+    "vel": 65,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n11",
+    "on": 1.84,
+    "off": 1.95,
+    "midi": 78,
+    "cents": -1.3,
+    "vel": 71,
+    "legato": true,
+    "flags": [
+     "uncertain-split"
+    ]
+   },
+   {
+    "id": "n8",
+    "on": 1.95,
+    "off": 2.06,
+    "midi": 81,
+    "cents": 15.0,
+    "vel": 82,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n9",
+    "on": 2.45,
+    "off": 2.57,
+    "midi": 85,
+    "cents": -18.3,
+    "vel": 111,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n10",
+    "on": 2.57,
+    "off": 2.89,
+    "midi": 84,
+    "cents": -6.9,
+    "vel": 95,
+    "legato": true,
+    "flags": []
+   }
+  ]
+ },
+ "verdict": {
+  "status": "passed",
+  "rounds": 2,
+  "summary": "All 9 notes match the original in pitch, splits and timing; the only diff (D1, n11 onset vs energy) is the legato dip A5-F#5-A5 where the energy event at 1.95 belongs to n8's arrival, and n11 is already flagged.",
+  "metrics": {
+   "pitch": 0.9463,
+   "voicingRecall": 1.0,
+   "voicingPrecision": 0.9263,
+   "onsetF1": 0.6667,
+   "explained": 1.0,
+   "notes": 9,
+   "durSec": 3.252
+  },
+  "judged": [
+   {
+    "round": 1,
+    "verdict": "fail",
+    "specVersion": 2
+   },
+   {
+    "round": 2,
+    "verdict": "pass",
+    "specVersion": 4
+   }
+  ]
+ },
+ "prior": {
+  "source": "truth",
+  "notes": 10,
+  "path": "apps/api/scripts/fixtures/eval-real/context/whistle-real/freesound-390816.truth.json"
+ },
+ "tool": {
+  "name": "synthcorpus.resynth",
+  "version": "1",
+  "analyzer": {
+   "family": "whistle",
+   "f0_range": [
+    400.0,
+    5000.0
+   ],
+   "gate_db": -32.0,
+   "version": 2
+  },
+  "timbre": {
+   "kind": "whistle"
+  },
+  "seed": 437348367
+ },
+ "createdAt": "2026-10-30T22:21:04+0100"
+}

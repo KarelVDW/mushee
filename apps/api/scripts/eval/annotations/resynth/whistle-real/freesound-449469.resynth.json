@@ -1,0 +1,241 @@
+{
+ "schema": "resynth/1",
+ "dataset": "whistle-real",
+ "clip": "freesound-449469",
+ "role": "target",
+ "audio": {
+  "file": "apps/api/scripts/fixtures/eval-real/context/whistle-real/freesound-449469__real.wav",
+  "sha256": "ef329e2bfd9db0cf32c287ed77bd54b213256d5193097df8e328f7b941960c1c",
+  "sampleRate": 44100,
+  "durationSec": 2.5219
+ },
+ "truth": {
+  "bpm": 120,
+  "notes": [
+   {
+    "onsetSec": 0.16,
+    "durSec": 0.19,
+    "midi": 91
+   },
+   {
+    "onsetSec": 0.35,
+    "durSec": 0.1,
+    "midi": 92
+   },
+   {
+    "onsetSec": 0.65,
+    "durSec": 0.2,
+    "midi": 91
+   },
+   {
+    "onsetSec": 0.85,
+    "durSec": 0.14,
+    "midi": 92
+   },
+   {
+    "onsetSec": 1.14,
+    "durSec": 0.14,
+    "midi": 90
+   },
+   {
+    "onsetSec": 1.28,
+    "durSec": 0.14,
+    "midi": 89
+   },
+   {
+    "onsetSec": 1.42,
+    "durSec": 0.07,
+    "midi": 90
+   },
+   {
+    "onsetSec": 1.49,
+    "durSec": 0.1,
+    "midi": 89
+   },
+   {
+    "onsetSec": 1.79,
+    "durSec": 0.16,
+    "midi": 90
+   },
+   {
+    "onsetSec": 2.16,
+    "durSec": 0.21,
+    "midi": 91
+   }
+  ]
+ },
+ "spec": {
+  "schema": "resynth-spec/1",
+  "dataset": "whistle-real",
+  "clip": "freesound-449469",
+  "version": 3,
+  "timbre": {
+   "kind": "whistle"
+  },
+  "render": {
+   "seed": 1652782979,
+   "contour": "copy-detrended",
+   "levelMatch": true
+  },
+  "nextId": 17,
+  "prior": {
+   "source": "truth",
+   "notes": 15,
+   "path": "apps/api/scripts/fixtures/eval-real/context/whistle-real/freesound-449469.truth.json"
+  },
+  "notes": [
+   {
+    "id": "n3",
+    "on": 0.16,
+    "off": 0.35,
+    "midi": 91,
+    "cents": 0.0,
+    "vel": 95,
+    "legato": false,
+    "flags": [
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n4",
+    "on": 0.35,
+    "off": 0.45,
+    "midi": 92,
+    "cents": -39.0,
+    "vel": 84,
+    "legato": true,
+    "flags": [
+     "uncertain-split"
+    ]
+   },
+   {
+    "id": "n7",
+    "on": 0.65,
+    "off": 0.85,
+    "midi": 91,
+    "cents": -25.5,
+    "vel": 94,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n8",
+    "on": 0.85,
+    "off": 0.99,
+    "midi": 92,
+    "cents": -22.2,
+    "vel": 92,
+    "legato": true,
+    "flags": [
+     "uncertain-split"
+    ]
+   },
+   {
+    "id": "n10",
+    "on": 1.14,
+    "off": 1.28,
+    "midi": 90,
+    "cents": -20.0,
+    "vel": 92,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n11",
+    "on": 1.28,
+    "off": 1.42,
+    "midi": 89,
+    "cents": 6.4,
+    "vel": 99,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n12",
+    "on": 1.42,
+    "off": 1.49,
+    "midi": 90,
+    "cents": -44.3,
+    "vel": 99,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n13",
+    "on": 1.49,
+    "off": 1.59,
+    "midi": 89,
+    "cents": 30.3,
+    "vel": 94,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n16",
+    "on": 1.79,
+    "off": 1.95,
+    "midi": 90,
+    "cents": 41.2,
+    "vel": 93,
+    "legato": false,
+    "flags": [
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n15",
+    "on": 2.16,
+    "off": 2.37,
+    "midi": 91,
+    "cents": -4.8,
+    "vel": 92,
+    "legato": false,
+    "flags": []
+   }
+  ]
+ },
+ "verdict": {
+  "status": "passed",
+  "rounds": 1,
+  "summary": "Five whistled phrases with matching onsets (all within ±50 ms); the F#6/F6 wavering in phrase 3 is real legato pitch changes held >=50 ms, the rising glides (n3, n7) and the fast sweep n16 are flagged genuine ambiguities, and the final fall after n15 is a fall rather than a note. D1-D4 are glide contour and legato grey-zone, not note errors.",
+  "metrics": {
+   "pitch": 0.7554,
+   "voicingRecall": 1.0,
+   "voicingPrecision": 0.8817,
+   "onsetF1": 0.9333,
+   "explained": 1.0,
+   "notes": 10,
+   "durSec": 2.522
+  },
+  "judged": [
+   {
+    "round": 1,
+    "verdict": "pass",
+    "specVersion": 3
+   }
+  ]
+ },
+ "prior": {
+  "source": "truth",
+  "notes": 15,
+  "path": "apps/api/scripts/fixtures/eval-real/context/whistle-real/freesound-449469.truth.json"
+ },
+ "tool": {
+  "name": "synthcorpus.resynth",
+  "version": "1",
+  "analyzer": {
+   "family": "whistle",
+   "f0_range": [
+    400.0,
+    5000.0
+   ],
+   "gate_db": -32.0,
+   "version": 2
+  },
+  "timbre": {
+   "kind": "whistle"
+  },
+  "seed": 1652782979
+ },
+ "createdAt": "2026-10-30T22:21:04+0100"
+}
