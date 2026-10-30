@@ -1,0 +1,236 @@
+{
+ "schema": "resynth/1",
+ "dataset": "whistle-real",
+ "clip": "freesound-533057",
+ "role": "target",
+ "audio": {
+  "file": "apps/api/scripts/fixtures/eval-real/context/whistle-real/freesound-533057__real.wav",
+  "sha256": "2a73a85f7e1bee48d0d274b4a08f83cb6e5b7c1e413ad80f226094df6f6ace9a",
+  "sampleRate": 44100,
+  "durationSec": 6.36
+ },
+ "truth": {
+  "bpm": 120,
+  "notes": [
+   {
+    "onsetSec": 0.01,
+    "durSec": 0.2,
+    "midi": 85
+   },
+   {
+    "onsetSec": 0.21,
+    "durSec": 0.1,
+    "midi": 86
+   },
+   {
+    "onsetSec": 0.31,
+    "durSec": 0.12,
+    "midi": 85
+   },
+   {
+    "onsetSec": 0.49,
+    "durSec": 0.22,
+    "midi": 94
+   },
+   {
+    "onsetSec": 0.83,
+    "durSec": 0.45,
+    "midi": 92
+   },
+   {
+    "onsetSec": 3.7,
+    "durSec": 0.21,
+    "midi": 85
+   },
+   {
+    "onsetSec": 4.0,
+    "durSec": 0.12,
+    "midi": 87
+   },
+   {
+    "onsetSec": 4.12,
+    "durSec": 0.1,
+    "midi": 86
+   },
+   {
+    "onsetSec": 4.29,
+    "durSec": 0.31,
+    "midi": 94
+   },
+   {
+    "onsetSec": 4.73,
+    "durSec": 0.47,
+    "midi": 93
+   }
+  ]
+ },
+ "spec": {
+  "schema": "resynth-spec/1",
+  "dataset": "whistle-real",
+  "clip": "freesound-533057",
+  "version": 2,
+  "timbre": {
+   "kind": "whistle"
+  },
+  "render": {
+   "seed": 3963918349,
+   "contour": "copy-detrended",
+   "levelMatch": true
+  },
+  "nextId": 22,
+  "prior": {
+   "source": "truth",
+   "notes": 19,
+   "path": "apps/api/scripts/fixtures/eval-real/context/whistle-real/freesound-533057.truth.json"
+  },
+  "notes": [
+   {
+    "id": "n20",
+    "on": 0.01,
+    "off": 0.21,
+    "midi": 85,
+    "cents": 26.6,
+    "vel": 71,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n1",
+    "on": 0.21,
+    "off": 0.31,
+    "midi": 86,
+    "cents": -8.8,
+    "vel": 72,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n2",
+    "on": 0.31,
+    "off": 0.43,
+    "midi": 85,
+    "cents": 20.3,
+    "vel": 79,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n4",
+    "on": 0.49,
+    "off": 0.71,
+    "midi": 94,
+    "cents": -42.7,
+    "vel": 95,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n5",
+    "on": 0.83,
+    "off": 1.28,
+    "midi": 92,
+    "cents": -51.2,
+    "vel": 98,
+    "legato": false,
+    "flags": [
+     "uncertain-pitch",
+     "uncertain-split"
+    ]
+   },
+   {
+    "id": "n12",
+    "on": 3.7,
+    "off": 3.91,
+    "midi": 85,
+    "cents": -37.1,
+    "vel": 74,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n13",
+    "on": 4.0,
+    "off": 4.12,
+    "midi": 87,
+    "cents": -12.3,
+    "vel": 86,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n14",
+    "on": 4.12,
+    "off": 4.22,
+    "midi": 86,
+    "cents": 30.1,
+    "vel": 89,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n15",
+    "on": 4.29,
+    "off": 4.6,
+    "midi": 94,
+    "cents": -7.0,
+    "vel": 98,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n19",
+    "on": 4.73,
+    "off": 5.2,
+    "midi": 93,
+    "cents": 33.9,
+    "vel": 96,
+    "legato": false,
+    "flags": []
+   }
+  ]
+ },
+ "verdict": {
+  "status": "passed",
+  "rounds": 1,
+  "summary": "All 10 whistled notes match the original in pitch, splits and onsets; D1 (n5) and D2 (n15) are wobble/drift inside held notes, and n5 is flagged as near a semitone boundary. Neither is a re-articulation.",
+  "metrics": {
+   "pitch": 0.8929,
+   "voicingRecall": 0.9912,
+   "voicingPrecision": 0.9382,
+   "onsetF1": 0.7857,
+   "explained": 1.0,
+   "notes": 10,
+   "durSec": 6.36
+  },
+  "judged": [
+   {
+    "round": 1,
+    "verdict": "pass",
+    "specVersion": 2
+   }
+  ]
+ },
+ "prior": {
+  "source": "truth",
+  "notes": 19,
+  "path": "apps/api/scripts/fixtures/eval-real/context/whistle-real/freesound-533057.truth.json"
+ },
+ "tool": {
+  "name": "synthcorpus.resynth",
+  "version": "1",
+  "analyzer": {
+   "family": "whistle",
+   "f0_range": [
+    400.0,
+    5000.0
+   ],
+   "gate_db": -32.0,
+   "version": 2
+  },
+  "timbre": {
+   "kind": "whistle"
+  },
+  "seed": 3963918349
+ },
+ "createdAt": "2026-10-30T22:36:44+0100"
+}

@@ -1,0 +1,272 @@
+{
+ "schema": "resynth/1",
+ "dataset": "whistle-real",
+ "clip": "freesound-577385",
+ "role": "target",
+ "audio": {
+  "file": "apps/api/scripts/fixtures/eval-real/context/whistle-real/freesound-577385__real.wav",
+  "sha256": "cfa9b9e666b5d48a78d917cd211fa5495467947872e7b8c1a79d2b0cd3056b60",
+  "sampleRate": 44100,
+  "durationSec": 4.1796
+ },
+ "truth": {
+  "bpm": 120,
+  "notes": [
+   {
+    "onsetSec": 0.04,
+    "durSec": 0.35,
+    "midi": 93
+   },
+   {
+    "onsetSec": 0.39,
+    "durSec": 0.32,
+    "midi": 84
+   },
+   {
+    "onsetSec": 0.71,
+    "durSec": 0.09,
+    "midi": 95
+   },
+   {
+    "onsetSec": 0.94,
+    "durSec": 0.42,
+    "midi": 93
+   },
+   {
+    "onsetSec": 1.36,
+    "durSec": 0.31,
+    "midi": 84
+   },
+   {
+    "onsetSec": 1.67,
+    "durSec": 0.09,
+    "midi": 94
+   },
+   {
+    "onsetSec": 2.18,
+    "durSec": 0.44,
+    "midi": 94
+   },
+   {
+    "onsetSec": 2.62,
+    "durSec": 0.23,
+    "midi": 85
+   },
+   {
+    "onsetSec": 2.85,
+    "durSec": 0.12,
+    "midi": 95
+   },
+   {
+    "onsetSec": 3.13,
+    "durSec": 0.54,
+    "midi": 93
+   },
+   {
+    "onsetSec": 3.67,
+    "durSec": 0.28,
+    "midi": 83
+   },
+   {
+    "onsetSec": 3.95,
+    "durSec": 0.19,
+    "midi": 94
+   }
+  ]
+ },
+ "spec": {
+  "schema": "resynth-spec/1",
+  "dataset": "whistle-real",
+  "clip": "freesound-577385",
+  "version": 3,
+  "timbre": {
+   "kind": "whistle"
+  },
+  "render": {
+   "seed": 1259823177,
+   "contour": "copy-detrended",
+   "levelMatch": true
+  },
+  "nextId": 21,
+  "prior": {
+   "source": "truth",
+   "notes": 15,
+   "path": "apps/api/scripts/fixtures/eval-real/context/whistle-real/freesound-577385.truth.json"
+  },
+  "notes": [
+   {
+    "id": "n1",
+    "on": 0.04,
+    "off": 0.39,
+    "midi": 93,
+    "cents": 3.5,
+    "vel": 96,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n2",
+    "on": 0.39,
+    "off": 0.71,
+    "midi": 84,
+    "cents": 0.0,
+    "vel": 82,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n3",
+    "on": 0.71,
+    "off": 0.8,
+    "midi": 95,
+    "cents": 7.6,
+    "vel": 83,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n4",
+    "on": 0.94,
+    "off": 1.36,
+    "midi": 93,
+    "cents": 9.6,
+    "vel": 100,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n5",
+    "on": 1.36,
+    "off": 1.67,
+    "midi": 84,
+    "cents": 2.1,
+    "vel": 92,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n6",
+    "on": 1.67,
+    "off": 1.76,
+    "midi": 94,
+    "cents": -22.0,
+    "vel": 85,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n7",
+    "on": 2.18,
+    "off": 2.62,
+    "midi": 94,
+    "cents": -30.3,
+    "vel": 83,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n8",
+    "on": 2.62,
+    "off": 2.85,
+    "midi": 85,
+    "cents": 0.0,
+    "vel": 76,
+    "legato": false,
+    "flags": [
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n9",
+    "on": 2.85,
+    "off": 2.97,
+    "midi": 95,
+    "cents": 0.2,
+    "vel": 76,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n11",
+    "on": 3.13,
+    "off": 3.67,
+    "midi": 93,
+    "cents": -1.9,
+    "vel": 92,
+    "legato": false,
+    "flags": [
+     "uncertain-split"
+    ]
+   },
+   {
+    "id": "n13",
+    "on": 3.67,
+    "off": 3.95,
+    "midi": 83,
+    "cents": 0.0,
+    "vel": 81,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n15",
+    "on": 3.95,
+    "off": 4.14,
+    "midi": 94,
+    "cents": -19.4,
+    "vel": 97,
+    "legato": false,
+    "flags": []
+   }
+  ]
+ },
+ "verdict": {
+  "status": "passed",
+  "rounds": 2,
+  "summary": "Glissando whistle: each V-shaped phrase is transcribed as top plateau, short bottom dwell, brief upper peak (A6/C6/B6, A6/C6/A#6, A#6/C#6/B6, A6/B5/A#6), and the copy reproduces it. Pitch diffs come from slide time inside the bottom boxes, while the box centres sit on the dwell. Extra-onset diffs mark gradual glide pitch changes, not re-articulations. Onset placement within long glides is a legato grey zone, and the short n8 dwell and n11 are already flagged.",
+  "metrics": {
+   "pitch": 0.5103,
+   "voicingRecall": 0.9797,
+   "voicingPrecision": 0.9253,
+   "onsetF1": 0.5161,
+   "explained": 1.0,
+   "notes": 12,
+   "durSec": 4.18
+  },
+  "judged": [
+   {
+    "round": 1,
+    "verdict": "fail",
+    "specVersion": 2
+   },
+   {
+    "round": 2,
+    "verdict": "pass",
+    "specVersion": 3
+   }
+  ]
+ },
+ "prior": {
+  "source": "truth",
+  "notes": 15,
+  "path": "apps/api/scripts/fixtures/eval-real/context/whistle-real/freesound-577385.truth.json"
+ },
+ "tool": {
+  "name": "synthcorpus.resynth",
+  "version": "1",
+  "analyzer": {
+   "family": "whistle",
+   "f0_range": [
+    400.0,
+    5000.0
+   ],
+   "gate_db": -32.0,
+   "version": 2
+  },
+  "timbre": {
+   "kind": "whistle"
+  },
+  "seed": 1259823177
+ },
+ "createdAt": "2026-10-30T22:36:44+0100"
+}

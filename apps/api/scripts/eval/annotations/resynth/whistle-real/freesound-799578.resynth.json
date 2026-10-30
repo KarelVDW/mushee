@@ -1,0 +1,130 @@
+{
+ "schema": "resynth/1",
+ "dataset": "whistle-real",
+ "clip": "freesound-799578",
+ "role": "target",
+ "audio": {
+  "file": "apps/api/scripts/fixtures/eval-real/context/whistle-real/freesound-799578__real.wav",
+  "sha256": "7f09141484879b629a792221280f0d1f7f02c2f6701eb19da299c228735238c5",
+  "sampleRate": 44100,
+  "durationSec": 1.2885
+ },
+ "truth": {
+  "bpm": 120,
+  "notes": [
+   {
+    "onsetSec": 0.3,
+    "durSec": 0.34,
+    "midi": 93
+   },
+   {
+    "onsetSec": 0.64,
+    "durSec": 0.24,
+    "midi": 83
+   },
+   {
+    "onsetSec": 0.88,
+    "durSec": 0.1,
+    "midi": 94
+   }
+  ]
+ },
+ "spec": {
+  "schema": "resynth-spec/1",
+  "dataset": "whistle-real",
+  "clip": "freesound-799578",
+  "version": 2,
+  "timbre": {
+   "kind": "whistle"
+  },
+  "render": {
+   "seed": 2808523615,
+   "contour": "copy-detrended",
+   "levelMatch": true
+  },
+  "nextId": 4,
+  "prior": {
+   "source": "truth",
+   "notes": 3,
+   "path": "apps/api/scripts/fixtures/eval-real/context/whistle-real/freesound-799578.truth.json"
+  },
+  "notes": [
+   {
+    "id": "n1",
+    "on": 0.3,
+    "off": 0.64,
+    "midi": 93,
+    "cents": 11.5,
+    "vel": 96,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n2",
+    "on": 0.64,
+    "off": 0.88,
+    "midi": 83,
+    "cents": 49.2,
+    "vel": 92,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n3",
+    "on": 0.88,
+    "off": 0.98,
+    "midi": 94,
+    "cents": -62.0,
+    "vel": 82,
+    "legato": false,
+    "flags": [
+     "uncertain-pitch"
+    ]
+   }
+  ]
+ },
+ "verdict": {
+  "status": "passed",
+  "rounds": 1,
+  "summary": "Three-note whistle (A6 attack, legato portamento down to B5, portamento back up to ~A6/A#6) is transcribed correctly: attack onset within 20 ms, legato onsets at pitch arrival, no missing/extra notes. D3 is a portamento contour limit, D1 is the legato arrival of the upward glide (no attack expected), D2 is the noisy glide/tail; n3's semitone (median A6+38, 12 c from the boundary, trackers split A6/A#6) is a flagged genuine ambiguity.",
+  "metrics": {
+   "pitch": 0.6154,
+   "voicingRecall": 0.963,
+   "voicingPrecision": 0.9857,
+   "onsetF1": 0.8,
+   "explained": 1.0,
+   "notes": 3,
+   "durSec": 1.289
+  },
+  "judged": [
+   {
+    "round": 1,
+    "verdict": "pass",
+    "specVersion": 2
+   }
+  ]
+ },
+ "prior": {
+  "source": "truth",
+  "notes": 3,
+  "path": "apps/api/scripts/fixtures/eval-real/context/whistle-real/freesound-799578.truth.json"
+ },
+ "tool": {
+  "name": "synthcorpus.resynth",
+  "version": "1",
+  "analyzer": {
+   "family": "whistle",
+   "f0_range": [
+    400.0,
+    5000.0
+   ],
+   "gate_db": -32.0,
+   "version": 2
+  },
+  "timbre": {
+   "kind": "whistle"
+  },
+  "seed": 2808523615
+ },
+ "createdAt": "2026-10-30T22:36:44+0100"
+}

@@ -1,0 +1,205 @@
+{
+ "schema": "resynth/1",
+ "dataset": "whistle-real",
+ "clip": "freesound-787609",
+ "role": "target",
+ "audio": {
+  "file": "apps/api/scripts/fixtures/eval-real/context/whistle-real/freesound-787609__real.wav",
+  "sha256": "f252b9cb33bf90b5eb218de2da854edd101adc4b849156b4d4cdca6aea5010a7",
+  "sampleRate": 44100,
+  "durationSec": 7.9573
+ },
+ "truth": {
+  "bpm": 120,
+  "notes": [
+   {
+    "onsetSec": 0.27,
+    "durSec": 0.06,
+    "midi": 91
+   },
+   {
+    "onsetSec": 0.43,
+    "durSec": 0.11,
+    "midi": 89
+   },
+   {
+    "onsetSec": 3.73,
+    "durSec": 0.06,
+    "midi": 90
+   },
+   {
+    "onsetSec": 3.89,
+    "durSec": 0.11,
+    "midi": 90
+   },
+   {
+    "onsetSec": 5.3,
+    "durSec": 0.07,
+    "midi": 88
+   },
+   {
+    "onsetSec": 5.43,
+    "durSec": 0.21,
+    "midi": 88
+   },
+   {
+    "onsetSec": 6.85,
+    "durSec": 0.1,
+    "midi": 90
+   },
+   {
+    "onsetSec": 7.03,
+    "durSec": 0.23,
+    "midi": 88
+   }
+  ]
+ },
+ "spec": {
+  "schema": "resynth-spec/1",
+  "dataset": "whistle-real",
+  "clip": "freesound-787609",
+  "version": 2,
+  "timbre": {
+   "kind": "whistle"
+  },
+  "render": {
+   "seed": 4111938703,
+   "contour": "copy-detrended",
+   "levelMatch": true
+  },
+  "nextId": 9,
+  "prior": {
+   "source": "truth",
+   "notes": 8,
+   "path": "apps/api/scripts/fixtures/eval-real/context/whistle-real/freesound-787609.truth.json"
+  },
+  "notes": [
+   {
+    "id": "n1",
+    "on": 0.27,
+    "off": 0.33,
+    "midi": 91,
+    "cents": -41.2,
+    "vel": 97,
+    "legato": false,
+    "flags": [
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n2",
+    "on": 0.43,
+    "off": 0.54,
+    "midi": 89,
+    "cents": 6.8,
+    "vel": 96,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n3",
+    "on": 3.73,
+    "off": 3.79,
+    "midi": 90,
+    "cents": -29.8,
+    "vel": 87,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n4",
+    "on": 3.89,
+    "off": 4.0,
+    "midi": 90,
+    "cents": -10.8,
+    "vel": 99,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n5",
+    "on": 5.3,
+    "off": 5.37,
+    "midi": 88,
+    "cents": -17.2,
+    "vel": 93,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n6",
+    "on": 5.43,
+    "off": 5.64,
+    "midi": 88,
+    "cents": -4.5,
+    "vel": 81,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n7",
+    "on": 6.85,
+    "off": 6.95,
+    "midi": 90,
+    "cents": -3.1,
+    "vel": 95,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n8",
+    "on": 7.03,
+    "off": 7.26,
+    "midi": 88,
+    "cents": -22.0,
+    "vel": 84,
+    "legato": false,
+    "flags": []
+   }
+  ]
+ },
+ "verdict": {
+  "status": "passed",
+  "rounds": 1,
+  "summary": "Four two-chirp whistle pairs (G6/F6, F#6/F#6, E6/E6, F#6/E6); every chirp is one note at its arrival pitch after the upward sweep, onsets align with the original envelope, no diffs.",
+  "metrics": {
+   "pitch": 0.9694,
+   "voicingRecall": 0.9423,
+   "voicingPrecision": 0.8561,
+   "onsetF1": 0.6316,
+   "explained": 0.9712,
+   "notes": 8,
+   "durSec": 7.957
+  },
+  "judged": [
+   {
+    "round": 1,
+    "verdict": "pass",
+    "specVersion": 2
+   }
+  ]
+ },
+ "prior": {
+  "source": "truth",
+  "notes": 8,
+  "path": "apps/api/scripts/fixtures/eval-real/context/whistle-real/freesound-787609.truth.json"
+ },
+ "tool": {
+  "name": "synthcorpus.resynth",
+  "version": "1",
+  "analyzer": {
+   "family": "whistle",
+   "f0_range": [
+    400.0,
+    5000.0
+   ],
+   "gate_db": -32.0,
+   "version": 2
+  },
+  "timbre": {
+   "kind": "whistle"
+  },
+  "seed": 4111938703
+ },
+ "createdAt": "2026-10-30T22:36:44+0100"
+}

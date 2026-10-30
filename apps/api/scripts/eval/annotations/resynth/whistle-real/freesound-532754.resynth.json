@@ -1,0 +1,634 @@
+{
+ "schema": "resynth/1",
+ "dataset": "whistle-real",
+ "clip": "freesound-532754",
+ "role": "target",
+ "audio": {
+  "file": "apps/api/scripts/fixtures/eval-real/context/whistle-real/freesound-532754__real.wav",
+  "sha256": "af9917e1b187232ec6641301f68c4fd9b763c0125083da3f741c6dc86cc530e4",
+  "sampleRate": 44100,
+  "durationSec": 8.0109
+ },
+ "truth": {
+  "bpm": 120,
+  "notes": [
+   {
+    "onsetSec": 0.46,
+    "durSec": 0.13,
+    "midi": 93
+   },
+   {
+    "onsetSec": 0.68,
+    "durSec": 0.09,
+    "midi": 89
+   },
+   {
+    "onsetSec": 0.77,
+    "durSec": 0.06,
+    "midi": 90
+   },
+   {
+    "onsetSec": 0.83,
+    "durSec": 0.08,
+    "midi": 91
+   },
+   {
+    "onsetSec": 1.04,
+    "durSec": 0.08,
+    "midi": 87
+   },
+   {
+    "onsetSec": 1.17,
+    "durSec": 0.06,
+    "midi": 91
+   },
+   {
+    "onsetSec": 1.4,
+    "durSec": 0.25,
+    "midi": 87
+   },
+   {
+    "onsetSec": 2.1,
+    "durSec": 0.17,
+    "midi": 93
+   },
+   {
+    "onsetSec": 2.38,
+    "durSec": 0.11,
+    "midi": 91
+   },
+   {
+    "onsetSec": 2.56,
+    "durSec": 0.11,
+    "midi": 93
+   },
+   {
+    "onsetSec": 2.75,
+    "durSec": 0.22,
+    "midi": 90
+   },
+   {
+    "onsetSec": 2.97,
+    "durSec": 0.2,
+    "midi": 91
+   },
+   {
+    "onsetSec": 3.17,
+    "durSec": 0.07,
+    "midi": 90
+   },
+   {
+    "onsetSec": 3.27,
+    "durSec": 0.14,
+    "midi": 92
+   },
+   {
+    "onsetSec": 3.5,
+    "durSec": 0.15,
+    "midi": 89
+   },
+   {
+    "onsetSec": 3.65,
+    "durSec": 0.22,
+    "midi": 91
+   },
+   {
+    "onsetSec": 3.87,
+    "durSec": 0.1,
+    "midi": 90
+   },
+   {
+    "onsetSec": 4.06,
+    "durSec": 0.07,
+    "midi": 92
+   },
+   {
+    "onsetSec": 4.21,
+    "durSec": 0.13,
+    "midi": 88
+   },
+   {
+    "onsetSec": 4.4,
+    "durSec": 0.06,
+    "midi": 93
+   },
+   {
+    "onsetSec": 4.58,
+    "durSec": 0.17,
+    "midi": 91
+   },
+   {
+    "onsetSec": 4.75,
+    "durSec": 0.1,
+    "midi": 93
+   },
+   {
+    "onsetSec": 4.96,
+    "durSec": 0.1,
+    "midi": 89
+   },
+   {
+    "onsetSec": 5.11,
+    "durSec": 0.12,
+    "midi": 92
+   },
+   {
+    "onsetSec": 5.34,
+    "durSec": 0.06,
+    "midi": 90
+   },
+   {
+    "onsetSec": 6.02,
+    "durSec": 0.13,
+    "midi": 90
+   },
+   {
+    "onsetSec": 6.26,
+    "durSec": 0.12,
+    "midi": 89
+   },
+   {
+    "onsetSec": 6.38,
+    "durSec": 0.04,
+    "midi": 93
+   },
+   {
+    "onsetSec": 6.6,
+    "durSec": 0.09,
+    "midi": 90
+   },
+   {
+    "onsetSec": 6.69,
+    "durSec": 0.06,
+    "midi": 94
+   },
+   {
+    "onsetSec": 6.89,
+    "durSec": 0.08,
+    "midi": 90
+   },
+   {
+    "onsetSec": 7.03,
+    "durSec": 0.13,
+    "midi": 89
+   },
+   {
+    "onsetSec": 7.24,
+    "durSec": 0.04,
+    "midi": 86
+   },
+   {
+    "onsetSec": 7.28,
+    "durSec": 0.07,
+    "midi": 85
+   },
+   {
+    "onsetSec": 7.42,
+    "durSec": 0.03,
+    "midi": 91
+   },
+   {
+    "onsetSec": 7.62,
+    "durSec": 0.13,
+    "midi": 88
+   }
+  ]
+ },
+ "spec": {
+  "schema": "resynth-spec/1",
+  "dataset": "whistle-real",
+  "clip": "freesound-532754",
+  "version": 3,
+  "timbre": {
+   "kind": "whistle"
+  },
+  "render": {
+   "seed": 1948957733,
+   "contour": "copy-detrended",
+   "levelMatch": true
+  },
+  "nextId": 39,
+  "prior": {
+   "source": "truth",
+   "notes": 36,
+   "path": "apps/api/scripts/fixtures/eval-real/context/whistle-real/freesound-532754.truth.json"
+  },
+  "notes": [
+   {
+    "id": "n1",
+    "on": 0.46,
+    "off": 0.59,
+    "midi": 93,
+    "cents": -4.7,
+    "vel": 104,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n2",
+    "on": 0.68,
+    "off": 0.77,
+    "midi": 89,
+    "cents": -6.5,
+    "vel": 94,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n3",
+    "on": 0.77,
+    "off": 0.83,
+    "midi": 90,
+    "cents": 0.0,
+    "vel": 82,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n4",
+    "on": 0.83,
+    "off": 0.91,
+    "midi": 91,
+    "cents": -46.6,
+    "vel": 100,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n5",
+    "on": 1.04,
+    "off": 1.12,
+    "midi": 87,
+    "cents": 38.4,
+    "vel": 91,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n6",
+    "on": 1.17,
+    "off": 1.23,
+    "midi": 91,
+    "cents": -43.0,
+    "vel": 80,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n7",
+    "on": 1.4,
+    "off": 1.65,
+    "midi": 87,
+    "cents": 0.0,
+    "vel": 84,
+    "legato": false,
+    "flags": [
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n8",
+    "on": 2.1,
+    "off": 2.27,
+    "midi": 93,
+    "cents": -21.1,
+    "vel": 103,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n9",
+    "on": 2.38,
+    "off": 2.49,
+    "midi": 91,
+    "cents": 21.0,
+    "vel": 97,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n11",
+    "on": 2.56,
+    "off": 2.67,
+    "midi": 93,
+    "cents": -16.7,
+    "vel": 86,
+    "legato": false,
+    "flags": [
+     "uncertain-onset"
+    ]
+   },
+   {
+    "id": "n12",
+    "on": 2.75,
+    "off": 2.97,
+    "midi": 90,
+    "cents": 21.3,
+    "vel": 95,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n13",
+    "on": 2.97,
+    "off": 3.17,
+    "midi": 91,
+    "cents": -1.3,
+    "vel": 85,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n14",
+    "on": 3.17,
+    "off": 3.24,
+    "midi": 90,
+    "cents": 32.0,
+    "vel": 85,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n15",
+    "on": 3.27,
+    "off": 3.41,
+    "midi": 92,
+    "cents": -35.8,
+    "vel": 93,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n16",
+    "on": 3.5,
+    "off": 3.65,
+    "midi": 89,
+    "cents": 10.7,
+    "vel": 99,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n17",
+    "on": 3.65,
+    "off": 3.87,
+    "midi": 91,
+    "cents": 19.4,
+    "vel": 85,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n18",
+    "on": 3.87,
+    "off": 3.97,
+    "midi": 90,
+    "cents": 31.5,
+    "vel": 87,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n37",
+    "on": 4.06,
+    "off": 4.13,
+    "midi": 92,
+    "cents": -29.9,
+    "vel": 68,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n19",
+    "on": 4.21,
+    "off": 4.34,
+    "midi": 88,
+    "cents": 14.0,
+    "vel": 95,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n20",
+    "on": 4.4,
+    "off": 4.46,
+    "midi": 93,
+    "cents": 8.3,
+    "vel": 71,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n21",
+    "on": 4.58,
+    "off": 4.75,
+    "midi": 91,
+    "cents": 20.4,
+    "vel": 92,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n22",
+    "on": 4.75,
+    "off": 4.85,
+    "midi": 93,
+    "cents": -30.5,
+    "vel": 90,
+    "legato": true,
+    "flags": [
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n24",
+    "on": 4.96,
+    "off": 5.06,
+    "midi": 89,
+    "cents": 4.7,
+    "vel": 91,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n25",
+    "on": 5.11,
+    "off": 5.23,
+    "midi": 92,
+    "cents": -28.8,
+    "vel": 94,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n26",
+    "on": 5.34,
+    "off": 5.4,
+    "midi": 90,
+    "cents": -26.1,
+    "vel": 99,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n38",
+    "on": 6.02,
+    "off": 6.15,
+    "midi": 90,
+    "cents": -26.0,
+    "vel": 87,
+    "legato": false,
+    "flags": [
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n27",
+    "on": 6.26,
+    "off": 6.38,
+    "midi": 89,
+    "cents": 39.0,
+    "vel": 93,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n28",
+    "on": 6.38,
+    "off": 6.42,
+    "midi": 93,
+    "cents": 7.2,
+    "vel": 93,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n29",
+    "on": 6.6,
+    "off": 6.69,
+    "midi": 90,
+    "cents": 17.2,
+    "vel": 91,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n30",
+    "on": 6.69,
+    "off": 6.75,
+    "midi": 94,
+    "cents": 0.0,
+    "vel": 70,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n31",
+    "on": 6.89,
+    "off": 6.97,
+    "midi": 90,
+    "cents": 23.3,
+    "vel": 70,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n32",
+    "on": 7.03,
+    "off": 7.16,
+    "midi": 89,
+    "cents": -13.2,
+    "vel": 84,
+    "legato": false,
+    "flags": [
+     "uncertain-pitch",
+     "uncertain-split"
+    ]
+   },
+   {
+    "id": "n33",
+    "on": 7.24,
+    "off": 7.28,
+    "midi": 86,
+    "cents": 17.9,
+    "vel": 77,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n34",
+    "on": 7.28,
+    "off": 7.35,
+    "midi": 85,
+    "cents": 32.0,
+    "vel": 81,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n35",
+    "on": 7.42,
+    "off": 7.45,
+    "midi": 91,
+    "cents": 19.9,
+    "vel": 77,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n36",
+    "on": 7.62,
+    "off": 7.75,
+    "midi": 88,
+    "cents": 35.9,
+    "vel": 85,
+    "legato": false,
+    "flags": []
+   }
+  ]
+ },
+ "verdict": {
+  "status": "passed",
+  "rounds": 1,
+  "summary": "36 notes match the original's articulations and pitches. D1 (n7) is a loud D#6 head (1.40-1.48) followed by a fading upward glide to G6 that has no stable target, so D#6 with an uncertain-pitch flag is defensible. D2 (n32) is a real re-attack: the level drops to -50 dB at 7.00-7.02 and comes back to -24 dB by 7.06. It is a falling F6, already flagged.",
+  "metrics": {
+   "pitch": 0.9041,
+   "voicingRecall": 0.9555,
+   "voicingPrecision": 0.868,
+   "onsetF1": 0.8571,
+   "explained": 0.9424,
+   "notes": 36,
+   "durSec": 8.011
+  },
+  "judged": [
+   {
+    "round": 1,
+    "verdict": "pass",
+    "specVersion": 3
+   }
+  ]
+ },
+ "prior": {
+  "source": "truth",
+  "notes": 36,
+  "path": "apps/api/scripts/fixtures/eval-real/context/whistle-real/freesound-532754.truth.json"
+ },
+ "tool": {
+  "name": "synthcorpus.resynth",
+  "version": "1",
+  "analyzer": {
+   "family": "whistle",
+   "f0_range": [
+    400.0,
+    5000.0
+   ],
+   "gate_db": -32.0,
+   "version": 2
+  },
+  "timbre": {
+   "kind": "whistle"
+  },
+  "seed": 1948957733
+ },
+ "createdAt": "2026-10-30T22:36:44+0100"
+}

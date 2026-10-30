@@ -1,0 +1,115 @@
+{
+ "schema": "resynth/1",
+ "dataset": "whistle-real",
+ "clip": "freesound-558265",
+ "role": "target",
+ "audio": {
+  "file": "apps/api/scripts/fixtures/eval-real/context/whistle-real/freesound-558265__real.wav",
+  "sha256": "5de873220797b924bc5732b85dc54ae436a4e6c88af42d9e1ad63d6d306db9f2",
+  "sampleRate": 44100,
+  "durationSec": 13.9051
+ },
+ "truth": {
+  "bpm": 120,
+  "notes": [
+   {
+    "onsetSec": 2.52,
+    "durSec": 0.31,
+    "midi": 87
+   },
+   {
+    "onsetSec": 2.83,
+    "durSec": 7.49,
+    "midi": 84
+   }
+  ]
+ },
+ "spec": {
+  "schema": "resynth-spec/1",
+  "dataset": "whistle-real",
+  "clip": "freesound-558265",
+  "version": 2,
+  "timbre": {
+   "kind": "whistle"
+  },
+  "render": {
+   "seed": 54688391,
+   "contour": "copy-detrended",
+   "levelMatch": true
+  },
+  "nextId": 5,
+  "prior": {
+   "source": "truth",
+   "notes": 4,
+   "path": "apps/api/scripts/fixtures/eval-real/context/whistle-real/freesound-558265.truth.json"
+  },
+  "notes": [
+   {
+    "id": "n1",
+    "on": 2.52,
+    "off": 2.83,
+    "midi": 87,
+    "cents": 0.0,
+    "vel": 72,
+    "legato": false,
+    "flags": [
+     "uncertain-exists"
+    ]
+   },
+   {
+    "id": "n4",
+    "on": 2.83,
+    "off": 10.32,
+    "midi": 84,
+    "cents": 31.1,
+    "vel": 94,
+    "legato": true,
+    "flags": []
+   }
+  ]
+ },
+ "verdict": {
+  "status": "passed",
+  "rounds": 1,
+  "summary": "One long held C6 whistle (2.83-10.33 s) preceded by a short flagged D#6 onset that falls into it; the copy matches. The 10 extra-onset diffs inside n4 are small f0 wobbles and amplitude ripples with continuous sound, not re-attacks; the D1 pitch diff is the glide median of a flagged grace note whose short stable top sits at D#6.",
+  "metrics": {
+   "pitch": 0.9701,
+   "voicingRecall": 1.0,
+   "voicingPrecision": 0.9936,
+   "onsetF1": 0.1667,
+   "explained": 1.0,
+   "notes": 2,
+   "durSec": 13.905
+  },
+  "judged": [
+   {
+    "round": 1,
+    "verdict": "pass",
+    "specVersion": 2
+   }
+  ]
+ },
+ "prior": {
+  "source": "truth",
+  "notes": 4,
+  "path": "apps/api/scripts/fixtures/eval-real/context/whistle-real/freesound-558265.truth.json"
+ },
+ "tool": {
+  "name": "synthcorpus.resynth",
+  "version": "1",
+  "analyzer": {
+   "family": "whistle",
+   "f0_range": [
+    400.0,
+    5000.0
+   ],
+   "gate_db": -32.0,
+   "version": 2
+  },
+  "timbre": {
+   "kind": "whistle"
+  },
+  "seed": 54688391
+ },
+ "createdAt": "2026-10-30T22:36:44+0100"
+}

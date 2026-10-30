@@ -1,0 +1,237 @@
+{
+ "schema": "resynth/1",
+ "dataset": "whistle-real",
+ "clip": "freesound-809415",
+ "role": "target",
+ "audio": {
+  "file": "apps/api/scripts/fixtures/eval-real/context/whistle-real/freesound-809415__real.wav",
+  "sha256": "b19776354aa8d3e6f029105b9ca4c90edf79a28bdfb812b82b1c3ac995fce58e",
+  "sampleRate": 44100,
+  "durationSec": 3.3321
+ },
+ "truth": {
+  "bpm": 120,
+  "notes": [
+   {
+    "onsetSec": 0.0,
+    "durSec": 0.24,
+    "midi": 85
+   },
+   {
+    "onsetSec": 0.24,
+    "durSec": 0.22,
+    "midi": 86
+   },
+   {
+    "onsetSec": 0.46,
+    "durSec": 0.48,
+    "midi": 87
+   },
+   {
+    "onsetSec": 0.94,
+    "durSec": 0.37,
+    "midi": 88
+   },
+   {
+    "onsetSec": 1.31,
+    "durSec": 0.14,
+    "midi": 89
+   },
+   {
+    "onsetSec": 1.45,
+    "durSec": 0.21,
+    "midi": 90
+   },
+   {
+    "onsetSec": 1.66,
+    "durSec": 0.09,
+    "midi": 91
+   },
+   {
+    "onsetSec": 1.75,
+    "durSec": 0.09,
+    "midi": 92
+   },
+   {
+    "onsetSec": 1.84,
+    "durSec": 0.07,
+    "midi": 93
+   },
+   {
+    "onsetSec": 1.91,
+    "durSec": 0.08,
+    "midi": 94
+   }
+  ]
+ },
+ "spec": {
+  "schema": "resynth-spec/1",
+  "dataset": "whistle-real",
+  "clip": "freesound-809415",
+  "version": 2,
+  "timbre": {
+   "kind": "whistle"
+  },
+  "render": {
+   "seed": 3286358968,
+   "contour": "copy-detrended",
+   "levelMatch": true
+  },
+  "nextId": 12,
+  "prior": {
+   "source": "truth",
+   "notes": 11,
+   "path": "apps/api/scripts/fixtures/eval-real/context/whistle-real/freesound-809415.truth.json"
+  },
+  "notes": [
+   {
+    "id": "n1",
+    "on": 0.0,
+    "off": 0.24,
+    "midi": 85,
+    "cents": -30.2,
+    "vel": 87,
+    "legato": false,
+    "flags": [
+     "uncertain-split"
+    ]
+   },
+   {
+    "id": "n3",
+    "on": 0.24,
+    "off": 0.46,
+    "midi": 86,
+    "cents": -3.3,
+    "vel": 91,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n4",
+    "on": 0.46,
+    "off": 0.94,
+    "midi": 87,
+    "cents": 1.5,
+    "vel": 86,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n5",
+    "on": 0.94,
+    "off": 1.31,
+    "midi": 88,
+    "cents": -12.7,
+    "vel": 89,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n6",
+    "on": 1.31,
+    "off": 1.45,
+    "midi": 89,
+    "cents": -21.7,
+    "vel": 89,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n7",
+    "on": 1.45,
+    "off": 1.66,
+    "midi": 90,
+    "cents": -6.3,
+    "vel": 95,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n8",
+    "on": 1.66,
+    "off": 1.75,
+    "midi": 91,
+    "cents": -41.3,
+    "vel": 100,
+    "legato": true,
+    "flags": [
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n9",
+    "on": 1.75,
+    "off": 1.84,
+    "midi": 92,
+    "cents": -13.1,
+    "vel": 109,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n10",
+    "on": 1.84,
+    "off": 1.91,
+    "midi": 93,
+    "cents": -30.0,
+    "vel": 104,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n11",
+    "on": 1.91,
+    "off": 1.99,
+    "midi": 94,
+    "cents": -22.0,
+    "vel": 82,
+    "legato": true,
+    "flags": []
+   }
+  ]
+ },
+ "verdict": {
+  "status": "passed",
+  "rounds": 1,
+  "summary": "Continuous upward whistle glide C#6->A#6 sliced into semitone steps at the band crossings; copy tracks the contour (pitch 98%, voicing 100/98%). D1/D2 are legato grey-zone timing diffs: pitch enters the n8 G6 and n10 A6 +-50c bands within ~30 ms of the note onsets, so they are not real errors.",
+  "metrics": {
+   "pitch": 0.9797,
+   "voicingRecall": 1.0,
+   "voicingPrecision": 0.9802,
+   "onsetF1": 0.875,
+   "explained": 1.0,
+   "notes": 10,
+   "durSec": 3.332
+  },
+  "judged": [
+   {
+    "round": 1,
+    "verdict": "pass",
+    "specVersion": 2
+   }
+  ]
+ },
+ "prior": {
+  "source": "truth",
+  "notes": 11,
+  "path": "apps/api/scripts/fixtures/eval-real/context/whistle-real/freesound-809415.truth.json"
+ },
+ "tool": {
+  "name": "synthcorpus.resynth",
+  "version": "1",
+  "analyzer": {
+   "family": "whistle",
+   "f0_range": [
+    400.0,
+    5000.0
+   ],
+   "gate_db": -32.0,
+   "version": 2
+  },
+  "timbre": {
+   "kind": "whistle"
+  },
+  "seed": 3286358968
+ },
+ "createdAt": "2026-10-30T22:36:44+0100"
+}

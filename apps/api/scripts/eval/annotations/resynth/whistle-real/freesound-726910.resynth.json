@@ -1,0 +1,274 @@
+{
+ "schema": "resynth/1",
+ "dataset": "whistle-real",
+ "clip": "freesound-726910",
+ "role": "target",
+ "audio": {
+  "file": "apps/api/scripts/fixtures/eval-real/context/whistle-real/freesound-726910__real.wav",
+  "sha256": "934885de046da5bb87934dba032b4e3632ae6e59eb0cc25d883ca9ef17f2802a",
+  "sampleRate": 44100,
+  "durationSec": 3.0
+ },
+ "truth": {
+  "bpm": 120,
+  "notes": [
+   {
+    "onsetSec": 0.42,
+    "durSec": 0.25,
+    "midi": 94
+   },
+   {
+    "onsetSec": 0.73,
+    "durSec": 0.08,
+    "midi": 96
+   },
+   {
+    "onsetSec": 0.88,
+    "durSec": 0.06,
+    "midi": 98
+   },
+   {
+    "onsetSec": 1.11,
+    "durSec": 0.21,
+    "midi": 95
+   },
+   {
+    "onsetSec": 1.32,
+    "durSec": 0.08,
+    "midi": 96
+   },
+   {
+    "onsetSec": 1.4,
+    "durSec": 0.08,
+    "midi": 95
+   },
+   {
+    "onsetSec": 1.53,
+    "durSec": 0.19,
+    "midi": 91
+   },
+   {
+    "onsetSec": 1.75,
+    "durSec": 0.26,
+    "midi": 94
+   },
+   {
+    "onsetSec": 2.01,
+    "durSec": 0.07,
+    "midi": 94
+   },
+   {
+    "onsetSec": 2.08,
+    "durSec": 0.24,
+    "midi": 95
+   },
+   {
+    "onsetSec": 2.32,
+    "durSec": 0.07,
+    "midi": 96
+   },
+   {
+    "onsetSec": 2.39,
+    "durSec": 0.19,
+    "midi": 95
+   }
+  ]
+ },
+ "spec": {
+  "schema": "resynth-spec/1",
+  "dataset": "whistle-real",
+  "clip": "freesound-726910",
+  "version": 4,
+  "timbre": {
+   "kind": "whistle"
+  },
+  "render": {
+   "seed": 2217471330,
+   "contour": "copy-detrended",
+   "levelMatch": true
+  },
+  "nextId": 15,
+  "prior": {
+   "source": "truth",
+   "notes": 13,
+   "path": "apps/api/scripts/fixtures/eval-real/context/whistle-real/freesound-726910.truth.json"
+  },
+  "notes": [
+   {
+    "id": "n1",
+    "on": 0.42,
+    "off": 0.67,
+    "midi": 94,
+    "cents": 0.0,
+    "vel": 92,
+    "legato": false,
+    "flags": [
+     "uncertain-onset"
+    ]
+   },
+   {
+    "id": "n3",
+    "on": 0.73,
+    "off": 0.81,
+    "midi": 96,
+    "cents": 25.7,
+    "vel": 94,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n4",
+    "on": 0.88,
+    "off": 0.94,
+    "midi": 98,
+    "cents": 45.0,
+    "vel": 68,
+    "legato": false,
+    "flags": [
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n5",
+    "on": 1.11,
+    "off": 1.32,
+    "midi": 95,
+    "cents": 40.4,
+    "vel": 97,
+    "legato": false,
+    "flags": [
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n7",
+    "on": 1.32,
+    "off": 1.4,
+    "midi": 96,
+    "cents": -32.7,
+    "vel": 100,
+    "legato": true,
+    "flags": [
+     "uncertain-pitch",
+     "uncertain-split"
+    ]
+   },
+   {
+    "id": "n8",
+    "on": 1.4,
+    "off": 1.48,
+    "midi": 95,
+    "cents": 40.8,
+    "vel": 97,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n9",
+    "on": 1.53,
+    "off": 1.72,
+    "midi": 91,
+    "cents": -6.6,
+    "vel": 83,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n10",
+    "on": 1.75,
+    "off": 2.01,
+    "midi": 94,
+    "cents": 20.6,
+    "vel": 87,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n14",
+    "on": 2.01,
+    "off": 2.08,
+    "midi": 94,
+    "cents": 14.5,
+    "vel": 95,
+    "legato": false,
+    "flags": [
+     "uncertain-split"
+    ]
+   },
+   {
+    "id": "n11",
+    "on": 2.08,
+    "off": 2.32,
+    "midi": 95,
+    "cents": 4.6,
+    "vel": 99,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n12",
+    "on": 2.32,
+    "off": 2.39,
+    "midi": 96,
+    "cents": -42.0,
+    "vel": 99,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n13",
+    "on": 2.39,
+    "off": 2.58,
+    "midi": 95,
+    "cents": 14.0,
+    "vel": 92,
+    "legato": true,
+    "flags": []
+   }
+  ]
+ },
+ "verdict": {
+  "status": "passed",
+  "rounds": 1,
+  "summary": "All three diffs are acceptable: D2/D3 are the long upward glide into n1 (stable part sits at A#6, so no split and no pitch change), and D1 is the n8->n9 legato fall where the n9 onset at 1.53 matches the pitch arrival. The quarter-tone B6/C7 ornaments (n5/n7/n8, n12) and the n1 onset are flagged genuine ambiguities.",
+  "metrics": {
+   "pitch": 0.8636,
+   "voicingRecall": 0.967,
+   "voicingPrecision": 0.9901,
+   "onsetF1": 0.6957,
+   "explained": 0.956,
+   "notes": 12,
+   "durSec": 3.0
+  },
+  "judged": [
+   {
+    "round": 1,
+    "verdict": "pass",
+    "specVersion": 4
+   }
+  ]
+ },
+ "prior": {
+  "source": "truth",
+  "notes": 13,
+  "path": "apps/api/scripts/fixtures/eval-real/context/whistle-real/freesound-726910.truth.json"
+ },
+ "tool": {
+  "name": "synthcorpus.resynth",
+  "version": "1",
+  "analyzer": {
+   "family": "whistle",
+   "f0_range": [
+    400.0,
+    5000.0
+   ],
+   "gate_db": -32.0,
+   "version": 2
+  },
+  "timbre": {
+   "kind": "whistle"
+  },
+  "seed": 2217471330
+ },
+ "createdAt": "2026-10-30T22:36:44+0100"
+}

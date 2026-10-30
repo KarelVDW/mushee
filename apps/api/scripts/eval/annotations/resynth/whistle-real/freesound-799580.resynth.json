@@ -1,0 +1,130 @@
+{
+ "schema": "resynth/1",
+ "dataset": "whistle-real",
+ "clip": "freesound-799580",
+ "role": "target",
+ "audio": {
+  "file": "apps/api/scripts/fixtures/eval-real/context/whistle-real/freesound-799580__real.wav",
+  "sha256": "26e0b43d7347c7b145c2c1b7be8949326d331831d6eeeb8cc6a0c93ee78df0d2",
+  "sampleRate": 44100,
+  "durationSec": 1.5552
+ },
+ "truth": {
+  "bpm": 120,
+  "notes": [
+   {
+    "onsetSec": 0.41,
+    "durSec": 0.36,
+    "midi": 93
+   },
+   {
+    "onsetSec": 0.77,
+    "durSec": 0.3,
+    "midi": 85
+   },
+   {
+    "onsetSec": 1.07,
+    "durSec": 0.13,
+    "midi": 93
+   }
+  ]
+ },
+ "spec": {
+  "schema": "resynth-spec/1",
+  "dataset": "whistle-real",
+  "clip": "freesound-799580",
+  "version": 2,
+  "timbre": {
+   "kind": "whistle"
+  },
+  "render": {
+   "seed": 766233404,
+   "contour": "copy-detrended",
+   "levelMatch": true
+  },
+  "nextId": 8,
+  "prior": {
+   "source": "truth",
+   "notes": 7,
+   "path": "apps/api/scripts/fixtures/eval-real/context/whistle-real/freesound-799580.truth.json"
+  },
+  "notes": [
+   {
+    "id": "n1",
+    "on": 0.41,
+    "off": 0.77,
+    "midi": 93,
+    "cents": 0.0,
+    "vel": 95,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n3",
+    "on": 0.77,
+    "off": 1.07,
+    "midi": 85,
+    "cents": -25.7,
+    "vel": 97,
+    "legato": true,
+    "flags": [
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n6",
+    "on": 1.07,
+    "off": 1.2,
+    "midi": 93,
+    "cents": -23.0,
+    "vel": 82,
+    "legato": true,
+    "flags": []
+   }
+  ]
+ },
+ "verdict": {
+  "status": "passed",
+  "rounds": 1,
+  "summary": "Three-note glide figure (A6 - C#6 - A6) transcribed correctly: the stable peak of n1 sits near A6, the long downward/upward slides are portamento with no pitch held >=50 ms, and legato onsets fall where the pitch arrives. D1 (median pulled down by the glide) and D2 (contour/render) are acceptable.",
+  "metrics": {
+   "pitch": 0.4,
+   "voicingRecall": 0.9722,
+   "voicingPrecision": 0.963,
+   "onsetF1": 0.5,
+   "explained": 1.0,
+   "notes": 3,
+   "durSec": 1.555
+  },
+  "judged": [
+   {
+    "round": 1,
+    "verdict": "pass",
+    "specVersion": 2
+   }
+  ]
+ },
+ "prior": {
+  "source": "truth",
+  "notes": 7,
+  "path": "apps/api/scripts/fixtures/eval-real/context/whistle-real/freesound-799580.truth.json"
+ },
+ "tool": {
+  "name": "synthcorpus.resynth",
+  "version": "1",
+  "analyzer": {
+   "family": "whistle",
+   "f0_range": [
+    400.0,
+    5000.0
+   ],
+   "gate_db": -32.0,
+   "version": 2
+  },
+  "timbre": {
+   "kind": "whistle"
+  },
+  "seed": 766233404
+ },
+ "createdAt": "2026-10-30T22:36:44+0100"
+}

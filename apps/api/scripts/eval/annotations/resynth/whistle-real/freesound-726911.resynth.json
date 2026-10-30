@@ -1,0 +1,204 @@
+{
+ "schema": "resynth/1",
+ "dataset": "whistle-real",
+ "clip": "freesound-726911",
+ "role": "target",
+ "audio": {
+  "file": "apps/api/scripts/fixtures/eval-real/context/whistle-real/freesound-726911__real.wav",
+  "sha256": "208d747a868682922b3857e18c6e9d94c5f2c50cfbb9ff147bfdc8d6880191de",
+  "sampleRate": 44100,
+  "durationSec": 2.9524
+ },
+ "truth": {
+  "bpm": 120,
+  "notes": [
+   {
+    "onsetSec": 0.53,
+    "durSec": 0.35,
+    "midi": 97
+   },
+   {
+    "onsetSec": 0.88,
+    "durSec": 0.18,
+    "midi": 97
+   },
+   {
+    "onsetSec": 1.12,
+    "durSec": 0.13,
+    "midi": 95
+   },
+   {
+    "onsetSec": 1.27,
+    "durSec": 0.11,
+    "midi": 93
+   },
+   {
+    "onsetSec": 1.43,
+    "durSec": 0.12,
+    "midi": 90
+   },
+   {
+    "onsetSec": 1.61,
+    "durSec": 0.17,
+    "midi": 90
+   },
+   {
+    "onsetSec": 1.78,
+    "durSec": 0.88,
+    "midi": 93
+   }
+  ]
+ },
+ "spec": {
+  "schema": "resynth-spec/1",
+  "dataset": "whistle-real",
+  "clip": "freesound-726911",
+  "version": 7,
+  "timbre": {
+   "kind": "whistle"
+  },
+  "render": {
+   "seed": 1552806616,
+   "contour": "copy-detrended",
+   "levelMatch": true
+  },
+  "nextId": 15,
+  "prior": {
+   "source": "truth",
+   "notes": 12,
+   "path": "apps/api/scripts/fixtures/eval-real/context/whistle-real/freesound-726911.truth.json"
+  },
+  "notes": [
+   {
+    "id": "n1",
+    "on": 0.53,
+    "off": 0.88,
+    "midi": 97,
+    "cents": 0.0,
+    "vel": 94,
+    "legato": false,
+    "flags": [
+     "uncertain-onset"
+    ]
+   },
+   {
+    "id": "n14",
+    "on": 0.88,
+    "off": 1.06,
+    "midi": 97,
+    "cents": -47.9,
+    "vel": 93,
+    "legato": false,
+    "flags": [
+     "uncertain-pitch",
+     "uncertain-split"
+    ]
+   },
+   {
+    "id": "n5",
+    "on": 1.12,
+    "off": 1.25,
+    "midi": 95,
+    "cents": 26.2,
+    "vel": 95,
+    "legato": false,
+    "flags": [
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n6",
+    "on": 1.27,
+    "off": 1.38,
+    "midi": 93,
+    "cents": -40.3,
+    "vel": 94,
+    "legato": false,
+    "flags": [
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n7",
+    "on": 1.43,
+    "off": 1.55,
+    "midi": 90,
+    "cents": -5.3,
+    "vel": 81,
+    "legato": false,
+    "flags": [
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n9",
+    "on": 1.61,
+    "off": 1.78,
+    "midi": 90,
+    "cents": 0.0,
+    "vel": 93,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n11",
+    "on": 1.78,
+    "off": 2.66,
+    "midi": 93,
+    "cents": -14.2,
+    "vel": 96,
+    "legato": true,
+    "flags": []
+   }
+  ]
+ },
+ "verdict": {
+  "status": "passed",
+  "rounds": 2,
+  "summary": "Pass: the 7 notes match the whistled line. D1 is the 270 ms glide from E6 into C#7: the attack is at 0.53 and the pitch arrives at C#7 at about 0.80. The n1/n14 split is backed by a roughly 10 dB dip and an energy onset at 0.88, and it is flagged. D2 (n9) holds F#6 from 1.60 to 1.68 before it glides into A6, so it is a contour limit and not a wrong semitone.",
+  "metrics": {
+   "pitch": 0.7308,
+   "voicingRecall": 0.9945,
+   "voicingPrecision": 0.9767,
+   "onsetF1": 0.7,
+   "explained": 0.9891,
+   "notes": 7,
+   "durSec": 2.952
+  },
+  "judged": [
+   {
+    "round": 1,
+    "verdict": "fail",
+    "specVersion": 3
+   },
+   {
+    "round": 2,
+    "verdict": "pass",
+    "specVersion": 7
+   }
+  ]
+ },
+ "prior": {
+  "source": "truth",
+  "notes": 12,
+  "path": "apps/api/scripts/fixtures/eval-real/context/whistle-real/freesound-726911.truth.json"
+ },
+ "tool": {
+  "name": "synthcorpus.resynth",
+  "version": "1",
+  "analyzer": {
+   "family": "whistle",
+   "f0_range": [
+    400.0,
+    5000.0
+   ],
+   "gate_db": -32.0,
+   "version": 2
+  },
+  "timbre": {
+   "kind": "whistle"
+  },
+  "seed": 1552806616
+ },
+ "createdAt": "2026-10-30T22:36:44+0100"
+}
