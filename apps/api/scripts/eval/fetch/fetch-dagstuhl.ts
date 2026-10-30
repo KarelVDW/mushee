@@ -142,18 +142,49 @@ function medianBpm(marks: BeatMark[]): number {
     return 60 / spb[Math.floor(spb.length / 2)]
 }
 
-/** Mono 16-bit PCM WAV → {samples, sampleRate}; DCS ships exactly this. */
+/**
+ * Mono WAV → {samples as 16-bit PCM, sampleRate}. DCS ships 32-bit FLOAT stems
+ * (format 3); until 2026-10-30 they were sliced as if 16-bit, which wrote half a
+ * window of float bytes under a PCM header (an octave-low, noise-like signal).
+ */
 function readWav(buf: Buffer): { samples: Buffer; sampleRate: number } {
     let pos = 12
     let sampleRate = 22050
+    let format = 1
+    let bits = 16
     while (pos + 8 <= buf.length) {
         const id = buf.toString('ascii', pos, pos + 4)
         const size = buf.readUInt32LE(pos + 4)
-        if (id === 'fmt ') sampleRate = buf.readUInt32LE(pos + 12)
-        else if (id === 'data') return { samples: buf.subarray(pos + 8, pos + 8 + size), sampleRate }
+        if (id === 'fmt ') {
+            format = buf.readUInt16LE(pos + 8)
+            sampleRate = buf.readUInt32LE(pos + 12)
+            bits = buf.readUInt16LE(pos + 22)
+            // WAVE_FORMAT_EXTENSIBLE carries the real format code in its sub-format GUID.
+            if (format === 0xfffe && size >= 40) format = buf.readUInt16LE(pos + 8 + 24)
+        } else if (id === 'data') {
+            return { samples: toPcm16(buf.subarray(pos + 8, pos + 8 + size), format, bits), sampleRate }
+        }
         pos += 8 + size + (size % 2)
     }
     throw new Error('no data chunk in WAV')
+}
+
+function toPcm16(data: Buffer, format: number, bits: number): Buffer {
+    if (format === 1 && bits === 16) return data
+    const bytes = bits / 8
+    const n = Math.floor(data.length / bytes)
+    const out = Buffer.alloc(n * 2)
+    for (let i = 0; i < n; i += 1) {
+        const at = i * bytes
+        let v: number
+        if (format === 3 && bits === 32) v = data.readFloatLE(at)
+        else if (format === 3 && bits === 64) v = data.readDoubleLE(at)
+        else if (format === 1 && bits === 24) v = data.readIntLE(at, 3) / 0x800000
+        else if (format === 1 && bits === 32) v = data.readInt32LE(at) / 0x80000000
+        else throw new Error(`unsupported WAV encoding: format ${format}, ${bits}-bit`)
+        out.writeInt16LE(Math.max(-32768, Math.min(32767, Math.round(v * 32767))), i * 2)
+    }
+    return out
 }
 
 function writeWavSlice(samples: Buffer, sampleRate: number, startSec: number, endSec: number, dest: string): void {
