@@ -201,10 +201,9 @@ an export has already moved the truth aside. A new dataset (the in-app takes) is
 follow from the material (`whistling`, `humming`, `singing`; `instrument` needs an explicit
 `f0_range` and `timbre`). webm/ogg/mp3 originals are decoded with ffmpeg-static.
 
-**Blocked: dagstuhl-choir fixtures are corrupt (found 2026-10-30).** `fetch-dagstuhl.ts`
-assumes 16-bit PCM, but DCS ships 32-bit float WAVs: every `__real.wav` holds the float bytes
-of half the window under a PCM_16 header, so every reader decodes noise an octave low (pYIN
-finds no voicing at all). Re-fetch the audio before resynth runs on this dataset.
+**dagstuhl-choir was re-fetched 2026-10-30.** `fetch-dagstuhl.ts` assumed 16-bit PCM, but DCS
+ships 32-bit float WAVs, so every earlier `__real.wav` held float bytes under a PCM_16 header
+(noise an octave low). Fixed in 37f7ea02; the dataset is now 94 clean excerpts (was 102).
 
 ## Analysis (deterministic, `analysis.py`)
 

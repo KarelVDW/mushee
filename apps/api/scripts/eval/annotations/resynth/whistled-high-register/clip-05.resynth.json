@@ -1,0 +1,207 @@
+{
+ "schema": "resynth/1",
+ "dataset": "whistled-high-register",
+ "clip": "clip-05",
+ "role": "target",
+ "audio": {
+  "file": "apps/api/scripts/fixtures/eval-real/context/whistled-high-register/clip-05__real.wav",
+  "sha256": "8f0d3616e7928d586a3749098fc6d312551c233a434ff6a7b1e3428a6396f764",
+  "sampleRate": 48000,
+  "durationSec": 11.493
+ },
+ "truth": {
+  "bpm": 90,
+  "notes": [
+   {
+    "onsetSec": 0.07,
+    "durSec": 2.38,
+    "midi": 92
+   },
+   {
+    "onsetSec": 3.78,
+    "durSec": 0.34,
+    "midi": 93
+   },
+   {
+    "onsetSec": 4.14,
+    "durSec": 0.42,
+    "midi": 92
+   },
+   {
+    "onsetSec": 4.78,
+    "durSec": 0.45,
+    "midi": 87
+   },
+   {
+    "onsetSec": 5.78,
+    "durSec": 0.27,
+    "midi": 84
+   },
+   {
+    "onsetSec": 6.12,
+    "durSec": 0.65,
+    "midi": 84
+   },
+   {
+    "onsetSec": 7.46,
+    "durSec": 0.5,
+    "midi": 85
+   },
+   {
+    "onsetSec": 8.1,
+    "durSec": 2.44,
+    "midi": 92
+   }
+  ]
+ },
+ "spec": {
+  "schema": "resynth-spec/1",
+  "dataset": "whistled-high-register",
+  "clip": "clip-05",
+  "version": 2,
+  "timbre": {
+   "kind": "whistle"
+  },
+  "render": {
+   "seed": 2140623049,
+   "contour": "copy-detrended",
+   "levelMatch": true
+  },
+  "nextId": 9,
+  "prior": {
+   "source": "aligned",
+   "notes": 8,
+   "path": "apps/api/scripts/fixtures/eval-real/context/whistled-high-register-aligned/clip-05.truth.json"
+  },
+  "notes": [
+   {
+    "id": "n1",
+    "on": 0.07,
+    "off": 2.45,
+    "midi": 92,
+    "cents": -21.8,
+    "vel": 91,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n2",
+    "on": 3.78,
+    "off": 4.12,
+    "midi": 93,
+    "cents": -36.1,
+    "vel": 104,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n3",
+    "on": 4.14,
+    "off": 4.56,
+    "midi": 92,
+    "cents": -14.5,
+    "vel": 90,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n4",
+    "on": 4.78,
+    "off": 5.23,
+    "midi": 87,
+    "cents": -28.2,
+    "vel": 98,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n5",
+    "on": 5.78,
+    "off": 6.05,
+    "midi": 84,
+    "cents": 46.7,
+    "vel": 94,
+    "legato": false,
+    "flags": [
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n6",
+    "on": 6.12,
+    "off": 6.77,
+    "midi": 84,
+    "cents": 40.6,
+    "vel": 92,
+    "legato": false,
+    "flags": [
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n7",
+    "on": 7.46,
+    "off": 7.96,
+    "midi": 85,
+    "cents": 3.4,
+    "vel": 96,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n8",
+    "on": 8.1,
+    "off": 10.54,
+    "midi": 92,
+    "cents": -23.9,
+    "vel": 93,
+    "legato": false,
+    "flags": []
+   }
+  ]
+ },
+ "verdict": {
+  "status": "passed",
+  "rounds": 1,
+  "summary": "All 8 notes match the original: onsets within ~20 ms of the clear attacks, semitones correct (n5/n6 at C6+41..47 rightly flagged uncertain-pitch, distinct from n7 C#6+3). The 4 extra-onset diffs are not note errors: D1 is a ~100 ms end-of-note fall during n1's decay, D2 is n2's continuous attack scoop D#6->A6 with no plateau (onset correctly at the attack 3.78), D3 is a sub-120 ms upward drift while n5 decays (pitch already flagged), and D4 at 10.16 is a 4-5 dB level fluctuation coinciding with the periodic click track (~0.665 s period, also at 8.83/9.49), with steady pitch and similar dips elsewhere in n8.",
+  "metrics": {
+   "pitch": 0.9785,
+   "voicingRecall": 1.0,
+   "voicingPrecision": 0.9744,
+   "onsetF1": 0.7857,
+   "explained": 1.0,
+   "notes": 8,
+   "durSec": 11.493
+  },
+  "judged": [
+   {
+    "round": 1,
+    "verdict": "pass",
+    "specVersion": 2
+   }
+  ]
+ },
+ "prior": {
+  "source": "aligned",
+  "notes": 8,
+  "path": "apps/api/scripts/fixtures/eval-real/context/whistled-high-register-aligned/clip-05.truth.json"
+ },
+ "tool": {
+  "name": "synthcorpus.resynth",
+  "version": "1",
+  "analyzer": {
+   "family": "whistle",
+   "f0_range": [
+    500.0,
+    5000.0
+   ],
+   "gate_db": -32.0,
+   "version": 2
+  },
+  "timbre": {
+   "kind": "whistle"
+  },
+  "seed": 2140623049
+ },
+ "createdAt": "2026-10-30T20:07:52+0100"
+}

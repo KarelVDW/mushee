@@ -82,7 +82,8 @@ never pooled, whatever the quality of their truth.
 1. `cd synthetic-corpus && PYTHONPATH=. .venv/bin/python -m synthcorpus.resynth status` shows
    per-dataset counts by status.
 2. Check `claude-usage --short`. Launch the next wave only while session use is below ~70%.
-3. Relaunch the resynth wave workflow with the clips still pending. It is idempotent: every
+3. Relaunch the resynth wave workflow (script: `resynth-wave` — saved copy at
+   `synthetic-corpus/work/resynth/_wave.js`; args `{"clips": ["<ds>/<clip>", …]}`) with the clips still pending. It is idempotent: every
    clip resumes from its `state.json`. Never resume a workflow run mid-flight (see the
    memory note on workflow resume); start a fresh run instead.
 4. Export passed clips: `resynth export --dataset <id>`.
@@ -125,3 +126,12 @@ decided and recorded without changing behaviour. "Open" means left with a reason
 
 - 2026-10-30 15:20: branch created; scoping workflow done (6 readers, ~1.2 M agent tokens,
   about 12 % of a session window).
+- 2026-10-30 17:20: phase-1/2/6/7 builds done and committed (92bc7278…81ba8611): close-out, resynth tool (27 tests;
+  perturbation self-test over 24 clips: pitch 100 %, delete 97 %, split 96 %, onset ±100 ms 99 %), harness
+  (results → apps/eval/data, truthSource, human-only headline, seams), timeline infra (14 commits, 509-clip
+  clipset), eval app rework. **dagstuhl-choir audio was corrupt** (float stems sliced as 16-bit) → fixed in
+  37f7ea02, re-fetched as 94 clips; every earlier dagstuhl number is void.
+- 2026-10-30 17:30: timeline transcription launched in the background (`run.ts --commits all --parallel 3`,
+  log `apps/api/scripts/eval/.cache/timeline/run.log`).
+- 2026-10-30 17:44: pilot wave launched (17 clips: 6 whistled-high-register, 4 calibration, 7 targets);
+  usage before: session 26 %, week 31 %.

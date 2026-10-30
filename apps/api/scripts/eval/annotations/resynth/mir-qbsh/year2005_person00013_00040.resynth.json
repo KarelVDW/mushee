@@ -1,0 +1,244 @@
+{
+ "schema": "resynth/1",
+ "dataset": "mir-qbsh",
+ "clip": "year2005_person00013_00040",
+ "role": "target",
+ "audio": {
+  "file": "apps/api/scripts/fixtures/eval-real/context/mir-qbsh/year2005_person00013_00040__real.wav",
+  "sha256": "b01dc4f38c225bd57f7663fcb2ff14a1ef1f3c082d5f57a46ac9efb481bebe84",
+  "sampleRate": 8000,
+  "durationSec": 8.0
+ },
+ "truth": {
+  "bpm": 120,
+  "notes": [
+   {
+    "onsetSec": 0.512,
+    "durSec": 0.48,
+    "midi": 44
+   },
+   {
+    "onsetSec": 1.06,
+    "durSec": 1.276,
+    "midi": 53
+   },
+   {
+    "onsetSec": 2.39,
+    "durSec": 0.586,
+    "midi": 51
+   },
+   {
+    "onsetSec": 3.02,
+    "durSec": 0.59,
+    "midi": 53
+   },
+   {
+    "onsetSec": 3.66,
+    "durSec": 1.16,
+    "midi": 49
+   },
+   {
+    "onsetSec": 4.91,
+    "durSec": 0.58,
+    "midi": 44
+   },
+   {
+    "onsetSec": 5.52,
+    "durSec": 0.5,
+    "midi": 45
+   },
+   {
+    "onsetSec": 6.12,
+    "durSec": 1.15,
+    "midi": 57
+   },
+   {
+    "onsetSec": 7.3,
+    "durSec": 0.56,
+    "midi": 55
+   },
+   {
+    "onsetSec": 7.91,
+    "durSec": 0.09,
+    "midi": 57
+   }
+  ]
+ },
+ "spec": {
+  "schema": "resynth-spec/1",
+  "dataset": "mir-qbsh",
+  "clip": "year2005_person00013_00040",
+  "version": 3,
+  "timbre": {
+   "kind": "voice",
+   "vowel": "u",
+   "lowpassHz": 2500,
+   "singer": "male8"
+  },
+  "render": {
+   "seed": 777269317,
+   "contour": "copy-detrended",
+   "levelMatch": true
+  },
+  "nextId": 24,
+  "prior": {
+   "source": "truth",
+   "notes": 23,
+   "path": "apps/api/scripts/fixtures/eval-real/context/mir-qbsh/year2005_person00013_00040.truth.json"
+  },
+  "notes": [
+   {
+    "id": "n1",
+    "on": 0.512,
+    "off": 0.992,
+    "midi": 44,
+    "cents": -1.9,
+    "vel": 91,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n2",
+    "on": 1.06,
+    "off": 2.336,
+    "midi": 53,
+    "cents": -11.1,
+    "vel": 95,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n3",
+    "on": 2.39,
+    "off": 2.976,
+    "midi": 51,
+    "cents": 14.2,
+    "vel": 97,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n4",
+    "on": 3.02,
+    "off": 3.61,
+    "midi": 53,
+    "cents": 24.2,
+    "vel": 92,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n6",
+    "on": 3.66,
+    "off": 4.82,
+    "midi": 49,
+    "cents": -53.2,
+    "vel": 89,
+    "legato": false,
+    "flags": [
+     "uncertain-pitch",
+     "uncertain-split"
+    ]
+   },
+   {
+    "id": "n13",
+    "on": 4.91,
+    "off": 5.49,
+    "midi": 44,
+    "cents": 25.8,
+    "vel": 83,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n15",
+    "on": 5.52,
+    "off": 6.02,
+    "midi": 45,
+    "cents": -36.1,
+    "vel": 82,
+    "legato": false,
+    "flags": [
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n17",
+    "on": 6.12,
+    "off": 7.27,
+    "midi": 57,
+    "cents": -8.9,
+    "vel": 97,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n22",
+    "on": 7.3,
+    "off": 7.86,
+    "midi": 55,
+    "cents": -18.6,
+    "vel": 101,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n23",
+    "on": 7.91,
+    "off": 8.0,
+    "midi": 57,
+    "cents": -2.5,
+    "vel": 105,
+    "legato": false,
+    "flags": []
+   }
+  ]
+ },
+ "verdict": {
+  "status": "passed",
+  "rounds": 1,
+  "summary": "All 10 notes match the original: onsets within ~20 ms of the original attacks (energy dips at 1.06, 2.39, 3.02, 3.66, 4.90, 5.52, 6.12, 7.29, 7.92), pitches match the stable-part medians (octave agrees with the dataset pitch vector), and sounding/silent spans line up. D1 (C3/C#3 at 4.13 inside n6) is drift around the semitone boundary (stable median 48.56) with no energy dip or re-attack, so no split; n6 and n15 are correctly flagged as uncertain pitch. The brief upward bumps in n17 (6.38, 7.08) and the end bump in n6 (4.68) are peaked excursions under 60 ms with no plateau, so they are not separate notes. The copy's missing attacks at 3.02 and 5.52 are a render limit; the spec has the re-articulations.",
+  "metrics": {
+   "pitch": 0.9471,
+   "voicingRecall": 0.9927,
+   "voicingPrecision": 0.981,
+   "onsetF1": 0.5833,
+   "explained": 0.9971,
+   "notes": 10,
+   "durSec": 8.0
+  },
+  "judged": [
+   {
+    "round": 1,
+    "verdict": "pass",
+    "specVersion": 3
+   }
+  ]
+ },
+ "prior": {
+  "source": "truth",
+  "notes": 23,
+  "path": "apps/api/scripts/fixtures/eval-real/context/mir-qbsh/year2005_person00013_00040.truth.json"
+ },
+ "tool": {
+  "name": "synthcorpus.resynth",
+  "version": "1",
+  "analyzer": {
+   "family": "voice",
+   "f0_range": [
+    70.0,
+    800.0
+   ],
+   "gate_db": -38.0,
+   "version": 2
+  },
+  "timbre": {
+   "kind": "voice",
+   "vowel": "u",
+   "lowpassHz": 2500,
+   "singer": "male8"
+  },
+  "seed": 777269317
+ },
+ "createdAt": "2026-10-30T20:07:54+0100"
+}
