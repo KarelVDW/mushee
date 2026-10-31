@@ -15,6 +15,7 @@ import { join } from 'path'
 import type { NoteDto, PipelineNotesDto, PipelineSourceDto } from '@/lib/dto'
 
 import { BenchmarkStore } from './BenchmarkStore'
+import { Corpus } from './Corpus'
 import { FileCache } from './FileCache'
 import { EvalPaths } from './paths'
 
@@ -116,20 +117,32 @@ export class PipelineNotes {
         return [...out, ...commits]
     }
 
-    /** One clip's notes from one source; `notes: null` when the source never scored the clip. */
+    /**
+     * One clip's notes from one source; `notes: null` when the source never scored the clip. A clip
+     * the source has no line for falls back to the same clip of the dataset it shares audio with
+     * (`audioFrom`): the run transcribed that audio once, under the other dataset's name, and
+     * `benchmark.ts rescore` scores such a twin from those notes too.
+     */
     static read(key: string, dataset: string, clip: string): PipelineNotesDto {
         const [kind, id] = [key.slice(0, key.indexOf(':')), key.slice(key.indexOf(':') + 1)]
         // Only names that are files in the cache directories resolve: no path from a request reaches the filesystem.
         const dir = kind === 'run' ? EvalPaths.runNotes : kind === 'timeline' ? EvalPaths.timelineNotes : null
-        if (!dir || !PipelineNotes.jsonl(dir).has(id)) return { key, notes: null, error: null }
+        if (!dir || !PipelineNotes.jsonl(dir).has(id)) return { key, notes: null, error: null, from: null }
         const index = PipelineNotes.indexes.read(join(dir, `${id}.jsonl`))
-        const line = index?.find(dataset, clip, 'real')
-        const row = line ? index?.read(line) : null
-        if (!row) return { key, notes: null, error: null }
+        if (!index) return { key, notes: null, error: null, from: null }
+        let from: string | null = null
+        let line = index.find(dataset, clip, 'real')
+        const twin = line ? null : Corpus.dataset(dataset)?.audioTwin
+        if (twin) {
+            line = index.find(twin, clip, 'real')
+            if (line) from = twin
+        }
+        const row = line ? index.read(line) : null
+        if (!row) return { key, notes: null, error: null, from: null }
         // benchmark.ts writes `error`, the timeline's run.ts `err`.
         const raw = row.err ?? row.error
         const error = typeof raw === 'string' && raw ? raw : null
-        return { key, notes: PipelineNotes.notes(row.notes), error }
+        return { key, notes: PipelineNotes.notes(row.notes), error, from }
     }
 
     /** Notes as `{onsetSec, durSec, midi}` objects or compact `[onset, dur, midi]` triples. */

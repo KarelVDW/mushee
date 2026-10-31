@@ -85,7 +85,8 @@ export class EvalData {
             bySource.set(d.truthSource, row)
             if (!d.resynth) continue
             if (d.resynth.calibration) {
-                resynth.calibrationClips += d.resynth.total
+                // Finished blind runs only: a canary still queued or in the loop calibrates nothing yet.
+                resynth.calibrationClips += d.resynth.passed + d.resynth.unresolved
                 continue
             }
             resynth.datasets++

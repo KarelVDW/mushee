@@ -111,8 +111,14 @@ export interface RunSummaryDto {
     gitSha: string
     gitDirty: boolean
     durationSec: number | null
+    /** The conditions the run scored clips in (a requested condition with no rendered audio scores none). */
     conditions: string[]
     quick: boolean
+    /**
+     * When `benchmark.ts rescore` last scored the run's cached notes against the truth then on disk.
+     * `date` stays the transcription date; the scores are the rescore's.
+     */
+    rescoredAt: string | null
     datasetCount: number
     clipCount: number
     overallF1: number
@@ -133,6 +139,8 @@ export interface RunMetaExtraDto {
     env: Record<string, unknown> | null
     /** `meta.corpus` (per-dataset truth fingerprints, since 2026-10-30), summarised. */
     corpus: { datasets: number; version: string | null } | null
+    /** Conditions the run asked for that scored no clip (no rendered audio for them on disk). */
+    unscoredConditions: string[]
     node: string | null
     file: string
 }
@@ -171,6 +179,8 @@ export interface CompareRowDto {
      * `files`: same source, different truth files (clips added or truth edited) — flagged only.
      */
     truthChange: 'source' | 'files' | null
+    /** Onset-only truth: its COnP is not a score, so neither side is drawn as one. */
+    pitchless: boolean
     a: number | null
     b: number | null
     /** Paired mean of b − a over the clips (dataset, clip, condition) both runs scored. */
@@ -371,4 +381,9 @@ export interface PipelineNotesDto {
     notes: NoteDto[] | null
     /** Empty transcription or a pipeline error recorded with the notes (timeline caches). */
     error: string | null
+    /**
+     * The dataset the notes were cached under when it is not the clip's own: a dataset that shares
+     * its audio (`audioFrom` in dataset.json, jacrc-notes → jacrc-students) and was transcribed once.
+     */
+    from: string | null
 }

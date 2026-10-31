@@ -66,7 +66,9 @@ export function RunList({ runs, synth }: { runs: RunSummaryDto[]; synth?: boolea
                                         </span>
                                     </Cell>
                                     <Cell>
-                                        <RowLink href={Route.run(run.id)} sub={`${run.gitSha}${run.gitDirty ? '* dirty tree' : ''}`}>
+                                        <RowLink
+                                            href={Route.run(run.id)}
+                                            sub={`${run.gitSha}${run.gitDirty ? '* dirty tree' : ''}${run.rescoredAt ? ` · rescored ${Fmt.date(run.rescoredAt)}` : ''}`}>
                                             {run.label}
                                         </RowLink>
                                     </Cell>

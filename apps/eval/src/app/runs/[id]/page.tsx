@@ -57,9 +57,20 @@ export default async function RunPage({ params }: Params) {
                 <MetaItem label={run.kind === 'timeline' ? 'Committed' : 'Recorded'}>
                     {Fmt.dateTime(s.date)} · {run.kind === 'timeline' ? 'transcribing took' : 'took'} {Fmt.duration(s.durationSec)}
                 </MetaItem>
+                {s.rescoredAt && (
+                    <MetaItem label="Rescored">
+                        {Fmt.dateTime(s.rescoredAt)} · these scores are the run&apos;s cached notes against the truth on disk then
+                    </MetaItem>
+                )}
                 <MetaItem label="Conditions">
                     {s.conditions.join(', ')}
                     {s.quick ? ' (quick: real only)' : ''}
+                    {detail.extra.unscoredConditions.length > 0 && (
+                        <span className="text-on-surface-variant">
+                            {' '}
+                            · also requested, but no audio rendered for them: {detail.extra.unscoredConditions.join(', ')}
+                        </span>
+                    )}
                 </MetaItem>
                 <MetaItem label="Matching">
                     {detail.extra.matchTol?.onsetTolSec != null

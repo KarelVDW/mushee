@@ -272,7 +272,9 @@ function TruthMix({ mix, datasets, provisional }: { mix: Partial<Record<string, 
     const entries = Object.entries(mix).filter(([, n]) => (n ?? 0) > 0)
     if (provisional || !entries.length)
         return (
-            <span className="font-body text-[12px] text-on-surface-variant">{datasets ? `${datasets} context datasets` : 'no data'}</span>
+            <span className="font-body text-[12px] text-on-surface-variant">
+                {datasets ? `${datasets} context datasets` : 'no note truth'}
+            </span>
         )
     return (
         <span className="font-body text-[13px] text-on-surface">

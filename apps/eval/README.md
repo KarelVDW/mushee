@@ -52,7 +52,9 @@ shows an empty state that names the command which produces it.
 - **`/runs`** (tabs: real, synthetic, timeline commits) and **`/runs/[id]`**: one run
   broken down per material, per dataset (truth source, pooled, licence, segmentation
   errors), per condition, and its worst clips. Each worst clip links to its compare
-  view with that run's notes overlaid.
+  view with that run's notes overlaid. The header gives the rescore date when
+  `benchmark.ts rescore` re-scored the run, and lists only the conditions that scored
+  clips; requested conditions without rendered audio are named apart.
 - **`/compare?a=&b=`**: paired per-dataset bars with each dataset's change B − A,
   plus the paired change: per dataset, the mean of B − A over the clips (dataset,
   clip, condition) both runs scored; as a headline, the mean of those over the
@@ -64,7 +66,9 @@ shows an empty state that names the command which produces it.
   `benchmark.ts compare`.
 - **`/datasets`** (tabs: real, synthetic) and **`/datasets/[id]`**: tier, material,
   truth source, licence, pooling and resynth progress (passed, unresolved, in
-  progress, pending). The clip list can be filtered by name and resynth status, and
+  progress, pending). A clip whose work directory was only initialised (drafted, never
+  judged) counts as pending, and a work directory exported under another dataset's id
+  (jacrc-students → jacrc-notes) counts only for that dataset. The clip list can be filtered by name and resynth status, and
   sorted by COnP or length.
 - **`/datasets/[id]/[clip]`, the compare view**: A/B playback of the original against
   the synthetic copy on one shared playhead. Switching sides keeps the moment.
@@ -77,7 +81,9 @@ shows an empty state that names the command which produces it.
     - Piano roll layers (time × MIDI, zoomable, click to seek):
         - the copy's notes, with uncertain-flagged notes hatched and marked "?";
         - the truth they replace, or the human truth beside a calibration copy;
-        - the pipeline's notes from any run or timeline commit whose notes are cached;
+        - the pipeline's notes from any run or timeline commit whose notes are cached (a dataset
+          that shares its audio with another, `audioFrom` in `dataset.json`, shows the notes
+          cached under that dataset, as `benchmark.ts rescore` scores them);
         - the original's and the copy's f0 contours;
         - the resynth report's open differences.
     - Side panel: the judge's verdict, the work state, the compare metrics, the
@@ -105,5 +111,5 @@ Until 2026-10-30 this app generated melodies, recorded them through the micropho
 into new corpora, kept them in a Postgres `eval` schema, and transcribed takes with a
 long-lived worker. We concluded that going from notes to recorded tracks is not the way
 to get good test data (see `meta/test-data-2026-10.md`), so all of that was removed.
-`apps/api/scripts/eval/transcribe-worker.ts` was its only client. Nothing drops the
+`apps/api/scripts/eval/transcribe-worker.ts`, its only client, is gone too. Nothing drops the
 leftover `eval` schema in the dev database; it is harmless.

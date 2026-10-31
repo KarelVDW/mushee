@@ -30,6 +30,9 @@ export default async function ComparePage({ searchParams }: { searchParams: Prom
     const b = query.b ? BenchmarkStore.get(query.b) : null
     const options = GROUPS.map((g) => ({ ...g, runs: BenchmarkStore.list(g.kind) })).filter((g) => g.runs.length > 0)
     const cmp = a && b ? BenchmarkStore.compare(a, b) : null
+    // Conditions only one run scored: the unpaired numbers (each run's own mean) mix that coverage in.
+    const onlyA = cmp ? cmp.a.conditions.filter((c) => !cmp.b.conditions.includes(c)) : []
+    const onlyB = cmp ? cmp.b.conditions.filter((c) => !cmp.a.conditions.includes(c)) : []
 
     return (
         <>
@@ -91,6 +94,16 @@ export default async function ComparePage({ searchParams }: { searchParams: Prom
                             detail={`${Fmt.count(cmp.pairedHuman.clips)} clips, ${cmp.pairedHuman.datasets} human-truth datasets`}
                         />
                     </div>
+                    {(onlyA.length > 0 || onlyB.length > 0) && (
+                        <EmptyNote title="The runs scored different conditions">
+                            <p className="m-0">
+                                {onlyB.length > 0 && <>Only run B scored {onlyB.join(', ')}. </>}
+                                {onlyA.length > 0 && <>Only run A scored {onlyA.join(', ')}. </>}
+                                The first two tiles and the B − A column compare each run&apos;s own mean, so they include that change in
+                                coverage. The paired change compares only the clips both runs scored in the same condition.
+                            </p>
+                        </EmptyNote>
+                    )}
                     {cmp.leftOut.length > 0 && (
                         <p className="font-body text-[13px] text-on-surface-variant m-0 max-w-4xl text-pretty">
                             Left out of the paired change:{' '}
@@ -153,13 +166,19 @@ export default async function ComparePage({ searchParams }: { searchParams: Prom
                                             </span>
                                         </Cell>
                                         <Cell className="w-[34%]">
-                                            <PairBar a={r.a} b={r.b} />
+                                            {r.pitchless ? (
+                                                <span className="font-body text-[12px] text-on-surface-variant">
+                                                    onset truth only, no COnP
+                                                </span>
+                                            ) : (
+                                                <PairBar a={r.a} b={r.b} />
+                                            )}
                                         </Cell>
                                         <Cell align="right">
-                                            <DeltaText value={r.a !== null && r.b !== null ? r.b - r.a : null} />
+                                            <DeltaText value={!r.pitchless && r.a !== null && r.b !== null ? r.b - r.a : null} />
                                         </Cell>
                                         <Cell align="right">
-                                            <DeltaText value={r.pairedDelta} />
+                                            <DeltaText value={r.pitchless ? null : r.pairedDelta} />
                                         </Cell>
                                         <Cell align="right" mono className="text-on-surface-variant">
                                             {r.pairedClips || '—'}

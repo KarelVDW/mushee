@@ -165,7 +165,15 @@ export function StatusTag({ status, rounds }: { status: ResynthStatus; rounds?: 
  */
 export function ResynthBar({ progress, compact }: { progress: ResynthProgressDto; compact?: boolean }) {
     const { passed, unresolved, inProgress, pending, total } = progress
-    if (progress.calibration) return <Tag tone="quiet">calibration · {total}</Tag>
+    if (progress.calibration) {
+        const done = passed + unresolved
+        return (
+            <Tag tone="quiet" title={`Blind calibration runs: ${done} finished, ${total - done} queued or in the loop`}>
+                calibration · {done}
+                {done < total ? ` of ${total}` : ''}
+            </Tag>
+        )
+    }
     const segments = [
         { n: passed, className: 'bg-chart-cyan', label: 'passed' },
         { n: unresolved, className: 'bg-chart-magenta', label: 'unresolved' },

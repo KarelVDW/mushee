@@ -193,7 +193,13 @@ const Grid = memo(function Grid({ model }: { model: PianoRollModel }) {
                         stroke="var(--color-surface-container-high)"
                         strokeWidth={1}
                     />
-                    <text x={model.x(t) + 3} y={model.plotHeight + 16} fontSize={11} className="font-mono fill-on-surface-variant">
+                    {/* The last label would run past the roll's right edge: it ends at its tick instead. */}
+                    <text
+                        x={model.x(t) + 44 > model.width ? model.x(t) - 3 : model.x(t) + 3}
+                        textAnchor={model.x(t) + 44 > model.width ? 'end' : 'start'}
+                        y={model.plotHeight + 16}
+                        fontSize={11}
+                        className="font-mono fill-on-surface-variant">
                         {Fmt.clock(t)}
                         {t % 1 ? `.${Math.round((t % 1) * 10)}` : ''}
                     </text>

@@ -95,6 +95,7 @@ export interface RawResult {
         env?: Record<string, unknown>
         corpus?: unknown
         corpusVersion?: string
+        rescoredAt?: string
         // Timeline files
         commitDate?: string
         subject?: string
@@ -119,6 +120,7 @@ const mean = (values: number[]): number | null => (values.length ? values.reduce
 export class BenchmarkRun {
     private scenarioRows: ScenarioRowDto[] | null = null
     private clipIndex: Map<string, ClipScoreDto> | null = null
+    private conditionSet: Set<string> | null = null
 
     constructor(
         readonly id: string,
@@ -139,8 +141,21 @@ export class BenchmarkRun {
         return (this.kind === 'timeline' ? meta.subject : undefined) ?? meta.label ?? meta.subject ?? this.id
     }
 
+    /**
+     * The conditions the run scored, in the order it asked for them. A requested condition whose
+     * audio was never rendered scores no clip, so listing it would overstate the run's coverage.
+     */
     get conditions(): string[] {
-        return this.raw.meta.conditions ?? [...new Set((this.raw.clips ?? []).map((c) => c.cond ?? 'real'))]
+        const requested = this.raw.meta.conditions ?? []
+        const scored = this.scoredConditions()
+        if (scored.size === 0) return requested
+        return [...requested.filter((c) => scored.has(c)), ...[...scored].filter((c) => !requested.includes(c))]
+    }
+
+    /** Requested conditions that scored no clip. */
+    get unscoredConditions(): string[] {
+        const scored = this.scoredConditions()
+        return scored.size === 0 ? [] : (this.raw.meta.conditions ?? []).filter((c) => !scored.has(c))
     }
 
     /** Synth runs carry one condition each; their label ends in it (`onset-policy-studio`). */
@@ -197,6 +212,7 @@ export class BenchmarkRun {
             durationSec: meta.durationSec ?? null,
             conditions: this.conditions,
             quick: meta.quick ?? false,
+            rescoredAt: meta.rescoredAt ?? null,
             datasetCount: meta.datasets?.length ?? scenarios.length,
             clipCount: this.raw.clips?.length ?? scenarios.reduce((s, r) => s + r.clips, 0),
             overallF1: this.raw.overallF1,
@@ -294,6 +310,7 @@ export class BenchmarkRun {
                     meta.corpus && typeof meta.corpus === 'object'
                         ? { datasets: Object.keys(meta.corpus).length, version: meta.corpusVersion ?? null }
                         : null,
+                unscoredConditions: this.unscoredConditions,
                 node: meta.node ?? null,
                 file: this.file,
             },
@@ -302,6 +319,11 @@ export class BenchmarkRun {
             perCondition: this.conditionRows(),
             worstClips: this.worstClips(worst),
         }
+    }
+
+    private scoredConditions(): Set<string> {
+        this.conditionSet ??= new Set((this.raw.clips ?? []).map((c) => c.cond ?? 'real'))
+        return this.conditionSet
     }
 
     private clips(): Map<string, ClipScoreDto> {
@@ -477,6 +499,7 @@ export class BenchmarkStore {
                 truthSource: s?.truthSource ?? 'human',
                 truthSourceA: sa?.truthSource ?? null,
                 truthChange,
+                pitchless: s?.pitchless ?? false,
                 a: sa?.f1 ?? null,
                 b: sb?.f1 ?? null,
                 pairedDelta: mean(paired),

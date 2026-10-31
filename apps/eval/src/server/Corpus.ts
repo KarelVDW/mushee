@@ -42,6 +42,8 @@ interface Manifest {
     source?: string
     notes?: string
     note?: string
+    /** `<tier>/<dataset>` whose audio this dataset's clips are (hard links): jacrc-notes → benchmark/jacrc-students. */
+    audioFrom?: string
 }
 
 /** `<clip>.f0.json`, written by the resynth export: consensus f0 in MIDI at a fixed hop. */
@@ -94,6 +96,11 @@ export class Dataset {
     get truthSource(): TruthSource {
         const m = this.manifest
         return m.truthSource ?? BenchmarkRun.truthSourceFromFlags({ ...m, tier: this.tier })
+    }
+
+    /** The dataset whose audio this one's clips share (`audioFrom`), so a transcription of either is one of both. */
+    get audioTwin(): string | null {
+        return this.manifest.audioFrom?.split('/').pop() || null
     }
 
     /** The pooling rule decided 2026-10-30 (meta/test-data-2026-10.md); synthetic sets pool only in the synth benchmark. */

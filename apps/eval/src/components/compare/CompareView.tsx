@@ -303,6 +303,7 @@ export function CompareView({
                 <div className="flex flex-wrap gap-x-4 gap-y-1 px-5 pt-1 pb-2 font-body text-[12px] text-on-surface-variant">
                     {dto.primary && <span>{dto.primary.detail}</span>}
                     {source && notes.data && notes.data.notes === null && <span>The chosen run has no notes for this clip.</span>}
+                    {notes.data?.from && <span>Pipeline notes cached under {notes.data.from}, which shares this audio.</span>}
                     {notes.data?.error && <span className="text-error">Pipeline error: {notes.data.error}</span>}
                     {dto.primary?.notes.some((n) => n.flags?.length) && (
                         <span className="inline-flex items-center gap-1">

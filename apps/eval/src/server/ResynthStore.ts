@@ -81,7 +81,10 @@ export class ResynthClip {
      * progress again), then the committed verdict, then the work state's own final status.
      */
     get status(): ResynthStatus {
-        const work = this.state?.status
+        const state = this.state
+        const work = state?.status
+        // Initialised from its prior but never judged: queued (humtrans awaits a scope decision), not worked on.
+        if (work === 'drafted' && state?.judgedVersion == null && !this.artifact) return 'pending'
         if (work && WORKING.has(work)) return 'in-progress'
         const verdict = this.artifact?.verdict?.status
         if (verdict === 'passed' || verdict === 'unresolved') return verdict
@@ -91,6 +94,7 @@ export class ResynthClip {
     }
 
     get rounds(): number | null {
+        if (this.status === 'pending') return null
         return this.artifact?.verdict?.rounds ?? this.state?.round ?? null
     }
 
@@ -267,8 +271,10 @@ export class ResynthStore {
         for (const dir of ResynthStore.artifactDirs(dataset)) {
             for (const f of readdirSync(dir)) if (f.endsWith('.resynth.json')) names.add(f.slice(0, -'.resynth.json'.length))
         }
-        const workDir = join(EvalPaths.resynthWork, ResynthStore.workDataset(dataset))
-        if (existsSync(workDir)) for (const e of readdirSync(workDir, { withFileTypes: true })) if (e.isDirectory()) names.add(e.name)
+        const workDataset = ResynthStore.workDataset(dataset)
+        const workDir = workDataset ? join(EvalPaths.resynthWork, workDataset) : null
+        if (workDir && existsSync(workDir))
+            for (const e of readdirSync(workDir, { withFileTypes: true })) if (e.isDirectory()) names.add(e.name)
         const out = new Map<string, ResynthClip>()
         for (const clip of [...names].sort()) out.set(clip, ResynthStore.clip(dataset, clip))
         return out
@@ -279,13 +285,15 @@ export class ResynthStore {
         for (const dir of ResynthStore.artifactDirs(dataset)) {
             artifact ??= ResynthStore.json<ResynthArtifact>(join(dir, `${clip}.resynth.json`))
         }
-        const workDir = join(EvalPaths.resynthWork, artifact?.workDataset ?? ResynthStore.workDataset(dataset), clip)
-        return new ResynthClip(dataset, clip, artifact, existsSync(workDir) ? workDir : null)
+        const workDataset = artifact?.workDataset ?? ResynthStore.workDataset(dataset)
+        const workDir = workDataset ? join(EvalPaths.resynthWork, workDataset, clip) : null
+        return new ResynthClip(dataset, clip, artifact, workDir && existsSync(workDir) ? workDir : null)
     }
 
     /** Whether a dataset has any resynth record at all. */
     static touches(dataset: string): boolean {
-        return ResynthStore.artifactDirs(dataset).length > 0 || existsSync(join(EvalPaths.resynthWork, ResynthStore.workDataset(dataset)))
+        const workDataset = ResynthStore.workDataset(dataset)
+        return ResynthStore.artifactDirs(dataset).length > 0 || (!!workDataset && existsSync(join(EvalPaths.resynthWork, workDataset)))
     }
 
     /** Progress over a dataset's clips; `calibration` marks blind runs on a human-truth dataset. */
@@ -307,11 +315,26 @@ export class ResynthStore {
         return [join(EvalPaths.resynthAnnotations, dataset), join(EvalPaths.resynthCalibration, dataset)].filter((d) => existsSync(d))
     }
 
-    /** The work directory's dataset id: the artifacts name it when the export went to a new dataset. */
-    private static workDataset(dataset: string): string {
+    /**
+     * The work directory's dataset id: the artifacts name it when the export went to a new dataset.
+     * Null when another dataset's artifacts claim this dataset's work directory (jacrc-notes claims
+     * jacrc-students'): that work produced the other dataset's truth, not this one's.
+     */
+    private static workDataset(dataset: string): string | null {
+        const own = ResynthStore.exportedWorkDataset(dataset)
+        if (own) return own
+        if (!existsSync(EvalPaths.resynthAnnotations)) return dataset
+        for (const other of readdirSync(EvalPaths.resynthAnnotations)) {
+            if (other !== dataset && ResynthStore.exportedWorkDataset(other) === dataset) return null
+        }
+        return dataset
+    }
+
+    /** The `workDataset` a dataset's committed artifacts name, if any. */
+    private static exportedWorkDataset(dataset: string): string | null {
         const dir = join(EvalPaths.resynthAnnotations, dataset)
-        if (!existsSync(dir)) return dataset
+        if (!existsSync(dir)) return null
         const first = readdirSync(dir).find((f) => f.endsWith('.resynth.json'))
-        return (first && ResynthStore.json<ResynthArtifact>(join(dir, first))?.workDataset) || dataset
+        return (first && ResynthStore.json<ResynthArtifact>(join(dir, first))?.workDataset) || null
     }
 }
