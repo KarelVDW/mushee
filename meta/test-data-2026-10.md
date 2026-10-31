@@ -152,3 +152,8 @@ decided and recorded without changing behaviour. "Open" means left with a reason
 - 2026-10-30 22:36: wave 3 done — 50/50 passed (mean 1.34 rounds), 134 agents / 6.5 M tokens (≈ 0.34 % session per whistle clip); whistle-real 116/117 exported. usage: session 85 %, week 52 %.
 - 2026-10-30 22:42: wave 4 (fill-up) done — 10/10 passed; **whistle-real complete (117/117) → resynth truth, poolable**; app-takes-whistling 9/19.
 - 2026-10-30 22:45: wave 5 (fill-up) done — 6/6 passed; app-takes-whistling 15/19.
+- 2026-10-31 02:45: wave 6 launched (mir-qbsh ×49, dagstuhl ×29, 2 canaries) into the fresh window. In-app takes
+  content-deduped against every eval clip (peak-contour fingerprint, octave-folded, ±1.5 s): the 40 takes of the
+  2026-06-17 batch were the vocadito corpus re-encoded through the server path (lag 0, 98–100 % match) → removed.
+  app-takes-singing = 52 genuine takes, app-takes-whistling = 19 (none duplicated). The 157 'instrument' takes were
+  the old soundfont corpus (excluded at triage).
