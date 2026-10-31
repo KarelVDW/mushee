@@ -8,6 +8,7 @@
  *   tsx scripts/eval/benchmark.ts run [--label <name>] [--conditions real,echoey-room,…]
  *                                     [--datasets a,b] [--quick]
  *   tsx scripts/eval/benchmark.ts compare <a.json> <b.json> [--split dev|test|all]
+ *   tsx scripts/eval/benchmark.ts rescore <result id|path> [--label <name>]
  *   tsx scripts/eval/benchmark.ts render [<result.json>]
  *   (add --synth to any of them for the realistic synthetic corpus, fixtures/eval-synth)
  *
@@ -25,6 +26,8 @@
  * the run). `compare` pairs the two results clip-by-clip (dataset, clip,
  * condition) and reports the paired-bootstrap Δ COnP per material, per dataset
  * and per condition — a change is only a result when its interval excludes zero.
+ * `rescore` rebuilds a recorded run from its cached notes against the CURRENT
+ * truth (no model loaded), for when the truth changed after the run.
  *
  * Conventions (see benchmarks/README.md): headline metric COnP@±100 ms (onset +
  * pitch, no offset gate); COnPOff at the same window is the secondary,
@@ -40,10 +43,26 @@
  */
 
 import { execSync } from 'child_process'
-import { appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync, renameSync, writeFileSync } from 'fs'
+import { appendFileSync, copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, renameSync, statSync, writeFileSync } from 'fs'
 import { basename, dirname, join, relative, resolve } from 'path'
 
-import { conditionsFor, defaultEvalOptions, type EvalReport, mean, REAL_ROOT, runEval, SYNTH_REALISTIC_ROOT } from './lib/evalRun'
+import {
+    aggregateEval,
+    type ClipResult,
+    conditionsFor,
+    type CorpusClip,
+    defaultEvalOptions,
+    type EvalReport,
+    hintsFor,
+    mean,
+    REAL_ROOT,
+    runEval,
+    scenarioClips,
+    scoreClip,
+    selectCorpus,
+    SYNTH_REALISTIC_ROOT,
+} from './lib/evalRun'
+import type { EstNote } from './lib/metrics'
 import {
     discoverRealDatasets,
     inferTruthSource,
@@ -126,6 +145,14 @@ export interface BenchResult {
         corpus?: Record<string, CorpusFingerprint>
         /** The generated corpus's version, when every scored dataset declares the same one. */
         corpusVersion?: string
+        /**
+         * Set by `rescore`: when this result was rebuilt from the run's cached notes
+         * against newer truth. The provenance above (sha, date, duration, env) is
+         * still the run's; `corpus` is the truth scored against at `rescoredAt`. Since 2026-10-31.
+         */
+        rescoredAt?: string
+        /** The result it was rebuilt from, and the truth fingerprints the RUN was scored against (kept through repeated rescores). */
+        rescoredFrom?: { id: string; corpus?: Record<string, CorpusFingerprint> }
     }
     overallF1: number
     overallF1Off: number
@@ -178,6 +205,10 @@ function flag(name: string): boolean {
 }
 /** The options that take a value — everything else after the command is a flag or a positional. */
 const VALUED = ['--label', '--conditions', '--datasets', '--split']
+/** A label as it appears in a result id. */
+function cleanLabel(v: string): string {
+    return v.replace(/[^A-Za-z0-9._-]+/g, '-')
+}
 /** Positional arguments after the command (`render --synth <x>` must not read `--synth` as a path). */
 function positionals(): string[] {
     const rest = process.argv.slice(3)
@@ -338,7 +369,7 @@ export function compact(report: EvalReport, meta: BenchResult['meta']): BenchRes
 
 async function run(): Promise<void> {
     const quick = flag('quick')
-    const label = (arg('label') ?? 'baseline').replace(/[^A-Za-z0-9._-]+/g, '-')
+    const label = cleanLabel(arg('label') ?? 'baseline')
     const conditions =
         list(arg('conditions')) ??
         (SYNTH
@@ -477,6 +508,12 @@ function renderResult(r: BenchResult): string {
         `- **Date** ${r.meta.date.slice(0, 16).replace('T', ' ')} UTC · **commit** \`${r.meta.gitSha}\`` +
             `${r.meta.gitDirty ? ' (dirty tree)' : ''} · **label** ${r.meta.label} · ${r.meta.durationSec} s · node ${r.meta.node}`,
     )
+    if (r.meta.rescoredAt) {
+        lines.push(
+            `- **Rescored** ${r.meta.rescoredAt.slice(0, 16).replace('T', ' ')} UTC from the run's cached notes against the truth of that day ` +
+                '(`benchmark.ts rescore`): the pipeline output is the run’s, the truth is newer',
+        )
+    }
     lines.push(
         `- **Conditions** ${r.meta.conditions.join(', ')}${r.meta.quick ? ' (quick: real only)' : ''} · ` +
             `**match** onset ±${Math.round(r.meta.matchTol.onsetTolSec * 1000)} ms, exact MIDI; COnPOff adds offset within max(50 ms, 20 %)`,
@@ -606,13 +643,18 @@ function renderHistory(results: BenchResult[]): string {
         const vp = r.perScenario.filter((s) => s.material === 'vocal-percussion')
         const vpOn = vp.length ? fmt(vp.reduce((a, s) => a + s.onsetF1, 0) / vp.length, 2) : '—'
         lines.push(
-            `| ${r.meta.date.slice(0, 16).replace('T', ' ')} | \`${r.meta.gitSha}\`${r.meta.gitDirty ? '*' : ''} | ${r.meta.label} | ` +
+            `| ${r.meta.date.slice(0, 16).replace('T', ' ')} | \`${r.meta.gitSha}\`${r.meta.gitDirty ? '*' : ''} | ${r.meta.label}${r.meta.rescoredAt ? ` (rescored ${r.meta.rescoredAt.slice(0, 10)})` : ''} | ` +
                 `${r.meta.quick ? 'real' : r.meta.conditions.length + ' cond.'} | **${fmt(r.overallF1)}** | ` +
                 `${withHuman ? `${fmt(humanHeadline(r)?.f1)} | ` : ''}${m('singing')} | ${m('humming')} | ` +
                 `${m('whistling')} | ${m('instrument')} | ${vpOn} | [\`${r.meta.id}.json\`](${resultLink(r)}) |`,
         )
     }
-    lines.push('', '`*` = working tree was dirty when the run was recorded. _Italic_ = provisional (context-tier truth only).', '')
+    lines.push(
+        '',
+        '`*` = working tree was dirty when the run was recorded. _Italic_ = provisional (context-tier truth only). ' +
+            '"rescored" = the run’s notes scored again against the truth of that date (`benchmark.ts rescore`).',
+        '',
+    )
     return lines.join('\n')
 }
 
@@ -736,6 +778,147 @@ function compare(aPath: string, bPath: string): void {
 }
 
 // ---------------------------------------------------------------------------
+// rescore
+// ---------------------------------------------------------------------------
+
+/** One line of `.cache/notes/<result id>.jsonl`, as `run` writes it. */
+interface NotesLine {
+    d: string
+    c: string
+    cond: string
+    notes: EstNote[]
+    error?: string
+}
+
+/** "a 3, b 1" — how many of each key. */
+function countBy(keys: string[]): string {
+    const n = new Map<string, number>()
+    for (const k of keys) n.set(k, (n.get(k) ?? 0) + 1)
+    return [...n].map(([k, v]) => `${k} ${v}`).join(', ')
+}
+
+/**
+ * Rebuild a recorded run from its cached notes against the CURRENT truth, with
+ * no pipeline loaded. The corpus walk, `scoreClip` and `aggregateEval` are the
+ * ones `runEval` scores with, so on unchanged truth the result reproduces the
+ * run exactly. The run's provenance (sha, date, duration, env) is kept, since it
+ * still names the pipeline that produced the notes; `corpus` becomes the truth
+ * scored against now, and `rescoredAt` / `rescoredFrom` say so. Without
+ * `--label` the result is rewritten in place; with it, it is written beside the
+ * original under that label (and the notes file is copied to the new id).
+ * Clips on disk that the run has no notes for (added since, and with no
+ * same-input twin, below) and notes whose truth is gone (a deleted dataset or
+ * clip) are counted, not scored.
+ */
+function rescore(path: string): void {
+    const orig = loadResult(path)
+    const notesFile = join(NOTES_DIR, `${orig.meta.id}.jsonl`)
+    if (!existsSync(notesFile)) throw new Error(`${orig.meta.id} has no cached notes (${notesFile}); runs record them since 2026-10-30`)
+    const notes = new Map<string, NotesLine>()
+    for (const line of readFileSync(notesFile, 'utf8').split('\n')) {
+        if (!line.trim()) continue
+        const n = JSON.parse(line) as NotesLine
+        notes.set(`${n.d}/${n.c}/${n.cond}`, n)
+    }
+    const label = cleanLabel(arg('label') ?? orig.meta.label)
+    const opts = defaultEvalOptions({
+        real: !SYNTH,
+        synth: SYNTH,
+        adaptive: true,
+        label,
+        conditionFilter: orig.meta.conditions,
+        scenarioFilter: [...new Set([...notes.values()].map((n) => n.d))],
+    })
+    const corpus = selectCorpus(opts)
+    const clips = corpus.scenarios.flatMap((s) => scenarioClips(corpus, s))
+    const keyOfClip = (c: CorpusClip): string => `${c.scenario.id}/${c.clipId}/${c.condition.id}`
+
+    // A clip the run has no notes for may share its input with one it has: a
+    // dataset of hard links (jacrc-notes → jacrc-students) gives the pipeline the
+    // same file, hints and tempo, so the run's notes for the twin are this clip's
+    // notes. Only twins whose dataset truth (and so its tempo) is unchanged since
+    // the run qualify.
+    const runCorpus = orig.meta.rescoredFrom ? orig.meta.rescoredFrom.corpus : orig.meta.corpus
+    const sameTruth = (d: string): boolean => {
+        const was = runCorpus?.[d]?.truthHash
+        return !!was && was === truthFingerprint(corpus.datasets.find((x) => x.id === d)?.dir ?? '').truthHash
+    }
+    const inputOf = (c: CorpusClip): string => {
+        const { dev, ino } = statSync(c.wavPath)
+        const h = hintsFor(c.scenario, opts.noHint)
+        return `${dev}:${ino}|${h.instrumentId ?? ''}|${h.sourceKind ?? ''}|${c.truth.bpm}`
+    }
+    const missing = clips.filter((c) => !notes.has(keyOfClip(c)))
+    const twins = new Map<string, NotesLine>()
+    if (missing.length) {
+        const wanted = new Set(missing.map((c) => `${c.clipId}/${c.condition.id}`))
+        const trusted = new Map<string, boolean>()
+        for (const c of clips) {
+            const n = notes.get(keyOfClip(c))
+            if (!n || !wanted.has(`${c.clipId}/${c.condition.id}`)) continue
+            if (!trusted.has(c.scenario.id)) trusted.set(c.scenario.id, sameTruth(c.scenario.id))
+            if (trusted.get(c.scenario.id)) twins.set(inputOf(c), n)
+        }
+    }
+
+    const results: ClipResult[] = []
+    const used = new Set<string>()
+    const unscored: string[] = []
+    const borrowed: string[] = []
+    for (const c of clips) {
+        const key = keyOfClip(c)
+        let n = notes.get(key)
+        if (n) used.add(key)
+        else if ((n = twins.get(inputOf(c)))) borrowed.push(`${c.scenario.id} ← ${n.d}`)
+        else {
+            unscored.push(c.scenario.id)
+            continue
+        }
+        results.push(
+            scoreClip({ datasetId: c.scenario.id, clipId: c.clipId, condition: c.condition.id, truth: c.truth }, n.notes, opts.matchOpts),
+        )
+    }
+    const orphaned = [...notes.values()].filter((n) => !used.has(`${n.d}/${n.c}/${n.cond}`)).map((n) => n.d)
+    const report = aggregateEval(opts, corpus, results)
+    printReport(report)
+
+    const scored = report.perScenario.filter((s) => s.clips > 0).map((s) => s.scenario)
+    const stem = orig.meta.id.endsWith(`_${orig.meta.label}`) ? orig.meta.id.slice(0, -orig.meta.label.length - 1) : orig.meta.id
+    const id = label === orig.meta.label ? orig.meta.id : `${stem}_${label}`
+    // The run's own provenance stays; only the truth side (and the label, if asked) changes.
+    const { corpus: _corpus, corpusVersion: _version, rescoredAt: _at, rescoredFrom: _from, ...kept } = orig.meta
+    const result = compact(report, {
+        ...kept,
+        id,
+        label,
+        datasets: scored,
+        matchTol: report.matchTol,
+        ...corpusProvenance(corpusFingerprints(corpus.datasets.filter((d) => scored.includes(d.id))), scored),
+        rescoredAt: new Date().toISOString(),
+        rescoredFrom: { id: orig.meta.id, ...(runCorpus ? { corpus: runCorpus } : {}) },
+    })
+
+    const out = join(RESULTS_DIR, `${id}.json`)
+    writeFileSync(out, JSON.stringify(result))
+    if (id !== orig.meta.id) copyFileSync(notesFile, join(NOTES_DIR, `${id}.jsonl`))
+    const changed = Object.entries(result.meta.corpus ?? {})
+        .filter(([d, f]) => runCorpus?.[d]?.truthHash !== f.truthHash)
+        .map(([d]) => d)
+    console.log(
+        `\nrescored ${orig.meta.id}: ${results.length} clip×cond from ${notes.size} cached notes` +
+            (borrowed.length ? `; ${borrowed.length} from a same-input twin (${countBy(borrowed)})` : '') +
+            (unscored.length ? `; no notes for ${unscored.length} (${countBy(unscored)})` : '') +
+            (orphaned.length ? `; no truth any more for ${orphaned.length} (${countBy(orphaned)})` : ''),
+    )
+    console.log(`truth changed since the run: ${changed.join(', ') || 'none'}`)
+    console.log(
+        `headline COnP ${fmt(orig.overallF1)} → ${fmt(result.overallF1)}; human truth ${fmt(orig.overallF1Human)} → ${fmt(result.overallF1Human)}`,
+    )
+    console.log(`Result written to ${out}`)
+    render()
+}
+
+// ---------------------------------------------------------------------------
 
 async function main(): Promise<void> {
     const cmd = process.argv[2]
@@ -746,10 +929,16 @@ async function main(): Promise<void> {
         if (!aPath || !bPath) throw new Error('compare needs two result files')
         return compare(resolveResult(aPath), resolveResult(bPath))
     }
+    if (cmd === 'rescore') {
+        const [path] = positionals()
+        if (!path) throw new Error('rescore needs a result id or file')
+        return rescore(resolveResult(path))
+    }
     console.log(
         'usage: benchmark.ts run [--label X] [--conditions a,b] [--datasets a,b] [--quick] [--synth]\n' +
             '       benchmark.ts compare <a.json> <b.json> [--split dev|test|all] [--synth]\n' +
-            '       benchmark.ts render [<result.json>] [--synth]',
+            '       benchmark.ts render [<result.json>] [--synth]\n' +
+            '       benchmark.ts rescore <result id|path> [--label X] [--synth]',
     )
 }
 

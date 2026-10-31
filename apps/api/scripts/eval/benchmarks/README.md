@@ -17,6 +17,8 @@ pnpm exec tsx scripts/eval/benchmark.ts run --quick --label <what-changed>
 pnpm exec tsx scripts/eval/benchmark.ts run --quick --datasets urmp-flute,vocadito --label <what>
 # did a change help? paired per-clip intervals between two recorded runs
 pnpm exec tsx scripts/eval/benchmark.ts compare <a> <b> [--split test]
+# the truth changed after a run: score its cached notes again (seconds, no model)
+pnpm exec tsx scripts/eval/benchmark.ts rescore <result> [--label <new-label>]
 # regenerate RESULTS.md from the committed results
 pnpm exec tsx scripts/eval/benchmark.ts render
 # the realistic synthetic corpus: add --synth to any command (≈ 23 min per condition)
@@ -190,7 +192,21 @@ Its headline is a mean over synthetic datasets; it has no human-truth variant.
 - `../.cache/notes/<result id>.jsonl` (gitignored) — the notes the pipeline
   produced in that run, one line per clip × condition:
   `{"d","c","cond","notes":[{"onsetSec","durSec","midi"}]}` (plus `error` when the
-  clip failed and scored as zero). The eval app's comparison view reads them.
+  clip failed and scored as zero). The eval app's comparison view reads them,
+  and `rescore` scores them again against the current truth: the same corpus
+  walk, `scoreClip` and `aggregateEval` as `run`, so on unchanged truth it
+  reproduces the run exactly (checked on a fresh `urmp-flute` run, and on the
+  37 datasets of `2026-10-31T06-12-44_d16420ef` whose truth had not changed:
+  4,857 clip rows identical). It keeps the run's `gitSha`, `date`,
+  `durationSec` and `env`, replaces `corpus` with the truth scored now, and
+  adds `meta.rescoredAt` plus `meta.rescoredFrom` (`id`, and the fingerprints
+  the run itself was scored against). Without `--label` it rewrites the result
+  in place; with one, it writes a sibling `<timestamp>_<sha>_<label>` and copies
+  the notes file to that id. A clip with no notes of its own takes the notes
+  of a same-input twin: the same audio inode (a hard-linked dataset such as
+  `jacrc-notes` → `jacrc-students`), the same hints and the same tempo. The twin
+  must come from a dataset whose truth is unchanged since the run. Clips with
+  neither are counted and left out, and so are notes whose truth is gone.
 - The result schema and `compact()` are exported from `benchmark.ts`; with
   `scoreClip()` and `aggregateEval()` from `../lib/evalRun.ts` a scorer of notes
   produced elsewhere (an older pipeline) writes results `render` and `compare`

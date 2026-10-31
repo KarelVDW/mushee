@@ -19,6 +19,13 @@
  *   3. (human corrects the TSVs in Audacity / Sonic Visualiser)
  *   4. fetch/import-note-labels.ts    → fixtures/eval-real/<tier>/<dataset>/            (scoreable)
  *
+ * Since 2026-10-30 the truth no longer comes from step 3: no clip was ever
+ * human-verified, and synthetic-corpus resynth (synthetic-corpus/RESYNTH.md)
+ * replaced the drafts in place (drafts kept as `<clip>.truth-derived.json`).
+ * whistle-real sits in `eval-real/benchmark/` (pooled), whistle-vintage in
+ * `eval-real/context/` (`pooled: false`). Re-running step 4 would overwrite
+ * that truth; re-run `synthcorpus.resynth export` afterwards if you ever do.
+ *
  * Audio is cached, never committed (it is re-fetchable from the URLs below).
  * The label TSVs ARE committed — they are the only part nobody can regenerate.
  *

@@ -41,8 +41,17 @@
  * with the audio copied across, so the original recording and its prescribed
  * melody stay exactly as recorded.
  *
+ * Status (2026-10-31): superseded for whistled-high-register. That dataset now
+ * lives in `benchmark/whistled-high-register` with resynth note truth
+ * (synthetic-corpus/RESYNTH.md); its prescribed melody moved to
+ * `<clip>.truth-derived.json`, and `whistled-high-register-aligned` was deleted
+ * (its labels stay in `annotations/whistled-high-register-aligned/`). This script
+ * reads `<clip>.truth.json` as the score, so do not point it at a dataset whose
+ * truth.json is already resynth truth. `context/humtrans` → `humtrans-aligned`
+ * is still current (the prior for the pending humtrans resynth decision).
+ *
  * Run: pnpm --filter api exec tsx scripts/eval/fetch/align-prescribed-truth.ts \
- *        --dataset=context/whistled-high-register
+ *        --dataset=context/humtrans --out=humtrans-aligned
  */
 
 import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'fs'

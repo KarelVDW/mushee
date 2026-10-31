@@ -12,7 +12,16 @@
  *
  * and writes the standard layout every other fetcher produces, into the TIER
  * the labels have earned (context/ while any clip is unverified, benchmark/
- * once a human has verified them all — see lib/realCorpus.ts):
+ * once a human has verified them all — see lib/realCorpus.ts).
+ *
+ * ⚠ whistle-real and whistle-vintage carry resynth note truth since 2026-10-30
+ * (synthetic-corpus/RESYNTH.md; whistle-real in benchmark/, whistle-vintage in
+ * context/ with `pooled: false`). A run for either dataset deletes its dir in
+ * BOTH tiers and rewrites it from the unverified label TSVs; re-run
+ * `synthcorpus.resynth export --dataset <id>` afterwards to restore the
+ * resynth truth.
+ *
+ * Output:
  *
  *   fixtures/eval-real/<tier>/<dataset>/<clip>.truth.json
  *   fixtures/eval-real/<tier>/<dataset>/<clip>__real.wav

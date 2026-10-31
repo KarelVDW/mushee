@@ -81,7 +81,11 @@ export function printReport(report: EvalReport): void {
                       ? '† not pooled (pitchless — read COn(onset) instead)'
                       : s.constructedPerformance
                         ? '† not pooled (constructed performance — real timbre, spliced notes)'
-                        : '† not pooled (note truth derived)'),
+                        : s.noteTruthDerived
+                          ? '† not pooled (note truth derived)'
+                          : s.licenceRestricted
+                            ? '† not pooled (restricted licence)'
+                            : '† not pooled (opted out)'),
         )
     }
 
