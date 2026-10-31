@@ -1,0 +1,247 @@
+{
+ "schema": "resynth/1",
+ "dataset": "jacrc-notes",
+ "workDataset": "jacrc-students",
+ "clip": "lsxp-Jiang_shen_er-San_jia_dian02-sz-S2_ex00",
+ "role": "target",
+ "audio": {
+  "file": "apps/api/scripts/fixtures/eval-real/benchmark/jacrc-students/lsxp-Jiang_shen_er-San_jia_dian02-sz-S2_ex00__real.wav",
+  "sha256": "201d603a268c0884c16ed17abffc9a6bf5b9ee1e53656ce425e1027300490d1e",
+  "sampleRate": 44100,
+  "durationSec": 30.0
+ },
+ "truth": {
+  "bpm": 120,
+  "notes": [
+   {
+    "onsetSec": 25.39,
+    "durSec": 0.68,
+    "midi": 59
+   },
+   {
+    "onsetSec": 26.17,
+    "durSec": 0.7,
+    "midi": 64
+   },
+   {
+    "onsetSec": 26.87,
+    "durSec": 0.13,
+    "midi": 65
+   },
+   {
+    "onsetSec": 27.0,
+    "durSec": 0.71,
+    "midi": 59
+   },
+   {
+    "onsetSec": 28.28,
+    "durSec": 0.32,
+    "midi": 59
+   },
+   {
+    "onsetSec": 28.66,
+    "durSec": 0.42,
+    "midi": 61
+   },
+   {
+    "onsetSec": 29.08,
+    "durSec": 0.41,
+    "midi": 63
+   },
+   {
+    "onsetSec": 29.49,
+    "durSec": 0.29,
+    "midi": 63
+   },
+   {
+    "onsetSec": 29.78,
+    "durSec": 0.16,
+    "midi": 66
+   },
+   {
+    "onsetSec": 29.94,
+    "durSec": 0.07,
+    "midi": 68
+   }
+  ]
+ },
+ "spec": {
+  "schema": "resynth-spec/1",
+  "dataset": "jacrc-students",
+  "clip": "lsxp-Jiang_shen_er-San_jia_dian02-sz-S2_ex00",
+  "version": 2,
+  "timbre": {
+   "kind": "voice",
+   "vowel": "a",
+   "singer": "male9"
+  },
+  "render": {
+   "seed": 2181255192,
+   "contour": "copy-detrended",
+   "levelMatch": true
+  },
+  "nextId": 13,
+  "prior": {
+   "source": "segment",
+   "notes": 0,
+   "path": "apps/api/scripts/fixtures/eval-real/benchmark/jacrc-students/lsxp-Jiang_shen_er-San_jia_dian02-sz-S2_ex00.truth.json",
+   "anchors": 7
+  },
+  "notes": [
+   {
+    "id": "n1",
+    "on": 25.39,
+    "off": 26.07,
+    "midi": 59,
+    "cents": 17.1,
+    "vel": 88,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n2",
+    "on": 26.17,
+    "off": 26.87,
+    "midi": 64,
+    "cents": -30.5,
+    "vel": 87,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n3",
+    "on": 26.87,
+    "off": 27.0,
+    "midi": 65,
+    "cents": 5.9,
+    "vel": 60,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n5",
+    "on": 27.0,
+    "off": 27.71,
+    "midi": 59,
+    "cents": -5.9,
+    "vel": 84,
+    "legato": false,
+    "flags": [
+     "uncertain-split"
+    ]
+   },
+   {
+    "id": "n6",
+    "on": 28.28,
+    "off": 28.6,
+    "midi": 59,
+    "cents": -26.5,
+    "vel": 91,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n8",
+    "on": 28.66,
+    "off": 29.08,
+    "midi": 61,
+    "cents": 18.7,
+    "vel": 65,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n9",
+    "on": 29.08,
+    "off": 29.49,
+    "midi": 63,
+    "cents": 46.4,
+    "vel": 94,
+    "legato": true,
+    "flags": [
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n10",
+    "on": 29.49,
+    "off": 29.78,
+    "midi": 63,
+    "cents": 51.0,
+    "vel": 101,
+    "legato": false,
+    "flags": [
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n11",
+    "on": 29.78,
+    "off": 29.94,
+    "midi": 66,
+    "cents": -7.8,
+    "vel": 92,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n12",
+    "on": 29.94,
+    "off": 30.01,
+    "midi": 68,
+    "cents": 30.2,
+    "vel": 80,
+    "legato": false,
+    "flags": []
+   }
+  ]
+ },
+ "verdict": {
+  "status": "passed",
+  "rounds": 1,
+  "summary": "Sung line occupies 25.3-30 s only (before is background noise); 10 notes match pitch, onsets and the human syllable onsets. D1/D2 are vibrato dips inside held n1/n2, D3 is a short upward glide inside n8 before n9 (contour limit).",
+  "metrics": {
+   "pitch": 0.7891,
+   "voicingRecall": 1.0,
+   "voicingPrecision": 0.9289,
+   "onsetF1": 0.6364,
+   "explained": 1.0,
+   "notes": 10,
+   "durSec": 30.0
+  },
+  "judged": [
+   {
+    "round": 1,
+    "verdict": "pass",
+    "specVersion": 2
+   }
+  ]
+ },
+ "prior": {
+  "source": "segment",
+  "notes": 0,
+  "path": "apps/api/scripts/fixtures/eval-real/benchmark/jacrc-students/lsxp-Jiang_shen_er-San_jia_dian02-sz-S2_ex00.truth.json",
+  "anchors": 7
+ },
+ "tool": {
+  "name": "synthcorpus.resynth",
+  "version": "1",
+  "analyzer": {
+   "family": "voice",
+   "f0_range": [
+    90.0,
+    1100.0
+   ],
+   "gate_db": -38.0,
+   "version": 2,
+   "syllables": 1
+  },
+  "timbre": {
+   "kind": "voice",
+   "vowel": "a",
+   "singer": "male9"
+  },
+  "seed": 2181255192
+ },
+ "createdAt": "2026-10-31T08:43:03+0100"
+}
