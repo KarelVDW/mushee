@@ -56,14 +56,24 @@ label files in `annotations/`.
   `<clip>__real.wav` + `<clip>.truth.json` + `dataset.json` manifest.
   `fetch/degrade-real.ts` adds `<clip>__<condition>.wav` variants for the adverse
   conditions — real performances under synthetic wind/reverb/babble are the most
-  honest robustness measure we have.
+  honest robustness measure we have. Datasets with resynth note truth
+  (`truthSource: "resynth"`, `synthetic-corpus/RESYNTH.md`) also hold
+  `<clip>.truth-derived.json` (the truth the export replaced), `<clip>__resynth.flac`
+  (the copy the notes were read from) and `<clip>.f0.json` (both contours); a clip
+  the judge never passed has `<clip>.truth-unresolved.json` and no `.truth.json`.
 
     The tier is the corpus's standing, visible in the tree (see **`CORPORA.md`**,
     the register, and `lib/realCorpus.ts` for the discovery rules):
-    - `benchmark/` — trusted truth, real human performance, permissive licence;
-      these numbers may gate decisions.
-    - `context/` — kept for realism/register coverage (mir-qbsh, the TinySOL
-      splices, the unverified whistling); reported, never pooled, never gates.
+    - `benchmark/` — human or complete resynth truth, real human performance,
+      permissive licence (or our own recordings); these numbers may gate
+      decisions. Since 2026-10-31 this includes the whistling (whistle-real,
+      whistled-high-register, app-takes-whistling).
+    - `context/` — kept for realism/register coverage (humtrans and mir-qbsh on
+      restricted licences, the TinySOL splices, whistle-vintage with
+      `pooled: false`); reported, never pooled, never gates.
+
+    Pooling is decided by the manifest flags (`isPooled()` in `lib/realCorpus.ts`),
+    not by the folder.
 
     Each dataset dir carries ONE `instrumentId` hint (`lib/realCorpus.ts`), so a
     corpus that spans instruments is split per instrument — hence `urmp-violin`,

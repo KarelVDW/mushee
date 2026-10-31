@@ -651,6 +651,8 @@ syllable-onset recall** with only **3 per 100 syllables missed entirely**. The h
 spurious (42) are the melisma effect predicted up front — in-melisma note onsets are correct
 detections the syllable truth does not list — which is why its manifest says read recall, not F1.
 
+⛔ **Void (2026-10-31): the dagstuhl-choir numbers in this section were measured on corrupt audio; see the correction note at the end of this log.**
+
 ⚠️ **Dagstuhl quantifies a warning that was previously only editorial.** vocadito's authors say
 DCS stems are "not well suited for monophonic voice evaluation" because of bleed. Measured: COnP
 0.01 with **28 splits and 36 spurious per 100 notes** — the pipeline over-segments badly on
@@ -2316,3 +2318,20 @@ snap), and GuitarSet is where to measure it.
 - Open: synthetic voices are vowel-only (no consonant re-onsets); no humming or
   whistling synthesis; bagpipe drones not yet mixed; euphonium rendered from tuba
   samples (no permissive euphonium recording exists).
+
+## Correction (2026-10-31): every dagstuhl-choir number before 2026-10-30 is void
+
+`fetch/fetch-dagstuhl.ts` sliced the Dagstuhl ChoirSet stems as 16-bit PCM, but they are 32-bit
+float, so every `__real.wav` held half a window of float bytes under a PCM header (read an
+octave low, unvoiced to pYIN). The fix (37f7ea02, 2026-10-30) makes `readWav` honour the fmt
+chunk and convert to 16-bit; the re-fetch produced 94 clean excerpts (102 corrupt before).
+**Every dagstuhl-choir number measured before 2026-10-30 was measured on that corrupt audio
+and is void.** That covers the adoption measurement in the 2026-08 section above (COnP 0.01,
+28 splits and 36 spurious per 100 notes, every clip resolved `NOISY` at ~0 dB SNR, beat-F1
+0.03 in `notation-eval`, "a third of the reference pitches > 50 cents off") and every
+dagstuhl-choir row in the benchmark results dated before 2026-10-30. The conclusions drawn
+from those numbers are void with them: the over-segmentation "on bleed-laden legato choral
+audio" and "the cause is the audio, not the alignment" described the decoding bug, not
+the choir. The beat grids themselves were never affected (they come from the annotation
+files, not the audio). Since 2026-10-31 the dataset's note truth is resynth (94/94 passed)
+and it pools; measure it fresh before quoting any dagstuhl number.
