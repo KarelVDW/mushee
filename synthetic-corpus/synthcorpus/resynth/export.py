@@ -156,7 +156,10 @@ class Exporter:
         if not own:
             src = cfg.audio_path(clip)
             self._link(src, d / src.name)
-        if own and tp.exists() and not dp.exists():
+        # only a clip's FIRST export can find a previous truth: on a re-export truth.json is our own
+        # (a blind-drafted dataset has no previous truth at all)
+        first = s.store.state()['status'] != 'exported'
+        if own and first and tp.exists() and not dp.exists():
             self._do(f'move {_rel(tp)} → {dp.name}', lambda: tp.rename(dp))
             moved = True
         else:

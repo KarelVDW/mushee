@@ -4,7 +4,7 @@
  "clip": "commons-donna",
  "role": "target",
  "audio": {
-  "file": "apps/api/scripts/fixtures/eval-real/context/whistle-real/commons-donna__real.wav",
+  "file": "apps/api/scripts/fixtures/eval-real/benchmark/whistle-real/commons-donna__real.wav",
   "sha256": "35309a77efb5a9dca0b516c0d9c5e126be4a5a109fd59664e6776221e3707b62",
   "sampleRate": 44100,
   "durationSec": 8.9281
@@ -491,5 +491,5 @@
   },
   "seed": 2549981846
  },
- "createdAt": "2026-10-30T20:07:53+0100"
+ "createdAt": "2026-10-31T13:29:14+0100"
 }

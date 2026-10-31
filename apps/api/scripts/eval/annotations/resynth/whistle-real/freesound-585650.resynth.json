@@ -4,7 +4,7 @@
  "clip": "freesound-585650",
  "role": "target",
  "audio": {
-  "file": "apps/api/scripts/fixtures/eval-real/context/whistle-real/freesound-585650__real.wav",
+  "file": "apps/api/scripts/fixtures/eval-real/benchmark/whistle-real/freesound-585650__real.wav",
   "sha256": "6be133b621af95352099f717bc3b7eb869da660c2e257373d3b445ea07682ed0",
   "sampleRate": 44100,
   "durationSec": 10.3576
@@ -396,5 +396,5 @@
   },
   "seed": 2740314170
  },
- "createdAt": "2026-10-30T22:36:44+0100"
+ "createdAt": "2026-10-31T13:29:15+0100"
 }

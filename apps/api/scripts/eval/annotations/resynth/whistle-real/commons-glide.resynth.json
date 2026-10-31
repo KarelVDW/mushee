@@ -4,7 +4,7 @@
  "clip": "commons-glide",
  "role": "target",
  "audio": {
-  "file": "apps/api/scripts/fixtures/eval-real/context/whistle-real/commons-glide__real.wav",
+  "file": "apps/api/scripts/fixtures/eval-real/benchmark/whistle-real/commons-glide__real.wav",
   "sha256": "4dabdc3eefbe2b5de4ac35b08f07556fd6b09d8b8c227fdad17645c837be81e5",
   "sampleRate": 44100,
   "durationSec": 11.7962
@@ -411,5 +411,5 @@
   },
   "seed": 1744059229
  },
- "createdAt": "2026-10-30T22:08:39+0100"
+ "createdAt": "2026-10-31T13:29:14+0100"
 }

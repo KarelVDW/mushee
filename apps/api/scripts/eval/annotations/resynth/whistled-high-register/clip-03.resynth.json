@@ -4,7 +4,7 @@
  "clip": "clip-03",
  "role": "target",
  "audio": {
-  "file": "apps/api/scripts/fixtures/eval-real/context/whistled-high-register/clip-03__real.wav",
+  "file": "apps/api/scripts/fixtures/eval-real/benchmark/whistled-high-register/clip-03__real.wav",
   "sha256": "e84168febe29d70b62bd07e4690239e9305815cf8e3653e46b9c0447eed79735",
   "sampleRate": 48000,
   "durationSec": 11.493
@@ -305,5 +305,5 @@
   },
   "seed": 2901392077
  },
- "createdAt": "2026-10-30T20:07:52+0100"
+ "createdAt": "2026-10-31T13:29:15+0100"
 }

@@ -195,8 +195,8 @@ DATASETS: dict[str, DatasetConfig] = {
     d.id: d
     for d in [
         # ---------------------------------------------------------- targets
-        DatasetConfig('whistled-high-register', 'context', 'whistling', prior='aligned', f0_range=(500.0, 5000.0)),
-        DatasetConfig('whistle-real', 'context', 'whistling'),
+        DatasetConfig('whistled-high-register', 'benchmark', 'whistling', prior='aligned', f0_range=(500.0, 5000.0)),
+        DatasetConfig('whistle-real', 'benchmark', 'whistling'),
         DatasetConfig('whistle-vintage', 'context', 'whistling', export_meta={'pooled': False}),
         DatasetConfig('mir-qbsh', 'context', 'humming', f0_range=(70.0, 800.0)),
         DatasetConfig('humtrans', 'context', 'humming', prior='aligned'),

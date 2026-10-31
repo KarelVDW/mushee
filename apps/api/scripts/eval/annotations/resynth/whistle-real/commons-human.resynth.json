@@ -4,7 +4,7 @@
  "clip": "commons-human",
  "role": "target",
  "audio": {
-  "file": "apps/api/scripts/fixtures/eval-real/context/whistle-real/commons-human__real.wav",
+  "file": "apps/api/scripts/fixtures/eval-real/benchmark/whistle-real/commons-human__real.wav",
   "sha256": "6218a15ee5ee21984b79fa83ac991f86b6b5d3df71e50a46bcf1ce321e30f8f7",
   "sampleRate": 44100,
   "durationSec": 1.4745
@@ -141,5 +141,5 @@
   },
   "seed": 2933989964
  },
- "createdAt": "2026-10-30T22:08:39+0100"
+ "createdAt": "2026-10-31T13:29:14+0100"
 }

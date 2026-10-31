@@ -75,7 +75,7 @@ sounding pitch.
    semitone boundary gets the flag `uncertain-pitch`.
 3. **Onset, attack from silence or a re-articulation**: the start of the audible attack
    (energy rise; for consonants, the start of voicing).
-   **Onset, legato pitch change**: where the pitch *arrives* in the new note's ±50-cent band.
+   **Onset, legato pitch change**: where the pitch _arrives_ in the new note's ±50-cent band.
    This is the annotator convention measured in `apps/api/scripts/eval/FINDINGS.md`
    (annotators mark arrival; a decoder that marks departure is ~50 ms early).
 4. **Offset**: the end of audible sound for detached notes; the next onset for legato.
@@ -126,16 +126,16 @@ feedback can refer to `n12` across versions (ids are therefore not in time order
 nothing — then normalised: sorted, a legato note's predecessor ends at its onset, overlaps are
 trimmed the same way, and a note left shorter than 20 ms rejects the whole edit):
 
-| op | fields |
-|---|---|
-| `set` | `id` + any of `on`, `off`, `midi`, `cents`, `vel`, `legato`, `flags` |
-| `add` | `on`, `off`, `midi` (+ optional `cents`, `vel`, `legato`, `flags`) → new id |
-| `delete` | `id` or `ids`; never moves other notes (a legato successor starts afresh) |
-| `split` | `id`, `at`, optional `midi` for the second part; the second part is legato iff its pitch differs (override with `legato`) |
-| `merge` | `ids` (adjacent notes) → the first id spans them; `midi` defaults to the longest one's |
-| `shift` | `ids` (or `"all"`), `dt` seconds |
-| `transpose` | `ids` (or `"all"`), `semitones` |
-| `flag` | `id`/`ids`, `add`: […], `remove`: […] (flags listed under Truth conventions) |
+| op          | fields                                                                                                                    |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `set`       | `id` + any of `on`, `off`, `midi`, `cents`, `vel`, `legato`, `flags`                                                      |
+| `add`       | `on`, `off`, `midi` (+ optional `cents`, `vel`, `legato`, `flags`) → new id                                               |
+| `delete`    | `id` or `ids`; never moves other notes (a legato successor starts afresh)                                                 |
+| `split`     | `id`, `at`, optional `midi` for the second part; the second part is legato iff its pitch differs (override with `legato`) |
+| `merge`     | `ids` (adjacent notes) → the first id spans them; `midi` defaults to the longest one's                                    |
+| `shift`     | `ids` (or `"all"`), `dt` seconds                                                                                          |
+| `transpose` | `ids` (or `"all"`), `semitones`                                                                                           |
+| `flag`      | `id`/`ids`, `add`: […], `remove`: […] (flags listed under Truth conventions)                                              |
 
 After an edit, `cents` and `vel` are re-derived from the original for every note whose `on`,
 `off` or `midi` changed (an explicit `cents` in the same op sticks). `cents` copies intonation
@@ -147,18 +147,18 @@ must be for the current spec version). Closed clips (passed, unresolved, exporte
 
 ### Per-clip work directory (gitignored): `synthetic-corpus/work/resynth/<dataset>/<clip>/`
 
-| file | what |
-|---|---|
-| `state.json` | `{status, round, specVersion, judgedVersion, renderedVersion, history[], exportedAt?}`; status ∈ `drafted`, `awaiting-judge`, `needs-work`, `passed`, `unresolved`, `exported` |
-| `orig.npz` | cached analysis of the original (both trackers, consensus, RMS, onset envelope, onset events; sung material: syllable channel); recomputed when the analyzer config changes or the audio file does (size + mtime) |
-| `synth.npz` | the same analysis of the latest copy (tagged with its spec version); after an analyzer change the existing copy is re-analysed, not re-rendered |
-| `spec.json` | current spec; `history/spec.v<n>.json` keeps every version |
-| `report.json` | latest compare report (`history/report.v<n>.json`) |
-| `judge.json` | latest verdict (`history/judge.r<round>.json`) |
-| `panels/p<k>.png` | latest comparison panels (≤ 8 s each, 1600×1000, 256-colour PNG, ~100–250 kB) |
-| `panels/zoom-<t0>-<t1>.png` | close-ups written by `zoom` (the 4 latest are kept; full colour, ~250 kB) |
-| `synth.flac` | latest synthetic copy (24 kHz 16-bit FLAC; only the latest is kept) |
-| `log.jsonl` | append-only event log (init, edit, autofix, render, compare, submit, verdict, export, timing) |
+| file                        | what                                                                                                                                                                                                              |
+| --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `state.json`                | `{status, round, specVersion, judgedVersion, renderedVersion, history[], exportedAt?}`; status ∈ `drafted`, `awaiting-judge`, `needs-work`, `passed`, `unresolved`, `exported`                                    |
+| `orig.npz`                  | cached analysis of the original (both trackers, consensus, RMS, onset envelope, onset events; sung material: syllable channel); recomputed when the analyzer config changes or the audio file does (size + mtime) |
+| `synth.npz`                 | the same analysis of the latest copy (tagged with its spec version); after an analyzer change the existing copy is re-analysed, not re-rendered                                                                   |
+| `spec.json`                 | current spec; `history/spec.v<n>.json` keeps every version                                                                                                                                                        |
+| `report.json`               | latest compare report (`history/report.v<n>.json`)                                                                                                                                                                |
+| `judge.json`                | latest verdict (`history/judge.r<round>.json`)                                                                                                                                                                    |
+| `panels/p<k>.png`           | latest comparison panels (≤ 8 s each, 1600×1000, 256-colour PNG, ~100–250 kB)                                                                                                                                     |
+| `panels/zoom-<t0>-<t1>.png` | close-ups written by `zoom` (the 4 latest are kept; full colour, ~250 kB)                                                                                                                                         |
+| `synth.flac`                | latest synthetic copy (24 kHz 16-bit FLAC; only the latest is kept)                                                                                                                                               |
+| `log.jsonl`                 | append-only event log (init, edit, autofix, render, compare, submit, verdict, export, timing)                                                                                                                     |
 
 A 30 s clip's work directory is about 1.5 MB.
 
@@ -167,8 +167,8 @@ A 30 s clip's work directory is about 1.5 MB.
 - **Committed truth artifact** (tracked, the durable record):
   `apps/api/scripts/eval/annotations/resynth/<dataset>/<clip>.resynth.json`, with
   `{schema:"resynth/1", dataset, clip, role, audio:{file, sha256, sampleRate, durationSec},
-  truth:{bpm, beatGrid?, notes:[{onsetSec,durSec,midi}]}, spec, verdict:{status, rounds,
-  summary, metrics, judged[]}, prior, tool:{name, version, analyzer, timbre, seed}, createdAt}`.
+truth:{bpm, beatGrid?, notes:[{onsetSec,durSec,midi}]}, spec, verdict:{status, rounds,
+summary, metrics, judged[]}, prior, tool:{name, version, analyzer, timbre, seed}, createdAt}`.
   Written for passed AND unresolved clips (`verdict.status` says which).
 - **Harness truth**: passed clips get `<clip>.truth.json` in the dataset's
   `apps/api/scripts/fixtures/eval-real/<tier>/<dataset>/` directory, with the bpm (and
@@ -200,7 +200,10 @@ A 30 s clip's work directory is about 1.5 MB.
 - **Calibration datasets** export only the artifact, to
   `annotations/resynth-calibration/<dataset>/<clip>.resynth.json`; their eval-real truth is
   never touched.
-- The `-aligned` duplicates (whistled-high-register-aligned, humtrans-aligned) are left alone.
+- The `-aligned` duplicates are never written. whistled-high-register-aligned was deleted on 2026-10-31 once its
+  dataset had resynth truth (re-drafts read `<clip>.truth-derived.json`); humtrans-aligned stays as the humtrans prior.
+- A re-export never moves truth aside again: only a clip's first export can find a previous truth (fixed
+  2026-10-31 — blind-drafted datasets used to lose their resynth truth to `.truth-derived.json` on a re-export).
 - **Idempotent**: a rerun rewrites nothing whose content is unchanged (timestamps included);
   `--dry-run` prints the plan (`would …`) and writes nothing.
 - Every output is regenerable from the committed artifact plus the original audio: the
@@ -208,16 +211,16 @@ A 30 s clip's work directory is about 1.5 MB.
 
 ## Datasets (`datasets.py`)
 
-| dataset | role | prior for the draft | copy timbre |
-|---|---|---|---|
-| whistled-high-register | target | `whistled-high-register-aligned` truth (identical audio) | whistle |
-| whistle-real, whistle-vintage | target | own truth (sineTrack drafts) | whistle |
-| mir-qbsh | target | own truth (pv-derived) | voice `u`, low-pass 2.5 kHz, band-limited like the 8 kHz original |
-| humtrans | target | `humtrans-aligned` truth | voice `u`, low-pass 2.5 kHz |
-| dagstuhl-choir | target | own truth (DTW); beatGrid kept | voice `a`, singer sex + f0 range from the part (`_S1_`, `_A2_`, …) |
-| jacrc-students → jacrc-notes | target | blind f0 segmentation, split at the human syllable onsets | voice `a` |
-| vocadito, n20emv2, hust-solfege | calibration | none (blind) | voice `a` |
-| urmp-flute / -violin / -trumpet | calibration | none (blind) | iowa-flute / philharmonia-violin / iowa-trumpet (MonoSampler) |
+| dataset                         | role        | prior for the draft                                                                       | copy timbre                                                        |
+| ------------------------------- | ----------- | ----------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| whistled-high-register          | target      | `whistled-high-register-aligned` truth (identical audio; now `<clip>.truth-derived.json`) | whistle                                                            |
+| whistle-real, whistle-vintage   | target      | own truth (sineTrack drafts)                                                              | whistle                                                            |
+| mir-qbsh                        | target      | own truth (pv-derived)                                                                    | voice `u`, low-pass 2.5 kHz, band-limited like the 8 kHz original  |
+| humtrans                        | target      | `humtrans-aligned` truth                                                                  | voice `u`, low-pass 2.5 kHz                                        |
+| dagstuhl-choir                  | target      | own truth (DTW); beatGrid kept                                                            | voice `a`, singer sex + f0 range from the part (`_S1_`, `_A2_`, …) |
+| jacrc-students → jacrc-notes    | target      | blind f0 segmentation, split at the human syllable onsets                                 | voice `a`                                                          |
+| vocadito, n20emv2, hust-solfege | calibration | none (blind)                                                                              | voice `a`                                                          |
+| urmp-flute / -violin / -trumpet | calibration | none (blind)                                                                              | iowa-flute / philharmonia-violin / iowa-trumpet (MonoSampler)      |
 
 `init --blind` drafts any target blind. A prior is read from `<clip>.truth-derived.json` when
 an export has already moved the truth aside. A new dataset (the in-app takes) is one
@@ -233,34 +236,34 @@ ships 32-bit float WAVs, so every earlier `__real.wav` held float bytes under a 
 
 - **Original**: decode (soundfile; ffmpeg-static from `node_modules` for webm/opus), mono.
   Frames are centred on a 10 ms grid.
-  - Voice / instruments: SwiftF0 (16 kHz, confidence ≥ 0.7, 16 ms frames interpolated onto
-    the grid) + pYIN (16 kHz, 20-cent bins), with an f0 range per dataset.
-  - Whistle: a sinusoidal FFT-peak tracker at the native rate (~43 ms Hann window at any rate,
-    log-parabolic interpolation, tonality ≥ 0.35 and level gates: the method of
-    `apps/api/scripts/eval/lib/sineTrack.ts`) + pYIN at 24 kHz up to 5 kHz. SwiftF0 tops out
-    at 2.1 kHz and is not confident on a near-pure tone.
-  - A level gate drops frames more than 38 dB (whistle 32, instruments 40) below the clip's
-    loud frames: bleed, room tails and noise are not the performance.
-  - **Consensus f0**: where the two trackers agree within 50 c, the frame is confident (2);
-    where only one is voiced or they disagree, it is uncertain (1, plotted grey) and keeps the
-    primary tracker's value.
-  - **Octave resolution** (voice, instruments): where the trackers are an octave apart, the
-    spectrum decides per run of such frames (the lower candidate's odd harmonics missing →
-    the upper one is f0; present → the lower one); a decided run counts as confident.
-    Instruments only: a held run (≥ 60 ms) both trackers agree on whose odd harmonics are
-    missing moves an octave up (SwiftF0 and pYIN both read some URMP flute notes an octave low).
-  - RMS (32 ms) in dBFS; a superflux onset envelope (librosa, lag 2, max-size 3, normalised
-    by its 98th percentile); onset events by adaptive peak picking, backtracked ≤ 50 ms to the
-    energy minimum and then placed where a quarter of the dB rise from that minimum has
-    happened (the minimum sits ~20–30 ms before where annotators hear the attack; the
-    quarter point is within ~±15 ms of vocadito, URMP and HUST truth). Each event has its
-    sustained `rise` (median level 20–120 ms after vs the minimum) and its re-articulation
-    `dip` (how far the level fell below the held level both before and after). A click has
-    neither.
-  - **Syllable channel** (sung material only: datasets whose material is `singing`): a
-    timbre-novelty envelope and its events, `SyllableTracker` (see "Syllable evidence").
-  - Pitch-change events: legato boundaries of the blind segmentation (below) between two
-    segments the trackers agree on for ≥ 30 % of their frames.
+    - Voice / instruments: SwiftF0 (16 kHz, confidence ≥ 0.7, 16 ms frames interpolated onto
+      the grid) + pYIN (16 kHz, 20-cent bins), with an f0 range per dataset.
+    - Whistle: a sinusoidal FFT-peak tracker at the native rate (~43 ms Hann window at any rate,
+      log-parabolic interpolation, tonality ≥ 0.35 and level gates: the method of
+      `apps/api/scripts/eval/lib/sineTrack.ts`) + pYIN at 24 kHz up to 5 kHz. SwiftF0 tops out
+      at 2.1 kHz and is not confident on a near-pure tone.
+    - A level gate drops frames more than 38 dB (whistle 32, instruments 40) below the clip's
+      loud frames: bleed, room tails and noise are not the performance.
+    - **Consensus f0**: where the two trackers agree within 50 c, the frame is confident (2);
+      where only one is voiced or they disagree, it is uncertain (1, plotted grey) and keeps the
+      primary tracker's value.
+    - **Octave resolution** (voice, instruments): where the trackers are an octave apart, the
+      spectrum decides per run of such frames (the lower candidate's odd harmonics missing →
+      the upper one is f0; present → the lower one); a decided run counts as confident.
+      Instruments only: a held run (≥ 60 ms) both trackers agree on whose odd harmonics are
+      missing moves an octave up (SwiftF0 and pYIN both read some URMP flute notes an octave low).
+    - RMS (32 ms) in dBFS; a superflux onset envelope (librosa, lag 2, max-size 3, normalised
+      by its 98th percentile); onset events by adaptive peak picking, backtracked ≤ 50 ms to the
+      energy minimum and then placed where a quarter of the dB rise from that minimum has
+      happened (the minimum sits ~20–30 ms before where annotators hear the attack; the
+      quarter point is within ~±15 ms of vocadito, URMP and HUST truth). Each event has its
+      sustained `rise` (median level 20–120 ms after vs the minimum) and its re-articulation
+      `dip` (how far the level fell below the held level both before and after). A click has
+      neither.
+    - **Syllable channel** (sung material only: datasets whose material is `singing`): a
+      timbre-novelty envelope and its events, `SyllableTracker` (see "Syllable evidence").
+    - Pitch-change events: legato boundaries of the blind segmentation (below) between two
+      segments the trackers agree on for ≥ 30 % of their frames.
 - **Synthetic copy**: the same analysis with the same settings, so the two files are
   measured identically.
 - **Cache keys**: the analyzer config (`family`, `f0_range`, `gate_db`, `version`, and for sung
@@ -349,53 +352,53 @@ or `uncertain-region  only pyin hears pitch (C#6 85.0)  → judge by eye`.
   sustained rise ∪ pitch arrivals) vs the copy's, ±50 ms; explained = the original's confident
   frames inside a note (±20 ms).
 - **Diff types** (spec vs the original's evidence, `evidence.py`; each with a suggested op):
-  - `missing-sound`: ≥ 60 ms of confident sound no note covers. The hint extends a touching
-    note of that pitch, never across a re-articulation (or a strong sung syllable); else it
-    adds a note.
-  - `extra-sound`: a note the original is voiced over < 35 % of.
-  - `pitch`: the original's median over the note's middle is > 50 c from `midi` (65 c for a
-    note flagged `uncertain-pitch`, a decided boundary call); or `copy vs orig … (orig moving,
-    note centre ok)`: the copy misses the original's in-note contour by > 50 c for ≥ 100 ms
-    while the original moves (a slow scoop, a glide, wide vibrato) — a contour/render limit,
-    not a note error.
-  - `extra-onset`, something inside a note that makes it two: a re-articulation (dip ≥ 3 dB
-    and rise ≥ 3 dB); a pitch change (a change within 120 ms of the note's start that ARRIVES
-    at its pitch is its scoop, one within 120 ms of its end that LEAVES it is its fall: neither
-    counts, convention 5); a held different pitch (≥ 100 ms, ≥ 120 ms at a note edge, its
-    10–90 % range within 1 st and ≥ 75 c from the note) where the segmenter saw no pitch event;
-    or silence (≥ 50 ms) followed by a new attack, with a split-and-trim op that takes both
-    pitches from the original.
-  - `unsupported`: no evidence of the note's kind of onset within ±150 ms. After silence: an
-    attack, an energy onset (rise ≥ 3 dB) or a pitch change. A legato change: a pitch arrival
-    or an energy onset (rise ≥ 2 dB). A same-pitch repeat: a level dip ≥ 2 dB (a swell without
-    a dip is not an onset) or a strong sung syllable within ±50 ms. jacrc's human syllable
-    onsets count for all; a strong sung syllable stands in for any kind when nothing else is
-    there. Evidence already matched to the previous note's onset is not reused. A repeat with
-    only a WEAK syllable change near it says so (`no orig re-articulation near 2.75, only a
-    weak syllable change 2.76 (1.10)  → merge with n7, unless a new syllable starts there?`,
-    lower severity): look before merging.
-  - `timing`: onset > 40 ms from the nearest such evidence.
-  - `offset`: end > 80 ms from where the original's sound ends, for notes followed by ≥ 100 ms
-    of silence. The sound end stops where the original moves on to a held different pitch,
-    re-articulates or starts a strong sung syllable: that sound is the next note, not this
-    note's tail.
-  - `syllable` (sung material): a strong syllable event inside a note, ≥ 60 ms from its
-    edges, nothing else splitting it within 100 ms, and the original's median pitch over the
-    note's parts before and after it (≤ 250 ms each) within 50 c: a new syllable on the same
-    pitch (convention 6). The op splits there; the judge decides by eye (a consonant gap or
-    burst, a formant change). On clean human truth it fires on ~6 % of held notes.
-  - `uncertain-region`: ≥ 150 ms where the trackers disagree or only one hears pitch; the
-    judge decides by looking.
+    - `missing-sound`: ≥ 60 ms of confident sound no note covers. The hint extends a touching
+      note of that pitch, never across a re-articulation (or a strong sung syllable); else it
+      adds a note.
+    - `extra-sound`: a note the original is voiced over < 35 % of.
+    - `pitch`: the original's median over the note's middle is > 50 c from `midi` (65 c for a
+      note flagged `uncertain-pitch`, a decided boundary call); or `copy vs orig … (orig moving,
+note centre ok)`: the copy misses the original's in-note contour by > 50 c for ≥ 100 ms
+      while the original moves (a slow scoop, a glide, wide vibrato) — a contour/render limit,
+      not a note error.
+    - `extra-onset`, something inside a note that makes it two: a re-articulation (dip ≥ 3 dB
+      and rise ≥ 3 dB); a pitch change (a change within 120 ms of the note's start that ARRIVES
+      at its pitch is its scoop, one within 120 ms of its end that LEAVES it is its fall: neither
+      counts, convention 5); a held different pitch (≥ 100 ms, ≥ 120 ms at a note edge, its
+      10–90 % range within 1 st and ≥ 75 c from the note) where the segmenter saw no pitch event;
+      or silence (≥ 50 ms) followed by a new attack, with a split-and-trim op that takes both
+      pitches from the original.
+    - `unsupported`: no evidence of the note's kind of onset within ±150 ms. After silence: an
+      attack, an energy onset (rise ≥ 3 dB) or a pitch change. A legato change: a pitch arrival
+      or an energy onset (rise ≥ 2 dB). A same-pitch repeat: a level dip ≥ 2 dB (a swell without
+      a dip is not an onset) or a strong sung syllable within ±50 ms. jacrc's human syllable
+      onsets count for all; a strong sung syllable stands in for any kind when nothing else is
+      there. Evidence already matched to the previous note's onset is not reused. A repeat with
+      only a WEAK syllable change near it says so (`no orig re-articulation near 2.75, only a
+weak syllable change 2.76 (1.10)  → merge with n7, unless a new syllable starts there?`,
+      lower severity): look before merging.
+    - `timing`: onset > 40 ms from the nearest such evidence.
+    - `offset`: end > 80 ms from where the original's sound ends, for notes followed by ≥ 100 ms
+      of silence. The sound end stops where the original moves on to a held different pitch,
+      re-articulates or starts a strong sung syllable: that sound is the next note, not this
+      note's tail.
+    - `syllable` (sung material): a strong syllable event inside a note, ≥ 60 ms from its
+      edges, nothing else splitting it within 100 ms, and the original's median pitch over the
+      note's parts before and after it (≤ 250 ms each) within 50 c: a new syllable on the same
+      pitch (convention 6). The op splits there; the judge decides by eye (a consonant gap or
+      burst, a formant change). On clean human truth it fires on ~6 % of held notes.
+    - `uncertain-region`: ≥ 150 ms where the trackers disagree or only one hears pitch; the
+      judge decides by looking.
 - **Panels** (one PNG per window of ≤ 8 s, 0.5 s overlap; y axis in note names with Hz,
   zoomed to the window's pitch range):
-  1. the original's log-frequency spectrogram with its consensus f0 (white; uncertain frames
-     grey), the copy's f0 (thin green), the note boxes (labelled `n12 G4`, dashed when
-     flagged) and the diff markers (`D3`: shaded span, dashed line for a point, top bracket
-     for a whole note);
-  2. the copy's spectrogram with its f0 and the same boxes;
-  3. the onset envelopes of the original (blue, ▼ events) and the copy (orange, ▲ events),
-     note onsets (teal), for sung material the original's syllable events (green ◆, filled
-     when strong, hollow when weak) and, for jacrc, the human syllable onsets (purple).
+    1. the original's log-frequency spectrogram with its consensus f0 (white; uncertain frames
+       grey), the copy's f0 (thin green), the note boxes (labelled `n12 G4`, dashed when
+       flagged) and the diff markers (`D3`: shaded span, dashed line for a point, top bracket
+       for a whole note);
+    2. the copy's spectrogram with its f0 and the same boxes;
+    3. the onset envelopes of the original (blue, ▼ events) and the copy (orange, ▲ events),
+       note onsets (teal), for sung material the original's syllable events (green ◆, filled
+       when strong, hollow when weak) and, for jacrc, the human syllable onsets (purple).
 - **autofix** (run by `init`; conservative, each change printed and logged): `phantoms`
   (delete a note the original is voiced over < 15 % of), `pitch` (re-pitch a note whose
   original pitch is confident, steady and ≥ 60 c away, never within 15 c of a semitone
@@ -446,7 +449,9 @@ the command prints the path.
 flags; the original's pitch over the stable middle (with its IQR) and over the first and last
 100 ms; the voiced fraction; the kind of onset the note makes (attack from silence, legato
 change, same-pitch repeat) and the nearest event of every kind within ±300 ms with its Δ and
-strength, `*` marking the ones that count as evidence for this onset; the events inside the
+strength, `*` marking the ones that count as evidence for this onset and `^` the ones that
+would but are already used by the previous note's onset (one event cannot start two notes, the
+report's rule); the events inside the
 note; where the original's sound ends (before a silence); the neighbours with their gaps; and
 the current report's diffs for the note.
 
@@ -458,6 +463,14 @@ n18  7.150–7.620 (470 ms)  F#4 (66) +0 c  vel 93  articulated  flags uncertain
   prev n17 6.99–7.09 F#3 (gap 60 ms) · next n20 7.67–8.11 D4 (gap 50 ms)
   D1 pitch: orig 64.6 vs note 66 (-143 c)  → midi 65?
 ```
+
+## Calibration
+
+Before resynth truth was used as benchmark truth, the loop was run blind (no prior notes) on
+clips with human truth, and the resynth-vs-human agreement was set against the human
+inter-annotator ceiling. Waves kept running calibration canaries alongside the targets. The
+gate, the numbers and how they were judged are in `meta/test-data-2026-10.md` (its
+"Calibration" section and progress log); they are not repeated here, so there is one source.
 
 ## Syllable evidence (sung material; `analysis.SyllableTracker`)
 
@@ -477,7 +490,7 @@ towards under-splitting sung lines.
   note's sound, blocks `extend` hints across it, and inside a held note it is a `syllable` diff
   (a possible same-pitch split). 1.0–1.25 (`SYL_WEAK`) supports nothing; it only rewords an
   `unsupported` repeat (`… only a weak syllable change … → merge, unless a new syllable starts
-  there?`, lower severity), so a merge across it is not flagged either. Below 1.0 the events
+there?`, lower severity), so a merge across it is not flagged either. Below 1.0 the events
   are shown by `inspect` / `zoom` / `note` only.
 - **Material**: datasets whose material is `singing` (vocadito, n20emv2, hust-solfege,
   dagstuhl-choir, jacrc). Humming, whistling and instruments have no syllable channel.
@@ -486,16 +499,17 @@ towards under-splitting sung lines.
   splits (events inside, ≥ 60 ms from the edges, are false alarms). Tuned on 38 vocadito clips;
   vocadito_3 and vocadito_14 held out; n20emv2 (40 clips, one annotator) never looked at:
 
-  | set | same-pitch boundaries | strong event ±50 ms | … of those with no energy dip / attack | onset evidence before → after | false alarms in held notes |
-  |---|---|---|---|---|---|
-  | vocadito, tuning (38 clips) | 495 | 38 % | 21 % of 219 | 56 % → 65 % | 0.13 / s, 5 % of 478 notes |
-  | vocadito_3 + _14 (held out) | 13 | 31 % | 0 of 6 | 54 % → 54 % | 0.33 / s, 10 % of 29 notes |
-  | n20emv2 (40 clips, unseen) | 95 | 42 % | 27 % of 45 | 53 % → 65 % | 0.10 / s, 5 % of 498 notes |
+    | set                          | same-pitch boundaries | strong event ±50 ms | … of those with no energy dip / attack | onset evidence before → after | false alarms in held notes |
+    | ---------------------------- | --------------------- | ------------------- | -------------------------------------- | ----------------------------- | -------------------------- |
+    | vocadito, tuning (38 clips)  | 495                   | 38 %                | 21 % of 219                            | 56 % → 65 %                   | 0.13 / s, 5 % of 478 notes |
+    | vocadito_3 + \_14 (held out) | 13                    | 31 %                | 0 of 6                                 | 54 % → 54 %                   | 0.33 / s, 10 % of 29 notes |
+    | n20emv2 (40 clips, unseen)   | 95                    | 42 %                | 27 % of 45                             | 53 % → 65 %                   | 0.10 / s, 5 % of 498 notes |
 
-  The weak tier (≥ 1.0, ±60 ms) reaches 63–65 % of the boundaries at 14–16 % of held notes,
-  too noisy to count as evidence. AUC of the window maximum (±50 ms) over the boundaries vs
-  points inside held notes: 0.93 (energy dip alone: 0.88). The two held-out clips are small and
-  show no gain on their 6 no-dip boundaries; n20emv2 generalises like the tuning set.
+    The weak tier (≥ 1.0, ±60 ms) reaches 63–65 % of the boundaries at 14–16 % of held notes,
+    too noisy to count as evidence. AUC of the window maximum (±50 ms) over the boundaries vs
+    points inside held notes: 0.93 (energy dip alone: 0.88). The two held-out clips are small and
+    show no gain on their 6 no-dip boundaries; n20emv2 generalises like the tuning set.
+
 - **What it does not fix**: on vocadito_3 and vocadito_14 the resynth truth (43 and 25 notes)
   under-splits annotator A1 (51 and 34) mostly by short DIFFERENT-pitch notes, not by
   same-pitch syllables: of the A1 boundaries that fall inside a resynth note, 16 of 18 are
@@ -523,16 +537,16 @@ A fresh run draws its targets from the notes whose neighbourhood is clean in ITS
 the two runs inject partly different errors; the last column re-scores the new code on the
 before-run's exact 177 errors:
 
-| family | before | after (fresh run) | after, same errors as before |
-|---|---|---|---|
-| pitch +1 / −1 / +2 / +12 | 18/18 each | 18/18 each | 18/18 each |
-| delete | 18/18 | 18/18 | 18/18 |
-| merge, different pitches | 8/8 (+ 1/1 short) | 8/8 (+ 1/1) | 8/8 (+ 1/1) |
-| merge, same pitch | 3/3 | 4/4 | 3/3 |
-| spurious split | 9/9 | 10/10 | 9/9 |
-| onset +60 / +100 / −80 ms | 11/13 · 13/13 · 9/13 | 12/14 · 14/14 · 10/14 | 11/13 · 13/13 · 9/13 |
-| offset +150 ms | 14/14 | 15/15 | 14/14 |
-| baseline note-level diffs (134 notes) | 58: 18 extra-onset, 14 timing, 13 unsupported, 10 pitch, 3 offset | 58: 18 extra-onset, 14 timing, 10 unsupported, 10 pitch, 3 syllable, 3 offset | |
+| family                                | before                                                            | after (fresh run)                                                             | after, same errors as before |
+| ------------------------------------- | ----------------------------------------------------------------- | ----------------------------------------------------------------------------- | ---------------------------- |
+| pitch +1 / −1 / +2 / +12              | 18/18 each                                                        | 18/18 each                                                                    | 18/18 each                   |
+| delete                                | 18/18                                                             | 18/18                                                                         | 18/18                        |
+| merge, different pitches              | 8/8 (+ 1/1 short)                                                 | 8/8 (+ 1/1)                                                                   | 8/8 (+ 1/1)                  |
+| merge, same pitch                     | 3/3                                                               | 4/4                                                                           | 3/3                          |
+| spurious split                        | 9/9                                                               | 10/10                                                                         | 9/9                          |
+| onset +60 / +100 / −80 ms             | 11/13 · 13/13 · 9/13                                              | 12/14 · 14/14 · 10/14                                                         | 11/13 · 13/13 · 9/13         |
+| offset +150 ms                        | 14/14                                                             | 15/15                                                                         | 14/14                        |
+| baseline note-level diffs (134 notes) | 58: 18 extra-onset, 14 timing, 13 unsupported, 10 pitch, 3 offset | 58: 18 extra-onset, 14 timing, 10 unsupported, 10 pitch, 3 syllable, 3 offset |                              |
 
 The 24-clip check of the first build (all families ≥ 90 % except onset +60 / −80, 81 % / 88 %)
 is in `_selftest/check-24clips-2026-10-30.json`. Small onset errors (< ~60 ms) are a known
@@ -549,12 +563,12 @@ round r = 1..5:
 ```
 
 - **Verdict file**: `{"verdict": "pass"|"fail", "summary": "…", "feedback": [{"t": 3.42,
-  "note": "n12", "text": "…"}, …]}`; a fail needs feedback (strings are accepted too).
+"note": "n12", "text": "…"}, …]}`; a fail needs feedback (strings are accepted too).
 - An edit while awaiting-judge returns the clip to drafted / needs-work.
 - **Resumability**: every step persists to the work directory before returning. An
   interrupted clip resumes from `state.json`:
-  - status `awaiting-judge` skips the generator;
-  - status `passed` / `unresolved` / `exported` skips the clip.
+    - status `awaiting-judge` skips the generator;
+    - status `passed` / `unresolved` / `exported` skips the clip.
 - **Priors**: see Datasets. Calibration clips always start blind.
 - **Deeper looks**: agents use `inspect`, `zoom` and `note` for a specific doubt, never
   ad-hoc Python (the pilot's judges spent about half their tool calls on it).
