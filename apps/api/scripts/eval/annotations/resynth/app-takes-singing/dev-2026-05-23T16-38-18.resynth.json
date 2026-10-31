@@ -1,0 +1,362 @@
+{
+ "schema": "resynth/1",
+ "dataset": "app-takes-singing",
+ "clip": "dev-2026-05-23T16-38-18",
+ "role": "target",
+ "audio": {
+  "file": "apps/api/scripts/fixtures/eval-real/benchmark/app-takes-singing/dev-2026-05-23T16-38-18__real.wav",
+  "sha256": "f3a023bbdf3ed5d4a58799cb7c05992c7d01f6fc3004ecb2c465e20461123df2",
+  "sampleRate": 48000,
+  "durationSec": 6.66
+ },
+ "truth": {
+  "bpm": 120,
+  "notes": [
+   {
+    "onsetSec": 0.0,
+    "durSec": 0.36,
+    "midi": 70
+   },
+   {
+    "onsetSec": 0.36,
+    "durSec": 0.36,
+    "midi": 73
+   },
+   {
+    "onsetSec": 0.72,
+    "durSec": 0.36,
+    "midi": 72
+   },
+   {
+    "onsetSec": 1.08,
+    "durSec": 0.32,
+    "midi": 70
+   },
+   {
+    "onsetSec": 1.4,
+    "durSec": 0.31,
+    "midi": 70
+   },
+   {
+    "onsetSec": 1.71,
+    "durSec": 0.4,
+    "midi": 65
+   },
+   {
+    "onsetSec": 2.11,
+    "durSec": 0.29,
+    "midi": 65
+   },
+   {
+    "onsetSec": 2.45,
+    "durSec": 0.37,
+    "midi": 65
+   },
+   {
+    "onsetSec": 2.82,
+    "durSec": 0.25,
+    "midi": 63
+   },
+   {
+    "onsetSec": 3.07,
+    "durSec": 0.32,
+    "midi": 65
+   },
+   {
+    "onsetSec": 3.39,
+    "durSec": 0.4,
+    "midi": 66
+   },
+   {
+    "onsetSec": 3.79,
+    "durSec": 0.25,
+    "midi": 70
+   },
+   {
+    "onsetSec": 4.09,
+    "durSec": 0.63,
+    "midi": 65
+   },
+   {
+    "onsetSec": 5.13,
+    "durSec": 0.24,
+    "midi": 66
+   },
+   {
+    "onsetSec": 5.43,
+    "durSec": 0.34,
+    "midi": 75
+   },
+   {
+    "onsetSec": 5.77,
+    "durSec": 0.31,
+    "midi": 72
+   },
+   {
+    "onsetSec": 6.08,
+    "durSec": 0.34,
+    "midi": 73
+   },
+   {
+    "onsetSec": 6.42,
+    "durSec": 0.25,
+    "midi": 70
+   }
+  ]
+ },
+ "spec": {
+  "schema": "resynth-spec/1",
+  "dataset": "app-takes-singing",
+  "clip": "dev-2026-05-23T16-38-18",
+  "version": 2,
+  "timbre": {
+   "kind": "voice",
+   "vowel": "a",
+   "singer": "female2"
+  },
+  "render": {
+   "seed": 689665827,
+   "contour": "copy-detrended",
+   "levelMatch": true
+  },
+  "nextId": 19,
+  "prior": {
+   "source": "segment",
+   "notes": 0
+  },
+  "notes": [
+   {
+    "id": "n1",
+    "on": 0.0,
+    "off": 0.36,
+    "midi": 70,
+    "cents": 30.1,
+    "vel": 97,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n2",
+    "on": 0.36,
+    "off": 0.72,
+    "midi": 73,
+    "cents": 16.9,
+    "vel": 99,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n3",
+    "on": 0.72,
+    "off": 1.08,
+    "midi": 72,
+    "cents": 0.6,
+    "vel": 98,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n4",
+    "on": 1.08,
+    "off": 1.4,
+    "midi": 70,
+    "cents": 3.4,
+    "vel": 93,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n5",
+    "on": 1.4,
+    "off": 1.71,
+    "midi": 70,
+    "cents": -2.2,
+    "vel": 94,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n6",
+    "on": 1.71,
+    "off": 2.11,
+    "midi": 65,
+    "cents": 22.3,
+    "vel": 95,
+    "legato": true,
+    "flags": [
+     "uncertain-split"
+    ]
+   },
+   {
+    "id": "n18",
+    "on": 2.11,
+    "off": 2.4,
+    "midi": 65,
+    "cents": 30.6,
+    "vel": 78,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n7",
+    "on": 2.45,
+    "off": 2.82,
+    "midi": 65,
+    "cents": 18.8,
+    "vel": 90,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n8",
+    "on": 2.82,
+    "off": 3.07,
+    "midi": 63,
+    "cents": 46.1,
+    "vel": 86,
+    "legato": true,
+    "flags": [
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n9",
+    "on": 3.07,
+    "off": 3.39,
+    "midi": 65,
+    "cents": 16.4,
+    "vel": 85,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n10",
+    "on": 3.39,
+    "off": 3.79,
+    "midi": 66,
+    "cents": 23.3,
+    "vel": 82,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n11",
+    "on": 3.79,
+    "off": 4.04,
+    "midi": 70,
+    "cents": 24.1,
+    "vel": 83,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n12",
+    "on": 4.09,
+    "off": 4.72,
+    "midi": 65,
+    "cents": 14.2,
+    "vel": 90,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n13",
+    "on": 5.13,
+    "off": 5.37,
+    "midi": 66,
+    "cents": -47.8,
+    "vel": 90,
+    "legato": false,
+    "flags": [
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n14",
+    "on": 5.43,
+    "off": 5.77,
+    "midi": 75,
+    "cents": 25.5,
+    "vel": 93,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n15",
+    "on": 5.77,
+    "off": 6.08,
+    "midi": 72,
+    "cents": 23.6,
+    "vel": 90,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n16",
+    "on": 6.08,
+    "off": 6.42,
+    "midi": 73,
+    "cents": 15.1,
+    "vel": 85,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n17",
+    "on": 6.42,
+    "off": 6.67,
+    "midi": 70,
+    "cents": 27.0,
+    "vel": 88,
+    "legato": true,
+    "flags": []
+   }
+  ]
+ },
+ "verdict": {
+  "status": "passed",
+  "rounds": 1,
+  "summary": "18 notes match the original in pitch, splits and timing (pitch 94.5%, voicing 100/96%). The three syllable diffs (0.82 in n3, 3.50 in n10, 6.17 in n16) fall 50-100 ms after a legato pitch change that already has a level dip (consonant). They have no energy dip of their own, so they belong to the syllable that starts at that pitch change and are not new syllables.",
+  "metrics": {
+   "pitch": 0.9446,
+   "voicingRecall": 1.0,
+   "voicingPrecision": 0.9604,
+   "onsetF1": 0.7692,
+   "explained": 1.0,
+   "notes": 18,
+   "durSec": 6.66
+  },
+  "judged": [
+   {
+    "round": 1,
+    "verdict": "pass",
+    "specVersion": 2
+   }
+  ]
+ },
+ "prior": {
+  "source": "segment",
+  "notes": 0
+ },
+ "tool": {
+  "name": "synthcorpus.resynth",
+  "version": "1",
+  "analyzer": {
+   "family": "voice",
+   "f0_range": [
+    65.0,
+    1100.0
+   ],
+   "gate_db": -38.0,
+   "version": 2,
+   "syllables": 1
+  },
+  "timbre": {
+   "kind": "voice",
+   "vowel": "a",
+   "singer": "female2"
+  },
+  "seed": 689665827
+ },
+ "createdAt": "2026-10-31T03:31:43+0100"
+}

@@ -1,0 +1,626 @@
+{
+ "schema": "resynth/1",
+ "dataset": "app-takes-singing",
+ "clip": "stored-30f8d31c-9-audio",
+ "role": "target",
+ "audio": {
+  "file": "apps/api/scripts/fixtures/eval-real/benchmark/app-takes-singing/stored-30f8d31c-9-audio__real.wav",
+  "sha256": "65538752219f249bc33aa0d412eed09d113ed550b1cf76ed66aa9c702b69ad8a",
+  "sampleRate": 48000,
+  "durationSec": 18.42
+ },
+ "truth": {
+  "bpm": 120,
+  "notes": [
+   {
+    "onsetSec": 0.01,
+    "durSec": 0.19,
+    "midi": 48
+   },
+   {
+    "onsetSec": 0.2,
+    "durSec": 0.4,
+    "midi": 46
+   },
+   {
+    "onsetSec": 0.6,
+    "durSec": 0.48,
+    "midi": 48
+   },
+   {
+    "onsetSec": 1.08,
+    "durSec": 0.47,
+    "midi": 51
+   },
+   {
+    "onsetSec": 1.6,
+    "durSec": 0.25,
+    "midi": 47
+   },
+   {
+    "onsetSec": 1.98,
+    "durSec": 0.11,
+    "midi": 45
+   },
+   {
+    "onsetSec": 2.14,
+    "durSec": 0.51,
+    "midi": 46
+   },
+   {
+    "onsetSec": 2.65,
+    "durSec": 0.41,
+    "midi": 49
+   },
+   {
+    "onsetSec": 3.06,
+    "durSec": 0.46,
+    "midi": 51
+   },
+   {
+    "onsetSec": 3.59,
+    "durSec": 0.4,
+    "midi": 46
+   },
+   {
+    "onsetSec": 4.07,
+    "durSec": 0.38,
+    "midi": 51
+   },
+   {
+    "onsetSec": 4.5,
+    "durSec": 0.57,
+    "midi": 52
+   },
+   {
+    "onsetSec": 5.07,
+    "durSec": 0.51,
+    "midi": 54
+   },
+   {
+    "onsetSec": 6.05,
+    "durSec": 0.45,
+    "midi": 51
+   },
+   {
+    "onsetSec": 6.5,
+    "durSec": 0.58,
+    "midi": 51
+   },
+   {
+    "onsetSec": 7.08,
+    "durSec": 0.54,
+    "midi": 54
+   },
+   {
+    "onsetSec": 8.07,
+    "durSec": 0.34,
+    "midi": 54
+   },
+   {
+    "onsetSec": 8.41,
+    "durSec": 0.16,
+    "midi": 55
+   },
+   {
+    "onsetSec": 8.57,
+    "durSec": 0.21,
+    "midi": 54
+   },
+   {
+    "onsetSec": 8.84,
+    "durSec": 0.73,
+    "midi": 51
+   },
+   {
+    "onsetSec": 9.57,
+    "durSec": 0.28,
+    "midi": 47
+   },
+   {
+    "onsetSec": 10.08,
+    "durSec": 0.28,
+    "midi": 53
+   },
+   {
+    "onsetSec": 10.36,
+    "durSec": 0.15,
+    "midi": 56
+   },
+   {
+    "onsetSec": 10.51,
+    "durSec": 0.23,
+    "midi": 54
+   },
+   {
+    "onsetSec": 10.82,
+    "durSec": 0.77,
+    "midi": 51
+   },
+   {
+    "onsetSec": 11.59,
+    "durSec": 0.28,
+    "midi": 46
+   },
+   {
+    "onsetSec": 12.09,
+    "durSec": 0.55,
+    "midi": 46
+   },
+   {
+    "onsetSec": 12.64,
+    "durSec": 0.49,
+    "midi": 42
+   },
+   {
+    "onsetSec": 13.13,
+    "durSec": 0.43,
+    "midi": 47
+   },
+   {
+    "onsetSec": 13.56,
+    "durSec": 0.16,
+    "midi": 47
+   },
+   {
+    "onsetSec": 14.03,
+    "durSec": 0.53,
+    "midi": 47
+   },
+   {
+    "onsetSec": 14.56,
+    "durSec": 0.56,
+    "midi": 42
+   },
+   {
+    "onsetSec": 15.12,
+    "durSec": 0.44,
+    "midi": 47
+   },
+   {
+    "onsetSec": 15.56,
+    "durSec": 0.22,
+    "midi": 47
+   }
+  ]
+ },
+ "spec": {
+  "schema": "resynth-spec/1",
+  "dataset": "app-takes-singing",
+  "clip": "stored-30f8d31c-9-audio",
+  "version": 3,
+  "timbre": {
+   "kind": "voice",
+   "vowel": "a",
+   "singer": "male8"
+  },
+  "render": {
+   "seed": 356784148,
+   "contour": "copy-detrended",
+   "levelMatch": true
+  },
+  "nextId": 37,
+  "prior": {
+   "source": "segment",
+   "notes": 0
+  },
+  "notes": [
+   {
+    "id": "n1",
+    "on": 0.01,
+    "off": 0.2,
+    "midi": 48,
+    "cents": 18.2,
+    "vel": 95,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n2",
+    "on": 0.2,
+    "off": 0.6,
+    "midi": 46,
+    "cents": 42.6,
+    "vel": 92,
+    "legato": true,
+    "flags": [
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n3",
+    "on": 0.6,
+    "off": 1.08,
+    "midi": 48,
+    "cents": 44.4,
+    "vel": 100,
+    "legato": true,
+    "flags": [
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n4",
+    "on": 1.08,
+    "off": 1.55,
+    "midi": 51,
+    "cents": -15.9,
+    "vel": 98,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n5",
+    "on": 1.6,
+    "off": 1.85,
+    "midi": 47,
+    "cents": 0.0,
+    "vel": 85,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n6",
+    "on": 1.98,
+    "off": 2.09,
+    "midi": 45,
+    "cents": 0.0,
+    "vel": 58,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n7",
+    "on": 2.14,
+    "off": 2.65,
+    "midi": 46,
+    "cents": 39.5,
+    "vel": 92,
+    "legato": false,
+    "flags": [
+     "uncertain-pitch",
+     "uncertain-split"
+    ]
+   },
+   {
+    "id": "n8",
+    "on": 2.65,
+    "off": 3.06,
+    "midi": 49,
+    "cents": -44.2,
+    "vel": 98,
+    "legato": true,
+    "flags": [
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n9",
+    "on": 3.06,
+    "off": 3.52,
+    "midi": 51,
+    "cents": -40.0,
+    "vel": 106,
+    "legato": true,
+    "flags": [
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n10",
+    "on": 3.59,
+    "off": 3.99,
+    "midi": 46,
+    "cents": 37.1,
+    "vel": 86,
+    "legato": false,
+    "flags": [
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n11",
+    "on": 4.07,
+    "off": 4.45,
+    "midi": 51,
+    "cents": -12.5,
+    "vel": 102,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n12",
+    "on": 4.5,
+    "off": 5.07,
+    "midi": 52,
+    "cents": -37.9,
+    "vel": 94,
+    "legato": false,
+    "flags": [
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n13",
+    "on": 5.07,
+    "off": 5.58,
+    "midi": 54,
+    "cents": 1.5,
+    "vel": 92,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n14",
+    "on": 6.05,
+    "off": 6.5,
+    "midi": 51,
+    "cents": -17.8,
+    "vel": 96,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n15",
+    "on": 6.5,
+    "off": 7.08,
+    "midi": 51,
+    "cents": 43.0,
+    "vel": 92,
+    "legato": false,
+    "flags": [
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n16",
+    "on": 7.08,
+    "off": 7.62,
+    "midi": 54,
+    "cents": -11.8,
+    "vel": 91,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n17",
+    "on": 8.07,
+    "off": 8.41,
+    "midi": 54,
+    "cents": -2.4,
+    "vel": 90,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n18",
+    "on": 8.41,
+    "off": 8.57,
+    "midi": 55,
+    "cents": 40.9,
+    "vel": 91,
+    "legato": true,
+    "flags": [
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n19",
+    "on": 8.57,
+    "off": 8.78,
+    "midi": 54,
+    "cents": -23.7,
+    "vel": 87,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n20",
+    "on": 8.84,
+    "off": 9.57,
+    "midi": 51,
+    "cents": -16.3,
+    "vel": 96,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n21",
+    "on": 9.57,
+    "off": 9.85,
+    "midi": 47,
+    "cents": -39.3,
+    "vel": 77,
+    "legato": true,
+    "flags": [
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n22",
+    "on": 10.08,
+    "off": 10.36,
+    "midi": 53,
+    "cents": 41.2,
+    "vel": 86,
+    "legato": false,
+    "flags": [
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n23",
+    "on": 10.36,
+    "off": 10.51,
+    "midi": 56,
+    "cents": -30.8,
+    "vel": 90,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n24",
+    "on": 10.51,
+    "off": 10.74,
+    "midi": 54,
+    "cents": 40.4,
+    "vel": 85,
+    "legato": true,
+    "flags": [
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n25",
+    "on": 10.82,
+    "off": 11.59,
+    "midi": 51,
+    "cents": -7.7,
+    "vel": 90,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n26",
+    "on": 11.59,
+    "off": 11.87,
+    "midi": 46,
+    "cents": 7.3,
+    "vel": 79,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n27",
+    "on": 12.09,
+    "off": 12.64,
+    "midi": 46,
+    "cents": 8.3,
+    "vel": 81,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n28",
+    "on": 12.64,
+    "off": 13.13,
+    "midi": 42,
+    "cents": -20.6,
+    "vel": 76,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n29",
+    "on": 13.13,
+    "off": 13.56,
+    "midi": 47,
+    "cents": -27.2,
+    "vel": 85,
+    "legato": true,
+    "flags": [
+     "uncertain-split"
+    ]
+   },
+   {
+    "id": "n36",
+    "on": 13.56,
+    "off": 13.72,
+    "midi": 47,
+    "cents": -44.9,
+    "vel": 68,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n31",
+    "on": 14.03,
+    "off": 14.56,
+    "midi": 47,
+    "cents": -38.5,
+    "vel": 85,
+    "legato": false,
+    "flags": [
+     "uncertain-pitch",
+     "uncertain-split"
+    ]
+   },
+   {
+    "id": "n33",
+    "on": 14.56,
+    "off": 15.12,
+    "midi": 42,
+    "cents": -22.9,
+    "vel": 77,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n35",
+    "on": 15.12,
+    "off": 15.56,
+    "midi": 47,
+    "cents": -5.2,
+    "vel": 89,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n34",
+    "on": 15.56,
+    "off": 15.78,
+    "midi": 47,
+    "cents": -37.7,
+    "vel": 74,
+    "legato": true,
+    "flags": []
+   }
+  ]
+ },
+ "verdict": {
+  "status": "passed",
+  "rounds": 1,
+  "summary": "Notes, pitches, splits and onsets match the original; the 6 diffs are acceptable: D2/D3/D4 syllable events sit within ~50-90 ms of existing note boundaries, with orig onset events coinciding with the chosen onsets (legato/onset grey zone), D1 is tracker wobble at the tail of a held B2, D5 is a pyin-only region in a silent gap, and D6 is scoop contour in n3. The weak mid-note syllable events in long D#3 notes n20 (9.06) and n25 (11.07) show no dip and no timbre change, so they are accepted as one sustained syllable.",
+  "metrics": {
+   "pitch": 0.8936,
+   "voicingRecall": 0.9936,
+   "voicingPrecision": 0.9488,
+   "onsetF1": 0.6269,
+   "explained": 1.0,
+   "notes": 34,
+   "durSec": 18.42
+  },
+  "judged": [
+   {
+    "round": 1,
+    "verdict": "pass",
+    "specVersion": 3
+   }
+  ]
+ },
+ "prior": {
+  "source": "segment",
+  "notes": 0
+ },
+ "tool": {
+  "name": "synthcorpus.resynth",
+  "version": "1",
+  "analyzer": {
+   "family": "voice",
+   "f0_range": [
+    65.0,
+    1100.0
+   ],
+   "gate_db": -38.0,
+   "version": 2,
+   "syllables": 1
+  },
+  "timbre": {
+   "kind": "voice",
+   "vowel": "a",
+   "singer": "male8"
+  },
+  "seed": 356784148
+ },
+ "createdAt": "2026-10-31T03:31:44+0100"
+}

@@ -1,0 +1,227 @@
+{
+ "schema": "resynth/1",
+ "dataset": "app-takes-singing",
+ "clip": "stored-6711f6bb-6-audio",
+ "role": "target",
+ "audio": {
+  "file": "apps/api/scripts/fixtures/eval-real/benchmark/app-takes-singing/stored-6711f6bb-6-audio__real.wav",
+  "sha256": "28c9f54069bb1099ea00fde0084cdd38b8b5fe11c041c3f5f24cdb89de0debff",
+  "sampleRate": 48000,
+  "durationSec": 3.18
+ },
+ "truth": {
+  "bpm": 120,
+  "notes": [
+   {
+    "onsetSec": 0.15,
+    "durSec": 0.17,
+    "midi": 48
+   },
+   {
+    "onsetSec": 0.32,
+    "durSec": 0.43,
+    "midi": 47
+   },
+   {
+    "onsetSec": 0.75,
+    "durSec": 0.22,
+    "midi": 50
+   },
+   {
+    "onsetSec": 0.97,
+    "durSec": 0.23,
+    "midi": 50
+   },
+   {
+    "onsetSec": 1.2,
+    "durSec": 0.17,
+    "midi": 50
+   },
+   {
+    "onsetSec": 1.37,
+    "durSec": 0.2,
+    "midi": 52
+   },
+   {
+    "onsetSec": 1.57,
+    "durSec": 0.39,
+    "midi": 52
+   },
+   {
+    "onsetSec": 2.14,
+    "durSec": 0.2,
+    "midi": 48
+   },
+   {
+    "onsetSec": 2.7,
+    "durSec": 0.49,
+    "midi": 48
+   }
+  ]
+ },
+ "spec": {
+  "schema": "resynth-spec/1",
+  "dataset": "app-takes-singing",
+  "clip": "stored-6711f6bb-6-audio",
+  "version": 3,
+  "timbre": {
+   "kind": "voice",
+   "vowel": "a",
+   "singer": "male8"
+  },
+  "render": {
+   "seed": 4079424349,
+   "contour": "copy-detrended",
+   "levelMatch": true
+  },
+  "nextId": 11,
+  "prior": {
+   "source": "segment",
+   "notes": 0
+  },
+  "notes": [
+   {
+    "id": "n2",
+    "on": 0.15,
+    "off": 0.32,
+    "midi": 48,
+    "cents": 23.9,
+    "vel": 99,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n3",
+    "on": 0.32,
+    "off": 0.75,
+    "midi": 47,
+    "cents": 37.9,
+    "vel": 97,
+    "legato": true,
+    "flags": [
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n4",
+    "on": 0.75,
+    "off": 0.97,
+    "midi": 50,
+    "cents": 11.4,
+    "vel": 98,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n9",
+    "on": 0.97,
+    "off": 1.2,
+    "midi": 50,
+    "cents": 5.4,
+    "vel": 98,
+    "legato": false,
+    "flags": [
+     "uncertain-split"
+    ]
+   },
+   {
+    "id": "n8",
+    "on": 1.2,
+    "off": 1.37,
+    "midi": 50,
+    "cents": -3.0,
+    "vel": 77,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n5",
+    "on": 1.37,
+    "off": 1.57,
+    "midi": 52,
+    "cents": 45.9,
+    "vel": 93,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n10",
+    "on": 1.57,
+    "off": 1.96,
+    "midi": 52,
+    "cents": -9.8,
+    "vel": 91,
+    "legato": false,
+    "flags": [
+     "uncertain-split"
+    ]
+   },
+   {
+    "id": "n6",
+    "on": 2.14,
+    "off": 2.34,
+    "midi": 48,
+    "cents": 9.2,
+    "vel": 81,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n7",
+    "on": 2.7,
+    "off": 3.19,
+    "midi": 48,
+    "cents": -34.0,
+    "vel": 95,
+    "legato": false,
+    "flags": []
+   }
+  ]
+ },
+ "verdict": {
+  "status": "passed",
+  "rounds": 1,
+  "summary": "9 notes match the original: C3-B2, D3 x3 (syllable splits flagged), E3 x2 (flagged split), C3, C3; pitches, onsets and silences agree, no diffs, pitch 97%, voiced time explained 98%.",
+  "metrics": {
+   "pitch": 0.9741,
+   "voicingRecall": 0.9747,
+   "voicingPrecision": 0.943,
+   "onsetF1": 0.8333,
+   "explained": 0.9848,
+   "notes": 9,
+   "durSec": 3.18
+  },
+  "judged": [
+   {
+    "round": 1,
+    "verdict": "pass",
+    "specVersion": 3
+   }
+  ]
+ },
+ "prior": {
+  "source": "segment",
+  "notes": 0
+ },
+ "tool": {
+  "name": "synthcorpus.resynth",
+  "version": "1",
+  "analyzer": {
+   "family": "voice",
+   "f0_range": [
+    65.0,
+    1100.0
+   ],
+   "gate_db": -38.0,
+   "version": 2,
+   "syllables": 1
+  },
+  "timbre": {
+   "kind": "voice",
+   "vowel": "a",
+   "singer": "male8"
+  },
+  "seed": 4079424349
+ },
+ "createdAt": "2026-10-31T03:31:44+0100"
+}

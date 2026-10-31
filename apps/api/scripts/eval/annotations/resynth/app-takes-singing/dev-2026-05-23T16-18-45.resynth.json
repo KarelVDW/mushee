@@ -1,0 +1,236 @@
+{
+ "schema": "resynth/1",
+ "dataset": "app-takes-singing",
+ "clip": "dev-2026-05-23T16-18-45",
+ "role": "target",
+ "audio": {
+  "file": "apps/api/scripts/fixtures/eval-real/benchmark/app-takes-singing/dev-2026-05-23T16-18-45__real.wav",
+  "sha256": "f79aa63ae1b30b17272c574d2acd6aebba695a6d76b55ac81c464e2c2e85c0b2",
+  "sampleRate": 48000,
+  "durationSec": 6.66
+ },
+ "truth": {
+  "bpm": 120,
+  "notes": [
+   {
+    "onsetSec": 0.1,
+    "durSec": 0.65,
+    "midi": 58
+   },
+   {
+    "onsetSec": 0.83,
+    "durSec": 0.57,
+    "midi": 60
+   },
+   {
+    "onsetSec": 1.49,
+    "durSec": 0.62,
+    "midi": 62
+   },
+   {
+    "onsetSec": 2.11,
+    "durSec": 0.62,
+    "midi": 58
+   },
+   {
+    "onsetSec": 2.79,
+    "durSec": 0.56,
+    "midi": 58
+   },
+   {
+    "onsetSec": 3.47,
+    "durSec": 0.59,
+    "midi": 60
+   },
+   {
+    "onsetSec": 4.15,
+    "durSec": 0.57,
+    "midi": 62
+   },
+   {
+    "onsetSec": 4.81,
+    "durSec": 0.37,
+    "midi": 58
+   },
+   {
+    "onsetSec": 5.49,
+    "durSec": 0.56,
+    "midi": 62
+   },
+   {
+    "onsetSec": 6.12,
+    "durSec": 0.55,
+    "midi": 63
+   }
+  ]
+ },
+ "spec": {
+  "schema": "resynth-spec/1",
+  "dataset": "app-takes-singing",
+  "clip": "dev-2026-05-23T16-18-45",
+  "version": 1,
+  "timbre": {
+   "kind": "voice",
+   "vowel": "a",
+   "singer": "male9"
+  },
+  "render": {
+   "seed": 3126879096,
+   "contour": "copy-detrended",
+   "levelMatch": true
+  },
+  "nextId": 11,
+  "prior": {
+   "source": "segment",
+   "notes": 0
+  },
+  "notes": [
+   {
+    "id": "n1",
+    "on": 0.1,
+    "off": 0.75,
+    "midi": 58,
+    "cents": 16.0,
+    "vel": 102,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n2",
+    "on": 0.83,
+    "off": 1.4,
+    "midi": 60,
+    "cents": 23.7,
+    "vel": 98,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n3",
+    "on": 1.49,
+    "off": 2.11,
+    "midi": 62,
+    "cents": 31.3,
+    "vel": 96,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n4",
+    "on": 2.11,
+    "off": 2.73,
+    "midi": 58,
+    "cents": -7.7,
+    "vel": 87,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n5",
+    "on": 2.79,
+    "off": 3.35,
+    "midi": 58,
+    "cents": 13.5,
+    "vel": 90,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n6",
+    "on": 3.47,
+    "off": 4.06,
+    "midi": 60,
+    "cents": 30.8,
+    "vel": 90,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n7",
+    "on": 4.15,
+    "off": 4.72,
+    "midi": 62,
+    "cents": 22.3,
+    "vel": 89,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n8",
+    "on": 4.81,
+    "off": 5.18,
+    "midi": 58,
+    "cents": 12.1,
+    "vel": 86,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n9",
+    "on": 5.49,
+    "off": 6.05,
+    "midi": 62,
+    "cents": 26.0,
+    "vel": 90,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n10",
+    "on": 6.12,
+    "off": 6.67,
+    "midi": 63,
+    "cents": 16.0,
+    "vel": 92,
+    "legato": false,
+    "flags": []
+   }
+  ]
+ },
+ "verdict": {
+  "status": "passed",
+  "rounds": 1,
+  "summary": "Ten clearly separated sung notes (A#3 C4 D4 A#3 A#3 C4 D4 A#3 D4 D#4) match the original in pitch, onsets and silences. D1/D2 syllable events sit ~120-140 ms after the n1/n6 attacks and are consonant-to-vowel transitions of the same syllable, not new syllables.",
+  "metrics": {
+   "pitch": 0.9962,
+   "voicingRecall": 1.0,
+   "voicingPrecision": 0.9197,
+   "onsetF1": 0.7407,
+   "explained": 1.0,
+   "notes": 10,
+   "durSec": 6.66
+  },
+  "judged": [
+   {
+    "round": 1,
+    "verdict": "pass",
+    "specVersion": 1
+   }
+  ]
+ },
+ "prior": {
+  "source": "segment",
+  "notes": 0
+ },
+ "tool": {
+  "name": "synthcorpus.resynth",
+  "version": "1",
+  "analyzer": {
+   "family": "voice",
+   "f0_range": [
+    65.0,
+    1100.0
+   ],
+   "gate_db": -38.0,
+   "version": 2,
+   "syllables": 1
+  },
+  "timbre": {
+   "kind": "voice",
+   "vowel": "a",
+   "singer": "male9"
+  },
+  "seed": 3126879096
+ },
+ "createdAt": "2026-10-31T03:31:43+0100"
+}

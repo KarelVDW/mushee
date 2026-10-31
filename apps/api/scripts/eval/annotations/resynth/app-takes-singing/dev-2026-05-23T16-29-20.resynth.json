@@ -1,0 +1,240 @@
+{
+ "schema": "resynth/1",
+ "dataset": "app-takes-singing",
+ "clip": "dev-2026-05-23T16-29-20",
+ "role": "target",
+ "audio": {
+  "file": "apps/api/scripts/fixtures/eval-real/benchmark/app-takes-singing/dev-2026-05-23T16-29-20__real.wav",
+  "sha256": "284a831142095092c3cc22848f77ba8aa7485cf8405a4ee5ca9acf5993b66881",
+  "sampleRate": 48000,
+  "durationSec": 6.18
+ },
+ "truth": {
+  "bpm": 120,
+  "notes": [
+   {
+    "onsetSec": 0.13,
+    "durSec": 0.62,
+    "midi": 65
+   },
+   {
+    "onsetSec": 0.79,
+    "durSec": 0.57,
+    "midi": 65
+   },
+   {
+    "onsetSec": 1.45,
+    "durSec": 0.58,
+    "midi": 65
+   },
+   {
+    "onsetSec": 2.11,
+    "durSec": 0.51,
+    "midi": 65
+   },
+   {
+    "onsetSec": 2.76,
+    "durSec": 0.24,
+    "midi": 67
+   },
+   {
+    "onsetSec": 3.08,
+    "durSec": 0.47,
+    "midi": 65
+   },
+   {
+    "onsetSec": 3.72,
+    "durSec": 0.19,
+    "midi": 63
+   },
+   {
+    "onsetSec": 4.04,
+    "durSec": 0.64,
+    "midi": 65
+   },
+   {
+    "onsetSec": 5.39,
+    "durSec": 0.26,
+    "midi": 65
+   },
+   {
+    "onsetSec": 5.7,
+    "durSec": 0.49,
+    "midi": 63
+   }
+  ]
+ },
+ "spec": {
+  "schema": "resynth-spec/1",
+  "dataset": "app-takes-singing",
+  "clip": "dev-2026-05-23T16-29-20",
+  "version": 2,
+  "timbre": {
+   "kind": "voice",
+   "vowel": "a",
+   "singer": "female4"
+  },
+  "render": {
+   "seed": 3063292285,
+   "contour": "copy-detrended",
+   "levelMatch": true
+  },
+  "nextId": 12,
+  "prior": {
+   "source": "segment",
+   "notes": 0
+  },
+  "notes": [
+   {
+    "id": "n1",
+    "on": 0.13,
+    "off": 0.75,
+    "midi": 65,
+    "cents": 33.1,
+    "vel": 98,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n2",
+    "on": 0.79,
+    "off": 1.36,
+    "midi": 65,
+    "cents": 32.7,
+    "vel": 98,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n3",
+    "on": 1.45,
+    "off": 2.03,
+    "midi": 65,
+    "cents": 24.5,
+    "vel": 96,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n5",
+    "on": 2.11,
+    "off": 2.62,
+    "midi": 65,
+    "cents": 27.7,
+    "vel": 92,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n6",
+    "on": 2.76,
+    "off": 3.0,
+    "midi": 67,
+    "cents": 41.0,
+    "vel": 86,
+    "legato": false,
+    "flags": [
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n7",
+    "on": 3.08,
+    "off": 3.55,
+    "midi": 65,
+    "cents": 23.5,
+    "vel": 90,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n8",
+    "on": 3.72,
+    "off": 3.91,
+    "midi": 63,
+    "cents": -41.5,
+    "vel": 81,
+    "legato": false,
+    "flags": [
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n9",
+    "on": 4.04,
+    "off": 4.68,
+    "midi": 65,
+    "cents": 25.5,
+    "vel": 88,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n10",
+    "on": 5.39,
+    "off": 5.65,
+    "midi": 65,
+    "cents": 11.6,
+    "vel": 88,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n11",
+    "on": 5.7,
+    "off": 6.19,
+    "midi": 63,
+    "cents": 25.7,
+    "vel": 89,
+    "legato": false,
+    "flags": []
+   }
+  ]
+ },
+ "verdict": {
+  "status": "passed",
+  "rounds": 1,
+  "summary": "10 notes match the original: pitches, onsets and silences agree. D1/D3 are n3's sub-120 ms fall from F#4 into F4 plus the consonant-to-vowel transition right after the attack. D2/D4 are timbre changes in the decaying tail of n7/n11 (level falling, no energy rise), so they are not new syllables.",
+  "metrics": {
+   "pitch": 1.0,
+   "voicingRecall": 1.0,
+   "voicingPrecision": 0.899,
+   "onsetF1": 0.6957,
+   "explained": 1.0,
+   "notes": 10,
+   "durSec": 6.18
+  },
+  "judged": [
+   {
+    "round": 1,
+    "verdict": "pass",
+    "specVersion": 2
+   }
+  ]
+ },
+ "prior": {
+  "source": "segment",
+  "notes": 0
+ },
+ "tool": {
+  "name": "synthcorpus.resynth",
+  "version": "1",
+  "analyzer": {
+   "family": "voice",
+   "f0_range": [
+    65.0,
+    1100.0
+   ],
+   "gate_db": -38.0,
+   "version": 2,
+   "syllables": 1
+  },
+  "timbre": {
+   "kind": "voice",
+   "vowel": "a",
+   "singer": "female4"
+  },
+  "seed": 3063292285
+ },
+ "createdAt": "2026-10-31T03:31:43+0100"
+}

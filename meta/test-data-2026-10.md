@@ -164,3 +164,4 @@ decided and recorded without changing behaviour. "Open" means left with a reason
   neighbour (convention 5 — n20emv2/hust experts are even coarser than resynth), 79 ±1 st calls on between-semitone
   notes, 6 truly missed. → wave script v4: sung same-pitch syllable doubt defaults to SPLIT (+ uncertain-split).
   Wave 7 restarted fresh under v4 (dagstuhl 31 clips + mir-qbsh passed under v3 — candidates for a syllable re-check).
+- 2026-10-31 03:31: wave 7 (v4) done — 80/80 passed (mean 1.44 rounds); **app-takes-singing (52/52) and app-takes-whistling (19/19) complete**; canaries under v4: vocadito_37 0.760 vs A1 (A2-vs-A1 0.717; 49 vs 51 notes — the under-split is gone), urmp-flute 1.000. usage: session 72 %, week 65 %.

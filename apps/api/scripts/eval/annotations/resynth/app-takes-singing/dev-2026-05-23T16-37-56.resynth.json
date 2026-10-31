@@ -1,0 +1,272 @@
+{
+ "schema": "resynth/1",
+ "dataset": "app-takes-singing",
+ "clip": "dev-2026-05-23T16-37-56",
+ "role": "target",
+ "audio": {
+  "file": "apps/api/scripts/fixtures/eval-real/benchmark/app-takes-singing/dev-2026-05-23T16-37-56__real.wav",
+  "sha256": "7b06ef54cb3a37a20f0381dad34188bcaaf721531f732da57ecdcb908d359f55",
+  "sampleRate": 48000,
+  "durationSec": 7.14
+ },
+ "truth": {
+  "bpm": 120,
+  "notes": [
+   {
+    "onsetSec": 0.0,
+    "durSec": 0.16,
+    "midi": 66
+   },
+   {
+    "onsetSec": 0.16,
+    "durSec": 0.32,
+    "midi": 70
+   },
+   {
+    "onsetSec": 0.48,
+    "durSec": 0.27,
+    "midi": 73
+   },
+   {
+    "onsetSec": 0.75,
+    "durSec": 0.33,
+    "midi": 72
+   },
+   {
+    "onsetSec": 1.08,
+    "durSec": 0.38,
+    "midi": 70
+   },
+   {
+    "onsetSec": 1.46,
+    "durSec": 0.36,
+    "midi": 70
+   },
+   {
+    "onsetSec": 1.82,
+    "durSec": 0.26,
+    "midi": 65
+   },
+   {
+    "onsetSec": 2.08,
+    "durSec": 0.35,
+    "midi": 65
+   },
+   {
+    "onsetSec": 2.47,
+    "durSec": 0.42,
+    "midi": 65
+   },
+   {
+    "onsetSec": 2.89,
+    "durSec": 0.31,
+    "midi": 63
+   },
+   {
+    "onsetSec": 3.2,
+    "durSec": 0.26,
+    "midi": 65
+   },
+   {
+    "onsetSec": 3.46,
+    "durSec": 0.32,
+    "midi": 65
+   }
+  ]
+ },
+ "spec": {
+  "schema": "resynth-spec/1",
+  "dataset": "app-takes-singing",
+  "clip": "dev-2026-05-23T16-37-56",
+  "version": 3,
+  "timbre": {
+   "kind": "voice",
+   "vowel": "a",
+   "singer": "female2"
+  },
+  "render": {
+   "seed": 288300182,
+   "contour": "copy-detrended",
+   "levelMatch": true
+  },
+  "nextId": 14,
+  "prior": {
+   "source": "segment",
+   "notes": 0
+  },
+  "notes": [
+   {
+    "id": "n1",
+    "on": 0.0,
+    "off": 0.16,
+    "midi": 66,
+    "cents": -27.3,
+    "vel": 95,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n2",
+    "on": 0.16,
+    "off": 0.48,
+    "midi": 70,
+    "cents": 17.3,
+    "vel": 97,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n3",
+    "on": 0.48,
+    "off": 0.75,
+    "midi": 73,
+    "cents": 9.5,
+    "vel": 100,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n4",
+    "on": 0.75,
+    "off": 1.08,
+    "midi": 72,
+    "cents": 13.1,
+    "vel": 97,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n6",
+    "on": 1.08,
+    "off": 1.46,
+    "midi": 70,
+    "cents": 30.7,
+    "vel": 93,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n11",
+    "on": 1.46,
+    "off": 1.82,
+    "midi": 70,
+    "cents": 12.9,
+    "vel": 92,
+    "legato": false,
+    "flags": [
+     "uncertain-split"
+    ]
+   },
+   {
+    "id": "n7",
+    "on": 1.82,
+    "off": 2.08,
+    "midi": 65,
+    "cents": 34.3,
+    "vel": 94,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n12",
+    "on": 2.08,
+    "off": 2.43,
+    "midi": 65,
+    "cents": 36.7,
+    "vel": 84,
+    "legato": false,
+    "flags": [
+     "uncertain-split"
+    ]
+   },
+   {
+    "id": "n8",
+    "on": 2.47,
+    "off": 2.89,
+    "midi": 65,
+    "cents": 20.2,
+    "vel": 87,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n9",
+    "on": 2.89,
+    "off": 3.2,
+    "midi": 63,
+    "cents": -14.5,
+    "vel": 75,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n10",
+    "on": 3.2,
+    "off": 3.46,
+    "midi": 65,
+    "cents": 12.9,
+    "vel": 75,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n13",
+    "on": 3.46,
+    "off": 3.78,
+    "midi": 65,
+    "cents": -35.5,
+    "vel": 79,
+    "legato": false,
+    "flags": [
+     "uncertain-split"
+    ]
+   }
+  ]
+ },
+ "verdict": {
+  "status": "passed",
+  "rounds": 1,
+  "summary": "12 notes match the original in pitch, splits and timing. The one diff, a syllable event at 0.09 s inside n1, sits at the start of a 160 ms F#4 that is already sounding when the recording starts, with a steady level and pitch. It is a click or consonant transient, not a new syllable. The same-pitch splits n6/n11, n7/n12 and n10/n13 are flagged, which is appropriate.",
+  "metrics": {
+   "pitch": 0.97,
+   "voicingRecall": 1.0,
+   "voicingPrecision": 0.9608,
+   "onsetF1": 0.75,
+   "explained": 1.0,
+   "notes": 12,
+   "durSec": 7.14
+  },
+  "judged": [
+   {
+    "round": 1,
+    "verdict": "pass",
+    "specVersion": 3
+   }
+  ]
+ },
+ "prior": {
+  "source": "segment",
+  "notes": 0
+ },
+ "tool": {
+  "name": "synthcorpus.resynth",
+  "version": "1",
+  "analyzer": {
+   "family": "voice",
+   "f0_range": [
+    65.0,
+    1100.0
+   ],
+   "gate_db": -38.0,
+   "version": 2,
+   "syllables": 1
+  },
+  "timbre": {
+   "kind": "voice",
+   "vowel": "a",
+   "singer": "female2"
+  },
+  "seed": 288300182
+ },
+ "createdAt": "2026-10-31T03:31:43+0100"
+}

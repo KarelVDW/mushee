@@ -1,0 +1,403 @@
+{
+ "schema": "resynth/1",
+ "dataset": "app-takes-singing",
+ "clip": "dev-2026-06-18T10-52-51",
+ "role": "target",
+ "audio": {
+  "file": "apps/api/scripts/fixtures/eval-real/benchmark/app-takes-singing/dev-2026-06-18T10-52-51__real.wav",
+  "sha256": "44b151ba9f567a69dde910e6b7c49e361be1c0dec5893d3c9d6633eaed7bb348",
+  "sampleRate": 48000,
+  "durationSec": 10.08
+ },
+ "truth": {
+  "bpm": 120,
+  "notes": [
+   {
+    "onsetSec": 0.07,
+    "durSec": 0.54,
+    "midi": 57
+   },
+   {
+    "onsetSec": 0.61,
+    "durSec": 0.33,
+    "midi": 62
+   },
+   {
+    "onsetSec": 0.94,
+    "durSec": 0.21,
+    "midi": 61
+   },
+   {
+    "onsetSec": 1.15,
+    "durSec": 0.18,
+    "midi": 56
+   },
+   {
+    "onsetSec": 1.33,
+    "durSec": 0.28,
+    "midi": 57
+   },
+   {
+    "onsetSec": 1.61,
+    "durSec": 0.19,
+    "midi": 54
+   },
+   {
+    "onsetSec": 1.8,
+    "durSec": 0.36,
+    "midi": 54
+   },
+   {
+    "onsetSec": 2.21,
+    "durSec": 0.45,
+    "midi": 62
+   },
+   {
+    "onsetSec": 2.66,
+    "durSec": 0.14,
+    "midi": 61
+   },
+   {
+    "onsetSec": 2.92,
+    "durSec": 0.4,
+    "midi": 66
+   },
+   {
+    "onsetSec": 3.38,
+    "durSec": 0.56,
+    "midi": 54
+   },
+   {
+    "onsetSec": 3.94,
+    "durSec": 0.44,
+    "midi": 62
+   },
+   {
+    "onsetSec": 4.38,
+    "durSec": 0.18,
+    "midi": 62
+   },
+   {
+    "onsetSec": 4.68,
+    "durSec": 0.37,
+    "midi": 53
+   },
+   {
+    "onsetSec": 5.12,
+    "durSec": 0.45,
+    "midi": 51
+   },
+   {
+    "onsetSec": 5.68,
+    "durSec": 0.27,
+    "midi": 74
+   },
+   {
+    "onsetSec": 5.95,
+    "durSec": 0.14,
+    "midi": 73
+   },
+   {
+    "onsetSec": 6.09,
+    "durSec": 0.18,
+    "midi": 73
+   },
+   {
+    "onsetSec": 6.36,
+    "durSec": 0.74,
+    "midi": 69
+   }
+  ]
+ },
+ "spec": {
+  "schema": "resynth-spec/1",
+  "dataset": "app-takes-singing",
+  "clip": "dev-2026-06-18T10-52-51",
+  "version": 3,
+  "timbre": {
+   "kind": "voice",
+   "vowel": "a",
+   "singer": "male9"
+  },
+  "render": {
+   "seed": 2530563460,
+   "contour": "copy-detrended",
+   "levelMatch": true
+  },
+  "nextId": 21,
+  "prior": {
+   "source": "segment",
+   "notes": 0
+  },
+  "notes": [
+   {
+    "id": "n1",
+    "on": 0.07,
+    "off": 0.61,
+    "midi": 57,
+    "cents": -0.5,
+    "vel": 101,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n2",
+    "on": 0.61,
+    "off": 0.94,
+    "midi": 62,
+    "cents": -27.9,
+    "vel": 101,
+    "legato": true,
+    "flags": [
+     "uncertain-split"
+    ]
+   },
+   {
+    "id": "n16",
+    "on": 0.94,
+    "off": 1.15,
+    "midi": 61,
+    "cents": 29.2,
+    "vel": 92,
+    "legato": false,
+    "flags": [
+     "uncertain-pitch",
+     "uncertain-split"
+    ]
+   },
+   {
+    "id": "n3",
+    "on": 1.15,
+    "off": 1.33,
+    "midi": 56,
+    "cents": 9.4,
+    "vel": 86,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n4",
+    "on": 1.33,
+    "off": 1.61,
+    "midi": 57,
+    "cents": -47.8,
+    "vel": 82,
+    "legato": true,
+    "flags": [
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n5",
+    "on": 1.61,
+    "off": 1.8,
+    "midi": 54,
+    "cents": 3.4,
+    "vel": 69,
+    "legato": true,
+    "flags": [
+     "uncertain-split"
+    ]
+   },
+   {
+    "id": "n17",
+    "on": 1.8,
+    "off": 2.16,
+    "midi": 54,
+    "cents": 22.8,
+    "vel": 67,
+    "legato": false,
+    "flags": [
+     "uncertain-split"
+    ]
+   },
+   {
+    "id": "n6",
+    "on": 2.21,
+    "off": 2.66,
+    "midi": 62,
+    "cents": -30.6,
+    "vel": 73,
+    "legato": false,
+    "flags": [
+     "uncertain-pitch",
+     "uncertain-split"
+    ]
+   },
+   {
+    "id": "n18",
+    "on": 2.66,
+    "off": 2.8,
+    "midi": 61,
+    "cents": 29.2,
+    "vel": 65,
+    "legato": false,
+    "flags": [
+     "uncertain-pitch",
+     "uncertain-split"
+    ]
+   },
+   {
+    "id": "n7",
+    "on": 2.92,
+    "off": 3.32,
+    "midi": 66,
+    "cents": 29.2,
+    "vel": 52,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n8",
+    "on": 3.38,
+    "off": 3.94,
+    "midi": 54,
+    "cents": -40.2,
+    "vel": 50,
+    "legato": false,
+    "flags": [
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n9",
+    "on": 3.94,
+    "off": 4.38,
+    "midi": 62,
+    "cents": -34.1,
+    "vel": 74,
+    "legato": true,
+    "flags": [
+     "uncertain-pitch",
+     "uncertain-split"
+    ]
+   },
+   {
+    "id": "n19",
+    "on": 4.38,
+    "off": 4.56,
+    "midi": 62,
+    "cents": -64.3,
+    "vel": 72,
+    "legato": false,
+    "flags": [
+     "uncertain-pitch",
+     "uncertain-split"
+    ]
+   },
+   {
+    "id": "n10",
+    "on": 4.68,
+    "off": 5.05,
+    "midi": 53,
+    "cents": 1.6,
+    "vel": 53,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n12",
+    "on": 5.12,
+    "off": 5.57,
+    "midi": 51,
+    "cents": 36.2,
+    "vel": 57,
+    "legato": false,
+    "flags": [
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n13",
+    "on": 5.68,
+    "off": 5.95,
+    "midi": 74,
+    "cents": -10.8,
+    "vel": 83,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n14",
+    "on": 5.95,
+    "off": 6.09,
+    "midi": 73,
+    "cents": -10.8,
+    "vel": 83,
+    "legato": true,
+    "flags": [
+     "uncertain-split"
+    ]
+   },
+   {
+    "id": "n20",
+    "on": 6.09,
+    "off": 6.27,
+    "midi": 73,
+    "cents": 0.0,
+    "vel": 77,
+    "legato": false,
+    "flags": [
+     "uncertain-pitch",
+     "uncertain-split"
+    ]
+   },
+   {
+    "id": "n15",
+    "on": 6.36,
+    "off": 7.1,
+    "midi": 69,
+    "cents": -10.8,
+    "vel": 77,
+    "legato": false,
+    "flags": []
+   }
+  ]
+ },
+ "verdict": {
+  "status": "passed",
+  "rounds": 1,
+  "summary": "19 notes match the original in pitch, splits and timing. D4 (inside n1) and D1 (inside n12) show no energy dip, formant change or pitch change in the zooms, so neither needs a split. The pyin-only regions D2/D3/D5/D6 are tails and transitions already covered by flagged notes. n2's ~80 ms overshoot to E4 is a scoop, and n12's pitch (D#3+38) is correctly flagged uncertain.",
+  "metrics": {
+   "pitch": 0.9534,
+   "voicingRecall": 0.9958,
+   "voicingPrecision": 0.9436,
+   "onsetF1": 0.7429,
+   "explained": 1.0,
+   "notes": 19,
+   "durSec": 10.08
+  },
+  "judged": [
+   {
+    "round": 1,
+    "verdict": "pass",
+    "specVersion": 3
+   }
+  ]
+ },
+ "prior": {
+  "source": "segment",
+  "notes": 0
+ },
+ "tool": {
+  "name": "synthcorpus.resynth",
+  "version": "1",
+  "analyzer": {
+   "family": "voice",
+   "f0_range": [
+    65.0,
+    1100.0
+   ],
+   "gate_db": -38.0,
+   "version": 2,
+   "syllables": 1
+  },
+  "timbre": {
+   "kind": "voice",
+   "vowel": "a",
+   "singer": "male9"
+  },
+  "seed": 2530563460
+ },
+ "createdAt": "2026-10-31T03:31:43+0100"
+}

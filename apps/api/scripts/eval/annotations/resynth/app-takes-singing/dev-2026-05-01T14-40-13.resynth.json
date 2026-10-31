@@ -1,0 +1,248 @@
+{
+ "schema": "resynth/1",
+ "dataset": "app-takes-singing",
+ "clip": "dev-2026-05-01T14-40-13",
+ "role": "target",
+ "audio": {
+  "file": "apps/api/scripts/fixtures/eval-real/benchmark/app-takes-singing/dev-2026-05-01T14-40-13__real.wav",
+  "sha256": "e5e2d37d3cab771fcad8396b09fb562c462f5d73433f989064188f5cd22e05dc",
+  "sampleRate": 48000,
+  "durationSec": 6.54
+ },
+ "truth": {
+  "bpm": 120,
+  "notes": [
+   {
+    "onsetSec": 0.0,
+    "durSec": 0.78,
+    "midi": 58
+   },
+   {
+    "onsetSec": 0.78,
+    "durSec": 0.59,
+    "midi": 59
+   },
+   {
+    "onsetSec": 1.37,
+    "durSec": 0.61,
+    "midi": 62
+   },
+   {
+    "onsetSec": 2.04,
+    "durSec": 0.46,
+    "midi": 57
+   },
+   {
+    "onsetSec": 2.69,
+    "durSec": 0.68,
+    "midi": 58
+   },
+   {
+    "onsetSec": 3.37,
+    "durSec": 0.62,
+    "midi": 59
+   },
+   {
+    "onsetSec": 3.99,
+    "durSec": 0.64,
+    "midi": 61
+   },
+   {
+    "onsetSec": 4.72,
+    "durSec": 0.49,
+    "midi": 57
+   },
+   {
+    "onsetSec": 5.36,
+    "durSec": 0.59,
+    "midi": 61
+   },
+   {
+    "onsetSec": 6.04,
+    "durSec": 0.5,
+    "midi": 74
+   }
+  ]
+ },
+ "spec": {
+  "schema": "resynth-spec/1",
+  "dataset": "app-takes-singing",
+  "clip": "dev-2026-05-01T14-40-13",
+  "version": 3,
+  "timbre": {
+   "kind": "voice",
+   "vowel": "a",
+   "singer": "male6"
+  },
+  "render": {
+   "seed": 122839714,
+   "contour": "copy-detrended",
+   "levelMatch": true
+  },
+  "nextId": 12,
+  "prior": {
+   "source": "segment",
+   "notes": 0
+  },
+  "notes": [
+   {
+    "id": "n2",
+    "on": 0.0,
+    "off": 0.78,
+    "midi": 58,
+    "cents": -61.5,
+    "vel": 78,
+    "legato": false,
+    "flags": [
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n3",
+    "on": 0.78,
+    "off": 1.37,
+    "midi": 59,
+    "cents": 35.6,
+    "vel": 100,
+    "legato": true,
+    "flags": [
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n4",
+    "on": 1.37,
+    "off": 1.98,
+    "midi": 62,
+    "cents": -46.9,
+    "vel": 88,
+    "legato": true,
+    "flags": [
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n5",
+    "on": 2.04,
+    "off": 2.5,
+    "midi": 57,
+    "cents": 31.5,
+    "vel": 88,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n6",
+    "on": 2.69,
+    "off": 3.37,
+    "midi": 58,
+    "cents": -49.5,
+    "vel": 68,
+    "legato": false,
+    "flags": [
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n7",
+    "on": 3.37,
+    "off": 3.99,
+    "midi": 59,
+    "cents": 19.5,
+    "vel": 96,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n8",
+    "on": 3.99,
+    "off": 4.63,
+    "midi": 61,
+    "cents": 34.9,
+    "vel": 90,
+    "legato": true,
+    "flags": [
+     "uncertain-onset"
+    ]
+   },
+   {
+    "id": "n9",
+    "on": 4.72,
+    "off": 5.21,
+    "midi": 57,
+    "cents": 17.0,
+    "vel": 87,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n10",
+    "on": 5.36,
+    "off": 5.95,
+    "midi": 61,
+    "cents": 9.9,
+    "vel": 83,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n11",
+    "on": 6.04,
+    "off": 6.54,
+    "midi": 74,
+    "cents": 29.2,
+    "vel": 101,
+    "legato": false,
+    "flags": [
+     "uncertain-exists"
+    ]
+   }
+  ]
+ },
+ "verdict": {
+  "status": "passed",
+  "rounds": 1,
+  "summary": "10 notes (two parallel phrases A#3-B3-D4 / A#3-B3-C#4, A3 links, C#4, final D5) match the original's pitches and attacks; syllable diffs inside n3/n4/n7 sit at consistent ~0.1 s post-onset vowel shifts within one syllable, n8's 4.10/4.16 events are the legato grey zone after pitch arrival at 4.0 (flagged), D1 is n2's own attack, D9/D10 are a pyin-only tail. Final loud D5 (n11) is flagged uncertain-exists; trackers agree on D5, accepted.",
+  "metrics": {
+   "pitch": 0.9305,
+   "voicingRecall": 1.0,
+   "voicingPrecision": 0.9615,
+   "onsetF1": 0.8333,
+   "explained": 1.0,
+   "notes": 10,
+   "durSec": 6.54
+  },
+  "judged": [
+   {
+    "round": 1,
+    "verdict": "pass",
+    "specVersion": 3
+   }
+  ]
+ },
+ "prior": {
+  "source": "segment",
+  "notes": 0
+ },
+ "tool": {
+  "name": "synthcorpus.resynth",
+  "version": "1",
+  "analyzer": {
+   "family": "voice",
+   "f0_range": [
+    65.0,
+    1100.0
+   ],
+   "gate_db": -38.0,
+   "version": 2,
+   "syllables": 1
+  },
+  "timbre": {
+   "kind": "voice",
+   "vowel": "a",
+   "singer": "male6"
+  },
+  "seed": 122839714
+ },
+ "createdAt": "2026-10-31T03:31:43+0100"
+}

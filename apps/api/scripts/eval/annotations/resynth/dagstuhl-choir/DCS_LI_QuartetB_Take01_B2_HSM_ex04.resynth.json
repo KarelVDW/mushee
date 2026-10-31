@@ -1,0 +1,350 @@
+{
+ "schema": "resynth/1",
+ "dataset": "dagstuhl-choir",
+ "clip": "DCS_LI_QuartetB_Take01_B2_HSM_ex04",
+ "role": "target",
+ "audio": {
+  "file": "apps/api/scripts/fixtures/eval-real/benchmark/dagstuhl-choir/DCS_LI_QuartetB_Take01_B2_HSM_ex04__real.wav",
+  "sha256": "b0d94450fce78e3c7f28554df647e4e8c0fdc19d10511efadec14acd8bcaf92d",
+  "sampleRate": 22050,
+  "durationSec": 23.7886
+ },
+ "truth": {
+  "bpm": 76.5624999401845,
+  "beatGrid": [
+   {
+    "timeSec": -0.09795918400000403,
+    "beat": 0
+   },
+   {
+    "timeSec": 0.5913832199999973,
+    "beat": 1
+   },
+   {
+    "timeSec": 1.3599999999999994,
+    "beat": 2
+   },
+   {
+    "timeSec": 2.136961451000005,
+    "beat": 3
+   },
+   {
+    "timeSec": 2.9061224489999944,
+    "beat": 4
+   },
+   {
+    "timeSec": 3.6825396830000017,
+    "beat": 5
+   },
+   {
+    "timeSec": 4.444444443999998,
+    "beat": 6
+   },
+   {
+    "timeSec": 5.206349205999999,
+    "beat": 7
+   },
+   {
+    "timeSec": 5.960997731999996,
+    "beat": 8
+   },
+   {
+    "timeSec": 6.744671202000006,
+    "beat": 9
+   },
+   {
+    "timeSec": 7.644444444000001,
+    "beat": 10
+   },
+   {
+    "timeSec": 8.486167800000004,
+    "beat": 11
+   },
+   {
+    "timeSec": 9.53106575999999,
+    "beat": 12
+   },
+   {
+    "timeSec": 10.321995464999986,
+    "beat": 13
+   },
+   {
+    "timeSec": 11.120181406,
+    "beat": 14
+   },
+   {
+    "timeSec": 11.939999999999998,
+    "beat": 15
+   },
+   {
+    "timeSec": 12.796371881999988,
+    "beat": 16
+   },
+   {
+    "timeSec": 13.53650793700001,
+    "beat": 17
+   },
+   {
+    "timeSec": 14.233106576000012,
+    "beat": 18
+   },
+   {
+    "timeSec": 14.939999999999998,
+    "beat": 19
+   },
+   {
+    "timeSec": 15.691609977000013,
+    "beat": 20
+   },
+   {
+    "timeSec": 16.47528344700001,
+    "beat": 21
+   },
+   {
+    "timeSec": 17.324263038999987,
+    "beat": 22
+   },
+   {
+    "timeSec": 18.267573696,
+    "beat": 23
+   },
+   {
+    "timeSec": 19.399546485000002,
+    "beat": 24
+   },
+   {
+    "timeSec": 20.778231293000005,
+    "beat": 25
+   },
+   {
+    "timeSec": 22.178684806999996,
+    "beat": 26
+   },
+   {
+    "timeSec": 23.397732426000005,
+    "beat": 27
+   },
+   {
+    "timeSec": 23.75328798199999,
+    "beat": 28
+   }
+  ],
+  "notes": [
+   {
+    "onsetSec": 0.01,
+    "durSec": 3.36,
+    "midi": 52
+   },
+   {
+    "onsetSec": 6.886,
+    "durSec": 0.752,
+    "midi": 52
+   },
+   {
+    "onsetSec": 7.638,
+    "durSec": 0.752,
+    "midi": 50
+   },
+   {
+    "onsetSec": 8.39,
+    "durSec": 0.55,
+    "midi": 48
+   },
+   {
+    "onsetSec": 9.62,
+    "durSec": 1.46,
+    "midi": 42
+   },
+   {
+    "onsetSec": 11.08,
+    "durSec": 1.32,
+    "midi": 42
+   },
+   {
+    "onsetSec": 12.811,
+    "durSec": 4.249,
+    "midi": 43
+   },
+   {
+    "onsetSec": 17.324,
+    "durSec": 1.396,
+    "midi": 43
+   },
+   {
+    "onsetSec": 19.47,
+    "durSec": 3.8,
+    "midi": 48
+   }
+  ]
+ },
+ "spec": {
+  "schema": "resynth-spec/1",
+  "dataset": "dagstuhl-choir",
+  "clip": "DCS_LI_QuartetB_Take01_B2_HSM_ex04",
+  "version": 4,
+  "timbre": {
+   "kind": "voice",
+   "vowel": "a",
+   "singer": "male8"
+  },
+  "render": {
+   "seed": 570859070,
+   "contour": "copy-detrended",
+   "levelMatch": true
+  },
+  "nextId": 10,
+  "prior": {
+   "source": "truth",
+   "notes": 9,
+   "path": "apps/api/scripts/fixtures/eval-real/benchmark/dagstuhl-choir/DCS_LI_QuartetB_Take01_B2_HSM_ex04.truth.json"
+  },
+  "notes": [
+   {
+    "id": "n1",
+    "on": 0.01,
+    "off": 3.37,
+    "midi": 52,
+    "cents": -27.1,
+    "vel": 101,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n2",
+    "on": 6.8859,
+    "off": 7.6381,
+    "midi": 52,
+    "cents": -12.5,
+    "vel": 97,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n3",
+    "on": 7.6381,
+    "off": 8.39,
+    "midi": 50,
+    "cents": -6.6,
+    "vel": 99,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n4",
+    "on": 8.39,
+    "off": 8.94,
+    "midi": 48,
+    "cents": -14.1,
+    "vel": 97,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n5",
+    "on": 9.62,
+    "off": 11.08,
+    "midi": 42,
+    "cents": -26.0,
+    "vel": 87,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n6",
+    "on": 11.08,
+    "off": 12.4,
+    "midi": 42,
+    "cents": 10.1,
+    "vel": 87,
+    "legato": true,
+    "flags": [
+     "uncertain-split"
+    ]
+   },
+   {
+    "id": "n7",
+    "on": 12.8111,
+    "off": 17.06,
+    "midi": 43,
+    "cents": -9.5,
+    "vel": 95,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n8",
+    "on": 17.3242,
+    "off": 18.72,
+    "midi": 43,
+    "cents": -17.3,
+    "vel": 85,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n9",
+    "on": 19.47,
+    "off": 23.27,
+    "midi": 48,
+    "cents": -5.6,
+    "vel": 91,
+    "legato": false,
+    "flags": [
+     "uncertain-onset"
+    ]
+   }
+  ]
+ },
+ "verdict": {
+  "status": "passed",
+  "rounds": 2,
+  "summary": "9 notes match the bass line: E3 D3 C3 legato steps, F#2 split flagged at a weak syllable change, G2 pair, final C3 flagged for B2/C3 pitch ambiguity. Remaining diffs are scoops (n5 dip to E2, n9 rise from B2), bleed (D2 B3 blip, D6 G4), or a release tail (D7); none is a note error.",
+  "metrics": {
+   "pitch": 0.9635,
+   "voicingRecall": 0.9918,
+   "voicingPrecision": 0.9849,
+   "onsetF1": 0.5185,
+   "explained": 0.9901,
+   "notes": 9,
+   "durSec": 23.789
+  },
+  "judged": [
+   {
+    "round": 1,
+    "verdict": "fail",
+    "specVersion": 2
+   },
+   {
+    "round": 2,
+    "verdict": "pass",
+    "specVersion": 4
+   }
+  ]
+ },
+ "prior": {
+  "source": "truth",
+  "notes": 9,
+  "path": "apps/api/scripts/fixtures/eval-real/benchmark/dagstuhl-choir/DCS_LI_QuartetB_Take01_B2_HSM_ex04.truth.json"
+ },
+ "tool": {
+  "name": "synthcorpus.resynth",
+  "version": "1",
+  "analyzer": {
+   "family": "voice",
+   "f0_range": [
+    65.0,
+    420.0
+   ],
+   "gate_db": -38.0,
+   "version": 2,
+   "syllables": 1
+  },
+  "timbre": {
+   "kind": "voice",
+   "vowel": "a",
+   "singer": "male8"
+  },
+  "seed": 570859070
+ },
+ "createdAt": "2026-10-31T03:31:44+0100"
+}

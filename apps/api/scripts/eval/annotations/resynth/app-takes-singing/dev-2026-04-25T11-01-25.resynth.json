@@ -1,0 +1,597 @@
+{
+ "schema": "resynth/1",
+ "dataset": "app-takes-singing",
+ "clip": "dev-2026-04-25T11-01-25",
+ "role": "target",
+ "audio": {
+  "file": "apps/api/scripts/fixtures/eval-real/benchmark/app-takes-singing/dev-2026-04-25T11-01-25__real.wav",
+  "sha256": "bbd8c476c67f2f692bb7b68b102628ef1fda9b87aa1eedd75ba0e55c679fe22e",
+  "sampleRate": 48000,
+  "durationSec": 26.46
+ },
+ "truth": {
+  "bpm": 120,
+  "notes": [
+   {
+    "onsetSec": 0.0,
+    "durSec": 0.73,
+    "midi": 60
+   },
+   {
+    "onsetSec": 0.73,
+    "durSec": 0.63,
+    "midi": 62
+   },
+   {
+    "onsetSec": 1.36,
+    "durSec": 0.57,
+    "midi": 64
+   },
+   {
+    "onsetSec": 2.01,
+    "durSec": 0.21,
+    "midi": 61
+   },
+   {
+    "onsetSec": 2.22,
+    "durSec": 0.23,
+    "midi": 60
+   },
+   {
+    "onsetSec": 2.66,
+    "durSec": 0.74,
+    "midi": 60
+   },
+   {
+    "onsetSec": 3.4,
+    "durSec": 0.64,
+    "midi": 62
+   },
+   {
+    "onsetSec": 4.04,
+    "durSec": 0.64,
+    "midi": 64
+   },
+   {
+    "onsetSec": 4.76,
+    "durSec": 0.35,
+    "midi": 60
+   },
+   {
+    "onsetSec": 5.45,
+    "durSec": 0.54,
+    "midi": 64
+   },
+   {
+    "onsetSec": 6.1,
+    "durSec": 0.65,
+    "midi": 65
+   },
+   {
+    "onsetSec": 6.75,
+    "durSec": 0.71,
+    "midi": 67
+   },
+   {
+    "onsetSec": 7.99,
+    "durSec": 0.63,
+    "midi": 64
+   },
+   {
+    "onsetSec": 8.73,
+    "durSec": 0.64,
+    "midi": 65
+   },
+   {
+    "onsetSec": 9.37,
+    "durSec": 0.68,
+    "midi": 67
+   },
+   {
+    "onsetSec": 10.64,
+    "durSec": 0.3,
+    "midi": 67
+   },
+   {
+    "onsetSec": 10.94,
+    "durSec": 0.43,
+    "midi": 68
+   },
+   {
+    "onsetSec": 11.37,
+    "durSec": 0.24,
+    "midi": 67
+   },
+   {
+    "onsetSec": 11.66,
+    "durSec": 0.46,
+    "midi": 65
+   },
+   {
+    "onsetSec": 12.12,
+    "durSec": 0.51,
+    "midi": 64
+   },
+   {
+    "onsetSec": 12.68,
+    "durSec": 0.39,
+    "midi": 60
+   },
+   {
+    "onsetSec": 13.37,
+    "durSec": 0.28,
+    "midi": 68
+   },
+   {
+    "onsetSec": 13.65,
+    "durSec": 0.31,
+    "midi": 69
+   },
+   {
+    "onsetSec": 14.0,
+    "durSec": 0.33,
+    "midi": 68
+   },
+   {
+    "onsetSec": 14.33,
+    "durSec": 0.31,
+    "midi": 65
+   },
+   {
+    "onsetSec": 14.64,
+    "durSec": 0.88,
+    "midi": 64
+   },
+   {
+    "onsetSec": 15.52,
+    "durSec": 0.25,
+    "midi": 60
+   },
+   {
+    "onsetSec": 16.08,
+    "durSec": 0.78,
+    "midi": 60
+   },
+   {
+    "onsetSec": 16.86,
+    "durSec": 0.54,
+    "midi": 55
+   },
+   {
+    "onsetSec": 17.4,
+    "durSec": 0.69,
+    "midi": 61
+   },
+   {
+    "onsetSec": 18.66,
+    "durSec": 0.78,
+    "midi": 60
+   },
+   {
+    "onsetSec": 19.44,
+    "durSec": 0.63,
+    "midi": 55
+   },
+   {
+    "onsetSec": 20.07,
+    "durSec": 0.77,
+    "midi": 60
+   }
+  ]
+ },
+ "spec": {
+  "schema": "resynth-spec/1",
+  "dataset": "app-takes-singing",
+  "clip": "dev-2026-04-25T11-01-25",
+  "version": 2,
+  "timbre": {
+   "kind": "voice",
+   "vowel": "a",
+   "singer": "male9"
+  },
+  "render": {
+   "seed": 2510423862,
+   "contour": "copy-detrended",
+   "levelMatch": true
+  },
+  "nextId": 40,
+  "prior": {
+   "source": "segment",
+   "notes": 0
+  },
+  "notes": [
+   {
+    "id": "n1",
+    "on": 0.0,
+    "off": 0.73,
+    "midi": 60,
+    "cents": -1.9,
+    "vel": 90,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n2",
+    "on": 0.73,
+    "off": 1.36,
+    "midi": 62,
+    "cents": -4.5,
+    "vel": 111,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n3",
+    "on": 1.36,
+    "off": 1.93,
+    "midi": 64,
+    "cents": 2.2,
+    "vel": 100,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n4",
+    "on": 2.01,
+    "off": 2.22,
+    "midi": 61,
+    "cents": -11.8,
+    "vel": 84,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n5",
+    "on": 2.22,
+    "off": 2.45,
+    "midi": 60,
+    "cents": 19.6,
+    "vel": 88,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n6",
+    "on": 2.66,
+    "off": 3.4,
+    "midi": 60,
+    "cents": 7.4,
+    "vel": 73,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n7",
+    "on": 3.4,
+    "off": 4.04,
+    "midi": 62,
+    "cents": 9.4,
+    "vel": 102,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n8",
+    "on": 4.04,
+    "off": 4.68,
+    "midi": 64,
+    "cents": -0.6,
+    "vel": 97,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n9",
+    "on": 4.76,
+    "off": 5.11,
+    "midi": 60,
+    "cents": 0.0,
+    "vel": 94,
+    "legato": false,
+    "flags": [
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n10",
+    "on": 5.45,
+    "off": 5.99,
+    "midi": 64,
+    "cents": -10.0,
+    "vel": 93,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n11",
+    "on": 6.1,
+    "off": 6.75,
+    "midi": 65,
+    "cents": -29.6,
+    "vel": 94,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n12",
+    "on": 6.75,
+    "off": 7.46,
+    "midi": 67,
+    "cents": 30.4,
+    "vel": 90,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n13",
+    "on": 7.99,
+    "off": 8.62,
+    "midi": 64,
+    "cents": -2.3,
+    "vel": 91,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n14",
+    "on": 8.73,
+    "off": 9.37,
+    "midi": 65,
+    "cents": -27.4,
+    "vel": 94,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n15",
+    "on": 9.37,
+    "off": 10.05,
+    "midi": 67,
+    "cents": 10.3,
+    "vel": 82,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n16",
+    "on": 10.64,
+    "off": 10.94,
+    "midi": 67,
+    "cents": 23.0,
+    "vel": 82,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n18",
+    "on": 10.94,
+    "off": 11.37,
+    "midi": 68,
+    "cents": 27.8,
+    "vel": 83,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n19",
+    "on": 11.37,
+    "off": 11.61,
+    "midi": 67,
+    "cents": 1.5,
+    "vel": 82,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n20",
+    "on": 11.66,
+    "off": 12.12,
+    "midi": 65,
+    "cents": 29.2,
+    "vel": 90,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n21",
+    "on": 12.12,
+    "off": 12.63,
+    "midi": 64,
+    "cents": 32.5,
+    "vel": 99,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n22",
+    "on": 12.68,
+    "off": 13.07,
+    "midi": 60,
+    "cents": 24.7,
+    "vel": 88,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n23",
+    "on": 13.37,
+    "off": 13.65,
+    "midi": 68,
+    "cents": -41.2,
+    "vel": 85,
+    "legato": false,
+    "flags": [
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n24",
+    "on": 13.65,
+    "off": 13.96,
+    "midi": 69,
+    "cents": 11.4,
+    "vel": 80,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n25",
+    "on": 14.0,
+    "off": 14.33,
+    "midi": 68,
+    "cents": -37.3,
+    "vel": 84,
+    "legato": false,
+    "flags": [
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n26",
+    "on": 14.33,
+    "off": 14.64,
+    "midi": 65,
+    "cents": 45.7,
+    "vel": 80,
+    "legato": true,
+    "flags": [
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n39",
+    "on": 14.64,
+    "off": 15.52,
+    "midi": 64,
+    "cents": 43.1,
+    "vel": 95,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n27",
+    "on": 15.52,
+    "off": 15.77,
+    "midi": 60,
+    "cents": 42.6,
+    "vel": 85,
+    "legato": true,
+    "flags": [
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n28",
+    "on": 16.08,
+    "off": 16.86,
+    "midi": 60,
+    "cents": 25.8,
+    "vel": 79,
+    "legato": false,
+    "flags": [
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n31",
+    "on": 16.86,
+    "off": 17.4,
+    "midi": 55,
+    "cents": 10.2,
+    "vel": 68,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n32",
+    "on": 17.4,
+    "off": 18.09,
+    "midi": 61,
+    "cents": -60.1,
+    "vel": 91,
+    "legato": true,
+    "flags": [
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n34",
+    "on": 18.66,
+    "off": 19.44,
+    "midi": 60,
+    "cents": 0.0,
+    "vel": 90,
+    "legato": false,
+    "flags": [
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n37",
+    "on": 19.44,
+    "off": 20.07,
+    "midi": 55,
+    "cents": -7.3,
+    "vel": 73,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n38",
+    "on": 20.07,
+    "off": 20.84,
+    "midi": 60,
+    "cents": 13.8,
+    "vel": 91,
+    "legato": true,
+    "flags": []
+   }
+  ]
+ },
+ "verdict": {
+  "status": "passed",
+  "rounds": 1,
+  "summary": "Notes, pitches and onsets match the original. D1/D2 (n34, n9 at C5) are the strong 2nd harmonic seen on every C4 note in this take, and C4 fits the melodic line. The extra-onset diffs are short scoops and drift inside n28/n32/n34. The syllable diffs sit 50-110 ms after each note's attack (consonant-to-vowel transitions), with no second syllable visible. The uncertain regions are glides that only pyin hears, and the rest are contour/render limits. The silent tail 22.5-26.5 s holds only broadband noise.",
+  "metrics": {
+   "pitch": 0.8696,
+   "voicingRecall": 1.0,
+   "voicingPrecision": 0.9572,
+   "onsetF1": 0.6512,
+   "explained": 1.0,
+   "notes": 33,
+   "durSec": 26.46
+  },
+  "judged": [
+   {
+    "round": 1,
+    "verdict": "pass",
+    "specVersion": 2
+   }
+  ]
+ },
+ "prior": {
+  "source": "segment",
+  "notes": 0
+ },
+ "tool": {
+  "name": "synthcorpus.resynth",
+  "version": "1",
+  "analyzer": {
+   "family": "voice",
+   "f0_range": [
+    65.0,
+    1100.0
+   ],
+   "gate_db": -38.0,
+   "version": 2,
+   "syllables": 1
+  },
+  "timbre": {
+   "kind": "voice",
+   "vowel": "a",
+   "singer": "male9"
+  },
+  "seed": 2510423862
+ },
+ "createdAt": "2026-10-31T03:31:43+0100"
+}
