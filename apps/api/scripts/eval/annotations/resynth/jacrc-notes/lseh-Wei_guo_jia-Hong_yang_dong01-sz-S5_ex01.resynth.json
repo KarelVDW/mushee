@@ -1,0 +1,476 @@
+{
+ "schema": "resynth/1",
+ "dataset": "jacrc-notes",
+ "workDataset": "jacrc-students",
+ "clip": "lseh-Wei_guo_jia-Hong_yang_dong01-sz-S5_ex01",
+ "role": "target",
+ "audio": {
+  "file": "apps/api/scripts/fixtures/eval-real/benchmark/jacrc-students/lseh-Wei_guo_jia-Hong_yang_dong01-sz-S5_ex01__real.wav",
+  "sha256": "284689ea13bb241e468b7455a1b38a87bbf999a5dee4678b73d1a487391a9a3b",
+  "sampleRate": 44100,
+  "durationSec": 30.0
+ },
+ "truth": {
+  "bpm": 120,
+  "notes": [
+   {
+    "onsetSec": 13.51,
+    "durSec": 0.22,
+    "midi": 66
+   },
+   {
+    "onsetSec": 13.73,
+    "durSec": 0.14,
+    "midi": 67
+   },
+   {
+    "onsetSec": 13.87,
+    "durSec": 0.47,
+    "midi": 69
+   },
+   {
+    "onsetSec": 14.41,
+    "durSec": 0.37,
+    "midi": 65
+   },
+   {
+    "onsetSec": 14.78,
+    "durSec": 0.47,
+    "midi": 66
+   },
+   {
+    "onsetSec": 15.25,
+    "durSec": 0.22,
+    "midi": 68
+   },
+   {
+    "onsetSec": 15.47,
+    "durSec": 0.22,
+    "midi": 67
+   },
+   {
+    "onsetSec": 15.69,
+    "durSec": 0.19,
+    "midi": 68
+   },
+   {
+    "onsetSec": 15.88,
+    "durSec": 0.21,
+    "midi": 66
+   },
+   {
+    "onsetSec": 16.09,
+    "durSec": 0.53,
+    "midi": 65
+   },
+   {
+    "onsetSec": 17.19,
+    "durSec": 0.36,
+    "midi": 64
+   },
+   {
+    "onsetSec": 17.55,
+    "durSec": 0.29,
+    "midi": 59
+   },
+   {
+    "onsetSec": 17.84,
+    "durSec": 0.27,
+    "midi": 67
+   },
+   {
+    "onsetSec": 18.11,
+    "durSec": 0.27,
+    "midi": 64
+   },
+   {
+    "onsetSec": 18.38,
+    "durSec": 0.4,
+    "midi": 61
+   },
+   {
+    "onsetSec": 18.78,
+    "durSec": 0.32,
+    "midi": 57
+   },
+   {
+    "onsetSec": 19.18,
+    "durSec": 0.39,
+    "midi": 59
+   },
+   {
+    "onsetSec": 19.57,
+    "durSec": 0.28,
+    "midi": 61
+   },
+   {
+    "onsetSec": 20.68,
+    "durSec": 0.34,
+    "midi": 69
+   },
+   {
+    "onsetSec": 21.02,
+    "durSec": 0.36,
+    "midi": 67
+   },
+   {
+    "onsetSec": 21.38,
+    "durSec": 0.27,
+    "midi": 65
+   },
+   {
+    "onsetSec": 21.65,
+    "durSec": 0.19,
+    "midi": 67
+   },
+   {
+    "onsetSec": 21.84,
+    "durSec": 2.26,
+    "midi": 66
+   },
+   {
+    "onsetSec": 29.66,
+    "durSec": 0.35,
+    "midi": 69
+   }
+  ]
+ },
+ "spec": {
+  "schema": "resynth-spec/1",
+  "dataset": "jacrc-students",
+  "clip": "lseh-Wei_guo_jia-Hong_yang_dong01-sz-S5_ex01",
+  "version": 5,
+  "timbre": {
+   "kind": "voice",
+   "vowel": "a",
+   "singer": "female4"
+  },
+  "render": {
+   "seed": 1048145130,
+   "contour": "copy-detrended",
+   "levelMatch": true
+  },
+  "nextId": 27,
+  "prior": {
+   "source": "segment",
+   "notes": 0,
+   "path": "apps/api/scripts/fixtures/eval-real/benchmark/jacrc-students/lseh-Wei_guo_jia-Hong_yang_dong01-sz-S5_ex01.truth.json",
+   "anchors": 10
+  },
+  "notes": [
+   {
+    "id": "n1",
+    "on": 13.51,
+    "off": 13.73,
+    "midi": 66,
+    "cents": 31.2,
+    "vel": 86,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n2",
+    "on": 13.73,
+    "off": 13.87,
+    "midi": 67,
+    "cents": 39.1,
+    "vel": 101,
+    "legato": true,
+    "flags": [
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n3",
+    "on": 13.87,
+    "off": 14.34,
+    "midi": 69,
+    "cents": -10.2,
+    "vel": 93,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n4",
+    "on": 14.41,
+    "off": 14.78,
+    "midi": 65,
+    "cents": -15.2,
+    "vel": 88,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n5",
+    "on": 14.78,
+    "off": 15.25,
+    "midi": 66,
+    "cents": 41.7,
+    "vel": 96,
+    "legato": true,
+    "flags": [
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n6",
+    "on": 15.25,
+    "off": 15.47,
+    "midi": 68,
+    "cents": 12.5,
+    "vel": 96,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n7",
+    "on": 15.47,
+    "off": 15.69,
+    "midi": 67,
+    "cents": -20.3,
+    "vel": 93,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n8",
+    "on": 15.69,
+    "off": 15.88,
+    "midi": 68,
+    "cents": 14.9,
+    "vel": 96,
+    "legato": true,
+    "flags": [
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n25",
+    "on": 15.88,
+    "off": 16.09,
+    "midi": 66,
+    "cents": 25.5,
+    "vel": 93,
+    "legato": true,
+    "flags": [
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n9",
+    "on": 16.09,
+    "off": 16.62,
+    "midi": 65,
+    "cents": 12.8,
+    "vel": 89,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n10",
+    "on": 17.19,
+    "off": 17.55,
+    "midi": 64,
+    "cents": -52.5,
+    "vel": 79,
+    "legato": false,
+    "flags": [
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n11",
+    "on": 17.55,
+    "off": 17.84,
+    "midi": 59,
+    "cents": -64.8,
+    "vel": 75,
+    "legato": false,
+    "flags": [
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n13",
+    "on": 17.84,
+    "off": 18.11,
+    "midi": 67,
+    "cents": 3.1,
+    "vel": 83,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n26",
+    "on": 18.11,
+    "off": 18.38,
+    "midi": 64,
+    "cents": -8.9,
+    "vel": 94,
+    "legato": false,
+    "flags": [
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n15",
+    "on": 18.38,
+    "off": 18.78,
+    "midi": 61,
+    "cents": 31.1,
+    "vel": 96,
+    "legato": false,
+    "flags": [
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n16",
+    "on": 18.78,
+    "off": 19.1,
+    "midi": 57,
+    "cents": -19.2,
+    "vel": 95,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n17",
+    "on": 19.18,
+    "off": 19.57,
+    "midi": 59,
+    "cents": 37.6,
+    "vel": 86,
+    "legato": false,
+    "flags": [
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n18",
+    "on": 19.57,
+    "off": 19.85,
+    "midi": 61,
+    "cents": 13.3,
+    "vel": 86,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n19",
+    "on": 20.68,
+    "off": 21.02,
+    "midi": 69,
+    "cents": -11.9,
+    "vel": 80,
+    "legato": false,
+    "flags": [
+     "uncertain-onset"
+    ]
+   },
+   {
+    "id": "n20",
+    "on": 21.02,
+    "off": 21.38,
+    "midi": 67,
+    "cents": 19.4,
+    "vel": 85,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n21",
+    "on": 21.38,
+    "off": 21.65,
+    "midi": 65,
+    "cents": -13.1,
+    "vel": 90,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n22",
+    "on": 21.65,
+    "off": 21.84,
+    "midi": 67,
+    "cents": -19.0,
+    "vel": 80,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n23",
+    "on": 21.84,
+    "off": 24.1,
+    "midi": 66,
+    "cents": 0.3,
+    "vel": 97,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n24",
+    "on": 29.66,
+    "off": 30.01,
+    "midi": 69,
+    "cents": -32.4,
+    "vel": 89,
+    "legato": false,
+    "flags": []
+   }
+  ]
+ },
+ "verdict": {
+  "status": "passed",
+  "rounds": 2,
+  "summary": "Round 2 fixes the r1 errors (n26 is now E4). All 24 notes match the original in pitch, splits and timing. The remaining diffs are acceptable: D1/D2 is a consonant gap at the start of n15 (the human onset is at 18.38), D3/D9/D11 are scoops and short contour moves inside melismas with no human onset, D4 is a vibrato dip before release, D5 is a consonant-led onset that the human onset at 20.65 supports, and D6/D7 are tracker disagreements over transitions.",
+  "metrics": {
+   "pitch": 0.8364,
+   "voicingRecall": 1.0,
+   "voicingPrecision": 0.9452,
+   "onsetF1": 0.5614,
+   "explained": 1.0,
+   "notes": 24,
+   "durSec": 30.0
+  },
+  "judged": [
+   {
+    "round": 1,
+    "verdict": "fail",
+    "specVersion": 3
+   },
+   {
+    "round": 2,
+    "verdict": "pass",
+    "specVersion": 5
+   }
+  ]
+ },
+ "prior": {
+  "source": "segment",
+  "notes": 0,
+  "path": "apps/api/scripts/fixtures/eval-real/benchmark/jacrc-students/lseh-Wei_guo_jia-Hong_yang_dong01-sz-S5_ex01.truth.json",
+  "anchors": 10
+ },
+ "tool": {
+  "name": "synthcorpus.resynth",
+  "version": "1",
+  "analyzer": {
+   "family": "voice",
+   "f0_range": [
+    90.0,
+    1100.0
+   ],
+   "gate_db": -38.0,
+   "version": 2,
+   "syllables": 1
+  },
+  "timbre": {
+   "kind": "voice",
+   "vowel": "a",
+   "singer": "female4"
+  },
+  "seed": 1048145130
+ },
+ "createdAt": "2026-10-31T08:36:13+0100"
+}

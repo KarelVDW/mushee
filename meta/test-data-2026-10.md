@@ -169,3 +169,4 @@ decided and recorded without changing behaviour. "Open" means left with a reason
 - 2026-10-31 03:47: wave 9 (fill-up) done — 8/8 passed; dagstuhl 90/94.
 - 2026-10-31 07:43: wave 10 launched (dagstuhl last 4, jacrc ×75, 1 canary) into the fresh window (reset was 07:40, not 07:19 — the window starts at the first request after expiry). Overnight CPU work: timeline notes for the 37 app-take clips × 14 commits; full HEAD benchmark (2026-10-31T06-12-44_d16420ef, notes cached for re-scoring after the last truth lands). usage: session 0 %, week 69 %.
 - 2026-10-31 08:11: wave 10 done — 80/80 passed (mean 1.68 rounds), 268 agents / 14.6 M tokens; **dagstuhl-choir complete (94/94) → resynth truth**; jacrc 76/175. usage: session 45 %, week 76 %.
+- 2026-10-31 08:37: wave 11 done — 67/67 passed; jacrc 142/175.

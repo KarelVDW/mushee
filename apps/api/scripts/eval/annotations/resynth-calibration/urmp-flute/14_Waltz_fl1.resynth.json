@@ -1,0 +1,522 @@
+{
+ "schema": "resynth/1",
+ "dataset": "urmp-flute",
+ "clip": "14_Waltz_fl1",
+ "role": "calibration",
+ "audio": {
+  "file": "apps/api/scripts/fixtures/eval-real/benchmark/urmp-flute/14_Waltz_fl1__real.wav",
+  "sha256": "41141751198c4da8c094b0111c92b0630235b7217a9c9989e5a71db56ab36c9a",
+  "sampleRate": 48000,
+  "durationSec": 15.0
+ },
+ "truth": {
+  "bpm": 120,
+  "notes": [
+   {
+    "onsetSec": 0.24,
+    "durSec": 0.86,
+    "midi": 75
+   },
+   {
+    "onsetSec": 1.1,
+    "durSec": 0.82,
+    "midi": 74
+   },
+   {
+    "onsetSec": 1.92,
+    "durSec": 0.62,
+    "midi": 75
+   },
+   {
+    "onsetSec": 2.54,
+    "durSec": 0.29,
+    "midi": 72
+   },
+   {
+    "onsetSec": 2.83,
+    "durSec": 0.24,
+    "midi": 74
+   },
+   {
+    "onsetSec": 3.07,
+    "durSec": 0.3,
+    "midi": 75
+   },
+   {
+    "onsetSec": 3.37,
+    "durSec": 0.32,
+    "midi": 72
+   },
+   {
+    "onsetSec": 3.69,
+    "durSec": 0.58,
+    "midi": 74
+   },
+   {
+    "onsetSec": 4.27,
+    "durSec": 0.3,
+    "midi": 77
+   },
+   {
+    "onsetSec": 4.57,
+    "durSec": 0.54,
+    "midi": 79
+   },
+   {
+    "onsetSec": 5.11,
+    "durSec": 0.31,
+    "midi": 76
+   },
+   {
+    "onsetSec": 5.42,
+    "durSec": 1.38,
+    "midi": 77
+   },
+   {
+    "onsetSec": 7.1,
+    "durSec": 0.88,
+    "midi": 82
+   },
+   {
+    "onsetSec": 7.98,
+    "durSec": 0.83,
+    "midi": 81
+   },
+   {
+    "onsetSec": 8.81,
+    "durSec": 0.59,
+    "midi": 80
+   },
+   {
+    "onsetSec": 9.4,
+    "durSec": 0.28,
+    "midi": 77
+   },
+   {
+    "onsetSec": 9.68,
+    "durSec": 0.27,
+    "midi": 80
+   },
+   {
+    "onsetSec": 9.95,
+    "durSec": 0.3,
+    "midi": 79
+   },
+   {
+    "onsetSec": 10.25,
+    "durSec": 0.32,
+    "midi": 77
+   },
+   {
+    "onsetSec": 10.57,
+    "durSec": 0.56,
+    "midi": 84
+   },
+   {
+    "onsetSec": 11.13,
+    "durSec": 0.27,
+    "midi": 82
+   },
+   {
+    "onsetSec": 11.4,
+    "durSec": 0.54,
+    "midi": 80
+   },
+   {
+    "onsetSec": 11.94,
+    "durSec": 0.6,
+    "midi": 79
+   },
+   {
+    "onsetSec": 12.54,
+    "durSec": 0.23,
+    "midi": 77
+   },
+   {
+    "onsetSec": 12.77,
+    "durSec": 0.38,
+    "midi": 76
+   },
+   {
+    "onsetSec": 13.15,
+    "durSec": 0.27,
+    "midi": 77
+   },
+   {
+    "onsetSec": 13.42,
+    "durSec": 0.27,
+    "midi": 72
+   },
+   {
+    "onsetSec": 13.69,
+    "durSec": 0.43,
+    "midi": 74
+   },
+   {
+    "onsetSec": 14.12,
+    "durSec": 0.89,
+    "midi": 75
+   }
+  ]
+ },
+ "spec": {
+  "schema": "resynth-spec/1",
+  "dataset": "urmp-flute",
+  "clip": "14_Waltz_fl1",
+  "version": 1,
+  "timbre": {
+   "kind": "instrument",
+   "timbre": "flute",
+   "source": "iowa-flute"
+  },
+  "render": {
+   "seed": 3015813016,
+   "contour": "copy-detrended",
+   "levelMatch": true
+  },
+  "nextId": 30,
+  "prior": {
+   "source": "none",
+   "notes": 0
+  },
+  "notes": [
+   {
+    "id": "n1",
+    "on": 0.24,
+    "off": 1.1,
+    "midi": 75,
+    "cents": 30.3,
+    "vel": 89,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n2",
+    "on": 1.1,
+    "off": 1.92,
+    "midi": 74,
+    "cents": 44.3,
+    "vel": 92,
+    "legato": true,
+    "flags": [
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n3",
+    "on": 1.92,
+    "off": 2.54,
+    "midi": 75,
+    "cents": 19.5,
+    "vel": 90,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n4",
+    "on": 2.54,
+    "off": 2.83,
+    "midi": 72,
+    "cents": 15.9,
+    "vel": 78,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n5",
+    "on": 2.83,
+    "off": 3.07,
+    "midi": 74,
+    "cents": 26.6,
+    "vel": 94,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n6",
+    "on": 3.07,
+    "off": 3.37,
+    "midi": 75,
+    "cents": 16.2,
+    "vel": 94,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n7",
+    "on": 3.37,
+    "off": 3.69,
+    "midi": 72,
+    "cents": 13.4,
+    "vel": 79,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n8",
+    "on": 3.69,
+    "off": 4.27,
+    "midi": 74,
+    "cents": 26.1,
+    "vel": 90,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n9",
+    "on": 4.27,
+    "off": 4.57,
+    "midi": 77,
+    "cents": 9.3,
+    "vel": 101,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n10",
+    "on": 4.57,
+    "off": 5.11,
+    "midi": 79,
+    "cents": 16.9,
+    "vel": 87,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n11",
+    "on": 5.11,
+    "off": 5.42,
+    "midi": 76,
+    "cents": 22.3,
+    "vel": 84,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n12",
+    "on": 5.42,
+    "off": 6.8,
+    "midi": 77,
+    "cents": 13.6,
+    "vel": 97,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n13",
+    "on": 7.1,
+    "off": 7.98,
+    "midi": 82,
+    "cents": 10.6,
+    "vel": 86,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n14",
+    "on": 7.98,
+    "off": 8.81,
+    "midi": 81,
+    "cents": 24.7,
+    "vel": 97,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n15",
+    "on": 8.81,
+    "off": 9.4,
+    "midi": 80,
+    "cents": 15.6,
+    "vel": 85,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n16",
+    "on": 9.4,
+    "off": 9.68,
+    "midi": 77,
+    "cents": 8.5,
+    "vel": 102,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n17",
+    "on": 9.68,
+    "off": 9.95,
+    "midi": 80,
+    "cents": 10.6,
+    "vel": 89,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n18",
+    "on": 9.95,
+    "off": 10.25,
+    "midi": 79,
+    "cents": 19.1,
+    "vel": 91,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n19",
+    "on": 10.25,
+    "off": 10.57,
+    "midi": 77,
+    "cents": 30.6,
+    "vel": 104,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n20",
+    "on": 10.57,
+    "off": 11.13,
+    "midi": 84,
+    "cents": 8.3,
+    "vel": 96,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n21",
+    "on": 11.13,
+    "off": 11.4,
+    "midi": 82,
+    "cents": 7.6,
+    "vel": 108,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n22",
+    "on": 11.4,
+    "off": 11.94,
+    "midi": 80,
+    "cents": 11.4,
+    "vel": 92,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n23",
+    "on": 11.94,
+    "off": 12.54,
+    "midi": 79,
+    "cents": 11.9,
+    "vel": 94,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n24",
+    "on": 12.54,
+    "off": 12.77,
+    "midi": 77,
+    "cents": 6.9,
+    "vel": 98,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n25",
+    "on": 12.77,
+    "off": 13.15,
+    "midi": 76,
+    "cents": 13.4,
+    "vel": 93,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n26",
+    "on": 13.15,
+    "off": 13.42,
+    "midi": 77,
+    "cents": 10.6,
+    "vel": 101,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n27",
+    "on": 13.42,
+    "off": 13.69,
+    "midi": 72,
+    "cents": 2.8,
+    "vel": 93,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n28",
+    "on": 13.69,
+    "off": 14.12,
+    "midi": 74,
+    "cents": 17.6,
+    "vel": 94,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n29",
+    "on": 14.12,
+    "off": 15.01,
+    "midi": 75,
+    "cents": 7.2,
+    "vel": 89,
+    "legato": true,
+    "flags": []
+   }
+  ]
+ },
+ "verdict": {
+  "status": "passed",
+  "rounds": 1,
+  "summary": "29 notes match the original flute line: pitches, splits and onsets agree. D1 (4.87) is a 2-4 dB vibrato-rate level ripple with continuous G5 pitch, not a re-articulation; D2-D4 sit on clear orig onset peaks with pitch changes; D5-D8 are single-tracker pitch blips inside or between already-covered notes.",
+  "metrics": {
+   "pitch": 0.989,
+   "voicingRecall": 1.0,
+   "voicingPrecision": 0.9724,
+   "onsetF1": 0.7458,
+   "explained": 1.0,
+   "notes": 29,
+   "durSec": 15.0
+  },
+  "judged": [
+   {
+    "round": 1,
+    "verdict": "pass",
+    "specVersion": 1
+   }
+  ]
+ },
+ "prior": {
+  "source": "none",
+  "notes": 0
+ },
+ "tool": {
+  "name": "synthcorpus.resynth",
+  "version": "1",
+  "analyzer": {
+   "family": "instrument",
+   "f0_range": [
+    240.0,
+    2300.0
+   ],
+   "gate_db": -40.0,
+   "version": 2
+  },
+  "timbre": {
+   "kind": "instrument",
+   "timbre": "flute",
+   "source": "iowa-flute"
+  },
+  "seed": 3015813016
+ },
+ "createdAt": "2026-10-31T08:36:14+0100"
+}
