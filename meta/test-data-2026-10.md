@@ -167,3 +167,4 @@ decided and recorded without changing behaviour. "Open" means left with a reason
 - 2026-10-31 03:31: wave 7 (v4) done — 80/80 passed (mean 1.44 rounds); **app-takes-singing (52/52) and app-takes-whistling (19/19) complete**; canaries under v4: vocadito_37 0.760 vs A1 (A2-vs-A1 0.717; 49 vs 51 notes — the under-split is gone), urmp-flute 1.000. usage: session 72 %, week 65 %.
 - 2026-10-31 03:43: wave 8 done — 30/30 passed (mean 1.5 rounds); dagstuhl 82/94; urmp-flute canary 2/4.
 - 2026-10-31 03:47: wave 9 (fill-up) done — 8/8 passed; dagstuhl 90/94.
+- 2026-10-31 07:43: wave 10 launched (dagstuhl last 4, jacrc ×75, 1 canary) into the fresh window (reset was 07:40, not 07:19 — the window starts at the first request after expiry). Overnight CPU work: timeline notes for the 37 app-take clips × 14 commits; full HEAD benchmark (2026-10-31T06-12-44_d16420ef, notes cached for re-scoring after the last truth lands). usage: session 0 %, week 69 %.
