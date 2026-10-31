@@ -1,0 +1,333 @@
+{
+ "schema": "resynth/1",
+ "dataset": "mir-qbsh",
+ "clip": "year2004b_person00007_00026",
+ "role": "target",
+ "audio": {
+  "file": "apps/api/scripts/fixtures/eval-real/context/mir-qbsh/year2004b_person00007_00026__real.wav",
+  "sha256": "1c8ec862929ffcf4b7b7ed9df09ab862919de906d3cd84bf83f7ce2f803fbea0",
+  "sampleRate": 8000,
+  "durationSec": 8.0
+ },
+ "truth": {
+  "bpm": 120,
+  "notes": [
+   {
+    "onsetSec": 0.128,
+    "durSec": 0.48,
+    "midi": 50
+   },
+   {
+    "onsetSec": 0.67,
+    "durSec": 0.258,
+    "midi": 47
+   },
+   {
+    "onsetSec": 0.96,
+    "durSec": 0.256,
+    "midi": 50
+   },
+   {
+    "onsetSec": 1.28,
+    "durSec": 0.544,
+    "midi": 47
+   },
+   {
+    "onsetSec": 1.856,
+    "durSec": 0.512,
+    "midi": 50
+   },
+   {
+    "onsetSec": 2.464,
+    "durSec": 0.768,
+    "midi": 55
+   },
+   {
+    "onsetSec": 3.328,
+    "durSec": 0.172,
+    "midi": 51
+   },
+   {
+    "onsetSec": 3.59,
+    "durSec": 0.57,
+    "midi": 50
+   },
+   {
+    "onsetSec": 4.77,
+    "durSec": 0.542,
+    "midi": 50
+   },
+   {
+    "onsetSec": 5.344,
+    "durSec": 0.256,
+    "midi": 53
+   },
+   {
+    "onsetSec": 5.63,
+    "durSec": 0.258,
+    "midi": 55
+   },
+   {
+    "onsetSec": 5.97,
+    "durSec": 0.18,
+    "midi": 45
+   },
+   {
+    "onsetSec": 6.15,
+    "durSec": 0.314,
+    "midi": 47
+   },
+   {
+    "onsetSec": 6.496,
+    "durSec": 0.256,
+    "midi": 50
+   },
+   {
+    "onsetSec": 6.784,
+    "durSec": 0.224,
+    "midi": 47
+   },
+   {
+    "onsetSec": 7.09,
+    "durSec": 0.91,
+    "midi": 45
+   }
+  ]
+ },
+ "spec": {
+  "schema": "resynth-spec/1",
+  "dataset": "mir-qbsh",
+  "clip": "year2004b_person00007_00026",
+  "version": 2,
+  "timbre": {
+   "kind": "voice",
+   "vowel": "u",
+   "lowpassHz": 2500,
+   "singer": "male8"
+  },
+  "render": {
+   "seed": 3950519217,
+   "contour": "copy-detrended",
+   "levelMatch": true
+  },
+  "nextId": 25,
+  "prior": {
+   "source": "truth",
+   "notes": 24,
+   "path": "apps/api/scripts/fixtures/eval-real/context/mir-qbsh/year2004b_person00007_00026.truth.json"
+  },
+  "notes": [
+   {
+    "id": "n1",
+    "on": 0.128,
+    "off": 0.608,
+    "midi": 50,
+    "cents": 12.2,
+    "vel": 92,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n2",
+    "on": 0.67,
+    "off": 0.928,
+    "midi": 47,
+    "cents": 36.2,
+    "vel": 93,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n3",
+    "on": 0.96,
+    "off": 1.216,
+    "midi": 50,
+    "cents": 27.1,
+    "vel": 94,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n5",
+    "on": 1.28,
+    "off": 1.824,
+    "midi": 47,
+    "cents": -9.5,
+    "vel": 90,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n6",
+    "on": 1.856,
+    "off": 2.368,
+    "midi": 50,
+    "cents": 19.6,
+    "vel": 94,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n7",
+    "on": 2.464,
+    "off": 3.232,
+    "midi": 55,
+    "cents": 10.9,
+    "vel": 95,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n8",
+    "on": 3.328,
+    "off": 3.5,
+    "midi": 51,
+    "cents": 0.0,
+    "vel": 98,
+    "legato": false,
+    "flags": [
+     "uncertain-exists"
+    ]
+   },
+   {
+    "id": "n10",
+    "on": 3.59,
+    "off": 4.16,
+    "midi": 50,
+    "cents": 9.8,
+    "vel": 96,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n12",
+    "on": 4.77,
+    "off": 5.312,
+    "midi": 50,
+    "cents": 27.8,
+    "vel": 101,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n13",
+    "on": 5.344,
+    "off": 5.6,
+    "midi": 53,
+    "cents": -43.8,
+    "vel": 97,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n15",
+    "on": 5.63,
+    "off": 5.888,
+    "midi": 55,
+    "cents": 41.2,
+    "vel": 102,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n16",
+    "on": 5.97,
+    "off": 6.15,
+    "midi": 45,
+    "cents": 0.0,
+    "vel": 93,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n18",
+    "on": 6.15,
+    "off": 6.464,
+    "midi": 47,
+    "cents": -23.1,
+    "vel": 91,
+    "legato": false,
+    "flags": [
+     "uncertain-split"
+    ]
+   },
+   {
+    "id": "n19",
+    "on": 6.496,
+    "off": 6.752,
+    "midi": 50,
+    "cents": 41.7,
+    "vel": 98,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n20",
+    "on": 6.784,
+    "off": 7.008,
+    "midi": 47,
+    "cents": 4.7,
+    "vel": 96,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n23",
+    "on": 7.09,
+    "off": 8.0,
+    "midi": 45,
+    "cents": 6.9,
+    "vel": 93,
+    "legato": false,
+    "flags": []
+   }
+  ]
+ },
+ "verdict": {
+  "status": "passed",
+  "rounds": 1,
+  "summary": "All 16 notes match the original's pitches, re-attacks and sounding spans. The remaining diffs are the flagged D#3/E3 boundary on n8, the A2->B2 glide split n16/n18 (flagged, roughly 90 ms near A2), and legato-onset grey zone timing on n10/n18.",
+  "metrics": {
+   "pitch": 0.9217,
+   "voicingRecall": 0.9588,
+   "voicingPrecision": 0.9915,
+   "onsetF1": 0.6818,
+   "explained": 0.9691,
+   "notes": 16,
+   "durSec": 8.0
+  },
+  "judged": [
+   {
+    "round": 1,
+    "verdict": "pass",
+    "specVersion": 2
+   }
+  ]
+ },
+ "prior": {
+  "source": "truth",
+  "notes": 24,
+  "path": "apps/api/scripts/fixtures/eval-real/context/mir-qbsh/year2004b_person00007_00026.truth.json"
+ },
+ "tool": {
+  "name": "synthcorpus.resynth",
+  "version": "1",
+  "analyzer": {
+   "family": "voice",
+   "f0_range": [
+    70.0,
+    800.0
+   ],
+   "gate_db": -38.0,
+   "version": 2
+  },
+  "timbre": {
+   "kind": "voice",
+   "vowel": "u",
+   "lowpassHz": 2500,
+   "singer": "male8"
+  },
+  "seed": 3950519217
+ },
+ "createdAt": "2026-10-31T03:08:39+0100"
+}

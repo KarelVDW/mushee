@@ -1,0 +1,325 @@
+{
+ "schema": "resynth/1",
+ "dataset": "mir-qbsh",
+ "clip": "year2009_person00022_00011",
+ "role": "target",
+ "audio": {
+  "file": "apps/api/scripts/fixtures/eval-real/context/mir-qbsh/year2009_person00022_00011__real.wav",
+  "sha256": "094e72382ab977f64d28457bf7b121d1b0fa8a48b26fdeb950c54c857bee59a8",
+  "sampleRate": 8000,
+  "durationSec": 8.0
+ },
+ "truth": {
+  "bpm": 120,
+  "notes": [
+   {
+    "onsetSec": 0.224,
+    "durSec": 0.336,
+    "midi": 45
+   },
+   {
+    "onsetSec": 0.6,
+    "durSec": 1.096,
+    "midi": 45
+   },
+   {
+    "onsetSec": 1.79,
+    "durSec": 0.258,
+    "midi": 50
+   },
+   {
+    "onsetSec": 2.16,
+    "durSec": 0.28,
+    "midi": 53
+   },
+   {
+    "onsetSec": 2.464,
+    "durSec": 0.288,
+    "midi": 50
+   },
+   {
+    "onsetSec": 2.83,
+    "durSec": 0.338,
+    "midi": 45
+   },
+   {
+    "onsetSec": 3.168,
+    "durSec": 1.344,
+    "midi": 47
+   },
+   {
+    "onsetSec": 4.544,
+    "durSec": 0.406,
+    "midi": 45
+   },
+   {
+    "onsetSec": 4.95,
+    "durSec": 0.33,
+    "midi": 47
+   },
+   {
+    "onsetSec": 5.28,
+    "durSec": 0.4,
+    "midi": 45
+   },
+   {
+    "onsetSec": 5.696,
+    "durSec": 0.288,
+    "midi": 41
+   },
+   {
+    "onsetSec": 6.06,
+    "durSec": 0.84,
+    "midi": 45
+   },
+   {
+    "onsetSec": 7.2,
+    "durSec": 0.288,
+    "midi": 45
+   },
+   {
+    "onsetSec": 7.53,
+    "durSec": 0.278,
+    "midi": 50
+   },
+   {
+    "onsetSec": 7.84,
+    "durSec": 0.16,
+    "midi": 52
+   }
+  ]
+ },
+ "spec": {
+  "schema": "resynth-spec/1",
+  "dataset": "mir-qbsh",
+  "clip": "year2009_person00022_00011",
+  "version": 3,
+  "timbre": {
+   "kind": "voice",
+   "vowel": "u",
+   "lowpassHz": 2500,
+   "singer": "male8"
+  },
+  "render": {
+   "seed": 2282052157,
+   "contour": "copy-detrended",
+   "levelMatch": true
+  },
+  "nextId": 24,
+  "prior": {
+   "source": "truth",
+   "notes": 23,
+   "path": "apps/api/scripts/fixtures/eval-real/context/mir-qbsh/year2009_person00022_00011.truth.json"
+  },
+  "notes": [
+   {
+    "id": "n1",
+    "on": 0.224,
+    "off": 0.56,
+    "midi": 45,
+    "cents": -4.9,
+    "vel": 98,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n3",
+    "on": 0.6,
+    "off": 1.696,
+    "midi": 45,
+    "cents": -6.2,
+    "vel": 98,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n4",
+    "on": 1.79,
+    "off": 2.048,
+    "midi": 50,
+    "cents": 12.1,
+    "vel": 98,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n6",
+    "on": 2.16,
+    "off": 2.44,
+    "midi": 53,
+    "cents": 8.9,
+    "vel": 101,
+    "legato": false,
+    "flags": [
+     "uncertain-onset"
+    ]
+   },
+   {
+    "id": "n7",
+    "on": 2.464,
+    "off": 2.752,
+    "midi": 50,
+    "cents": -20.9,
+    "vel": 96,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n8",
+    "on": 2.83,
+    "off": 3.168,
+    "midi": 45,
+    "cents": 49.6,
+    "vel": 95,
+    "legato": false,
+    "flags": [
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n10",
+    "on": 3.168,
+    "off": 4.512,
+    "midi": 47,
+    "cents": 11.2,
+    "vel": 97,
+    "legato": false,
+    "flags": [
+     "uncertain-split"
+    ]
+   },
+   {
+    "id": "n12",
+    "on": 4.544,
+    "off": 4.95,
+    "midi": 45,
+    "cents": -18.6,
+    "vel": 100,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n14",
+    "on": 4.95,
+    "off": 5.28,
+    "midi": 47,
+    "cents": -12.3,
+    "vel": 101,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n15",
+    "on": 5.28,
+    "off": 5.68,
+    "midi": 45,
+    "cents": 0.0,
+    "vel": 98,
+    "legato": true,
+    "flags": [
+     "uncertain-pitch",
+     "uncertain-split"
+    ]
+   },
+   {
+    "id": "n18",
+    "on": 5.696,
+    "off": 5.984,
+    "midi": 41,
+    "cents": -10.9,
+    "vel": 86,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n20",
+    "on": 6.06,
+    "off": 6.9,
+    "midi": 45,
+    "cents": 9.9,
+    "vel": 96,
+    "legato": false,
+    "flags": [
+     "uncertain-split"
+    ]
+   },
+   {
+    "id": "n21",
+    "on": 7.2,
+    "off": 7.488,
+    "midi": 45,
+    "cents": -7.1,
+    "vel": 96,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n22",
+    "on": 7.53,
+    "off": 7.808,
+    "midi": 50,
+    "cents": -38.7,
+    "vel": 97,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n23",
+    "on": 7.84,
+    "off": 8.0,
+    "midi": 52,
+    "cents": 9.5,
+    "vel": 96,
+    "legato": false,
+    "flags": []
+   }
+  ]
+ },
+ "verdict": {
+  "status": "passed",
+  "rounds": 1,
+  "summary": "All 15 notes match the original in pitch, splits and onsets; D1 is a minor legato offset (n4 could run to n6's onset at ~2.14 s through the upward glide), D2 is the descending glide inside n15 (contour/render limit).",
+  "metrics": {
+   "pitch": 0.8872,
+   "voicingRecall": 0.9716,
+   "voicingPrecision": 0.9878,
+   "onsetF1": 0.8,
+   "explained": 0.9756,
+   "notes": 15,
+   "durSec": 8.0
+  },
+  "judged": [
+   {
+    "round": 1,
+    "verdict": "pass",
+    "specVersion": 3
+   }
+  ]
+ },
+ "prior": {
+  "source": "truth",
+  "notes": 23,
+  "path": "apps/api/scripts/fixtures/eval-real/context/mir-qbsh/year2009_person00022_00011.truth.json"
+ },
+ "tool": {
+  "name": "synthcorpus.resynth",
+  "version": "1",
+  "analyzer": {
+   "family": "voice",
+   "f0_range": [
+    70.0,
+    800.0
+   ],
+   "gate_db": -38.0,
+   "version": 2
+  },
+  "timbre": {
+   "kind": "voice",
+   "vowel": "u",
+   "lowpassHz": 2500,
+   "singer": "male8"
+  },
+  "seed": 2282052157
+ },
+ "createdAt": "2026-10-31T03:08:39+0100"
+}

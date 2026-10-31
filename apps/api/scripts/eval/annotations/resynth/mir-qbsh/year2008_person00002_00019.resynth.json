@@ -1,0 +1,352 @@
+{
+ "schema": "resynth/1",
+ "dataset": "mir-qbsh",
+ "clip": "year2008_person00002_00019",
+ "role": "target",
+ "audio": {
+  "file": "apps/api/scripts/fixtures/eval-real/context/mir-qbsh/year2008_person00002_00019__real.wav",
+  "sha256": "4d5ba09d52982b3292b4961f8e45990a3cb4d6d866c7fe2a5c52329441bba3c0",
+  "sampleRate": 8000,
+  "durationSec": 8.0
+ },
+ "truth": {
+  "bpm": 120,
+  "notes": [
+   {
+    "onsetSec": 0.56,
+    "durSec": 0.4,
+    "midi": 72
+   },
+   {
+    "onsetSec": 0.96,
+    "durSec": 0.256,
+    "midi": 72
+   },
+   {
+    "onsetSec": 1.28,
+    "durSec": 0.704,
+    "midi": 67
+   },
+   {
+    "onsetSec": 2.016,
+    "durSec": 0.096,
+    "midi": 70
+   },
+   {
+    "onsetSec": 2.112,
+    "durSec": 0.238,
+    "midi": 69
+   },
+   {
+    "onsetSec": 2.35,
+    "durSec": 0.274,
+    "midi": 69
+   },
+   {
+    "onsetSec": 2.656,
+    "durSec": 0.64,
+    "midi": 67
+   },
+   {
+    "onsetSec": 3.38,
+    "durSec": 0.39,
+    "midi": 64
+   },
+   {
+    "onsetSec": 3.77,
+    "durSec": 0.262,
+    "midi": 67
+   },
+   {
+    "onsetSec": 4.128,
+    "durSec": 0.128,
+    "midi": 71
+   },
+   {
+    "onsetSec": 4.256,
+    "durSec": 0.128,
+    "midi": 72
+   },
+   {
+    "onsetSec": 4.448,
+    "durSec": 0.288,
+    "midi": 69
+   },
+   {
+    "onsetSec": 4.8,
+    "durSec": 1.216,
+    "midi": 67
+   },
+   {
+    "onsetSec": 6.05,
+    "durSec": 0.702,
+    "midi": 69
+   },
+   {
+    "onsetSec": 6.816,
+    "durSec": 0.608,
+    "midi": 67
+   },
+   {
+    "onsetSec": 7.488,
+    "durSec": 0.302,
+    "midi": 64
+   },
+   {
+    "onsetSec": 7.84,
+    "durSec": 0.16,
+    "midi": 70
+   }
+  ]
+ },
+ "spec": {
+  "schema": "resynth-spec/1",
+  "dataset": "mir-qbsh",
+  "clip": "year2008_person00002_00019",
+  "version": 2,
+  "timbre": {
+   "kind": "voice",
+   "vowel": "u",
+   "lowpassHz": 2500,
+   "singer": "female2"
+  },
+  "render": {
+   "seed": 3631962868,
+   "contour": "copy-detrended",
+   "levelMatch": true
+  },
+  "nextId": 20,
+  "prior": {
+   "source": "truth",
+   "notes": 17,
+   "path": "apps/api/scripts/fixtures/eval-real/context/mir-qbsh/year2008_person00002_00019.truth.json"
+  },
+  "notes": [
+   {
+    "id": "n1",
+    "on": 0.56,
+    "off": 0.96,
+    "midi": 72,
+    "cents": -13.3,
+    "vel": 90,
+    "legato": false,
+    "flags": [
+     "uncertain-split"
+    ]
+   },
+   {
+    "id": "n18",
+    "on": 0.96,
+    "off": 1.216,
+    "midi": 72,
+    "cents": 2.8,
+    "vel": 84,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n2",
+    "on": 1.28,
+    "off": 1.984,
+    "midi": 67,
+    "cents": 11.2,
+    "vel": 92,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n3",
+    "on": 2.016,
+    "off": 2.112,
+    "midi": 70,
+    "cents": -2.5,
+    "vel": 90,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n4",
+    "on": 2.112,
+    "off": 2.35,
+    "midi": 69,
+    "cents": 9.0,
+    "vel": 95,
+    "legato": true,
+    "flags": [
+     "uncertain-split"
+    ]
+   },
+   {
+    "id": "n19",
+    "on": 2.35,
+    "off": 2.624,
+    "midi": 69,
+    "cents": 5.3,
+    "vel": 97,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n5",
+    "on": 2.656,
+    "off": 3.296,
+    "midi": 67,
+    "cents": -14.8,
+    "vel": 95,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n6",
+    "on": 3.38,
+    "off": 3.77,
+    "midi": 64,
+    "cents": 0.3,
+    "vel": 92,
+    "legato": false,
+    "flags": [
+     "uncertain-split"
+    ]
+   },
+   {
+    "id": "n8",
+    "on": 3.77,
+    "off": 4.032,
+    "midi": 67,
+    "cents": 40.8,
+    "vel": 93,
+    "legato": true,
+    "flags": [
+     "uncertain-onset"
+    ]
+   },
+   {
+    "id": "n9",
+    "on": 4.128,
+    "off": 4.256,
+    "midi": 71,
+    "cents": 26.8,
+    "vel": 92,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n10",
+    "on": 4.256,
+    "off": 4.384,
+    "midi": 72,
+    "cents": -9.4,
+    "vel": 90,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n11",
+    "on": 4.448,
+    "off": 4.736,
+    "midi": 69,
+    "cents": -3.1,
+    "vel": 102,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n12",
+    "on": 4.8,
+    "off": 6.016,
+    "midi": 67,
+    "cents": 28.5,
+    "vel": 98,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n14",
+    "on": 6.05,
+    "off": 6.752,
+    "midi": 69,
+    "cents": 3.9,
+    "vel": 99,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n15",
+    "on": 6.816,
+    "off": 7.424,
+    "midi": 67,
+    "cents": 21.4,
+    "vel": 96,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n16",
+    "on": 7.488,
+    "off": 7.79,
+    "midi": 64,
+    "cents": 29.1,
+    "vel": 87,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n17",
+    "on": 7.84,
+    "off": 8.0,
+    "midi": 70,
+    "cents": -11.1,
+    "vel": 92,
+    "legato": false,
+    "flags": []
+   }
+  ]
+ },
+ "verdict": {
+  "status": "passed",
+  "rounds": 1,
+  "summary": "Copy matches the original note for note: pitches, splits and onsets line up. The 4 diffs are acceptable: D1 is tracker noise on a flat G4, D2 is a small 4 dB dip during the rise into n8 (n6 is flagged uncertain-split), D3 and D4 are real short pitch steps (A#4->A4, B4->C5) that are visible in the f0.",
+  "metrics": {
+   "pitch": 0.9629,
+   "voicingRecall": 0.9868,
+   "voicingPrecision": 0.9891,
+   "onsetF1": 0.6512,
+   "explained": 0.9927,
+   "notes": 17,
+   "durSec": 8.0
+  },
+  "judged": [
+   {
+    "round": 1,
+    "verdict": "pass",
+    "specVersion": 2
+   }
+  ]
+ },
+ "prior": {
+  "source": "truth",
+  "notes": 17,
+  "path": "apps/api/scripts/fixtures/eval-real/context/mir-qbsh/year2008_person00002_00019.truth.json"
+ },
+ "tool": {
+  "name": "synthcorpus.resynth",
+  "version": "1",
+  "analyzer": {
+   "family": "voice",
+   "f0_range": [
+    70.0,
+    800.0
+   ],
+   "gate_db": -38.0,
+   "version": 2
+  },
+  "timbre": {
+   "kind": "voice",
+   "vowel": "u",
+   "lowpassHz": 2500,
+   "singer": "female2"
+  },
+  "seed": 3631962868
+ },
+ "createdAt": "2026-10-31T03:08:39+0100"
+}

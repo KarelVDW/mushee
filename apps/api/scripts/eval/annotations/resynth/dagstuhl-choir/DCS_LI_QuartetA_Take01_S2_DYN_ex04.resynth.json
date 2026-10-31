@@ -1,0 +1,427 @@
+{
+ "schema": "resynth/1",
+ "dataset": "dagstuhl-choir",
+ "clip": "DCS_LI_QuartetA_Take01_S2_DYN_ex04",
+ "role": "target",
+ "audio": {
+  "file": "apps/api/scripts/fixtures/eval-real/benchmark/dagstuhl-choir/DCS_LI_QuartetA_Take01_S2_DYN_ex04__real.wav",
+  "sha256": "812b9b375d4d44050e54a18236df012fd9dc1d99fa93e8b507f0cb9e32ae230a",
+  "sampleRate": 22050,
+  "durationSec": 25.4127
+ },
+ "truth": {
+  "bpm": 72.91666665400813,
+  "beatGrid": [
+   {
+    "timeSec": -0.6791836729999972,
+    "beat": 2
+   },
+   {
+    "timeSec": 0.06530612199999553,
+    "beat": 3
+   },
+   {
+    "timeSec": 0.7902040820000025,
+    "beat": 4
+   },
+   {
+    "timeSec": 1.6435374149999973,
+    "beat": 5
+   },
+   {
+    "timeSec": 2.4599999999999937,
+    "beat": 6
+   },
+   {
+    "timeSec": 3.280000000000001,
+    "beat": 7
+   },
+   {
+    "timeSec": 4.1665306120000025,
+    "beat": 8
+   },
+   {
+    "timeSec": 4.813061223999995,
+    "beat": 9
+   },
+   {
+    "timeSec": 5.422585033999994,
+    "beat": 10
+   },
+   {
+    "timeSec": 6.023401360999998,
+    "beat": 11
+   },
+   {
+    "timeSec": 6.719999999999999,
+    "beat": 12
+   },
+   {
+    "timeSec": 7.529795918000005,
+    "beat": 13
+   },
+   {
+    "timeSec": 8.450612245000002,
+    "beat": 14
+   },
+   {
+    "timeSec": 9.325714285999993,
+    "beat": 15
+   },
+   {
+    "timeSec": 10.409795917999986,
+    "beat": 16
+   },
+   {
+    "timeSec": 11.317551019999996,
+    "beat": 17
+   },
+   {
+    "timeSec": 12.212244897999994,
+    "beat": 18
+   },
+   {
+    "timeSec": 13.035102040999988,
+    "beat": 19
+   },
+   {
+    "timeSec": 13.900000000000006,
+    "beat": 20
+   },
+   {
+    "timeSec": 14.63510204100001,
+    "beat": 21
+   },
+   {
+    "timeSec": 15.425306121999995,
+    "beat": 22
+   },
+   {
+    "timeSec": 16.19591836699999,
+    "beat": 23
+   },
+   {
+    "timeSec": 16.986122448999993,
+    "beat": 24
+   },
+   {
+    "timeSec": 17.808979591999986,
+    "beat": 25
+   },
+   {
+    "timeSec": 18.586122448999987,
+    "beat": 26
+   },
+   {
+    "timeSec": 19.607074829999988,
+    "beat": 27
+   },
+   {
+    "timeSec": 20.80000000000001,
+    "beat": 28
+   },
+   {
+    "timeSec": 22.140952381000005,
+    "beat": 29
+   },
+   {
+    "timeSec": 23.78666666699999,
+    "beat": 30
+   },
+   {
+    "timeSec": 25.149387754999992,
+    "beat": 31
+   },
+   {
+    "timeSec": 25.39755102000001,
+    "beat": 32
+   }
+  ],
+  "notes": [
+   {
+    "onsetSec": 0.0,
+    "durSec": 0.59,
+    "midi": 65
+   },
+   {
+    "onsetSec": 0.59,
+    "durSec": 0.55,
+    "midi": 66
+   },
+   {
+    "onsetSec": 1.14,
+    "durSec": 0.15,
+    "midi": 65
+   },
+   {
+    "onsetSec": 1.29,
+    "durSec": 1.16,
+    "midi": 66
+   },
+   {
+    "onsetSec": 2.461,
+    "durSec": 1.704,
+    "midi": 67
+   },
+   {
+    "onsetSec": 7.5,
+    "durSec": 0.958,
+    "midi": 67
+   },
+   {
+    "onsetSec": 8.458,
+    "durSec": 1.053,
+    "midi": 65
+   },
+   {
+    "onsetSec": 9.511,
+    "durSec": 0.229,
+    "midi": 64
+   },
+   {
+    "onsetSec": 10.25,
+    "durSec": 1.977,
+    "midi": 65
+   },
+   {
+    "onsetSec": 12.227,
+    "durSec": 1.633,
+    "midi": 62
+   },
+   {
+    "onsetSec": 13.88,
+    "durSec": 4.47,
+    "midi": 62
+   },
+   {
+    "onsetSec": 18.54,
+    "durSec": 1.42,
+    "midi": 62
+   },
+   {
+    "onsetSec": 20.76,
+    "durSec": 4.25,
+    "midi": 64
+   }
+  ]
+ },
+ "spec": {
+  "schema": "resynth-spec/1",
+  "dataset": "dagstuhl-choir",
+  "clip": "DCS_LI_QuartetA_Take01_S2_DYN_ex04",
+  "version": 6,
+  "timbre": {
+   "kind": "voice",
+   "vowel": "a",
+   "singer": "female4"
+  },
+  "render": {
+   "seed": 1004274260,
+   "contour": "copy-detrended",
+   "levelMatch": true
+  },
+  "nextId": 14,
+  "prior": {
+   "source": "truth",
+   "notes": 9,
+   "path": "apps/api/scripts/fixtures/eval-real/benchmark/dagstuhl-choir/DCS_LI_QuartetA_Take01_S2_DYN_ex04.truth.json"
+  },
+  "notes": [
+   {
+    "id": "n10",
+    "on": 0.0,
+    "off": 0.59,
+    "midi": 65,
+    "cents": 48.5,
+    "vel": 105,
+    "legato": false,
+    "flags": [
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n11",
+    "on": 0.59,
+    "off": 1.14,
+    "midi": 66,
+    "cents": 31.9,
+    "vel": 96,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n12",
+    "on": 1.14,
+    "off": 1.29,
+    "midi": 65,
+    "cents": -4.8,
+    "vel": 90,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n13",
+    "on": 1.29,
+    "off": 2.45,
+    "midi": 66,
+    "cents": -1.4,
+    "vel": 100,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n1",
+    "on": 2.4607,
+    "off": 4.1651,
+    "midi": 67,
+    "cents": -0.0,
+    "vel": 93,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n2",
+    "on": 7.5,
+    "off": 8.4581,
+    "midi": 67,
+    "cents": -7.5,
+    "vel": 81,
+    "legato": false,
+    "flags": [
+     "uncertain-onset"
+    ]
+   },
+   {
+    "id": "n3",
+    "on": 8.4581,
+    "off": 9.5106,
+    "midi": 65,
+    "cents": -0.0,
+    "vel": 90,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n4",
+    "on": 9.5106,
+    "off": 9.74,
+    "midi": 64,
+    "cents": 34.5,
+    "vel": 95,
+    "legato": true,
+    "flags": [
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n5",
+    "on": 10.25,
+    "off": 12.2268,
+    "midi": 65,
+    "cents": -5.4,
+    "vel": 88,
+    "legato": false,
+    "flags": [
+     "uncertain-onset"
+    ]
+   },
+   {
+    "id": "n6",
+    "on": 12.2268,
+    "off": 13.86,
+    "midi": 62,
+    "cents": 8.4,
+    "vel": 99,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n7",
+    "on": 13.88,
+    "off": 18.35,
+    "midi": 62,
+    "cents": -21.6,
+    "vel": 91,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n8",
+    "on": 18.54,
+    "off": 19.96,
+    "midi": 62,
+    "cents": 13.8,
+    "vel": 91,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n9",
+    "on": 20.76,
+    "off": 25.01,
+    "midi": 64,
+    "cents": -14.5,
+    "vel": 87,
+    "legato": false,
+    "flags": []
+   }
+  ]
+ },
+ "verdict": {
+  "status": "passed",
+  "rounds": 3,
+  "summary": "All 13 notes match the original in pitch, splits and timing; n4 offset now ends at ~9.74 as requested in r2. Remaining diffs are scoops into n2/n5/n7 (contour), G3 bleed from another voice (D1/D2/D10/D12), and the flagged legato F4->E4+34 drop at n4 (genuine ambiguity).",
+  "metrics": {
+   "pitch": 0.942,
+   "voicingRecall": 0.9849,
+   "voicingPrecision": 0.9672,
+   "onsetF1": 0.4667,
+   "explained": 0.9834,
+   "notes": 13,
+   "durSec": 25.413
+  },
+  "judged": [
+   {
+    "round": 1,
+    "verdict": "fail",
+    "specVersion": 3
+   },
+   {
+    "round": 2,
+    "verdict": "fail",
+    "specVersion": 5
+   },
+   {
+    "round": 3,
+    "verdict": "pass",
+    "specVersion": 6
+   }
+  ]
+ },
+ "prior": {
+  "source": "truth",
+  "notes": 9,
+  "path": "apps/api/scripts/fixtures/eval-real/benchmark/dagstuhl-choir/DCS_LI_QuartetA_Take01_S2_DYN_ex04.truth.json"
+ },
+ "tool": {
+  "name": "synthcorpus.resynth",
+  "version": "1",
+  "analyzer": {
+   "family": "voice",
+   "f0_range": [
+    200.0,
+    1100.0
+   ],
+   "gate_db": -38.0,
+   "version": 2,
+   "syllables": 1
+  },
+  "timbre": {
+   "kind": "voice",
+   "vowel": "a",
+   "singer": "female4"
+  },
+  "seed": 1004274260
+ },
+ "createdAt": "2026-10-31T03:08:44+0100"
+}

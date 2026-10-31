@@ -1,0 +1,274 @@
+{
+ "schema": "resynth/1",
+ "dataset": "mir-qbsh",
+ "clip": "year2004a_person00012_00034",
+ "role": "target",
+ "audio": {
+  "file": "apps/api/scripts/fixtures/eval-real/context/mir-qbsh/year2004a_person00012_00034__real.wav",
+  "sha256": "69bccf03b9b7c89be21d7c943a5040314e239ff0d28a3e7b9364fe05c85c8f9b",
+  "sampleRate": 8000,
+  "durationSec": 8.0
+ },
+ "truth": {
+  "bpm": 120,
+  "notes": [
+   {
+    "onsetSec": 0.448,
+    "durSec": 0.288,
+    "midi": 58
+   },
+   {
+    "onsetSec": 0.8,
+    "durSec": 0.256,
+    "midi": 60
+   },
+   {
+    "onsetSec": 1.18,
+    "durSec": 0.388,
+    "midi": 62
+   },
+   {
+    "onsetSec": 1.568,
+    "durSec": 0.608,
+    "midi": 63
+   },
+   {
+    "onsetSec": 2.304,
+    "durSec": 0.256,
+    "midi": 64
+   },
+   {
+    "onsetSec": 2.656,
+    "durSec": 0.992,
+    "midi": 64
+   },
+   {
+    "onsetSec": 3.712,
+    "durSec": 0.378,
+    "midi": 66
+   },
+   {
+    "onsetSec": 4.128,
+    "durSec": 1.362,
+    "midi": 66
+   },
+   {
+    "onsetSec": 5.6,
+    "durSec": 0.608,
+    "midi": 63
+   },
+   {
+    "onsetSec": 6.304,
+    "durSec": 0.288,
+    "midi": 67
+   },
+   {
+    "onsetSec": 6.62,
+    "durSec": 0.452,
+    "midi": 66
+   },
+   {
+    "onsetSec": 7.104,
+    "durSec": 0.896,
+    "midi": 64
+   }
+  ]
+ },
+ "spec": {
+  "schema": "resynth-spec/1",
+  "dataset": "mir-qbsh",
+  "clip": "year2004a_person00012_00034",
+  "version": 2,
+  "timbre": {
+   "kind": "voice",
+   "vowel": "u",
+   "lowpassHz": 2500,
+   "singer": "male9"
+  },
+  "render": {
+   "seed": 2892586177,
+   "contour": "copy-detrended",
+   "levelMatch": true
+  },
+  "nextId": 17,
+  "prior": {
+   "source": "truth",
+   "notes": 16,
+   "path": "apps/api/scripts/fixtures/eval-real/context/mir-qbsh/year2004a_person00012_00034.truth.json"
+  },
+  "notes": [
+   {
+    "id": "n1",
+    "on": 0.448,
+    "off": 0.736,
+    "midi": 58,
+    "cents": 7.9,
+    "vel": 92,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n2",
+    "on": 0.8,
+    "off": 1.056,
+    "midi": 60,
+    "cents": 10.4,
+    "vel": 100,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n3",
+    "on": 1.18,
+    "off": 1.568,
+    "midi": 62,
+    "cents": 40.3,
+    "vel": 85,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n4",
+    "on": 1.568,
+    "off": 2.176,
+    "midi": 63,
+    "cents": -47.4,
+    "vel": 92,
+    "legato": true,
+    "flags": [
+     "uncertain-pitch",
+     "uncertain-split"
+    ]
+   },
+   {
+    "id": "n7",
+    "on": 2.304,
+    "off": 2.56,
+    "midi": 64,
+    "cents": -6.8,
+    "vel": 95,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n9",
+    "on": 2.656,
+    "off": 3.648,
+    "midi": 64,
+    "cents": 18.7,
+    "vel": 94,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n10",
+    "on": 3.712,
+    "off": 4.09,
+    "midi": 66,
+    "cents": 18.8,
+    "vel": 89,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n11",
+    "on": 4.128,
+    "off": 5.49,
+    "midi": 66,
+    "cents": 45.4,
+    "vel": 99,
+    "legato": false,
+    "flags": [
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n12",
+    "on": 5.6,
+    "off": 6.208,
+    "midi": 63,
+    "cents": 13.3,
+    "vel": 93,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n13",
+    "on": 6.304,
+    "off": 6.592,
+    "midi": 67,
+    "cents": -8.3,
+    "vel": 91,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n14",
+    "on": 6.62,
+    "off": 7.072,
+    "midi": 66,
+    "cents": 38.5,
+    "vel": 93,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n16",
+    "on": 7.104,
+    "off": 8.0,
+    "midi": 64,
+    "cents": 18.4,
+    "vel": 90,
+    "legato": false,
+    "flags": []
+   }
+  ]
+ },
+ "verdict": {
+  "status": "passed",
+  "rounds": 1,
+  "summary": "12 notes match the original in pitch, splits and onsets. D1 (7.26) is the E4 note settling from +50c to +15c after a short scoop, not a new note; D2 (1.18) is n3's soft attack after the gap following n2, which is visible in the spectrogram.",
+  "metrics": {
+   "pitch": 0.9643,
+   "voicingRecall": 0.9926,
+   "voicingPrecision": 0.9822,
+   "onsetF1": 0.5714,
+   "explained": 0.9926,
+   "notes": 12,
+   "durSec": 8.0
+  },
+  "judged": [
+   {
+    "round": 1,
+    "verdict": "pass",
+    "specVersion": 2
+   }
+  ]
+ },
+ "prior": {
+  "source": "truth",
+  "notes": 16,
+  "path": "apps/api/scripts/fixtures/eval-real/context/mir-qbsh/year2004a_person00012_00034.truth.json"
+ },
+ "tool": {
+  "name": "synthcorpus.resynth",
+  "version": "1",
+  "analyzer": {
+   "family": "voice",
+   "f0_range": [
+    70.0,
+    800.0
+   ],
+   "gate_db": -38.0,
+   "version": 2
+  },
+  "timbre": {
+   "kind": "voice",
+   "vowel": "u",
+   "lowpassHz": 2500,
+   "singer": "male9"
+  },
+  "seed": 2892586177
+ },
+ "createdAt": "2026-10-31T03:08:39+0100"
+}

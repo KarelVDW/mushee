@@ -1,0 +1,272 @@
+{
+ "schema": "resynth/1",
+ "dataset": "mir-qbsh",
+ "clip": "year2004b_person00018_00034",
+ "role": "target",
+ "audio": {
+  "file": "apps/api/scripts/fixtures/eval-real/context/mir-qbsh/year2004b_person00018_00034__real.wav",
+  "sha256": "1a2dedec14743b77d8f9bc0053e2b13cbb6bd5584fb9ed6c2510c5543d8c2421",
+  "sampleRate": 8000,
+  "durationSec": 8.0
+ },
+ "truth": {
+  "bpm": 120,
+  "notes": [
+   {
+    "onsetSec": 0.48,
+    "durSec": 0.22,
+    "midi": 47
+   },
+   {
+    "onsetSec": 0.736,
+    "durSec": 0.314,
+    "midi": 49
+   },
+   {
+    "onsetSec": 1.05,
+    "durSec": 0.87,
+    "midi": 51
+   },
+   {
+    "onsetSec": 1.984,
+    "durSec": 1.248,
+    "midi": 53
+   },
+   {
+    "onsetSec": 3.296,
+    "durSec": 0.184,
+    "midi": 56
+   },
+   {
+    "onsetSec": 3.48,
+    "durSec": 1.57,
+    "midi": 55
+   },
+   {
+    "onsetSec": 5.088,
+    "durSec": 0.512,
+    "midi": 52
+   },
+   {
+    "onsetSec": 5.6,
+    "durSec": 0.62,
+    "midi": 55
+   },
+   {
+    "onsetSec": 6.22,
+    "durSec": 0.212,
+    "midi": 52
+   },
+   {
+    "onsetSec": 6.432,
+    "durSec": 0.768,
+    "midi": 53
+   },
+   {
+    "onsetSec": 7.2,
+    "durSec": 0.416,
+    "midi": 52
+   },
+   {
+    "onsetSec": 7.68,
+    "durSec": 0.32,
+    "midi": 53
+   }
+  ]
+ },
+ "spec": {
+  "schema": "resynth-spec/1",
+  "dataset": "mir-qbsh",
+  "clip": "year2004b_person00018_00034",
+  "version": 3,
+  "timbre": {
+   "kind": "voice",
+   "vowel": "u",
+   "lowpassHz": 2500,
+   "singer": "male8"
+  },
+  "render": {
+   "seed": 1783260150,
+   "contour": "copy-detrended",
+   "levelMatch": true
+  },
+  "nextId": 21,
+  "prior": {
+   "source": "truth",
+   "notes": 19,
+   "path": "apps/api/scripts/fixtures/eval-real/context/mir-qbsh/year2004b_person00018_00034.truth.json"
+  },
+  "notes": [
+   {
+    "id": "n1",
+    "on": 0.48,
+    "off": 0.7,
+    "midi": 47,
+    "cents": -32.4,
+    "vel": 89,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n2",
+    "on": 0.736,
+    "off": 1.05,
+    "midi": 49,
+    "cents": 7.1,
+    "vel": 92,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n4",
+    "on": 1.05,
+    "off": 1.92,
+    "midi": 51,
+    "cents": 9.8,
+    "vel": 93,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n6",
+    "on": 1.984,
+    "off": 3.232,
+    "midi": 53,
+    "cents": -51.2,
+    "vel": 90,
+    "legato": false,
+    "flags": [
+     "uncertain-pitch",
+     "uncertain-split"
+    ]
+   },
+   {
+    "id": "n10",
+    "on": 3.296,
+    "off": 3.48,
+    "midi": 56,
+    "cents": 5.4,
+    "vel": 90,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n11",
+    "on": 3.48,
+    "off": 5.05,
+    "midi": 55,
+    "cents": 7.2,
+    "vel": 95,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n12",
+    "on": 5.088,
+    "off": 5.6,
+    "midi": 52,
+    "cents": 0.1,
+    "vel": 97,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n15",
+    "on": 5.6,
+    "off": 6.22,
+    "midi": 55,
+    "cents": -29.2,
+    "vel": 100,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n20",
+    "on": 6.22,
+    "off": 6.432,
+    "midi": 52,
+    "cents": -17.9,
+    "vel": 102,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n17",
+    "on": 6.432,
+    "off": 7.2,
+    "midi": 53,
+    "cents": -39.6,
+    "vel": 99,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n18",
+    "on": 7.2,
+    "off": 7.616,
+    "midi": 52,
+    "cents": -5.1,
+    "vel": 100,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n19",
+    "on": 7.68,
+    "off": 8.0,
+    "midi": 53,
+    "cents": -16.2,
+    "vel": 98,
+    "legato": false,
+    "flags": []
+   }
+  ]
+ },
+ "verdict": {
+  "status": "passed",
+  "rounds": 1,
+  "summary": "12 notes match the original: correct semitones, legato onsets in place, voicing 100/99%. D1 is drift inside one continuous held F3 (n6, flagged) with no re-attack; D2 is a sub-120 ms fall at the end of n11 before n12, a contour limit.",
+  "metrics": {
+   "pitch": 0.8583,
+   "voicingRecall": 0.9973,
+   "voicingPrecision": 0.9947,
+   "onsetF1": 0.7742,
+   "explained": 0.9906,
+   "notes": 12,
+   "durSec": 8.0
+  },
+  "judged": [
+   {
+    "round": 1,
+    "verdict": "pass",
+    "specVersion": 3
+   }
+  ]
+ },
+ "prior": {
+  "source": "truth",
+  "notes": 19,
+  "path": "apps/api/scripts/fixtures/eval-real/context/mir-qbsh/year2004b_person00018_00034.truth.json"
+ },
+ "tool": {
+  "name": "synthcorpus.resynth",
+  "version": "1",
+  "analyzer": {
+   "family": "voice",
+   "f0_range": [
+    70.0,
+    800.0
+   ],
+   "gate_db": -38.0,
+   "version": 2
+  },
+  "timbre": {
+   "kind": "voice",
+   "vowel": "u",
+   "lowpassHz": 2500,
+   "singer": "male8"
+  },
+  "seed": 1783260150
+ },
+ "createdAt": "2026-10-31T03:08:39+0100"
+}

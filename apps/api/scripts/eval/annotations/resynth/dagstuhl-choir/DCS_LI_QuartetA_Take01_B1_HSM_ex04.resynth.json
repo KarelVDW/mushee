@@ -1,0 +1,409 @@
+{
+ "schema": "resynth/1",
+ "dataset": "dagstuhl-choir",
+ "clip": "DCS_LI_QuartetA_Take01_B1_HSM_ex04",
+ "role": "target",
+ "audio": {
+  "file": "apps/api/scripts/fixtures/eval-real/benchmark/dagstuhl-choir/DCS_LI_QuartetA_Take01_B1_HSM_ex04__real.wav",
+  "sha256": "d0cee7904de947f9c9bf042838e3d6e93a0eb9006a2b081c4afc34996cf3fccf",
+  "sampleRate": 22050,
+  "durationSec": 25.4127
+ },
+ "truth": {
+  "bpm": 72.91666665400813,
+  "beatGrid": [
+   {
+    "timeSec": -0.6791836729999972,
+    "beat": 2
+   },
+   {
+    "timeSec": 0.06530612199999553,
+    "beat": 3
+   },
+   {
+    "timeSec": 0.7902040820000025,
+    "beat": 4
+   },
+   {
+    "timeSec": 1.6435374149999973,
+    "beat": 5
+   },
+   {
+    "timeSec": 2.4599999999999937,
+    "beat": 6
+   },
+   {
+    "timeSec": 3.280000000000001,
+    "beat": 7
+   },
+   {
+    "timeSec": 4.1665306120000025,
+    "beat": 8
+   },
+   {
+    "timeSec": 4.813061223999995,
+    "beat": 9
+   },
+   {
+    "timeSec": 5.422585033999994,
+    "beat": 10
+   },
+   {
+    "timeSec": 6.023401360999998,
+    "beat": 11
+   },
+   {
+    "timeSec": 6.719999999999999,
+    "beat": 12
+   },
+   {
+    "timeSec": 7.529795918000005,
+    "beat": 13
+   },
+   {
+    "timeSec": 8.450612245000002,
+    "beat": 14
+   },
+   {
+    "timeSec": 9.325714285999993,
+    "beat": 15
+   },
+   {
+    "timeSec": 10.409795917999986,
+    "beat": 16
+   },
+   {
+    "timeSec": 11.317551019999996,
+    "beat": 17
+   },
+   {
+    "timeSec": 12.212244897999994,
+    "beat": 18
+   },
+   {
+    "timeSec": 13.035102040999988,
+    "beat": 19
+   },
+   {
+    "timeSec": 13.900000000000006,
+    "beat": 20
+   },
+   {
+    "timeSec": 14.63510204100001,
+    "beat": 21
+   },
+   {
+    "timeSec": 15.425306121999995,
+    "beat": 22
+   },
+   {
+    "timeSec": 16.19591836699999,
+    "beat": 23
+   },
+   {
+    "timeSec": 16.986122448999993,
+    "beat": 24
+   },
+   {
+    "timeSec": 17.808979591999986,
+    "beat": 25
+   },
+   {
+    "timeSec": 18.586122448999987,
+    "beat": 26
+   },
+   {
+    "timeSec": 19.607074829999988,
+    "beat": 27
+   },
+   {
+    "timeSec": 20.80000000000001,
+    "beat": 28
+   },
+   {
+    "timeSec": 22.140952381000005,
+    "beat": 29
+   },
+   {
+    "timeSec": 23.78666666699999,
+    "beat": 30
+   },
+   {
+    "timeSec": 25.149387754999992,
+    "beat": 31
+   },
+   {
+    "timeSec": 25.39755102000001,
+    "beat": 32
+   }
+  ],
+  "notes": [
+   {
+    "onsetSec": 0.0,
+    "durSec": 0.62,
+    "midi": 52
+   },
+   {
+    "onsetSec": 0.62,
+    "durSec": 1.841,
+    "midi": 53
+   },
+   {
+    "onsetSec": 2.461,
+    "durSec": 1.639,
+    "midi": 53
+   },
+   {
+    "onsetSec": 7.49,
+    "durSec": 0.968,
+    "midi": 53
+   },
+   {
+    "onsetSec": 8.458,
+    "durSec": 0.852,
+    "midi": 51
+   },
+   {
+    "onsetSec": 9.31,
+    "durSec": 0.51,
+    "midi": 48
+   },
+   {
+    "onsetSec": 10.44,
+    "durSec": 1.61,
+    "midi": 41
+   },
+   {
+    "onsetSec": 12.05,
+    "durSec": 1.42,
+    "midi": 42
+   },
+   {
+    "onsetSec": 13.9,
+    "durSec": 4.66,
+    "midi": 42
+   },
+   {
+    "onsetSec": 18.6,
+    "durSec": 1.55,
+    "midi": 43
+   },
+   {
+    "onsetSec": 20.7,
+    "durSec": 4.24,
+    "midi": 48
+   }
+  ]
+ },
+ "spec": {
+  "schema": "resynth-spec/1",
+  "dataset": "dagstuhl-choir",
+  "clip": "DCS_LI_QuartetA_Take01_B1_HSM_ex04",
+  "version": 8,
+  "timbre": {
+   "kind": "voice",
+   "vowel": "a",
+   "singer": "male8"
+  },
+  "render": {
+   "seed": 837944578,
+   "contour": "copy-detrended",
+   "levelMatch": true
+  },
+  "nextId": 14,
+  "prior": {
+   "source": "truth",
+   "notes": 11,
+   "path": "apps/api/scripts/fixtures/eval-real/benchmark/dagstuhl-choir/DCS_LI_QuartetA_Take01_B1_HSM_ex04.truth.json"
+  },
+  "notes": [
+   {
+    "id": "n1",
+    "on": 0.0,
+    "off": 0.62,
+    "midi": 52,
+    "cents": -4.0,
+    "vel": 107,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n2",
+    "on": 0.62,
+    "off": 2.4607,
+    "midi": 53,
+    "cents": 0.1,
+    "vel": 102,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n3",
+    "on": 2.4607,
+    "off": 4.1,
+    "midi": 53,
+    "cents": -3.6,
+    "vel": 96,
+    "legato": false,
+    "flags": [
+     "uncertain-split"
+    ]
+   },
+   {
+    "id": "n4",
+    "on": 7.49,
+    "off": 8.4581,
+    "midi": 53,
+    "cents": -43.2,
+    "vel": 92,
+    "legato": false,
+    "flags": [
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n5",
+    "on": 8.4581,
+    "off": 9.31,
+    "midi": 51,
+    "cents": -28.8,
+    "vel": 96,
+    "legato": true,
+    "flags": [
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n6",
+    "on": 9.31,
+    "off": 9.82,
+    "midi": 48,
+    "cents": -3.5,
+    "vel": 100,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n7",
+    "on": 10.44,
+    "off": 12.05,
+    "midi": 41,
+    "cents": 6.2,
+    "vel": 87,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n8",
+    "on": 12.05,
+    "off": 13.47,
+    "midi": 42,
+    "cents": 48.6,
+    "vel": 95,
+    "legato": true,
+    "flags": [
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n9",
+    "on": 13.9,
+    "off": 18.56,
+    "midi": 42,
+    "cents": 48.3,
+    "vel": 90,
+    "legato": false,
+    "flags": [
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n10",
+    "on": 18.6,
+    "off": 20.15,
+    "midi": 43,
+    "cents": -17.0,
+    "vel": 93,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n11",
+    "on": 20.7,
+    "off": 24.94,
+    "midi": 48,
+    "cents": 13.9,
+    "vel": 92,
+    "legato": false,
+    "flags": []
+   }
+  ]
+ },
+ "verdict": {
+  "status": "passed",
+  "rounds": 5,
+  "summary": "11 notes match the bass line: pitches, splits and onsets fit; D1/D3/D9 are quiet G3 bleed from another singer (-36..-55 dB, same pitch both times) exposed right after the bass releases, not bass notes; D2 is pyin octave error (no F2 energy); D5-D7 are drift inside flagged F#2/G2 and D#3/E3 borderline notes; D4 is a release drift; D10/D11 are scoop/contour limits; n2/n3 split is flagged.",
+  "metrics": {
+   "pitch": 0.9338,
+   "voicingRecall": 0.9701,
+   "voicingPrecision": 0.9806,
+   "onsetF1": 0.5806,
+   "explained": 0.9696,
+   "notes": 11,
+   "durSec": 25.413
+  },
+  "judged": [
+   {
+    "round": 1,
+    "verdict": "fail",
+    "specVersion": 3
+   },
+   {
+    "round": 2,
+    "verdict": "fail",
+    "specVersion": 4
+   },
+   {
+    "round": 3,
+    "verdict": "fail",
+    "specVersion": 5
+   },
+   {
+    "round": 4,
+    "verdict": "fail",
+    "specVersion": 7
+   },
+   {
+    "round": 5,
+    "verdict": "pass",
+    "specVersion": 8
+   }
+  ]
+ },
+ "prior": {
+  "source": "truth",
+  "notes": 11,
+  "path": "apps/api/scripts/fixtures/eval-real/benchmark/dagstuhl-choir/DCS_LI_QuartetA_Take01_B1_HSM_ex04.truth.json"
+ },
+ "tool": {
+  "name": "synthcorpus.resynth",
+  "version": "1",
+  "analyzer": {
+   "family": "voice",
+   "f0_range": [
+    65.0,
+    420.0
+   ],
+   "gate_db": -38.0,
+   "version": 2,
+   "syllables": 1
+  },
+  "timbre": {
+   "kind": "voice",
+   "vowel": "a",
+   "singer": "male8"
+  },
+  "seed": 837944578
+ },
+ "createdAt": "2026-10-31T03:08:43+0100"
+}

@@ -157,3 +157,4 @@ decided and recorded without changing behaviour. "Open" means left with a reason
   2026-06-17 batch were the vocadito corpus re-encoded through the server path (lag 0, 98–100 % match) → removed.
   app-takes-singing = 52 genuine takes, app-takes-whistling = 19 (none duplicated). The 157 'instrument' takes were
   the old soundfont corpus (excluded at triage).
+- 2026-10-31 03:08: wave 6 done — 80/80 passed (mean 1.51 rounds; dagstuhl 1.9), 242 agents / 12.2 M tokens (≈ 0.45 % session per clip); **mir-qbsh complete (50/50)**. usage: session 36 %, week 59 %.

@@ -1,0 +1,241 @@
+{
+ "schema": "resynth/1",
+ "dataset": "mir-qbsh",
+ "clip": "year2005_person00005_00022",
+ "role": "target",
+ "audio": {
+  "file": "apps/api/scripts/fixtures/eval-real/context/mir-qbsh/year2005_person00005_00022__real.wav",
+  "sha256": "02dbfc5b2c81c6adf5cce806b587b08cd65b6bcd688a781f21390f10f85a1be6",
+  "sampleRate": 8000,
+  "durationSec": 8.0
+ },
+ "truth": {
+  "bpm": 120,
+  "notes": [
+   {
+    "onsetSec": 0.64,
+    "durSec": 0.64,
+    "midi": 57
+   },
+   {
+    "onsetSec": 1.408,
+    "durSec": 0.608,
+    "midi": 60
+   },
+   {
+    "onsetSec": 2.048,
+    "durSec": 0.544,
+    "midi": 62
+   },
+   {
+    "onsetSec": 2.72,
+    "durSec": 1.248,
+    "midi": 58
+   },
+   {
+    "onsetSec": 4.128,
+    "durSec": 0.576,
+    "midi": 60
+   },
+   {
+    "onsetSec": 4.736,
+    "durSec": 0.608,
+    "midi": 62
+   },
+   {
+    "onsetSec": 5.5,
+    "durSec": 0.484,
+    "midi": 58
+   },
+   {
+    "onsetSec": 6.176,
+    "durSec": 0.576,
+    "midi": 62
+   },
+   {
+    "onsetSec": 6.816,
+    "durSec": 0.512,
+    "midi": 63
+   },
+   {
+    "onsetSec": 7.488,
+    "durSec": 0.512,
+    "midi": 65
+   }
+  ]
+ },
+ "spec": {
+  "schema": "resynth-spec/1",
+  "dataset": "mir-qbsh",
+  "clip": "year2005_person00005_00022",
+  "version": 3,
+  "timbre": {
+   "kind": "voice",
+   "vowel": "u",
+   "lowpassHz": 2500,
+   "singer": "male9"
+  },
+  "render": {
+   "seed": 2284443305,
+   "contour": "copy-detrended",
+   "levelMatch": true
+  },
+  "nextId": 16,
+  "prior": {
+   "source": "truth",
+   "notes": 15,
+   "path": "apps/api/scripts/fixtures/eval-real/context/mir-qbsh/year2005_person00005_00022.truth.json"
+  },
+  "notes": [
+   {
+    "id": "n1",
+    "on": 0.64,
+    "off": 1.28,
+    "midi": 57,
+    "cents": -9.9,
+    "vel": 90,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n4",
+    "on": 1.408,
+    "off": 2.016,
+    "midi": 60,
+    "cents": -14.5,
+    "vel": 96,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n5",
+    "on": 2.048,
+    "off": 2.592,
+    "midi": 62,
+    "cents": 13.4,
+    "vel": 99,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n6",
+    "on": 2.72,
+    "off": 3.968,
+    "midi": 58,
+    "cents": 8.0,
+    "vel": 95,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n8",
+    "on": 4.128,
+    "off": 4.704,
+    "midi": 60,
+    "cents": 38.0,
+    "vel": 95,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n9",
+    "on": 4.736,
+    "off": 5.344,
+    "midi": 62,
+    "cents": 14.8,
+    "vel": 97,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n10",
+    "on": 5.5,
+    "off": 5.984,
+    "midi": 58,
+    "cents": 41.5,
+    "vel": 95,
+    "legato": false,
+    "flags": [
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n12",
+    "on": 6.176,
+    "off": 6.752,
+    "midi": 62,
+    "cents": -4.1,
+    "vel": 95,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n13",
+    "on": 6.816,
+    "off": 7.328,
+    "midi": 63,
+    "cents": 27.2,
+    "vel": 100,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n14",
+    "on": 7.488,
+    "off": 8.0,
+    "midi": 65,
+    "cents": 38.9,
+    "vel": 102,
+    "legato": false,
+    "flags": []
+   }
+  ]
+ },
+ "verdict": {
+  "status": "passed",
+  "rounds": 1,
+  "summary": "All 10 notes match the original contour in pitch, segmentation and timing; each note is a separately articulated event with silences between, no missing/extra notes or octave errors. n1 onset 0.64 vs pitched attack ~0.62 (preceding 0.55 low-level breath/click is not a note); n10 A#3 flag is a genuine ambiguity.",
+  "metrics": {
+   "pitch": 0.9856,
+   "voicingRecall": 0.9952,
+   "voicingPrecision": 0.9807,
+   "onsetF1": 0.6154,
+   "explained": 1.0,
+   "notes": 10,
+   "durSec": 8.0
+  },
+  "judged": [
+   {
+    "round": 1,
+    "verdict": "pass",
+    "specVersion": 3
+   }
+  ]
+ },
+ "prior": {
+  "source": "truth",
+  "notes": 15,
+  "path": "apps/api/scripts/fixtures/eval-real/context/mir-qbsh/year2005_person00005_00022.truth.json"
+ },
+ "tool": {
+  "name": "synthcorpus.resynth",
+  "version": "1",
+  "analyzer": {
+   "family": "voice",
+   "f0_range": [
+    70.0,
+    800.0
+   ],
+   "gate_db": -38.0,
+   "version": 2
+  },
+  "timbre": {
+   "kind": "voice",
+   "vowel": "u",
+   "lowpassHz": 2500,
+   "singer": "male9"
+  },
+  "seed": 2284443305
+ },
+ "createdAt": "2026-10-31T03:08:39+0100"
+}

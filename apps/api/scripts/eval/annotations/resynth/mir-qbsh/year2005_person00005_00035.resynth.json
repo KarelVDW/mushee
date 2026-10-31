@@ -1,0 +1,226 @@
+{
+ "schema": "resynth/1",
+ "dataset": "mir-qbsh",
+ "clip": "year2005_person00005_00035",
+ "role": "target",
+ "audio": {
+  "file": "apps/api/scripts/fixtures/eval-real/context/mir-qbsh/year2005_person00005_00035__real.wav",
+  "sha256": "824c1acbb7cee084bd338b010975f08c8f28ef4d5a7f232ffd5d9b321321bb4b",
+  "sampleRate": 8000,
+  "durationSec": 8.0
+ },
+ "truth": {
+  "bpm": 120,
+  "notes": [
+   {
+    "onsetSec": 0.672,
+    "durSec": 1.312,
+    "midi": 65
+   },
+   {
+    "onsetSec": 2.112,
+    "durSec": 1.184,
+    "midi": 61
+   },
+   {
+    "onsetSec": 3.5,
+    "durSec": 0.5,
+    "midi": 58
+   },
+   {
+    "onsetSec": 4.064,
+    "durSec": 0.352,
+    "midi": 60
+   },
+   {
+    "onsetSec": 4.52,
+    "durSec": 0.44,
+    "midi": 64
+   },
+   {
+    "onsetSec": 4.96,
+    "durSec": 1.056,
+    "midi": 62
+   },
+   {
+    "onsetSec": 6.592,
+    "durSec": 0.558,
+    "midi": 62
+   },
+   {
+    "onsetSec": 7.15,
+    "durSec": 0.338,
+    "midi": 64
+   },
+   {
+    "onsetSec": 7.552,
+    "durSec": 0.416,
+    "midi": 62
+   }
+  ]
+ },
+ "spec": {
+  "schema": "resynth-spec/1",
+  "dataset": "mir-qbsh",
+  "clip": "year2005_person00005_00035",
+  "version": 4,
+  "timbre": {
+   "kind": "voice",
+   "vowel": "u",
+   "lowpassHz": 2500,
+   "singer": "male9"
+  },
+  "render": {
+   "seed": 3170323506,
+   "contour": "copy-detrended",
+   "levelMatch": true
+  },
+  "nextId": 15,
+  "prior": {
+   "source": "truth",
+   "notes": 14,
+   "path": "apps/api/scripts/fixtures/eval-real/context/mir-qbsh/year2005_person00005_00035.truth.json"
+  },
+  "notes": [
+   {
+    "id": "n1",
+    "on": 0.672,
+    "off": 1.984,
+    "midi": 65,
+    "cents": -0.9,
+    "vel": 99,
+    "legato": false,
+    "flags": [
+     "uncertain-split"
+    ]
+   },
+   {
+    "id": "n3",
+    "on": 2.112,
+    "off": 3.296,
+    "midi": 61,
+    "cents": 31.3,
+    "vel": 98,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n6",
+    "on": 3.5,
+    "off": 4.0,
+    "midi": 58,
+    "cents": 19.9,
+    "vel": 94,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n7",
+    "on": 4.064,
+    "off": 4.416,
+    "midi": 60,
+    "cents": 26.2,
+    "vel": 93,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n8",
+    "on": 4.52,
+    "off": 4.96,
+    "midi": 64,
+    "cents": -33.1,
+    "vel": 98,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n10",
+    "on": 4.96,
+    "off": 6.016,
+    "midi": 62,
+    "cents": 18.3,
+    "vel": 96,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n11",
+    "on": 6.592,
+    "off": 7.15,
+    "midi": 62,
+    "cents": -6.5,
+    "vel": 97,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n13",
+    "on": 7.15,
+    "off": 7.488,
+    "midi": 64,
+    "cents": 8.7,
+    "vel": 97,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n14",
+    "on": 7.552,
+    "off": 7.968,
+    "midi": 62,
+    "cents": -13.2,
+    "vel": 93,
+    "legato": false,
+    "flags": []
+   }
+  ]
+ },
+ "verdict": {
+  "status": "passed",
+  "rounds": 1,
+  "summary": "9 hummed notes match the original in pitch, splits and timing; D1 is n1's initial E4->F4 scoop (flagged note, ~150 ms onset glide) and D2 is the legato glide from n11 into n13 (contour grey zone), neither a note error.",
+  "metrics": {
+   "pitch": 0.9426,
+   "voicingRecall": 0.9984,
+   "voicingPrecision": 0.9954,
+   "onsetF1": 0.8571,
+   "explained": 0.9904,
+   "notes": 9,
+   "durSec": 8.0
+  },
+  "judged": [
+   {
+    "round": 1,
+    "verdict": "pass",
+    "specVersion": 4
+   }
+  ]
+ },
+ "prior": {
+  "source": "truth",
+  "notes": 14,
+  "path": "apps/api/scripts/fixtures/eval-real/context/mir-qbsh/year2005_person00005_00035.truth.json"
+ },
+ "tool": {
+  "name": "synthcorpus.resynth",
+  "version": "1",
+  "analyzer": {
+   "family": "voice",
+   "f0_range": [
+    70.0,
+    800.0
+   ],
+   "gate_db": -38.0,
+   "version": 2
+  },
+  "timbre": {
+   "kind": "voice",
+   "vowel": "u",
+   "lowpassHz": 2500,
+   "singer": "male9"
+  },
+  "seed": 3170323506
+ },
+ "createdAt": "2026-10-31T03:08:39+0100"
+}

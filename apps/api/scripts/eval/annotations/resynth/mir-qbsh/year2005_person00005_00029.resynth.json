@@ -1,0 +1,200 @@
+{
+ "schema": "resynth/1",
+ "dataset": "mir-qbsh",
+ "clip": "year2005_person00005_00029",
+ "role": "target",
+ "audio": {
+  "file": "apps/api/scripts/fixtures/eval-real/context/mir-qbsh/year2005_person00005_00029__real.wav",
+  "sha256": "e035306880ef5690fc82523aca63a950d9f7179518ab8ca877ae2b58f009d6a1",
+  "sampleRate": 8000,
+  "durationSec": 8.0
+ },
+ "truth": {
+  "bpm": 120,
+  "notes": [
+   {
+    "onsetSec": 0.92,
+    "durSec": 1.064,
+    "midi": 59
+   },
+   {
+    "onsetSec": 2.208,
+    "durSec": 0.512,
+    "midi": 60
+   },
+   {
+    "onsetSec": 2.816,
+    "durSec": 0.576,
+    "midi": 62
+   },
+   {
+    "onsetSec": 3.488,
+    "durSec": 0.544,
+    "midi": 65
+   },
+   {
+    "onsetSec": 4.096,
+    "durSec": 1.216,
+    "midi": 67
+   },
+   {
+    "onsetSec": 5.408,
+    "durSec": 0.682,
+    "midi": 64
+   },
+   {
+    "onsetSec": 6.1,
+    "durSec": 1.91,
+    "midi": 62
+   }
+  ]
+ },
+ "spec": {
+  "schema": "resynth-spec/1",
+  "dataset": "mir-qbsh",
+  "clip": "year2005_person00005_00029",
+  "version": 2,
+  "timbre": {
+   "kind": "voice",
+   "vowel": "u",
+   "lowpassHz": 2500,
+   "singer": "male9"
+  },
+  "render": {
+   "seed": 3152613771,
+   "contour": "copy-detrended",
+   "levelMatch": true
+  },
+  "nextId": 16,
+  "prior": {
+   "source": "truth",
+   "notes": 15,
+   "path": "apps/api/scripts/fixtures/eval-real/context/mir-qbsh/year2005_person00005_00029.truth.json"
+  },
+  "notes": [
+   {
+    "id": "n1",
+    "on": 0.92,
+    "off": 1.984,
+    "midi": 59,
+    "cents": 33.0,
+    "vel": 95,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n2",
+    "on": 2.208,
+    "off": 2.72,
+    "midi": 60,
+    "cents": -27.3,
+    "vel": 96,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n3",
+    "on": 2.816,
+    "off": 3.392,
+    "midi": 62,
+    "cents": 46.3,
+    "vel": 99,
+    "legato": false,
+    "flags": [
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n8",
+    "on": 3.488,
+    "off": 4.032,
+    "midi": 65,
+    "cents": -18.2,
+    "vel": 100,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n9",
+    "on": 4.096,
+    "off": 5.312,
+    "midi": 67,
+    "cents": 42.2,
+    "vel": 93,
+    "legato": false,
+    "flags": [
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n10",
+    "on": 5.408,
+    "off": 6.09,
+    "midi": 64,
+    "cents": 33.7,
+    "vel": 94,
+    "legato": false,
+    "flags": [
+     "uncertain-split"
+    ]
+   },
+   {
+    "id": "n13",
+    "on": 6.1,
+    "off": 8.01,
+    "midi": 62,
+    "cents": 35.7,
+    "vel": 95,
+    "legato": false,
+    "flags": []
+   }
+  ]
+ },
+ "verdict": {
+  "status": "passed",
+  "rounds": 1,
+  "summary": "7 notes match the original in pitch, onsets and voiced spans. D1 (D#4 5.97-6.09) is a ~120 ms legato fall from E4 to D4, not a separate note. The pitch break at 4.80 inside n9 has no level dip, so it is treated as contour, not a re-attack.",
+  "metrics": {
+   "pitch": 0.9622,
+   "voicingRecall": 0.9866,
+   "voicingPrecision": 0.9927,
+   "onsetF1": 0.6364,
+   "explained": 0.9791,
+   "notes": 7,
+   "durSec": 8.0
+  },
+  "judged": [
+   {
+    "round": 1,
+    "verdict": "pass",
+    "specVersion": 2
+   }
+  ]
+ },
+ "prior": {
+  "source": "truth",
+  "notes": 15,
+  "path": "apps/api/scripts/fixtures/eval-real/context/mir-qbsh/year2005_person00005_00029.truth.json"
+ },
+ "tool": {
+  "name": "synthcorpus.resynth",
+  "version": "1",
+  "analyzer": {
+   "family": "voice",
+   "f0_range": [
+    70.0,
+    800.0
+   ],
+   "gate_db": -38.0,
+   "version": 2
+  },
+  "timbre": {
+   "kind": "voice",
+   "vowel": "u",
+   "lowpassHz": 2500,
+   "singer": "male9"
+  },
+  "seed": 3152613771
+ },
+ "createdAt": "2026-10-31T03:08:39+0100"
+}

@@ -1,0 +1,400 @@
+{
+ "schema": "resynth/1",
+ "dataset": "dagstuhl-choir",
+ "clip": "DCS_LI_QuartetA_Take02_B1_HSM_ex02",
+ "role": "target",
+ "audio": {
+  "file": "apps/api/scripts/fixtures/eval-real/benchmark/dagstuhl-choir/DCS_LI_QuartetA_Take02_B1_HSM_ex02__real.wav",
+  "sha256": "15e0e402c133966d65a9476d7691d2e68acf410f2ed9159c0446788cea93a93b",
+  "sampleRate": 22050,
+  "durationSec": 30.0
+ },
+ "truth": {
+  "bpm": 86.85661774684772,
+  "beatGrid": [
+   {
+    "timeSec": -0.35999999999999943,
+    "beat": 3
+   },
+   {
+    "timeSec": 0.28000000000000114,
+    "beat": 4
+   },
+   {
+    "timeSec": 0.9814058959999983,
+    "beat": 5
+   },
+   {
+    "timeSec": 1.598185940999997,
+    "beat": 6
+   },
+   {
+    "timeSec": 2.2875283449999984,
+    "beat": 7
+   },
+   {
+    "timeSec": 2.962358277,
+    "beat": 8
+   },
+   {
+    "timeSec": 3.6081632650000017,
+    "beat": 9
+   },
+   {
+    "timeSec": 4.312018140999996,
+    "beat": 10
+   },
+   {
+    "timeSec": 4.979591837000001,
+    "beat": 11
+   },
+   {
+    "timeSec": 5.610884354000007,
+    "beat": 12
+   },
+   {
+    "timeSec": 6.278458049999998,
+    "beat": 13
+   },
+   {
+    "timeSec": 7,
+    "beat": 14
+   },
+   {
+    "timeSec": 7.649886620999993,
+    "beat": 15
+   },
+   {
+    "timeSec": 8.299999999999997,
+    "beat": 16
+   },
+   {
+    "timeSec": 8.959999999999994,
+    "beat": 17
+   },
+   {
+    "timeSec": 9.620000000000005,
+    "beat": 18
+   },
+   {
+    "timeSec": 10.305668933999996,
+    "beat": 19
+   },
+   {
+    "timeSec": 10.958730158999998,
+    "beat": 20
+   },
+   {
+    "timeSec": 11.599999999999994,
+    "beat": 21
+   },
+   {
+    "timeSec": 12.260000000000005,
+    "beat": 22
+   },
+   {
+    "timeSec": 12.980000000000004,
+    "beat": 23
+   },
+   {
+    "timeSec": 13.672562357999993,
+    "beat": 24
+   },
+   {
+    "timeSec": 14.480000000000004,
+    "beat": 25
+   },
+   {
+    "timeSec": 15.14,
+    "beat": 26
+   },
+   {
+    "timeSec": 15.879999999999995,
+    "beat": 27
+   },
+   {
+    "timeSec": 16.540000000000006,
+    "beat": 28
+   },
+   {
+    "timeSec": 17.28,
+    "beat": 29
+   },
+   {
+    "timeSec": 17.939999999999998,
+    "beat": 30
+   },
+   {
+    "timeSec": 18.599999999999994,
+    "beat": 31
+   },
+   {
+    "timeSec": 19.329523809999998,
+    "beat": 32
+   },
+   {
+    "timeSec": 20.02031746,
+    "beat": 33
+   },
+   {
+    "timeSec": 20.904126984,
+    "beat": 34
+   },
+   {
+    "timeSec": 21.940317460000003,
+    "beat": 35
+   },
+   {
+    "timeSec": 23.098412698000004,
+    "beat": 36
+   },
+   {
+    "timeSec": 23.824036281000005,
+    "beat": 37
+   },
+   {
+    "timeSec": 24.556916099999995,
+    "beat": 38
+   },
+   {
+    "timeSec": 25.326077098,
+    "beat": 39
+   },
+   {
+    "timeSec": 26.080725623999996,
+    "beat": 40
+   },
+   {
+    "timeSec": 26.806349205999993,
+    "beat": 41
+   },
+   {
+    "timeSec": 27.560997732000004,
+    "beat": 42
+   },
+   {
+    "timeSec": 28.457142856999994,
+    "beat": 43
+   },
+   {
+    "timeSec": 29.258956916000002,
+    "beat": 44
+   },
+   {
+    "timeSec": 29.970068026999996,
+    "beat": 45
+   },
+   {
+    "timeSec": 30.659410430999998,
+    "beat": 46
+   }
+  ],
+  "notes": [
+   {
+    "onsetSec": 22.94,
+    "durSec": 0.16,
+    "midi": 46
+   },
+   {
+    "onsetSec": 23.1,
+    "durSec": 0.16,
+    "midi": 47
+   },
+   {
+    "onsetSec": 23.26,
+    "durSec": 2.169,
+    "midi": 48
+   },
+   {
+    "onsetSec": 25.429,
+    "durSec": 0.712,
+    "midi": 48
+   },
+   {
+    "onsetSec": 26.141,
+    "durSec": 1.409,
+    "midi": 48
+   },
+   {
+    "onsetSec": 27.66,
+    "durSec": 0.797,
+    "midi": 48
+   },
+   {
+    "onsetSec": 28.457,
+    "durSec": 0.793,
+    "midi": 48
+   },
+   {
+    "onsetSec": 29.25,
+    "durSec": 0.76,
+    "midi": 48
+   }
+  ]
+ },
+ "spec": {
+  "schema": "resynth-spec/1",
+  "dataset": "dagstuhl-choir",
+  "clip": "DCS_LI_QuartetA_Take02_B1_HSM_ex02",
+  "version": 4,
+  "timbre": {
+   "kind": "voice",
+   "vowel": "a",
+   "singer": "male8"
+  },
+  "render": {
+   "seed": 2160148337,
+   "contour": "copy-detrended",
+   "levelMatch": true
+  },
+  "nextId": 14,
+  "prior": {
+   "source": "truth",
+   "notes": 5,
+   "path": "apps/api/scripts/fixtures/eval-real/benchmark/dagstuhl-choir/DCS_LI_QuartetA_Take02_B1_HSM_ex02.truth.json"
+  },
+  "notes": [
+   {
+    "id": "n11",
+    "on": 22.94,
+    "off": 23.1,
+    "midi": 46,
+    "cents": -35.7,
+    "vel": 68,
+    "legato": false,
+    "flags": [
+     "uncertain-exists",
+     "uncertain-split"
+    ]
+   },
+   {
+    "id": "n13",
+    "on": 23.1,
+    "off": 23.26,
+    "midi": 47,
+    "cents": 13.9,
+    "vel": 78,
+    "legato": false,
+    "flags": [
+     "uncertain-split"
+    ]
+   },
+   {
+    "id": "n1",
+    "on": 23.26,
+    "off": 25.4286,
+    "midi": 48,
+    "cents": 9.2,
+    "vel": 100,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n2",
+    "on": 25.4286,
+    "off": 26.1408,
+    "midi": 48,
+    "cents": -13.1,
+    "vel": 96,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n3",
+    "on": 26.1408,
+    "off": 27.55,
+    "midi": 48,
+    "cents": 3.8,
+    "vel": 101,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n4",
+    "on": 27.66,
+    "off": 28.4573,
+    "midi": 48,
+    "cents": -7.1,
+    "vel": 94,
+    "legato": false,
+    "flags": [
+     "uncertain-onset"
+    ]
+   },
+   {
+    "id": "n5",
+    "on": 28.4573,
+    "off": 29.25,
+    "midi": 48,
+    "cents": -6.0,
+    "vel": 88,
+    "legato": false,
+    "flags": [
+     "uncertain-split"
+    ]
+   },
+   {
+    "id": "n12",
+    "on": 29.25,
+    "off": 30.01,
+    "midi": 48,
+    "cents": 9.5,
+    "vel": 99,
+    "legato": false,
+    "flags": []
+   }
+  ]
+ },
+ "verdict": {
+  "status": "passed",
+  "rounds": 2,
+  "summary": "0-21 s is other singers' bleed (about 12 dB below the target's level at 23-30 s), so leaving it silent is correct. The target bass line at 22.95-30 s (A#2/B2 pickup then repeated C3 syllables at 23.26, 25.43, 26.13, 27.65, 28.45, 29.25) matches the original's attacks and syllable events. B2->C3 diffs inside n4/n5/n12 are scoops into the note, not stable separate pitches.",
+  "metrics": {
+   "pitch": 0.8917,
+   "voicingRecall": 0.5723,
+   "voicingPrecision": 0.9219,
+   "onsetF1": 0.24,
+   "explained": 0.5723,
+   "notes": 8,
+   "durSec": 30.0
+  },
+  "judged": [
+   {
+    "round": 1,
+    "verdict": "fail",
+    "specVersion": 2
+   },
+   {
+    "round": 2,
+    "verdict": "pass",
+    "specVersion": 4
+   }
+  ]
+ },
+ "prior": {
+  "source": "truth",
+  "notes": 5,
+  "path": "apps/api/scripts/fixtures/eval-real/benchmark/dagstuhl-choir/DCS_LI_QuartetA_Take02_B1_HSM_ex02.truth.json"
+ },
+ "tool": {
+  "name": "synthcorpus.resynth",
+  "version": "1",
+  "analyzer": {
+   "family": "voice",
+   "f0_range": [
+    65.0,
+    420.0
+   ],
+   "gate_db": -38.0,
+   "version": 2,
+   "syllables": 1
+  },
+  "timbre": {
+   "kind": "voice",
+   "vowel": "a",
+   "singer": "male8"
+  },
+  "seed": 2160148337
+ },
+ "createdAt": "2026-10-31T03:08:44+0100"
+}

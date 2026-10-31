@@ -1,0 +1,355 @@
+{
+ "schema": "resynth/1",
+ "dataset": "mir-qbsh",
+ "clip": "year2003_person00010_00021",
+ "role": "target",
+ "audio": {
+  "file": "apps/api/scripts/fixtures/eval-real/context/mir-qbsh/year2003_person00010_00021__real.wav",
+  "sha256": "96d592fa8d4e7cca82eb8ad07f15948e7b7bc30d6867176db52651a58a0f8524",
+  "sampleRate": 8000,
+  "durationSec": 8.0
+ },
+ "truth": {
+  "bpm": 120,
+  "notes": [
+   {
+    "onsetSec": 0.448,
+    "durSec": 0.192,
+    "midi": 53
+   },
+   {
+    "onsetSec": 0.672,
+    "durSec": 0.268,
+    "midi": 52
+   },
+   {
+    "onsetSec": 0.94,
+    "durSec": 0.532,
+    "midi": 53
+   },
+   {
+    "onsetSec": 1.536,
+    "durSec": 0.16,
+    "midi": 53
+   },
+   {
+    "onsetSec": 1.728,
+    "durSec": 0.128,
+    "midi": 53
+   },
+   {
+    "onsetSec": 1.92,
+    "durSec": 0.16,
+    "midi": 55
+   },
+   {
+    "onsetSec": 2.08,
+    "durSec": 0.28,
+    "midi": 56
+   },
+   {
+    "onsetSec": 2.432,
+    "durSec": 0.328,
+    "midi": 61
+   },
+   {
+    "onsetSec": 2.784,
+    "durSec": 1.024,
+    "midi": 60
+   },
+   {
+    "onsetSec": 3.83,
+    "durSec": 1.13,
+    "midi": 58
+   },
+   {
+    "onsetSec": 4.96,
+    "durSec": 0.512,
+    "midi": 57
+   },
+   {
+    "onsetSec": 5.568,
+    "durSec": 0.482,
+    "midi": 57
+   },
+   {
+    "onsetSec": 6.08,
+    "durSec": 0.23,
+    "midi": 57
+   },
+   {
+    "onsetSec": 6.31,
+    "durSec": 0.282,
+    "midi": 55
+   },
+   {
+    "onsetSec": 6.656,
+    "durSec": 0.096,
+    "midi": 53
+   },
+   {
+    "onsetSec": 6.84,
+    "durSec": 0.232,
+    "midi": 52
+   },
+   {
+    "onsetSec": 7.15,
+    "durSec": 0.85,
+    "midi": 50
+   }
+  ]
+ },
+ "spec": {
+  "schema": "resynth-spec/1",
+  "dataset": "mir-qbsh",
+  "clip": "year2003_person00010_00021",
+  "version": 2,
+  "timbre": {
+   "kind": "voice",
+   "vowel": "u",
+   "lowpassHz": 2500,
+   "singer": "male5"
+  },
+  "render": {
+   "seed": 309441730,
+   "contour": "copy-detrended",
+   "levelMatch": true
+  },
+  "nextId": 25,
+  "prior": {
+   "source": "truth",
+   "notes": 24,
+   "path": "apps/api/scripts/fixtures/eval-real/context/mir-qbsh/year2003_person00010_00021.truth.json"
+  },
+  "notes": [
+   {
+    "id": "n1",
+    "on": 0.448,
+    "off": 0.64,
+    "midi": 53,
+    "cents": -13.5,
+    "vel": 99,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n2",
+    "on": 0.672,
+    "off": 0.94,
+    "midi": 52,
+    "cents": 33.3,
+    "vel": 92,
+    "legato": false,
+    "flags": [
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n4",
+    "on": 0.94,
+    "off": 1.472,
+    "midi": 53,
+    "cents": -50.6,
+    "vel": 92,
+    "legato": true,
+    "flags": [
+     "uncertain-pitch",
+     "uncertain-split"
+    ]
+   },
+   {
+    "id": "n7",
+    "on": 1.536,
+    "off": 1.696,
+    "midi": 53,
+    "cents": -33.7,
+    "vel": 96,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n8",
+    "on": 1.728,
+    "off": 1.856,
+    "midi": 53,
+    "cents": -14.5,
+    "vel": 98,
+    "legato": false,
+    "flags": [
+     "uncertain-split"
+    ]
+   },
+   {
+    "id": "n9",
+    "on": 1.92,
+    "off": 2.08,
+    "midi": 55,
+    "cents": -18.4,
+    "vel": 95,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n10",
+    "on": 2.08,
+    "off": 2.36,
+    "midi": 56,
+    "cents": 52.0,
+    "vel": 95,
+    "legato": true,
+    "flags": [
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n12",
+    "on": 2.432,
+    "off": 2.76,
+    "midi": 61,
+    "cents": -22.4,
+    "vel": 98,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n13",
+    "on": 2.784,
+    "off": 3.808,
+    "midi": 60,
+    "cents": 25.6,
+    "vel": 102,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n14",
+    "on": 3.83,
+    "off": 4.96,
+    "midi": 58,
+    "cents": 24.8,
+    "vel": 94,
+    "legato": false,
+    "flags": [
+     "uncertain-split"
+    ]
+   },
+   {
+    "id": "n18",
+    "on": 4.96,
+    "off": 5.472,
+    "midi": 57,
+    "cents": 12.6,
+    "vel": 90,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n19",
+    "on": 5.568,
+    "off": 6.05,
+    "midi": 57,
+    "cents": 11.8,
+    "vel": 88,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n20",
+    "on": 6.08,
+    "off": 6.31,
+    "midi": 57,
+    "cents": -6.6,
+    "vel": 89,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n21",
+    "on": 6.31,
+    "off": 6.592,
+    "midi": 55,
+    "cents": 26.2,
+    "vel": 89,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n22",
+    "on": 6.656,
+    "off": 6.752,
+    "midi": 53,
+    "cents": 33.3,
+    "vel": 87,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n23",
+    "on": 6.84,
+    "off": 7.072,
+    "midi": 52,
+    "cents": -16.1,
+    "vel": 89,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n24",
+    "on": 7.15,
+    "off": 8.0,
+    "midi": 50,
+    "cents": -6.1,
+    "vel": 89,
+    "legato": false,
+    "flags": []
+   }
+  ]
+ },
+ "verdict": {
+  "status": "passed",
+  "rounds": 1,
+  "summary": "All 17 notes match the original contour at semitone level; the 7 unsupported diffs are legato pitch changes (F3->E3 at 0.67, F3->G3->G#3 glide at 1.92/2.08) or soft re-articulations visible as pitch dips / broadband consonant streaks (1.54, 1.73, 5.55, 6.08) within tolerance, with the ambiguous ones flagged.",
+  "metrics": {
+   "pitch": 0.9524,
+   "voicingRecall": 0.9741,
+   "voicingPrecision": 0.9946,
+   "onsetF1": 0.5333,
+   "explained": 0.97,
+   "notes": 17,
+   "durSec": 8.0
+  },
+  "judged": [
+   {
+    "round": 1,
+    "verdict": "pass",
+    "specVersion": 2
+   }
+  ]
+ },
+ "prior": {
+  "source": "truth",
+  "notes": 24,
+  "path": "apps/api/scripts/fixtures/eval-real/context/mir-qbsh/year2003_person00010_00021.truth.json"
+ },
+ "tool": {
+  "name": "synthcorpus.resynth",
+  "version": "1",
+  "analyzer": {
+   "family": "voice",
+   "f0_range": [
+    70.0,
+    800.0
+   ],
+   "gate_db": -38.0,
+   "version": 2
+  },
+  "timbre": {
+   "kind": "voice",
+   "vowel": "u",
+   "lowpassHz": 2500,
+   "singer": "male5"
+  },
+  "seed": 309441730
+ },
+ "createdAt": "2026-10-31T03:08:39+0100"
+}
