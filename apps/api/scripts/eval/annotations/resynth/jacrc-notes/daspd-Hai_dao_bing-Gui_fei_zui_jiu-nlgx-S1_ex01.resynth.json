@@ -1,0 +1,1110 @@
+{
+ "schema": "resynth/1",
+ "dataset": "jacrc-notes",
+ "workDataset": "jacrc-students",
+ "clip": "daspd-Hai_dao_bing-Gui_fei_zui_jiu-nlgx-S1_ex01",
+ "role": "target",
+ "audio": {
+  "file": "apps/api/scripts/fixtures/eval-real/benchmark/jacrc-students/daspd-Hai_dao_bing-Gui_fei_zui_jiu-nlgx-S1_ex01__real.wav",
+  "sha256": "2827030de7ef356b6255f6287972f725ffd572f126ad1fcde2977e7ac2c79939",
+  "sampleRate": 44100,
+  "durationSec": 30.0
+ },
+ "truth": {
+  "bpm": 120,
+  "notes": [
+   {
+    "onsetSec": 0.0,
+    "durSec": 0.73,
+    "midi": 66
+   },
+   {
+    "onsetSec": 0.84,
+    "durSec": 0.22,
+    "midi": 70
+   },
+   {
+    "onsetSec": 1.06,
+    "durSec": 0.47,
+    "midi": 69
+   },
+   {
+    "onsetSec": 1.53,
+    "durSec": 0.35,
+    "midi": 74
+   },
+   {
+    "onsetSec": 1.88,
+    "durSec": 1.36,
+    "midi": 71
+   },
+   {
+    "onsetSec": 4.06,
+    "durSec": 0.29,
+    "midi": 74
+   },
+   {
+    "onsetSec": 4.35,
+    "durSec": 0.96,
+    "midi": 71
+   },
+   {
+    "onsetSec": 5.31,
+    "durSec": 0.43,
+    "midi": 69
+   },
+   {
+    "onsetSec": 5.95,
+    "durSec": 0.84,
+    "midi": 73
+   },
+   {
+    "onsetSec": 6.79,
+    "durSec": 0.23,
+    "midi": 72
+   },
+   {
+    "onsetSec": 7.02,
+    "durSec": 0.37,
+    "midi": 73
+   },
+   {
+    "onsetSec": 7.39,
+    "durSec": 0.14,
+    "midi": 73
+   },
+   {
+    "onsetSec": 7.53,
+    "durSec": 0.27,
+    "midi": 75
+   },
+   {
+    "onsetSec": 7.8,
+    "durSec": 0.43,
+    "midi": 73
+   },
+   {
+    "onsetSec": 8.23,
+    "durSec": 0.65,
+    "midi": 71
+   },
+   {
+    "onsetSec": 8.96,
+    "durSec": 0.62,
+    "midi": 72
+   },
+   {
+    "onsetSec": 9.58,
+    "durSec": 0.07,
+    "midi": 75
+   },
+   {
+    "onsetSec": 9.65,
+    "durSec": 0.31,
+    "midi": 76
+   },
+   {
+    "onsetSec": 9.96,
+    "durSec": 0.39,
+    "midi": 74
+   },
+   {
+    "onsetSec": 10.35,
+    "durSec": 0.24,
+    "midi": 74
+   },
+   {
+    "onsetSec": 10.59,
+    "durSec": 0.06,
+    "midi": 71
+   },
+   {
+    "onsetSec": 10.65,
+    "durSec": 0.28,
+    "midi": 72
+   },
+   {
+    "onsetSec": 10.93,
+    "durSec": 0.62,
+    "midi": 69
+   },
+   {
+    "onsetSec": 11.55,
+    "durSec": 0.31,
+    "midi": 68
+   },
+   {
+    "onsetSec": 11.86,
+    "durSec": 0.09,
+    "midi": 68
+   },
+   {
+    "onsetSec": 11.95,
+    "durSec": 0.44,
+    "midi": 67
+   },
+   {
+    "onsetSec": 12.39,
+    "durSec": 0.26,
+    "midi": 66
+   },
+   {
+    "onsetSec": 12.65,
+    "durSec": 0.12,
+    "midi": 69
+   },
+   {
+    "onsetSec": 12.77,
+    "durSec": 0.14,
+    "midi": 69
+   },
+   {
+    "onsetSec": 12.91,
+    "durSec": 0.23,
+    "midi": 68
+   },
+   {
+    "onsetSec": 13.14,
+    "durSec": 0.3,
+    "midi": 67
+   },
+   {
+    "onsetSec": 13.44,
+    "durSec": 0.29,
+    "midi": 65
+   },
+   {
+    "onsetSec": 13.73,
+    "durSec": 0.11,
+    "midi": 64
+   },
+   {
+    "onsetSec": 13.84,
+    "durSec": 0.11,
+    "midi": 64
+   },
+   {
+    "onsetSec": 13.95,
+    "durSec": 0.45,
+    "midi": 66
+   },
+   {
+    "onsetSec": 14.4,
+    "durSec": 0.54,
+    "midi": 72
+   },
+   {
+    "onsetSec": 14.94,
+    "durSec": 0.16,
+    "midi": 73
+   },
+   {
+    "onsetSec": 15.1,
+    "durSec": 1.86,
+    "midi": 69
+   },
+   {
+    "onsetSec": 16.96,
+    "durSec": 0.28,
+    "midi": 68
+   },
+   {
+    "onsetSec": 17.3,
+    "durSec": 0.09,
+    "midi": 69
+   },
+   {
+    "onsetSec": 17.93,
+    "durSec": 0.24,
+    "midi": 72
+   },
+   {
+    "onsetSec": 18.17,
+    "durSec": 0.23,
+    "midi": 71
+   },
+   {
+    "onsetSec": 18.4,
+    "durSec": 0.17,
+    "midi": 70
+   },
+   {
+    "onsetSec": 18.57,
+    "durSec": 0.36,
+    "midi": 69
+   },
+   {
+    "onsetSec": 18.93,
+    "durSec": 0.09,
+    "midi": 69
+   },
+   {
+    "onsetSec": 19.02,
+    "durSec": 0.36,
+    "midi": 74
+   },
+   {
+    "onsetSec": 19.38,
+    "durSec": 1.1,
+    "midi": 71
+   },
+   {
+    "onsetSec": 20.48,
+    "durSec": 0.4,
+    "midi": 70
+   },
+   {
+    "onsetSec": 21.07,
+    "durSec": 0.35,
+    "midi": 73
+   },
+   {
+    "onsetSec": 21.42,
+    "durSec": 1.13,
+    "midi": 72
+   },
+   {
+    "onsetSec": 22.55,
+    "durSec": 0.49,
+    "midi": 73
+   },
+   {
+    "onsetSec": 23.05,
+    "durSec": 0.47,
+    "midi": 66
+   },
+   {
+    "onsetSec": 23.52,
+    "durSec": 0.35,
+    "midi": 64
+   },
+   {
+    "onsetSec": 23.87,
+    "durSec": 0.18,
+    "midi": 63
+   },
+   {
+    "onsetSec": 24.05,
+    "durSec": 0.3,
+    "midi": 70
+   },
+   {
+    "onsetSec": 24.35,
+    "durSec": 0.69,
+    "midi": 69
+   },
+   {
+    "onsetSec": 25.04,
+    "durSec": 0.43,
+    "midi": 69
+   },
+   {
+    "onsetSec": 25.47,
+    "durSec": 0.27,
+    "midi": 72
+   },
+   {
+    "onsetSec": 25.74,
+    "durSec": 0.31,
+    "midi": 71
+   },
+   {
+    "onsetSec": 26.05,
+    "durSec": 0.18,
+    "midi": 72
+   },
+   {
+    "onsetSec": 26.23,
+    "durSec": 0.67,
+    "midi": 67
+   },
+   {
+    "onsetSec": 26.9,
+    "durSec": 0.25,
+    "midi": 66
+   },
+   {
+    "onsetSec": 27.15,
+    "durSec": 0.96,
+    "midi": 64
+   },
+   {
+    "onsetSec": 28.72,
+    "durSec": 1.02,
+    "midi": 73
+   },
+   {
+    "onsetSec": 29.74,
+    "durSec": 0.27,
+    "midi": 72
+   }
+  ]
+ },
+ "spec": {
+  "schema": "resynth-spec/1",
+  "dataset": "jacrc-students",
+  "clip": "daspd-Hai_dao_bing-Gui_fei_zui_jiu-nlgx-S1_ex01",
+  "version": 4,
+  "timbre": {
+   "kind": "voice",
+   "vowel": "a",
+   "singer": "female2"
+  },
+  "render": {
+   "seed": 1966640764,
+   "contour": "copy-detrended",
+   "levelMatch": true
+  },
+  "nextId": 67,
+  "prior": {
+   "source": "segment",
+   "notes": 0,
+   "path": "apps/api/scripts/fixtures/eval-real/benchmark/jacrc-students/daspd-Hai_dao_bing-Gui_fei_zui_jiu-nlgx-S1_ex01.truth.json",
+   "anchors": 8
+  },
+  "notes": [
+   {
+    "id": "n1",
+    "on": 0.0,
+    "off": 0.73,
+    "midi": 66,
+    "cents": -11.7,
+    "vel": 83,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n2",
+    "on": 0.84,
+    "off": 1.06,
+    "midi": 70,
+    "cents": -25.3,
+    "vel": 100,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n3",
+    "on": 1.06,
+    "off": 1.53,
+    "midi": 69,
+    "cents": 12.0,
+    "vel": 96,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n4",
+    "on": 1.53,
+    "off": 1.88,
+    "midi": 74,
+    "cents": -31.3,
+    "vel": 98,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n5",
+    "on": 1.88,
+    "off": 3.24,
+    "midi": 71,
+    "cents": 7.1,
+    "vel": 101,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n6",
+    "on": 4.06,
+    "off": 4.35,
+    "midi": 74,
+    "cents": 14.5,
+    "vel": 93,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n7",
+    "on": 4.35,
+    "off": 5.31,
+    "midi": 71,
+    "cents": -16.0,
+    "vel": 90,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n8",
+    "on": 5.31,
+    "off": 5.74,
+    "midi": 69,
+    "cents": 32.6,
+    "vel": 76,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n9",
+    "on": 5.95,
+    "off": 6.79,
+    "midi": 73,
+    "cents": -40.2,
+    "vel": 97,
+    "legato": false,
+    "flags": [
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n10",
+    "on": 6.79,
+    "off": 7.02,
+    "midi": 72,
+    "cents": -17.9,
+    "vel": 97,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n11",
+    "on": 7.02,
+    "off": 7.39,
+    "midi": 73,
+    "cents": 20.0,
+    "vel": 98,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n12",
+    "on": 7.39,
+    "off": 7.53,
+    "midi": 73,
+    "cents": 1.1,
+    "vel": 94,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n13",
+    "on": 7.53,
+    "off": 7.8,
+    "midi": 75,
+    "cents": 6.8,
+    "vel": 100,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n14",
+    "on": 7.8,
+    "off": 8.23,
+    "midi": 73,
+    "cents": 38.4,
+    "vel": 98,
+    "legato": true,
+    "flags": [
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n15",
+    "on": 8.23,
+    "off": 8.88,
+    "midi": 71,
+    "cents": 31.8,
+    "vel": 90,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n16",
+    "on": 8.96,
+    "off": 9.58,
+    "midi": 72,
+    "cents": 30.8,
+    "vel": 98,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n17",
+    "on": 9.58,
+    "off": 9.65,
+    "midi": 75,
+    "cents": 34.5,
+    "vel": 101,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n18",
+    "on": 9.65,
+    "off": 9.96,
+    "midi": 76,
+    "cents": 41.1,
+    "vel": 103,
+    "legato": true,
+    "flags": [
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n19",
+    "on": 9.96,
+    "off": 10.35,
+    "midi": 74,
+    "cents": -38.3,
+    "vel": 97,
+    "legato": true,
+    "flags": [
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n20",
+    "on": 10.35,
+    "off": 10.59,
+    "midi": 74,
+    "cents": -34.1,
+    "vel": 93,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n21",
+    "on": 10.59,
+    "off": 10.65,
+    "midi": 71,
+    "cents": 46.1,
+    "vel": 92,
+    "legato": true,
+    "flags": [
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n22",
+    "on": 10.65,
+    "off": 10.93,
+    "midi": 72,
+    "cents": -41.5,
+    "vel": 93,
+    "legato": true,
+    "flags": [
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n23",
+    "on": 10.93,
+    "off": 11.55,
+    "midi": 69,
+    "cents": 23.3,
+    "vel": 92,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n24",
+    "on": 11.55,
+    "off": 11.86,
+    "midi": 68,
+    "cents": 28.2,
+    "vel": 94,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n25",
+    "on": 11.86,
+    "off": 11.95,
+    "midi": 68,
+    "cents": 19.3,
+    "vel": 94,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n26",
+    "on": 11.95,
+    "off": 12.39,
+    "midi": 67,
+    "cents": -57.4,
+    "vel": 86,
+    "legato": true,
+    "flags": [
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n27",
+    "on": 12.39,
+    "off": 12.65,
+    "midi": 66,
+    "cents": 45.2,
+    "vel": 83,
+    "legato": true,
+    "flags": [
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n28",
+    "on": 12.65,
+    "off": 12.77,
+    "midi": 69,
+    "cents": -39.3,
+    "vel": 84,
+    "legato": true,
+    "flags": [
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n29",
+    "on": 12.77,
+    "off": 12.91,
+    "midi": 69,
+    "cents": -30.1,
+    "vel": 85,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n30",
+    "on": 12.91,
+    "off": 13.14,
+    "midi": 68,
+    "cents": -5.5,
+    "vel": 83,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n31",
+    "on": 13.14,
+    "off": 13.44,
+    "midi": 67,
+    "cents": -10.6,
+    "vel": 78,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n32",
+    "on": 13.44,
+    "off": 13.73,
+    "midi": 65,
+    "cents": -47.6,
+    "vel": 68,
+    "legato": true,
+    "flags": [
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n33",
+    "on": 13.73,
+    "off": 13.84,
+    "midi": 64,
+    "cents": 32.6,
+    "vel": 65,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n34",
+    "on": 13.84,
+    "off": 13.95,
+    "midi": 64,
+    "cents": 32.6,
+    "vel": 44,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n35",
+    "on": 13.95,
+    "off": 14.4,
+    "midi": 66,
+    "cents": 43.4,
+    "vel": 79,
+    "legato": false,
+    "flags": [
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n36",
+    "on": 14.4,
+    "off": 14.94,
+    "midi": 72,
+    "cents": 33.8,
+    "vel": 88,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n37",
+    "on": 14.94,
+    "off": 15.1,
+    "midi": 73,
+    "cents": -23.8,
+    "vel": 97,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n38",
+    "on": 15.1,
+    "off": 16.96,
+    "midi": 69,
+    "cents": 32.2,
+    "vel": 89,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n39",
+    "on": 16.96,
+    "off": 17.24,
+    "midi": 68,
+    "cents": 6.6,
+    "vel": 75,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n40",
+    "on": 17.3,
+    "off": 17.39,
+    "midi": 69,
+    "cents": -27.4,
+    "vel": 36,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n41",
+    "on": 17.93,
+    "off": 18.17,
+    "midi": 72,
+    "cents": -15.5,
+    "vel": 93,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n42",
+    "on": 18.17,
+    "off": 18.4,
+    "midi": 71,
+    "cents": 34.2,
+    "vel": 95,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n43",
+    "on": 18.4,
+    "off": 18.57,
+    "midi": 70,
+    "cents": -32.1,
+    "vel": 92,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n44",
+    "on": 18.57,
+    "off": 18.93,
+    "midi": 69,
+    "cents": 8.6,
+    "vel": 88,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n45",
+    "on": 18.93,
+    "off": 19.02,
+    "midi": 69,
+    "cents": 21.7,
+    "vel": 58,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n46",
+    "on": 19.02,
+    "off": 19.38,
+    "midi": 74,
+    "cents": -38.9,
+    "vel": 95,
+    "legato": false,
+    "flags": [
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n47",
+    "on": 19.38,
+    "off": 20.48,
+    "midi": 71,
+    "cents": 22.9,
+    "vel": 89,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n48",
+    "on": 20.48,
+    "off": 20.88,
+    "midi": 70,
+    "cents": 32.6,
+    "vel": 71,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n49",
+    "on": 21.07,
+    "off": 21.42,
+    "midi": 73,
+    "cents": 8.4,
+    "vel": 89,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n50",
+    "on": 21.42,
+    "off": 22.55,
+    "midi": 72,
+    "cents": 38.4,
+    "vel": 94,
+    "legato": true,
+    "flags": [
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n51",
+    "on": 22.55,
+    "off": 23.04,
+    "midi": 73,
+    "cents": 8.5,
+    "vel": 97,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n52",
+    "on": 23.05,
+    "off": 23.52,
+    "midi": 66,
+    "cents": 4.6,
+    "vel": 79,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n53",
+    "on": 23.52,
+    "off": 23.87,
+    "midi": 64,
+    "cents": -48.2,
+    "vel": 74,
+    "legato": true,
+    "flags": [
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n54",
+    "on": 23.87,
+    "off": 24.05,
+    "midi": 63,
+    "cents": 34.1,
+    "vel": 65,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n55",
+    "on": 24.05,
+    "off": 24.35,
+    "midi": 70,
+    "cents": -0.5,
+    "vel": 93,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n56",
+    "on": 24.35,
+    "off": 25.04,
+    "midi": 69,
+    "cents": -7.2,
+    "vel": 83,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n66",
+    "on": 25.04,
+    "off": 25.47,
+    "midi": 69,
+    "cents": 0.0,
+    "vel": 80,
+    "legato": false,
+    "flags": [
+     "uncertain-pitch",
+     "uncertain-split"
+    ]
+   },
+   {
+    "id": "n57",
+    "on": 25.47,
+    "off": 25.74,
+    "midi": 72,
+    "cents": -37.9,
+    "vel": 92,
+    "legato": true,
+    "flags": [
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n58",
+    "on": 25.74,
+    "off": 26.05,
+    "midi": 71,
+    "cents": 52.6,
+    "vel": 85,
+    "legato": true,
+    "flags": [
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n59",
+    "on": 26.05,
+    "off": 26.23,
+    "midi": 72,
+    "cents": 41.4,
+    "vel": 85,
+    "legato": false,
+    "flags": [
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n61",
+    "on": 26.23,
+    "off": 26.9,
+    "midi": 67,
+    "cents": 39.7,
+    "vel": 82,
+    "legato": true,
+    "flags": [
+     "uncertain-pitch"
+    ]
+   },
+   {
+    "id": "n62",
+    "on": 26.9,
+    "off": 27.15,
+    "midi": 66,
+    "cents": 30.6,
+    "vel": 83,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n63",
+    "on": 27.15,
+    "off": 28.11,
+    "midi": 64,
+    "cents": -17.2,
+    "vel": 74,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n64",
+    "on": 28.72,
+    "off": 29.74,
+    "midi": 73,
+    "cents": -26.6,
+    "vel": 96,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n65",
+    "on": 29.74,
+    "off": 30.01,
+    "midi": 72,
+    "cents": 11.6,
+    "vel": 93,
+    "legato": true,
+    "flags": []
+   }
+  ]
+ },
+ "verdict": {
+  "status": "passed",
+  "rounds": 2,
+  "summary": "Round-1 feedback applied (n61 now starts at the 26.23 syllable attack, n52 aligned to the 23.05 event). Remaining extra-onset diffs are wide jingju vibrato dips inside held notes, pitch diffs are contour/render limits, and the n8/n48 diffs are faint but visible phrase-end tails held at a distinct pitch for about 400 ms. The n33/n34 split is backed by a human onset at 13.84.",
+  "metrics": {
+   "pitch": 0.8452,
+   "voicingRecall": 1.0,
+   "voicingPrecision": 0.9834,
+   "onsetF1": 0.7257,
+   "explained": 1.0,
+   "notes": 65,
+   "durSec": 30.0
+  },
+  "judged": [
+   {
+    "round": 1,
+    "verdict": "fail",
+    "specVersion": 3
+   },
+   {
+    "round": 2,
+    "verdict": "pass",
+    "specVersion": 4
+   }
+  ]
+ },
+ "prior": {
+  "source": "segment",
+  "notes": 0,
+  "path": "apps/api/scripts/fixtures/eval-real/benchmark/jacrc-students/daspd-Hai_dao_bing-Gui_fei_zui_jiu-nlgx-S1_ex01.truth.json",
+  "anchors": 8
+ },
+ "tool": {
+  "name": "synthcorpus.resynth",
+  "version": "1",
+  "analyzer": {
+   "family": "voice",
+   "f0_range": [
+    90.0,
+    1100.0
+   ],
+   "gate_db": -38.0,
+   "version": 2,
+   "syllables": 1
+  },
+  "timbre": {
+   "kind": "voice",
+   "vowel": "a",
+   "singer": "female2"
+  },
+  "seed": 1966640764
+ },
+ "createdAt": "2026-10-31T08:11:39+0100"
+}

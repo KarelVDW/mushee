@@ -1,0 +1,795 @@
+{
+ "schema": "resynth/1",
+ "dataset": "urmp-flute",
+ "clip": "08_Spring_fl1",
+ "role": "calibration",
+ "audio": {
+  "file": "apps/api/scripts/fixtures/eval-real/benchmark/urmp-flute/08_Spring_fl1__real.wav",
+  "sha256": "1bdcfd655217ce34d2b8b946871e775b3e9d9d6c5985db3119b62e900f050774",
+  "sampleRate": 48000,
+  "durationSec": 15.0
+ },
+ "truth": {
+  "bpm": 120,
+  "notes": [
+   {
+    "onsetSec": 0.23,
+    "durSec": 0.27,
+    "midi": 72
+   },
+   {
+    "onsetSec": 0.5,
+    "durSec": 0.21,
+    "midi": 76
+   },
+   {
+    "onsetSec": 0.78,
+    "durSec": 0.22,
+    "midi": 76
+   },
+   {
+    "onsetSec": 1.1,
+    "durSec": 0.21,
+    "midi": 76
+   },
+   {
+    "onsetSec": 1.35,
+    "durSec": 0.16,
+    "midi": 74
+   },
+   {
+    "onsetSec": 1.51,
+    "durSec": 0.2,
+    "midi": 72
+   },
+   {
+    "onsetSec": 1.71,
+    "durSec": 1.0,
+    "midi": 79
+   },
+   {
+    "onsetSec": 2.71,
+    "durSec": 0.13,
+    "midi": 77
+   },
+   {
+    "onsetSec": 2.84,
+    "durSec": 0.15,
+    "midi": 76
+   },
+   {
+    "onsetSec": 3.1,
+    "durSec": 0.22,
+    "midi": 76
+   },
+   {
+    "onsetSec": 3.4,
+    "durSec": 0.18,
+    "midi": 76
+   },
+   {
+    "onsetSec": 3.66,
+    "durSec": 0.14,
+    "midi": 74
+   },
+   {
+    "onsetSec": 3.8,
+    "durSec": 0.2,
+    "midi": 72
+   },
+   {
+    "onsetSec": 4.0,
+    "durSec": 1.02,
+    "midi": 79
+   },
+   {
+    "onsetSec": 5.02,
+    "durSec": 0.14,
+    "midi": 77
+   },
+   {
+    "onsetSec": 5.16,
+    "durSec": 0.19,
+    "midi": 76
+   },
+   {
+    "onsetSec": 5.42,
+    "durSec": 0.13,
+    "midi": 77
+   },
+   {
+    "onsetSec": 5.55,
+    "durSec": 0.17,
+    "midi": 79
+   },
+   {
+    "onsetSec": 5.72,
+    "durSec": 0.16,
+    "midi": 77
+   },
+   {
+    "onsetSec": 5.95,
+    "durSec": 0.19,
+    "midi": 76
+   },
+   {
+    "onsetSec": 6.23,
+    "durSec": 0.64,
+    "midi": 74
+   },
+   {
+    "onsetSec": 7.2,
+    "durSec": 0.2,
+    "midi": 72
+   },
+   {
+    "onsetSec": 7.44,
+    "durSec": 0.23,
+    "midi": 76
+   },
+   {
+    "onsetSec": 7.76,
+    "durSec": 0.16,
+    "midi": 76
+   },
+   {
+    "onsetSec": 8.03,
+    "durSec": 0.18,
+    "midi": 76
+   },
+   {
+    "onsetSec": 8.31,
+    "durSec": 0.14,
+    "midi": 74
+   },
+   {
+    "onsetSec": 8.45,
+    "durSec": 0.17,
+    "midi": 72
+   },
+   {
+    "onsetSec": 8.62,
+    "durSec": 0.97,
+    "midi": 79
+   },
+   {
+    "onsetSec": 9.59,
+    "durSec": 0.11,
+    "midi": 77
+   },
+   {
+    "onsetSec": 9.7,
+    "durSec": 0.16,
+    "midi": 76
+   },
+   {
+    "onsetSec": 9.96,
+    "durSec": 0.2,
+    "midi": 76
+   },
+   {
+    "onsetSec": 10.27,
+    "durSec": 0.21,
+    "midi": 76
+   },
+   {
+    "onsetSec": 10.55,
+    "durSec": 0.15,
+    "midi": 74
+   },
+   {
+    "onsetSec": 10.7,
+    "durSec": 0.19,
+    "midi": 72
+   },
+   {
+    "onsetSec": 10.93,
+    "durSec": 0.61,
+    "midi": 79
+   },
+   {
+    "onsetSec": 11.78,
+    "durSec": 0.14,
+    "midi": 79
+   },
+   {
+    "onsetSec": 11.92,
+    "durSec": 0.12,
+    "midi": 77
+   },
+   {
+    "onsetSec": 12.04,
+    "durSec": 0.28,
+    "midi": 76
+   },
+   {
+    "onsetSec": 12.32,
+    "durSec": 0.14,
+    "midi": 77
+   },
+   {
+    "onsetSec": 12.46,
+    "durSec": 0.15,
+    "midi": 79
+   },
+   {
+    "onsetSec": 12.61,
+    "durSec": 0.13,
+    "midi": 77
+   },
+   {
+    "onsetSec": 12.86,
+    "durSec": 0.16,
+    "midi": 76
+   },
+   {
+    "onsetSec": 13.12,
+    "durSec": 0.75,
+    "midi": 74
+   },
+   {
+    "onsetSec": 14.16,
+    "durSec": 0.22,
+    "midi": 76
+   },
+   {
+    "onsetSec": 14.45,
+    "durSec": 0.3,
+    "midi": 79
+   },
+   {
+    "onsetSec": 14.75,
+    "durSec": 0.15,
+    "midi": 77
+   },
+   {
+    "onsetSec": 14.9,
+    "durSec": 0.11,
+    "midi": 76
+   }
+  ]
+ },
+ "spec": {
+  "schema": "resynth-spec/1",
+  "dataset": "urmp-flute",
+  "clip": "08_Spring_fl1",
+  "version": 3,
+  "timbre": {
+   "kind": "instrument",
+   "timbre": "flute",
+   "source": "iowa-flute"
+  },
+  "render": {
+   "seed": 3620008585,
+   "contour": "copy-detrended",
+   "levelMatch": true
+  },
+  "nextId": 51,
+  "prior": {
+   "source": "none",
+   "notes": 0
+  },
+  "notes": [
+   {
+    "id": "n1",
+    "on": 0.23,
+    "off": 0.5,
+    "midi": 72,
+    "cents": 2.4,
+    "vel": 91,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n2",
+    "on": 0.5,
+    "off": 0.71,
+    "midi": 76,
+    "cents": 10.0,
+    "vel": 81,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n3",
+    "on": 0.78,
+    "off": 1.0,
+    "midi": 76,
+    "cents": 0.0,
+    "vel": 78,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n4",
+    "on": 1.1,
+    "off": 1.31,
+    "midi": 76,
+    "cents": -9.4,
+    "vel": 84,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n5",
+    "on": 1.35,
+    "off": 1.51,
+    "midi": 74,
+    "cents": 26.7,
+    "vel": 85,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n6",
+    "on": 1.51,
+    "off": 1.71,
+    "midi": 72,
+    "cents": 2.4,
+    "vel": 89,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n7",
+    "on": 1.71,
+    "off": 2.71,
+    "midi": 79,
+    "cents": 10.6,
+    "vel": 100,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n8",
+    "on": 2.71,
+    "off": 2.84,
+    "midi": 77,
+    "cents": 10.6,
+    "vel": 87,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n9",
+    "on": 2.84,
+    "off": 2.99,
+    "midi": 76,
+    "cents": -9.4,
+    "vel": 83,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n10",
+    "on": 3.1,
+    "off": 3.32,
+    "midi": 76,
+    "cents": -9.4,
+    "vel": 78,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n11",
+    "on": 3.4,
+    "off": 3.58,
+    "midi": 76,
+    "cents": -9.4,
+    "vel": 76,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n12",
+    "on": 3.66,
+    "off": 3.8,
+    "midi": 74,
+    "cents": 15.5,
+    "vel": 86,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n13",
+    "on": 3.8,
+    "off": 4.0,
+    "midi": 72,
+    "cents": -8.6,
+    "vel": 85,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n14",
+    "on": 4.0,
+    "off": 5.02,
+    "midi": 79,
+    "cents": 10.6,
+    "vel": 99,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n15",
+    "on": 5.02,
+    "off": 5.16,
+    "midi": 77,
+    "cents": 10.6,
+    "vel": 87,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n16",
+    "on": 5.16,
+    "off": 5.35,
+    "midi": 76,
+    "cents": -9.4,
+    "vel": 82,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n17",
+    "on": 5.42,
+    "off": 5.55,
+    "midi": 77,
+    "cents": -9.4,
+    "vel": 85,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n18",
+    "on": 5.55,
+    "off": 5.72,
+    "midi": 79,
+    "cents": 10.6,
+    "vel": 96,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n19",
+    "on": 5.72,
+    "off": 5.88,
+    "midi": 77,
+    "cents": -9.4,
+    "vel": 84,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n20",
+    "on": 5.95,
+    "off": 6.14,
+    "midi": 76,
+    "cents": -9.4,
+    "vel": 76,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n21",
+    "on": 6.23,
+    "off": 6.87,
+    "midi": 74,
+    "cents": 9.7,
+    "vel": 87,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n22",
+    "on": 7.2,
+    "off": 7.4,
+    "midi": 72,
+    "cents": -13.2,
+    "vel": 74,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n24",
+    "on": 7.44,
+    "off": 7.67,
+    "midi": 76,
+    "cents": -9.4,
+    "vel": 65,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n25",
+    "on": 7.76,
+    "off": 7.92,
+    "midi": 76,
+    "cents": -9.4,
+    "vel": 55,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n26",
+    "on": 8.03,
+    "off": 8.21,
+    "midi": 76,
+    "cents": -9.4,
+    "vel": 72,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n27",
+    "on": 8.31,
+    "off": 8.45,
+    "midi": 74,
+    "cents": 7.2,
+    "vel": 71,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n28",
+    "on": 8.45,
+    "off": 8.62,
+    "midi": 72,
+    "cents": -9.4,
+    "vel": 78,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n29",
+    "on": 8.62,
+    "off": 9.59,
+    "midi": 79,
+    "cents": 3.7,
+    "vel": 93,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n30",
+    "on": 9.59,
+    "off": 9.7,
+    "midi": 77,
+    "cents": -9.4,
+    "vel": 77,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n31",
+    "on": 9.7,
+    "off": 9.86,
+    "midi": 76,
+    "cents": -9.4,
+    "vel": 72,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n32",
+    "on": 9.96,
+    "off": 10.16,
+    "midi": 76,
+    "cents": -9.4,
+    "vel": 69,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n33",
+    "on": 10.27,
+    "off": 10.48,
+    "midi": 76,
+    "cents": -9.4,
+    "vel": 73,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n34",
+    "on": 10.55,
+    "off": 10.7,
+    "midi": 74,
+    "cents": 10.6,
+    "vel": 81,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n35",
+    "on": 10.7,
+    "off": 10.89,
+    "midi": 72,
+    "cents": -17.1,
+    "vel": 75,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n36",
+    "on": 10.93,
+    "off": 11.54,
+    "midi": 79,
+    "cents": 10.6,
+    "vel": 93,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n37",
+    "on": 11.78,
+    "off": 11.92,
+    "midi": 79,
+    "cents": -9.4,
+    "vel": 90,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n38",
+    "on": 11.92,
+    "off": 12.04,
+    "midi": 77,
+    "cents": -9.4,
+    "vel": 88,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n39",
+    "on": 12.04,
+    "off": 12.32,
+    "midi": 76,
+    "cents": -9.4,
+    "vel": 82,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n40",
+    "on": 12.32,
+    "off": 12.46,
+    "midi": 77,
+    "cents": 10.6,
+    "vel": 92,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n41",
+    "on": 12.46,
+    "off": 12.61,
+    "midi": 79,
+    "cents": 2.6,
+    "vel": 95,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n42",
+    "on": 12.61,
+    "off": 12.74,
+    "midi": 77,
+    "cents": -9.4,
+    "vel": 85,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n43",
+    "on": 12.86,
+    "off": 13.02,
+    "midi": 76,
+    "cents": -9.4,
+    "vel": 68,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n44",
+    "on": 13.12,
+    "off": 13.87,
+    "midi": 74,
+    "cents": 19.5,
+    "vel": 88,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n47",
+    "on": 14.16,
+    "off": 14.38,
+    "midi": 76,
+    "cents": -9.4,
+    "vel": 83,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n48",
+    "on": 14.45,
+    "off": 14.75,
+    "midi": 79,
+    "cents": 14.1,
+    "vel": 100,
+    "legato": false,
+    "flags": []
+   },
+   {
+    "id": "n49",
+    "on": 14.75,
+    "off": 14.9,
+    "midi": 77,
+    "cents": 10.6,
+    "vel": 91,
+    "legato": true,
+    "flags": []
+   },
+   {
+    "id": "n50",
+    "on": 14.9,
+    "off": 15.01,
+    "midi": 76,
+    "cents": 10.6,
+    "vel": 87,
+    "legato": true,
+    "flags": []
+   }
+  ]
+ },
+ "verdict": {
+  "status": "passed",
+  "rounds": 2,
+  "summary": "Note list matches the original: n3 octave fix to E5 is right (E-E-E repeat of the Spring theme, strong E5 band; the E4 track is a low-band artefact present under many notes). The extra-onset diffs at 6.61, 8.97, 9.14, 13.33 and 13.50 are 4-5 dB vibrato/breath dips inside held D5/G5 notes, not re-articulations.",
+  "metrics": {
+   "pitch": 0.9549,
+   "voicingRecall": 1.0,
+   "voicingPrecision": 0.8152,
+   "onsetF1": 0.7156,
+   "explained": 1.0,
+   "notes": 47,
+   "durSec": 15.0
+  },
+  "judged": [
+   {
+    "round": 1,
+    "verdict": "fail",
+    "specVersion": 2
+   },
+   {
+    "round": 2,
+    "verdict": "pass",
+    "specVersion": 3
+   }
+  ]
+ },
+ "prior": {
+  "source": "none",
+  "notes": 0
+ },
+ "tool": {
+  "name": "synthcorpus.resynth",
+  "version": "1",
+  "analyzer": {
+   "family": "instrument",
+   "f0_range": [
+    240.0,
+    2300.0
+   ],
+   "gate_db": -40.0,
+   "version": 2
+  },
+  "timbre": {
+   "kind": "instrument",
+   "timbre": "flute",
+   "source": "iowa-flute"
+  },
+  "seed": 3620008585
+ },
+ "createdAt": "2026-10-31T08:11:40+0100"
+}
