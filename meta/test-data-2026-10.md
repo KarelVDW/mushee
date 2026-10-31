@@ -171,3 +171,4 @@ decided and recorded without changing behaviour. "Open" means left with a reason
 - 2026-10-31 08:11: wave 10 done — 80/80 passed (mean 1.68 rounds), 268 agents / 14.6 M tokens; **dagstuhl-choir complete (94/94) → resynth truth**; jacrc 76/175. usage: session 45 %, week 76 %.
 - 2026-10-31 08:37: wave 11 done — 67/67 passed; jacrc 142/175.
 - 2026-10-31 08:43: wave 12 done — 15/15 passed; jacrc 157/175 (18 left). Week reset at 09:00 → new-week policy: finish jacrc only, then the finalize workflow (`synthetic-corpus/work/resynth/_finalize.js`: organise → rescore HEAD benchmark + timeline → eval-app verify); humtrans held for Karel.
+- 2026-10-31 12:58: wave 13 done — 19/19 passed; **jacrc complete (175/175 → jacrc-notes, resynth truth, poolable)**. Every non-humtrans target is done: 520 target clips + 24 calibration clips exported, 0 unresolved. Finalize workflow launched.
