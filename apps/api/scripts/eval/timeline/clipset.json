@@ -11,13 +11,23 @@
         "capPerDataset": 40,
         "order": "sha1(\"<dataset>/<clip>\") ascending, first capPerDataset"
     },
-    "hash": "a6aab37256924c0ddf9c831f4ba26ce376a0fa33",
-    "size": 509,
+    "hash": "dd496ea99a2f9d235b1a86979645aff394102dea",
+    "size": 546,
     "datasets": {
         "annotated-vocalset": {
             "clips": 400,
             "test": 211,
             "selected": 40
+        },
+        "app-takes-singing": {
+            "clips": 52,
+            "test": 27,
+            "selected": 27
+        },
+        "app-takes-whistling": {
+            "clips": 19,
+            "test": 10,
+            "selected": 10
         },
         "csd": {
             "clips": 96,
@@ -188,6 +198,7 @@
     "skipped": {
         "avp": "pitchless",
         "humtrans-aligned": "derived from context/humtrans (same audio)",
+        "jacrc-notes": "audio already in as jacrc-students (timeline.ts DATASET_ALIASES)",
         "whistled-high-register-aligned": "derived from context/whistled-high-register (same audio)"
     },
     "clips": [
@@ -231,6 +242,43 @@
         { "d": "annotated-vocalset", "c": "m8_arpeggios_c_fast_piano_e" },
         { "d": "annotated-vocalset", "c": "m8_arpeggios_vibrato_a" },
         { "d": "annotated-vocalset", "c": "m8_arpeggios_vibrato_e" },
+        { "d": "app-takes-singing", "c": "dev-2026-04-25T10-56-40" },
+        { "d": "app-takes-singing", "c": "dev-2026-04-25T11-01-25" },
+        { "d": "app-takes-singing", "c": "dev-2026-04-26T09-53-31" },
+        { "d": "app-takes-singing", "c": "dev-2026-04-28T19-38-53" },
+        { "d": "app-takes-singing", "c": "dev-2026-05-01T14-39-40" },
+        { "d": "app-takes-singing", "c": "dev-2026-05-01T14-40-13" },
+        { "d": "app-takes-singing", "c": "dev-2026-05-01T14-43-03" },
+        { "d": "app-takes-singing", "c": "dev-2026-05-14T05-56-52" },
+        { "d": "app-takes-singing", "c": "dev-2026-05-23T16-18-45" },
+        { "d": "app-takes-singing", "c": "dev-2026-05-23T16-38-18" },
+        { "d": "app-takes-singing", "c": "dev-2026-05-23T16-46-59" },
+        { "d": "app-takes-singing", "c": "dev-2026-05-23T16-50-54" },
+        { "d": "app-takes-singing", "c": "dev-2026-06-11T10-13-17" },
+        { "d": "app-takes-singing", "c": "dev-2026-06-11T10-13-22" },
+        { "d": "app-takes-singing", "c": "dev-2026-06-11T12-22-04" },
+        { "d": "app-takes-singing", "c": "dev-2026-06-16T20-12-03" },
+        { "d": "app-takes-singing", "c": "dev-2026-06-18T10-51-38" },
+        { "d": "app-takes-singing", "c": "dev-2026-06-18T10-52-51" },
+        { "d": "app-takes-singing", "c": "stored-026d6375-2-audio" },
+        { "d": "app-takes-singing", "c": "stored-17824fc9-5-audio" },
+        { "d": "app-takes-singing", "c": "stored-1fb054f5-4-audio" },
+        { "d": "app-takes-singing", "c": "stored-30f8d31c-9-audio" },
+        { "d": "app-takes-singing", "c": "stored-46721231-a-audio" },
+        { "d": "app-takes-singing", "c": "stored-4e85e10c-4-audio" },
+        { "d": "app-takes-singing", "c": "stored-6711f6bb-6-audio" },
+        { "d": "app-takes-singing", "c": "stored-8f103cc2-7-audio" },
+        { "d": "app-takes-singing", "c": "stored-dfb95363-c-audio" },
+        { "d": "app-takes-whistling", "c": "dev-2026-05-01T14-40-53" },
+        { "d": "app-takes-whistling", "c": "dev-2026-05-23T16-43-38" },
+        { "d": "app-takes-whistling", "c": "dev-2026-06-03T21-06-21" },
+        { "d": "app-takes-whistling", "c": "dev-2026-06-03T21-10-37" },
+        { "d": "app-takes-whistling", "c": "dev-2026-06-16T20-13-20" },
+        { "d": "app-takes-whistling", "c": "dev-2026-06-18T10-53-38" },
+        { "d": "app-takes-whistling", "c": "dev-2026-06-18T11-03-30" },
+        { "d": "app-takes-whistling", "c": "stored-06d933f7-e-audio" },
+        { "d": "app-takes-whistling", "c": "stored-5c46094b-f-audio" },
+        { "d": "app-takes-whistling", "c": "stored-c5763719-2-audio" },
         { "d": "csd", "c": "alto1_ER_w0" },
         { "d": "csd", "c": "alto1_LI_w0" },
         { "d": "csd", "c": "alto1_ND_w0" },
