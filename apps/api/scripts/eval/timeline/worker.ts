@@ -7,8 +7,8 @@
  * `apps/api/timeline-worker.ts`; run.ts starts it there with cwd = that tree's
  * apps/api (models resolve from process.cwd() in every era) and a scrubbed env
  * (timeline.ts `workerEnv`). It imports nothing from HEAD: the tree's own
- * src/ and the node_modules prepare.ts linked in. Same protocol as
- * scripts/eval/transcribe-worker.ts, one JSON object per line:
+ * src/ and the node_modules prepare.ts linked in. Same protocol as the former
+ * scripts/eval/transcribe-worker.ts (removed 2026-10), one JSON object per line:
  *
  *   in : { id, wavPath, bpm, instrumentId?, sourceKind? }
  *   out: '@@RES ' + { id, ok, measures, ms, err?, warn? }

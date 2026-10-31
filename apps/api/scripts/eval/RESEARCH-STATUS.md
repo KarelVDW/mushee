@@ -188,8 +188,8 @@ note truth anywhere) is fetched into the context tier and its reference-MIDI
 labels are aligned to the audio with a YIN drafter, giving the benchmark a
 _provisional_ humming row. A benchmark-grade row still needs permissively
 licensed, human-verified humming: record beta users humming freely (not to a
-click) and annotate; the consent language is already in the terms and
-`apps/eval` materialises in-house corpora.
+click) and annotate; the consent language is already in the terms. (`apps/eval` is
+now only a benchmark viewer with no DB; it no longer records or materialises corpora.)
 
 **D. Annotate SingBAP's phone channel** (CC-BY-4.0, no onsets; interval
 patterns published so only onsets need marking). The only route to amateur

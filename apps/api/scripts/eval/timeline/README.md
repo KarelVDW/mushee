@@ -65,8 +65,8 @@ The worker is found by file existence, four entry points:
 | D   | 15344df4 → f2611442 (9)      | `recordings/pipeline/recording-pipeline.ts` | the same, kebab-case paths                                                                                         |
 
 Each clip goes through `setMeta({bpm, 4/4, transpose 0, instrumentId,
-sourceKind})` → 12 × `appendChunk` → `finalize()`, as `transcribe-worker.ts`
-feeds HEAD. The hints are the ones the benchmark gives the same dataset
+sourceKind})` → 12 × `appendChunk` → `finalize()`, as the eval app's former
+`transcribe-worker.ts` (removed 2026-10) fed HEAD. The hints are the ones the benchmark gives the same dataset
 (`evalRun.ts` `hintsFor`: `sourceKind` explicit, so YAMNet never decides);
 eras that predate a key ignore it, exactly as the product did. HEAD turns the
 returned measures into notes (`lib/pipelineRun.ts` `measuresToNotes`; the

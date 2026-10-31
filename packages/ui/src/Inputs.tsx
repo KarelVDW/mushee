@@ -209,7 +209,7 @@ export function TextField({
     )
 }
 
-// Not in the web app's barrel (it never renders one); the admin console and the eval workbench do.
+// Not in the web app's barrel (it never renders one); the admin console does.
 interface TextAreaProps {
     label?: ReactNode
     value: string

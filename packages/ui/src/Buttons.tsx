@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { type AnchorHTMLAttributes, type ButtonHTMLAttributes, type ReactNode } from 'react'
+import { type AnchorHTMLAttributes, type ReactNode } from 'react'
 
 import { Icon, type IconName } from './Icon'
 
@@ -357,31 +357,6 @@ export function CloseButton({ onClick, ariaLabel = 'Close', size = 'sm' }: Close
                 'focus-ring',
             ].join(' ')}>
             <Icon name="x" size={size === 'md' ? 20 : 14} />
-        </button>
-    )
-}
-
-// Not in the web app's barrel (it never renders one); the eval workbench does.
-interface ToggleButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
-    active?: boolean
-    tone?: 'cyan' | 'rec'
-}
-
-export function ToggleButton({ active, tone = 'cyan', children, className, ...rest }: ToggleButtonProps) {
-    const activePalette = tone === 'rec' ? 'bg-error text-on-error' : 'bg-primary-container text-on-primary-container'
-    return (
-        <button
-            type="button"
-            {...rest}
-            className={[
-                'inline-flex items-center gap-1.5 shrink-0 whitespace-nowrap cursor-pointer',
-                'border-0 rounded-sm px-2.75 py-1.75 min-h-7.5 pointer-coarse:min-h-10',
-                'font-label font-semibold text-[12px] leading-none',
-                'focus-ring',
-                active ? activePalette : 'bg-surface-container-low text-on-surface',
-                className ?? '',
-            ].join(' ')}>
-            {children}
         </button>
     )
 }
