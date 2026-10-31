@@ -158,3 +158,9 @@ decided and recorded without changing behaviour. "Open" means left with a reason
   app-takes-singing = 52 genuine takes, app-takes-whistling = 19 (none duplicated). The 157 'instrument' takes were
   the old soundfont corpus (excluded at triage).
 - 2026-10-31 03:08: wave 6 done — 80/80 passed (mean 1.51 rounds; dagstuhl 1.9), 242 agents / 12.2 M tokens (≈ 0.45 % session per clip); **mir-qbsh complete (50/50)**. usage: session 36 %, week 59 %.
+- 2026-10-31 03:15: calibration check (18 blind clips): vocadito resynth-vs-A1 0.643, best-of-annotators 0.707 vs
+  annotators' own A2-vs-A1 0.732 (n=9); n20emv2/hust 0.652 (n=9). Of 423 vocadito annotator notes resynth does not
+  match: 133 are same-pitch sung syllables resynth merged, 180 short (< 150 ms) ornaments/scoops resynth folds into a
+  neighbour (convention 5 — n20emv2/hust experts are even coarser than resynth), 79 ±1 st calls on between-semitone
+  notes, 6 truly missed. → wave script v4: sung same-pitch syllable doubt defaults to SPLIT (+ uncertain-split).
+  Wave 7 restarted fresh under v4 (dagstuhl 31 clips + mir-qbsh passed under v3 — candidates for a syllable re-check).
