@@ -2532,6 +2532,20 @@ provider only.
     it does not ship. The failing cell is GuitarSet in the milder room and is not significant. **Owner call**:
     `envFlag('RECORDING_CONF_RELATIVE_GATE', true)` ships it; stacked on the shipped set it adds about +0.004 ALL
     on test.
+  - **Hardened for the flip (review findings 3 and 4; still off).**
+    - Silent and noise-only takes read as the wettest room: every frame is "loud" against its own peak, the level
+      never drops, and CREPE hears noise at ~0.2, so the gate fell to 0.20. Through the real pipeline with the knob
+      on, pink noise at −60 / −40 dBFS and a fan's room tone gave 1–10 junk notes (0 off; digital silence and a
+      −90 dBFS muted mic gave 0 either way). `PitchTrack.reverbEvidence` now reads a take neutral when its peak is
+      under −60 dBFS, under 10 % of its loud frames are pitched, or its level spans under 4 dB (dev: the quietest
+      real take peaks at −50 dBFS, the least pitched has 24 %, the flattest spans 6.4 dB; noise 0–1 % and 1–3 dB).
+      All five synthetic takes now give 0 notes, knob on or off. No benchmark clip × condition reads neutral, and
+      the cached run is note-identical on 2,813 of 2,813, knob on and off, both splits.
+    - The streaming drift check compared float gates exactly, so nearly every take the gate touched was rebuilt at
+      stop. It now allows 0.02 (`_DRIFT_TOL`). Emulated on the cached dev tracks: the exact compare rebuilt 580 of
+      1,372 takes, 0.02 rebuilds 501 with the same final COnP; 0.05 would rebuild 379 at −0.0003, and recording only
+      the passes that committed notes 528 at −0.0003, because every rebuild also erases the streaming commit's own
+      losses (see RecordingPipeline). `check-streaming` rows are identical.
 - **Whistle family (WH-H1/H2/H3; `RECORDING_WHISTLE_DETECT=1 RECORDING_WHISTLE_PITCHDOWN=1 RECORDING_WHISTLE_ONSET=0.2`).**
   - Rule: a whistle hint, or YAMNet "Whistling" in the top 3 (ties count against), means the take is never voice,
     goes to the octave-down provider whatever its band, and gets a flat 0.2 re-attack dip.

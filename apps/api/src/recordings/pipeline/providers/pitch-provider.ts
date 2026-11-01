@@ -111,10 +111,10 @@ export interface PitchProvider {
     transcribe(samples: Float32Array, options?: PitchTranscribeOptions, session?: PitchSession): Promise<NoteEventTime[]>
 
     /**
-     * True when the passes of `session` decoded under different take-level
-     * decisions (the decode-side reverb adaptation's gate), so notes committed by
-     * an earlier pass may contradict the final one. Optional: a provider with no
-     * take-level adaptation never drifts.
+     * True when an earlier pass of `session` decoded under a take-level decision
+     * (the decode-side reverb adaptation's gate) the final pass no longer agrees
+     * with, so notes it committed may contradict the final ones. Optional: a
+     * provider with no take-level adaptation never drifts.
      */
     voicingAdaptationDrifted?(session: PitchSession): boolean
 }

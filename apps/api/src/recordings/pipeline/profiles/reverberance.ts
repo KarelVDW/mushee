@@ -43,7 +43,13 @@ export interface ReverbDecision {
  * keeps its profile's gate exactly; below it the gate is lowered in proportion,
  * never under FLOOR and never raised. A take whose level still falls
  * `_DRY_DROP_DB` (default 12) in 100 ms is not in a room — its low confidence is
- * noise or breath — and keeps its gate too. `_MODE=replace` drops the profile's
+ * noise or breath — and keeps its gate too, and so does a take with nothing to
+ * measure: silence, a muted mic or noise alone reads neutral
+ * (`PitchTrack.reverbEvidence`). It used to read as the wettest room there is and
+ * take the gate to FLOOR: pink noise at −60 / −40 dBFS and a fan's room tone came
+ * out of the real pipeline as 1–10 junk notes (0 with the knob off); now 0. No
+ * benchmark clip×condition reads neutral (0 of 2,813, both splits), so the numbers
+ * below stand. `_MODE=replace` drops the profile's
  * own reverb relief (`applyReverb`, triggered by `dipDepth`) and uses this rule
  * alone against the band anchor BASE (0.5 on every band; the noisy-take bump
  * ships at 0); with `_SLOPE=0` it is an exact decode-side replay of
@@ -68,9 +74,11 @@ export interface ReverbDecision {
  * NOT inert — removing it costs AVS reverb −0.028* / −0.027* and vocadito clean
  * −0.009*, because a lower gate on a random half of the takes is still a lower gate.
  * Knee 0.82…0.88 × slope 1.5…3 all land at ALL +0.007…+0.013; 0.85/2 lowers the
- * gate on the fewest clean takes (10 %). Streaming: the 1.5 s frozen prefix keeps
- * +0.009 of the +0.010 (ALL). On L0b's measured-RIR tier (Arni rooms, dev): ALL
- * +0.018*, voice rir-near / rir-far +0.027* / +0.060*, every instrument row ≥ 0.
+ * gate on the fewest clean takes (10 %). Streaming: decoded under the decision of
+ * its 1.5 s frozen prefix a take keeps +0.009 of the +0.010 (ALL) — that is the
+ * live view; the score kept at stop is under "Streaming" below. On L0b's
+ * measured-RIR tier (Arni rooms, dev): ALL +0.018*, voice rir-near / rir-far
+ * +0.027* / +0.060*, every instrument row ≥ 0.
  * Realistic synthetic corpus (exact truth, mild measured rooms, both parts on):
  * studio −0.000, room +0.001, home-phone +0.002, all n.s.
  *
@@ -122,10 +130,23 @@ export interface ReverbDecision {
  *
  * The provider measures the evidence on every pass until `_FREEZE_SEC` of loud
  * audio exist, then freezes it for the rest of the take; the FINAL pass measures
- * the whole take again. When the final decision differs from one an earlier pass
- * used, the pipeline discards the notes committed under it and rebuilds the score
- * from the final pass (`RecordingPipeline`), so the final score is the whole-take
- * transcription the benchmark measures.
+ * the whole take again. The relative gate is continuous, so the final gate almost
+ * never equals a frozen one bit for bit (the old exact compare rebuilt nearly every
+ * take the gate touched). When the final decision moved more than `_DRIFT_TOL` (default
+ * 0.02, `agrees`) from one an earlier pass ran with, or switched the
+ * back-extension, the pipeline discards the committed notes and rebuilds the score
+ * from the final pass (`RecordingPipeline`) — the whole-take transcription the
+ * benchmark measures. Otherwise the notes committed live stand and the final pass
+ * only adds the rest: where the whole take confirms its frozen prefix, the score
+ * kept at stop is the one the live view showed.
+ *
+ * Emulated on the cached dev tracks (1,372 clip×conditions; passes at 1.2 s + k·1 s,
+ * the 0.4 s commit margin; no profile lock, ffmpeg tail or prefix Viterbi): the
+ * frozen gate equals the whole take's on 858 and is within 0.018 at p75 (p90
+ * 0.086). The exact compare rebuilt 580 takes, 0.02 rebuilds 501 with the same
+ * final COnP (−0.0010 against the whole-take decode either way: the streaming
+ * commit's own cost, which every rebuild also erases). 0.05 would rebuild 379 at
+ * −0.0013, and recording only the passes that committed notes 528 at −0.0013.
  */
 export class ReverbDecodeAdaptation {
     constructor(
@@ -135,6 +156,8 @@ export class ReverbDecodeAdaptation {
         private readonly backExtend: { maxDropDb: number; maxConfMed: number; minConfidence: number; windowSec: number } | undefined,
         /** Seconds of loud audio after which a streaming session freezes its evidence. */
         readonly freezeSec: number,
+        /** The largest gate difference two passes' decisions may show and still agree (`agrees`). */
+        private readonly driftTolerance = 0.02,
     ) {}
 
     /** The adaptation the env selects; undefined when both parts are off (production). */
@@ -162,7 +185,17 @@ export class ReverbDecodeAdaptation {
                   }
                 : undefined,
             envNumber('RECORDING_CONF_RELATIVE_GATE_FREEZE_SEC', 1.5),
+            envNumber('RECORDING_CONF_RELATIVE_GATE_DRIFT_TOL', 0.02),
         )
+    }
+
+    /**
+     * Whether notes decoded under `a` can stand beside notes decoded under `b`: the
+     * same onset treatment, and gates no more than the drift tolerance apart (plus
+     * float slack — the gates are computed, not chosen).
+     */
+    agrees(a: ReverbDecision, b: ReverbDecision): boolean {
+        return Boolean(a.backExtend) === Boolean(b.backExtend) && Math.abs(a.gate - b.gate) <= this.driftTolerance + 1e-9
     }
 
     /**
