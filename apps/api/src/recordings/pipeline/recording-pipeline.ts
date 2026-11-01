@@ -29,6 +29,21 @@ const DEBOUNCE_MS = envPositiveNumber('RECORDING_DEBOUNCE_MS', 1000)
  * is a whole note, so an onset is never committed before its offset. And its
  * delay compensation does not apply either — we report measured note times,
  * not confirmation times; R7 calibrated the reported-time bias at 0.)
+ *
+ * The END is the performed note's (`performedEndSeconds`), not the written
+ * one's. Until 2026-11 it was the written end, which `quantize` floor-snaps
+ * (whole note at most): a held note cleared the margin while it still
+ * sounded, was committed short, and its onset + pitch key kept every later
+ * pass — the final one only appends — from lengthening it. `check-streaming`'s
+ * 3-beat note streamed as 1.5 beats, and a bridged dropout (INST-H4) lost its
+ * extra length. On 39 real dev takes (URMP, vocadito, whistle-real; 1,168
+ * notes, one pass per second of audio, whole-buffer on the same profile) 37
+ * notes were committed still sounding and 44 came out shorter than the
+ * whole-buffer pass (50 beats in all); waiting on the performed end leaves 0
+ * and 18 (7 beats, each a note whose NEXT note changed after its commit). The
+ * cost is latency on the held notes only: 45 notes (3.9 %) appear a median
+ * 1.0 s later (max 4.1 s); the median note still appears 1.37 s after its
+ * onset (was 1.36 s).
  */
 const STABLE_MARGIN_SEC = envPositiveNumber('RECORDING_STABLE_MARGIN_SEC', 0.4)
 /** Minimum audio before we trust the pitch scan enough to lock a profile. */
@@ -585,8 +600,10 @@ export class RecordingPipeline {
 
     /**
      * Fold one pass's extracted notes into the emitted set: a note is committed
-     * once it ends `STABLE_MARGIN_SEC` before the decoded audio does (the final
-     * pass commits to the very end), and is emitted once, keyed on onset + pitch.
+     * once both its written end and the end of the performed note behind it
+     * (`NoteEventTime.performedEndSeconds`) lie `STABLE_MARGIN_SEC` before the
+     * decoded audio's end (the final pass commits to the very end), and is
+     * emitted once, keyed on onset + pitch.
      */
     private emitFromExtracted(extracted: ExtractedNotes, duration: number, isFinal: boolean): void {
         const { raw, deduced } = extracted
@@ -598,7 +615,10 @@ export class RecordingPipeline {
 
         const newNotes: PendingNote[] = []
         for (const n of deduced) {
-            if (n.startTimeSeconds + n.durationSeconds > cutoff) continue
+            // Wait on the later of the written end and the PERFORMED end: the written
+            // length is floor-snapped, so a held note's written end passes the cutoff
+            // while it still sounds, and the key below never lets it grow back.
+            if (Math.max(n.startTimeSeconds + n.durationSeconds, n.performedEndSeconds ?? 0) > cutoff) continue
             const key = `${Math.round(n.startTimeSeconds * 1000)}_${n.pitchMidi}`
             if (this.emittedKeys.has(key)) continue
             this.emittedKeys.add(key)

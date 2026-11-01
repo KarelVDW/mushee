@@ -253,6 +253,9 @@ export class NoteExtractor {
                 out.push({ ...n })
                 continue
             }
+            // The slot is settled only once BOTH performances have ended: a loser still
+            // sounding can grow and win the slot on a later pass.
+            const performedEnd = Math.max(prev.performedEndSeconds ?? -Infinity, n.performedEndSeconds ?? -Infinity)
             if (n.pitchMidi === prev.pitchMidi) {
                 prev.durationSeconds = Math.max(prev.durationSeconds, n.durationSeconds)
                 prev.amplitude = Math.max(prev.amplitude, n.amplitude)
@@ -262,6 +265,7 @@ export class NoteExtractor {
             ) {
                 out[out.length - 1] = { ...n }
             }
+            if (Number.isFinite(performedEnd)) out[out.length - 1].performedEndSeconds = performedEnd
         }
         return out
     }
@@ -348,6 +352,7 @@ export class NoteExtractor {
                 ...note,
                 startTimeSeconds: snapStart / beatsPerSecond,
                 durationSeconds: durationBeats / beatsPerSecond,
+                performedEndSeconds: note.startTimeSeconds + note.durationSeconds,
             })
         }
         return result
