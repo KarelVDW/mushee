@@ -90,6 +90,10 @@ const MODELS = {
  * taken (c2.5/c3/c4/c6 score identically to three decimals), so the model has
  * already chosen mandatory-silence on its own. Saying so structurally is honest
  * about what it does and removes a knob.
+ *
+ * Since 2026-11 production also sets `onsetShiftSec: 0.05` (`SHIPPING_VOICE_OPTS`,
+ * fitted on the QUANTISED benchmark output); this unquantised sweep keeps the
+ * decoder's 0.07, its own optimum, so its `ship` rows are 20 ms off production.
  */
 const BEST: VoiceDecodeOptions = {
     transitionMode: 'direct',

@@ -330,8 +330,9 @@ export interface VoiceDecodeOptions {
      * constant): the lead is consistent, while any per-note estimate of it is noisy,
      * and the noise costs more than the bias it removes.
      *
-     * **Re-fit on the quantised output, 2026-11 (`VOICE_ONSET_SHIFT_SEC`; 0.07 still
-     * ships).** The 70–100 ms optimum above was fitted on UNQUANTISED notes, where the
+     * **Re-fit on the quantised output, 2026-11: 0.05 SHIPS** (`SHIPPING_VOICE_OPTS`;
+     * this decoder's own default stays 0.07, and `VOICE_ONSET_SHIFT_SEC=0.07` is the
+     * kill-switch back to it). The 70–100 ms optimum above was fitted on UNQUANTISED notes, where the
      * ±100 ms window is hard and the best constant covers the most mass. The product
      * snaps onsets to a 16th grid, which makes the window soft and rewards centring
      * the error instead — and this decode is still a median +20…+60 ms late. Scored
@@ -346,6 +347,15 @@ export interface VoiceDecodeOptions {
      * +0.012 at both. Independent: realistic synthetic singing to the click +0.009
      * (n.s., COnPOff +0.022), jacrc-students human syllable-onset recall +0.108,
      * AVP onset F1 +0.082, humming (mir-qbsh) +0.038.
+     *
+     * Confirmed on the final 2026-11 harness (corrected adverse tier + grid/tempo
+     * corrections; cached, all conditions, performance-cluster CIs). Dev: singing
+     * +0.016 [+0.012, +0.021], app-takes-singing at its session bpm +0.019. **The one
+     * test look: singing +0.013 [+0.009, +0.017]** (0.586 → 0.599), ALL +0.005
+     * [+0.004, +0.007], human +0.004 [+0.003, +0.006], real-only +0.003; whistling and
+     * instruments exactly 0; human-timed sets +0.020; AVS real −0.044 (its pYIN-
+     * segmented timing) with its reverb rows +0.008 / +0.034; esmuc −0.011;
+     * app-takes-singing +0.009 (n.s., 17 clips).
      */
     onsetShiftSec?: number
     /**
@@ -370,7 +380,10 @@ export interface VoiceDecodeOptions {
      * 0.10–0.20. All of that is the reverb rows (echoey +0.016, distant +0.026);
      * clean takes are null (human-truth real −0.001), wind and street exactly 0,
      * and esmuc −0.006. The voicing gate is the more direct lever for those
-     * reverb rows.
+     * reverb rows. Re-checked on the final 2026-11 harness (dev): +0.003 on top of
+     * the shipped 0.05 shift, +0.002 (n.s.) on top of the shift plus the
+     * confidence-relative gate (`RECORDING_CONF_RELATIVE_GATE`); human-truth real
+     * −0.001. Dropped below its +0.004 bar; no test look.
      */
     backExtend?: { minConfidence: number; windowSec: number }
 
@@ -614,12 +627,17 @@ const DEFAULTS: Required<Omit<VoiceDecodeOptions, OptionalKnob>> = {
  *    contour; we decode CREPE's Viterbi-smoothed trajectory, which is already
  *    smoothed once, so trusting the per-frame pitch this little merges real notes
  *    (measured: t0.1 → 0.627, t0.7 → 0.684 on dev).
+ *  - `onsetShiftSec: 0.05` rather than the decoder's 0.07 (2026-11): the 0.07
+ *    calibration was fitted on unquantised notes; on the quantised output the
+ *    product scores, 0.05 centres the onset error. Test: singing +0.013
+ *    [+0.009, +0.017] (see `onsetShiftSec`).
  */
 export const SHIPPING_VOICE_OPTS: VoiceDecodeOptions = {
     transitionMode: 'direct',
     changeCost: 2.5,
     evidenceDiscount: 0.35,
     trust: 0.7,
+    onsetShiftSec: 0.05,
     ...voiceOnsetEnvOverrides(),
 }
 
@@ -627,8 +645,9 @@ export const SHIPPING_VOICE_OPTS: VoiceDecodeOptions = {
  * The A/B overrides of the voice decode's onset timing, read once at import. Both
  * are unset in production, so `SHIPPING_VOICE_OPTS` is exactly the object above.
  *
- *  - `VOICE_ONSET_SHIFT_SEC=<seconds>` replaces `onsetShiftSec` (0.07 today;
- *    0.05 is the 2026-11 candidate, see `onsetShiftSec` for its numbers).
+ *  - `VOICE_ONSET_SHIFT_SEC=<seconds>` replaces `onsetShiftSec` (0.05 ships since
+ *    2026-11; `=0.07` is the kill-switch to the previous calibration, see
+ *    `onsetShiftSec` for the numbers).
  *  - `VOICE_ONSET_BACKEXTEND=<minConfidence>,<windowSec>` turns on `backExtend`
  *    (measured and kept off, see there). `off`, unset, or anything that is not two
  *    finite numbers leaves it off.

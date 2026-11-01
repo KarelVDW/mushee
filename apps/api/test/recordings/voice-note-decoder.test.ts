@@ -247,20 +247,20 @@ describe('SHIPPING_VOICE_OPTS env overrides', () => {
         return (await import('../../src/recordings/pipeline/voice-note-decoder')).SHIPPING_VOICE_OPTS
     }
 
-    it('adds nothing when unset, so production decodes exactly as before', async () => {
-        expect(await shippingWith({})).toEqual({ transitionMode: 'direct', changeCost: 2.5, evidenceDiscount: 0.35, trust: 0.7 })
+    it('ships the 2026-11 onset shift (0.05) and no back-extension when unset', async () => {
+        expect(await shippingWith({})).toEqual({ transitionMode: 'direct', changeCost: 2.5, evidenceDiscount: 0.35, trust: 0.7, onsetShiftSec: 0.05 })
     })
 
-    it('reads the onset shift and the back-extension pair', async () => {
-        const o = await shippingWith({ VOICE_ONSET_SHIFT_SEC: '0.05', VOICE_ONSET_BACKEXTEND: '0.15,0.1' })
-        expect(o.onsetShiftSec).toBe(0.05)
+    it('reads the onset shift (0.07 = the kill-switch) and the back-extension pair', async () => {
+        const o = await shippingWith({ VOICE_ONSET_SHIFT_SEC: '0.07', VOICE_ONSET_BACKEXTEND: '0.15,0.1' })
+        expect(o.onsetShiftSec).toBe(0.07)
         expect(o.backExtend).toEqual({ minConfidence: 0.15, windowSec: 0.1 })
     })
 
     it('ignores malformed values instead of feeding NaN into the decode', async () => {
         for (const bad of ['off', '0.15', '0.15,', 'a,b', '0.1,0.2,0.3']) {
             const o = await shippingWith({ VOICE_ONSET_SHIFT_SEC: 'abc', VOICE_ONSET_BACKEXTEND: bad })
-            expect(o.onsetShiftSec).toBeUndefined()
+            expect(o.onsetShiftSec).toBe(0.05)
             expect(o.backExtend).toBeUndefined()
         }
     })
