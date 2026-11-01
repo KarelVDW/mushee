@@ -101,7 +101,7 @@ Both splits, cached, after the flips (`int-after-cached-all`, env {}): ALL 0.671
 - **The finding:** the pooled dataset mean hid two SING-H1 losses on test, annotated-vocalset real −0.044\* and
   esmuc −0.011\* (AVS's pooled row was −0.001 n.s. on test). Read singing A/Bs per dataset × condition.
 - **AVS real is the truth's onset convention:** its notes start where the pYIN glide (a dropped "Transition" row,
-  median 116 ms) ends. Re-timed to the glide midpoint, AVS peaks at 0.05 like every human-annotated set; nothing
+  median 93 ms) ends. Re-timed to the glide midpoint, AVS peaks at 0.05 like every human-annotated set; nothing
   the pipeline can observe separates it. No product rule.
 - **esmuc was not timing:** the shift also lowered the decoder's minimum note from 100 to 80 ms (its existence test
   runs after the shift), admitting 7.7 short runs per take, mostly choir bleed; timing alone gained +0.012\*.

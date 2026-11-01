@@ -2663,14 +2663,15 @@ The 0.07 → 0.05 change splits into onset timing and one side effect:
   0.08 (4 frames at the 20 ms hop), 0.07 dropped every 4-frame run (0.01 s left) and 0.05 keeps it (0.03 s): the
   shift silently lowered the minimum note from 100 to 80 ms. That admitted 2,784 extra raw notes on dev (all
   exactly 30 ms), 1,046 of them on esmuc (7.7 per take: +7.1 written notes for +0.16 matches). Against the other
-  dev singers' parts of the same take, 40 % sit on a pitch only another singer is singing (23 % for every other
-  raw note) and 6 % on the singer's own (60 %): choir bleed. **esmuc's paradox** (onsets closer, COnP lower) is
+  dev singers' parts of the same take, 35–40 % sit on a pitch only another singer is singing (22–23 % for every
+  other raw note) and 5–6 % on the singer's own (59–60 %): choir bleed (the two independent counts differ by
+  attribution rule: note midpoint vs overlap). **esmuc's paradox** (onsets closer, COnP lower) is
   this: its timing gained +0.012\*; the "within ±100 ms" share only counts notes with a same-pitch truth nearby,
   which the 30 ms notes mostly lack. The esmuc/hust sawtooth in the shift sweep (0.06 below 0.05 and 0.07), part of
   what the 2026-11 sweep read as a hop-lattice staircase, is the same floor: with existence fixed, both peak at 0.05.
 - **AVS real is its truth's onset convention, not the pipeline.** Its fetcher keeps only the pYIN "Sound" rows of
-  rows typed Rest / Sound / Transition. 86 % of AVS notes follow a Transition (median 116 ms), so the truth onset
-  is where the glide has *ended*. Raw decoder onsets at 0.05 sit −52 ms against legato notes and +15 ms against
+  rows typed Rest / Sound / Transition. 86 % of AVS notes follow a Transition (median 93 ms; the Sound row starts one
+  or two pYIN hops after it, 116 ms after the Transition starts), so the truth onset is where the glide has *ended*. Raw decoder onsets at 0.05 sit −52 ms against legato notes and +15 ms against
   notes after a rest (the other sets: +10…+30). Re-timing each legato truth onset to its Transition's midpoint (a
   diagnostic only) moves AVS clean's optimum from 0.09 to 0.05, like every human-annotated set (COnP 0.538 →
   0.657), and its reverb rows to 0.03, like vocadito's. Every VocalSet technique and exercise prefers 0.07–0.10 on
