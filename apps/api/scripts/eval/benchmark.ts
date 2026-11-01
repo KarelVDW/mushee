@@ -40,6 +40,13 @@
  * dataset (lib/split.ts); `--materials` narrows to datasets of those materials.
  * `--cached` without `--datasets` scores the pooled datasets only.
  *
+ * Undeclared input: every dataset is scored with its own instrument hint and an
+ * explicit sourceKind. `EVAL_UNDECLARED_SOURCE=1` drops the sourceKind (the audio
+ * classifier votes, as in the app) and `EVAL_UNDECLARED_HINT=<instrument id>|none`
+ * replaces the hint (e.g. whistling on a `voice-lead` or `piano` score) — see
+ * `harnessHint` in lib/trackCache.ts; both land in `meta.env` and key their own
+ * cache subtree.
+ *
  * Conventions (see benchmarks/README.md): headline metric COnP@±100 ms (onset +
  * pitch, no offset gate); COnPOff at the same window is the secondary,
  * publication-comparable column; pooled numbers are means of DATASET means over
