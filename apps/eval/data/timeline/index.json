@@ -55,7 +55,7 @@
                 "emptyOutputs": 47
             },
             "truthHash": "95e0bf0dec138763cd3ff5d3063c0eae899d0433",
-            "scoredAt": "2026-11-01T17:43:14.522Z"
+            "scoredAt": "2026-11-01T18:55:40.739Z"
         },
         {
             "id": "2026-05-03_bec075de",
@@ -105,7 +105,7 @@
                 "emptyOutputs": 47
             },
             "truthHash": "95e0bf0dec138763cd3ff5d3063c0eae899d0433",
-            "scoredAt": "2026-11-01T17:43:14.666Z"
+            "scoredAt": "2026-11-01T18:55:40.906Z"
         },
         {
             "id": "2026-06-13_cf7d6173",
@@ -155,7 +155,7 @@
                 "emptyOutputs": 2
             },
             "truthHash": "95e0bf0dec138763cd3ff5d3063c0eae899d0433",
-            "scoredAt": "2026-11-01T17:43:14.814Z"
+            "scoredAt": "2026-11-01T18:55:41.063Z"
         },
         {
             "id": "2026-06-20_9771190d",
@@ -205,7 +205,7 @@
                 "emptyOutputs": 2
             },
             "truthHash": "95e0bf0dec138763cd3ff5d3063c0eae899d0433",
-            "scoredAt": "2026-11-01T17:43:14.979Z"
+            "scoredAt": "2026-11-01T18:55:41.223Z"
         },
         {
             "id": "2026-06-21_eb323a97",
@@ -255,7 +255,7 @@
                 "emptyOutputs": 2
             },
             "truthHash": "95e0bf0dec138763cd3ff5d3063c0eae899d0433",
-            "scoredAt": "2026-11-01T17:43:15.135Z"
+            "scoredAt": "2026-11-01T18:55:41.383Z"
         },
         {
             "id": "2026-07-11_15344df4",
@@ -305,7 +305,7 @@
                 "emptyOutputs": 2
             },
             "truthHash": "95e0bf0dec138763cd3ff5d3063c0eae899d0433",
-            "scoredAt": "2026-11-01T17:43:15.291Z"
+            "scoredAt": "2026-11-01T18:55:41.541Z"
         },
         {
             "id": "2026-07-25_cfc53676",
@@ -355,7 +355,7 @@
                 "emptyOutputs": 2
             },
             "truthHash": "95e0bf0dec138763cd3ff5d3063c0eae899d0433",
-            "scoredAt": "2026-11-01T17:43:15.452Z"
+            "scoredAt": "2026-11-01T18:55:41.702Z"
         },
         {
             "id": "2026-08-08_3e70cb88",
@@ -405,7 +405,7 @@
                 "emptyOutputs": 2
             },
             "truthHash": "95e0bf0dec138763cd3ff5d3063c0eae899d0433",
-            "scoredAt": "2026-11-01T17:43:15.608Z"
+            "scoredAt": "2026-11-01T18:55:41.862Z"
         },
         {
             "id": "2026-08-09_0b217b4f",
@@ -455,7 +455,7 @@
                 "emptyOutputs": 2
             },
             "truthHash": "95e0bf0dec138763cd3ff5d3063c0eae899d0433",
-            "scoredAt": "2026-11-01T17:43:15.765Z"
+            "scoredAt": "2026-11-01T18:55:42.020Z"
         },
         {
             "id": "2026-08-19_ab26a103",
@@ -505,7 +505,7 @@
                 "emptyOutputs": 2
             },
             "truthHash": "95e0bf0dec138763cd3ff5d3063c0eae899d0433",
-            "scoredAt": "2026-11-01T17:43:15.921Z"
+            "scoredAt": "2026-11-01T18:55:42.178Z"
         },
         {
             "id": "2026-08-22_61f86a96",
@@ -555,7 +555,7 @@
                 "emptyOutputs": 0
             },
             "truthHash": "95e0bf0dec138763cd3ff5d3063c0eae899d0433",
-            "scoredAt": "2026-11-01T17:43:16.079Z"
+            "scoredAt": "2026-11-01T18:55:42.331Z"
         },
         {
             "id": "2026-09-01_2b83e008",
@@ -605,7 +605,7 @@
                 "emptyOutputs": 0
             },
             "truthHash": "95e0bf0dec138763cd3ff5d3063c0eae899d0433",
-            "scoredAt": "2026-11-01T17:43:16.240Z"
+            "scoredAt": "2026-11-01T18:55:42.484Z"
         },
         {
             "id": "2026-09-27_d77db1db",
@@ -655,7 +655,7 @@
                 "emptyOutputs": 0
             },
             "truthHash": "95e0bf0dec138763cd3ff5d3063c0eae899d0433",
-            "scoredAt": "2026-11-01T17:43:16.437Z"
+            "scoredAt": "2026-11-01T18:55:42.681Z"
         },
         {
             "id": "2026-10-23_f2611442",
@@ -705,7 +705,7 @@
                 "emptyOutputs": 0
             },
             "truthHash": "95e0bf0dec138763cd3ff5d3063c0eae899d0433",
-            "scoredAt": "2026-11-01T17:43:16.685Z"
+            "scoredAt": "2026-11-01T18:55:42.923Z"
         },
         {
             "id": "2026-11-01_a9baf46e",
@@ -755,7 +755,57 @@
                 "emptyOutputs": 0
             },
             "truthHash": "95e0bf0dec138763cd3ff5d3063c0eae899d0433",
-            "scoredAt": "2026-11-01T17:43:16.846Z"
+            "scoredAt": "2026-11-01T18:55:43.078Z"
+        },
+        {
+            "id": "2026-11-01_5302a5bb",
+            "file": "2026-11-01_5302a5bb.json",
+            "sha": "5302a5bb04444f7c2db89d10f589798d4488539a",
+            "short": "5302a5bb",
+            "commitDate": "2026-11-01T19:45:01+01:00",
+            "subject": "fix(recordings): the voice existence test never judges below the reporting shift",
+            "era": "D",
+            "overallF1": 0.684,
+            "overallF1Off": 0.359,
+            "overallF1Human": 0.708,
+            "overallF1OffHuman": 0.377,
+            "perMaterial": {
+                "humming": {
+                    "f1": 0.657,
+                    "f1Off": 0.351,
+                    "provisional": true,
+                    "datasets": 1
+                },
+                "instrument": {
+                    "f1": 0.774,
+                    "f1Off": 0.437,
+                    "provisional": false,
+                    "datasets": 13
+                },
+                "singing": {
+                    "f1": 0.576,
+                    "f1Off": 0.274,
+                    "provisional": false,
+                    "datasets": 10,
+                    "f1Human": 0.586
+                },
+                "whistling": {
+                    "f1": 0.64,
+                    "f1Off": 0.276,
+                    "provisional": false,
+                    "datasets": 2
+                }
+            },
+            "counts": {
+                "scored": 536,
+                "noTruth": 0,
+                "missing": 0,
+                "failed": 0,
+                "pipelineErrors": 0,
+                "emptyOutputs": 0
+            },
+            "truthHash": "95e0bf0dec138763cd3ff5d3063c0eae899d0433",
+            "scoredAt": "2026-11-01T18:55:43.232Z"
         }
     ]
 }
