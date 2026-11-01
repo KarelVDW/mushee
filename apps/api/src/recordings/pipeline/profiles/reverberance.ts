@@ -40,9 +40,35 @@ export interface ReverbDecision {
  *
  * A take whose loud frames CREPE hears with median confidence at or above KNEE
  * keeps its profile's gate exactly; below it the gate is lowered in proportion,
- * never under FLOOR and never raised. `_MODE=replace` drops the profile's own
- * reverb relief (`applyReverb`, triggered by `dipDepth`) and uses this rule alone
- * against the band anchor BASE (0.5 on every band; the noisy-take bump ships at 0).
+ * never under FLOOR and never raised. A take whose level still falls
+ * `_DRY_DROP_DB` (default 12) in 100 ms is not in a room — its low confidence is
+ * noise or breath — and keeps its gate too. `_MODE=replace` drops the profile's
+ * own reverb relief (`applyReverb`, triggered by `dipDepth`) and uses this rule
+ * alone against the band anchor BASE (0.5 on every band; the noisy-take bump
+ * ships at 0); with `_SLOPE=0` it is an exact decode-side replay of
+ * `RECORDING_REVERB_CONF_RELIEF=0` (862/862 dev clip×conditions identical to the
+ * per-env cache build).
+ *
+ * Measured 2026-11-01 on the regenerated adverse tier (`benchmark.ts run --cached
+ * --split dev`, all conditions, 1,372 clip×conditions; Δ of the mean of dataset
+ * means, paired bootstrap over performances, `*` = 95 % CI excludes 0), defaults
+ * (KNEE 0.85, SLOPE 2, FLOOR 0.20, DRY_DROP_DB 12, min):
+ *
+ *     ALL +0.010* [+0.005, +0.014]   human-truth +0.011*   singing +0.008*
+ *     instrument +0.013*   whistling +0.002*   real condition only +0.003 (n.s.)
+ *     echoey / distant:  voice +0.045* / +0.055*   plucked +0.009 / +0.025*
+ *                        sustained +0.019* / +0.023*
+ *
+ * Clean takes: every human singing set within ±0.001 on `real`; the only dataset
+ * below −0.005 is urmp-contrabass (one dev take, −0.019). Without the dry veto the
+ * gate cost app-takes-singing −0.007…−0.012 (two dry, noisy takes); `replace` is
+ * never better than `min` and costs clean takes (vocadito −0.006, app-takes-singing
+ * −0.014*): the dipDepth relief is blind on correct audio (voice AUC 0.47/0.46) but
+ * NOT inert — removing it costs AVS reverb −0.028* / −0.027* and vocadito clean
+ * −0.009*, because a lower gate on a random half of the takes is still a lower gate.
+ * Knee 0.82…0.88 × slope 1.5…3 all land at ALL +0.007…+0.013; 0.85/2 lowers the
+ * gate on the fewest clean takes (10 %). Streaming: the 1.5 s frozen prefix keeps
+ * +0.009 of the +0.010 (ALL). Not yet confirmed on test or on measured RIRs.
  *
  * ## 2. Instrument onset back-extension (ADV-H3, instrument part) — `RECORDING_INSTR_ONSET_BACKEXTEND=1`
  *
@@ -50,7 +76,22 @@ export interface ReverbDecision {
  * `_MAX_DROP_DB` AND confMed under `_MAX_CONF_MED`), each raw note's start moves
  * back over the sub-gate frames already at its pitch (`PitchTrack.backExtendOnsets`).
  * Ungated it costs dry plucked/sustained takes (a note's own pre-attack noise at
- * pitch), hence the take-level gate.
+ * pitch), hence the take-level gate. Both features are measured on the trajectory
+ * grid (20 ms; the adverse lane's 10 ms-envelope drop separates the same way).
+ *
+ * Measured 2026-11-01 (same protocol as above), defaults (MAX_DROP_DB 10,
+ * MAX_CONF_MED 0.87, CONF 0.15, WINDOW_SEC 0.15):
+ *
+ *     alone:            ALL +0.005*  instrument +0.010*  real only +0.003*
+ *                       plucked echoey/distant +0.014 / +0.037*, sustained +0.010* / +0.028*
+ *     on top of (1):    ALL +0.002*  instrument +0.004*  plucked +0.012 / +0.016*,
+ *                       sustained +0.001 / +0.021*; clean GuitarSet −0.001, URMP ≥ 0
+ *     both vs neither:  ALL +0.012* [+0.007, +0.016]  human +0.014*  instrument +0.017*
+ *
+ * It fires on 11 % of clean non-voice dev takes (GuitarSet 5/25, URMP 4/24,
+ * whistles 6/82, TinySOL 0/30) — sustained / legato takes that read like a room —
+ * without a clean cost; a stricter gate (6 dB / 0.85, 2 % of clean takes) keeps about
+ * half of the instrument gain (alone +0.005* vs +0.010*).
  *
  * ## Streaming
  *
@@ -84,7 +125,7 @@ export class ReverbDecodeAdaptation {
                       floor: envNumber('RECORDING_CONF_RELATIVE_GATE_FLOOR', 0.2),
                       base: 0.5,
                       mode: process.env.RECORDING_CONF_RELATIVE_GATE_MODE === 'replace' ? 'replace' : 'min',
-                      dryDropDb: envNumber('RECORDING_CONF_RELATIVE_GATE_DRY_DROP_DB', Infinity),
+                      dryDropDb: envNumber('RECORDING_CONF_RELATIVE_GATE_DRY_DROP_DB', 12),
                   }
                 : undefined,
             extendOn
