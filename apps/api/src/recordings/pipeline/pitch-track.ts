@@ -2,13 +2,38 @@ import type { NoteEventTime } from './note-event'
 
 /** What a take says about its room — see `PitchTrack.reverbEvidence`. */
 export interface ReverbEvidence {
-    /** Median confidence over the loud frames (1 when there are none). */
+    /** Median confidence over the loud frames (1 when there are none, or nothing to measure). */
     confMed: number
-    /** Frames the median is over. */
+    /** Frames the median is over (0 when there is nothing to measure). */
     loudFrames: number
     /** P95 100-ms level drop in dB (99 when nothing is loud enough to measure). */
     maxDropDb: number
 }
+
+/**
+ * The evidence of a take that holds nothing a room could have shaped — the reading
+ * every decision treats as dry, and that never freezes a streaming session.
+ */
+const NO_REVERB_EVIDENCE: ReverbEvidence = { confMed: 1, loudFrames: 0, maxDropDb: 99 }
+
+/**
+ * Below this peak frame RMS (−60 dBFS) a take is digital silence, a muted mic or a
+ * bare noise floor. The quietest take in the benchmark peaks at −50 dBFS (dev).
+ */
+const REVERB_EVIDENCE_MIN_PEAK = 1e-3
+/**
+ * Share of the loud frames CREPE must hear as pitched (confidence ≥ 0.5, the
+ * band anchor gate): noise reads 0–1 %, the least pitched real take 24 % (dev,
+ * every condition).
+ */
+const REVERB_EVIDENCE_MIN_PITCHED_SHARE = 0.1
+const PITCHED_CONFIDENCE = 0.5
+/**
+ * Peak frame over the 10th-percentile frame, in dB, under which a take has no
+ * dynamics at all: stationary noise reads 1–3 dB, the flattest real take 6.4 and
+ * the flattest take the relative gate lowers 10.4 (dev, every condition).
+ */
+const REVERB_EVIDENCE_MIN_RANGE_DB = 4
 
 /**
  * A frame-level pitch trajectory: what a trajectory provider (CREPE) actually
@@ -156,13 +181,25 @@ export class PitchTrack {
      * `energy` is the per-frame RMS on this track's grid (`frameEnergy`), and
      * `realHopSec` the real time one frame spans (the octave-down provider's frames
      * span half its model hop).
+     *
+     * A take with nothing to measure gets the neutral reading (`confMed` 1,
+     * `loudFrames` 0, `maxDropDb` 99): its peak is under −60 dBFS, under a tenth
+     * of its loud frames are pitched, or its level has no dynamics. Every frame of
+     * a silent or noise-only take is "loud" against its own peak, CREPE's
+     * confidence on noise sits near 0.2 and the level never drops, so it would
+     * otherwise read as the most reverberant room there is and take the gate down
+     * to its floor — junk notes from a muted mic.
      */
     reverbEvidence(energy: Float32Array, realHopSec: number, frames = this.frames): ReverbEvidence {
         const n = Math.min(frames, this.frames, energy.length)
         let peak = 0
         for (let i = 0; i < n; i += 1) if (energy[i] > peak) peak = energy[i]
+        if (peak < REVERB_EVIDENCE_MIN_PEAK) return NO_REVERB_EVIDENCE
         const loud: number[] = []
         for (let i = 0; i < n; i += 1) if (energy[i] >= 0.1 * peak) loud.push(this.confidence[i])
+        if (loud.filter((c) => c >= PITCHED_CONFIDENCE).length < REVERB_EVIDENCE_MIN_PITCHED_SHARE * loud.length) return NO_REVERB_EVIDENCE
+        const levels = energy.slice(0, n).sort()
+        if (20 * Math.log10(peak / levels[Math.floor(n * 0.1)]) < REVERB_EVIDENCE_MIN_RANGE_DB) return NO_REVERB_EVIDENCE
         loud.sort((a, b) => a - b)
 
         const lag = Math.max(1, Math.round(0.1 / realHopSec))

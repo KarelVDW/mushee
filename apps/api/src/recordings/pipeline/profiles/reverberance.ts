@@ -43,7 +43,13 @@ export interface ReverbDecision {
  * keeps its profile's gate exactly; below it the gate is lowered in proportion,
  * never under FLOOR and never raised. A take whose level still falls
  * `_DRY_DROP_DB` (default 12) in 100 ms is not in a room — its low confidence is
- * noise or breath — and keeps its gate too. `_MODE=replace` drops the profile's
+ * noise or breath — and keeps its gate too, and so does a take with nothing to
+ * measure: silence, a muted mic or noise alone reads neutral
+ * (`PitchTrack.reverbEvidence`). It used to read as the wettest room there is and
+ * take the gate to FLOOR: pink noise at −60 / −40 dBFS and a fan's room tone came
+ * out of the real pipeline as 1–10 junk notes (0 with the knob off); now 0. No
+ * benchmark clip×condition reads neutral (0 of 2,813, both splits), so the numbers
+ * below stand. `_MODE=replace` drops the profile's
  * own reverb relief (`applyReverb`, triggered by `dipDepth`) and uses this rule
  * alone against the band anchor BASE (0.5 on every band; the noisy-take bump
  * ships at 0); with `_SLOPE=0` it is an exact decode-side replay of

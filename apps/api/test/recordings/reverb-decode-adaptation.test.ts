@@ -35,10 +35,11 @@ describe('PitchTrack.reverbEvidence', () => {
 
     it('measures a prefix when asked', () => {
         const t = track(new Array<number>(6).fill(6000), [0.9, 0.9, 0.9, 0.2, 0.2, 0.2])
-        const energy = new Float32Array(6).fill(1)
+        const energy = Float32Array.from([0.05, 1, 1, 1, 1, 1])
         expect(t.reverbEvidence(energy, HOP, 3).confMed).toBeCloseTo(0.9)
-        expect(t.reverbEvidence(energy, HOP).confMed).toBeCloseTo(0.9)
-        expect(t.reverbEvidence(energy, HOP, 3).loudFrames).toBe(3)
+        expect(t.reverbEvidence(energy, HOP, 3).loudFrames).toBe(2)
+        expect(t.reverbEvidence(energy, HOP).confMed).toBeCloseTo(0.2)
+        expect(t.reverbEvidence(energy, HOP).loudFrames).toBe(5)
     })
 
     it('reads a fast release as a large 100 ms level drop and a slow decay as a small one', () => {
@@ -50,6 +51,52 @@ describe('PitchTrack.reverbEvidence', () => {
         const t = track(new Array<number>(n).fill(6000), conf)
         expect(t.reverbEvidence(dry, HOP).maxDropDb).toBeGreaterThan(15)
         expect(t.reverbEvidence(wet, HOP).maxDropDb).toBeLessThan(5)
+    })
+})
+
+describe('ReverbDecodeAdaptation on takes with nothing to measure', () => {
+    const shipped = new ReverbDecodeAdaptation({ knee: 0.85, slope: 2, floor: 0.2, base: 0.5, mode: 'min', dryDropDb: 12 }, undefined, 1.5)
+    const neutral = { confMed: 1, loudFrames: 0, maxDropDb: 99 }
+    const N = 200
+    /** Deterministic jitter in [0, 1). */
+    const jitter = (i: number, seed: number): number => {
+        const x = Math.sin(i * 12.9898 + seed * 78.233) * 43758.5453
+        return x - Math.floor(x)
+    }
+    const noise = (level: number): Float32Array => Float32Array.from({ length: N }, (_, i) => level * (0.9 + 0.2 * jitter(i, 1)))
+    const noiseConfidence = Array.from({ length: N }, (_, i) => 0.15 + 0.2 * jitter(i, 2))
+    const flat = new Array<number>(N).fill(6000)
+    /** Half-second notes in a room: each decays 4 dB per 100 ms, never fast. */
+    const room = (level: number): Float32Array => Float32Array.from({ length: N }, (_, i) => level * Math.pow(10, (-0.8 * (i % 25)) / 20))
+
+    it('reads digital silence as neutral and keeps the profile gate', () => {
+        const ev = track(flat, noiseConfidence).reverbEvidence(new Float32Array(N), HOP)
+        expect(ev).toEqual(neutral)
+        expect(shipped.decide(ev, 0.5, true, HOP).gate).toBe(0.5)
+    })
+
+    it('reads stationary noise as neutral and keeps the profile gate', () => {
+        const ev = track(flat, noiseConfidence).reverbEvidence(noise(0.01), HOP)
+        expect(ev).toEqual(neutral)
+        expect(shipped.decide(ev, 0.5, false, HOP).gate).toBe(0.5)
+    })
+
+    it('reads a steady hum CREPE hears as pitched as neutral too: it has no dynamics', () => {
+        expect(track(flat, new Array<number>(N).fill(0.6)).reverbEvidence(noise(0.01), HOP)).toEqual(neutral)
+    })
+
+    it('reads anything under -60 dBFS as neutral, pitched or not', () => {
+        expect(track(flat, new Array<number>(N).fill(0.7)).reverbEvidence(room(5e-4), HOP)).toEqual(neutral)
+    })
+
+    it('still measures a reverberant take, loud or quiet, and lowers its gate', () => {
+        for (const level of [1, 0.005]) {
+            const ev = track(flat, new Array<number>(N).fill(0.75)).reverbEvidence(room(level), HOP)
+            expect(ev.loudFrames).toBe(N)
+            expect(ev.confMed).toBeCloseTo(0.75)
+            expect(ev.maxDropDb).toBeCloseTo(4)
+            expect(shipped.decide(ev, 0.5, true, HOP).gate).toBeCloseTo(0.3)
+        }
     })
 })
 
@@ -142,7 +189,9 @@ describe('CrepeProvider streaming with the relative gate on', () => {
         return b
     }
 
-    const tone = (sec: number): Float32Array => Float32Array.from({ length: Math.round(sec * 16000) }, (_, i) => 0.3 * Math.sin((2 * Math.PI * 440 * i) / 16000))
+    /** Half-second notes decaying 40 dB/s, as in a room — a steady tone has no dynamics and reads neutral. */
+    const tone = (sec: number): Float32Array =>
+        Float32Array.from({ length: Math.round(sec * 16000) }, (_, i) => 0.3 * Math.pow(10, (-2 * ((i / 16000) % 0.5))) * Math.sin((2 * Math.PI * 440 * i) / 16000))
 
     async function provider(env: Record<string, string>): Promise<{ p: InstanceType<typeof import('../../src/recordings/pipeline/providers/crepe-provider').CrepeProvider>; b: ReturnType<typeof backend> }> {
         for (const [k, v] of Object.entries(env)) vi.stubEnv(k, v)
