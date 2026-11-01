@@ -141,12 +141,146 @@ export function pairedDiffCI(a: number[], b: number[], { resamples = DEFAULT_RES
     }
 }
 
-/** Compact one-line rendering: `+0.062 [+0.021,+0.104] n=20 σ=.13 ρ=.71 mde=.041 *`. */
-export function formatComparison(c: PairedComparison): string {
+/**
+ * One paired observation for `clusteredDiffCI`: a clip × condition scored under
+ * both configs, with the stratum it is averaged in and the cluster it is drawn with.
+ */
+export interface ClusteredPair {
+    /** The dataset. The statistic is the mean over strata of each stratum's mean — the headline's arithmetic. */
+    stratum: string
+    /** The performance: one clip with every condition it was scored under. The unit that is resampled. */
+    cluster: string
+    a: number
+    b: number
+}
+
+export interface ClusteredComparison extends PairedComparison {
+    /** The levels the difference is between: mean over strata of each stratum's mean, per config. */
+    levelA: number
+    levelB: number
+    /** Clusters the interval rests on, summed over strata. */
+    clusters: number
+    /** Strata with ONE cluster: resampling cannot vary them, so the interval omits their variance. */
+    singletonStrata: number
+}
+
+/**
+ * Paired cluster bootstrap of a mean-of-stratum-means difference `b − a`.
+ *
+ * `pairedDiffCI` treats every clip × condition as independent. On an all-condition
+ * run that is the wrong unit: the adverse variants of one performance are the same
+ * singer, melody and phrasing as its clean take, so they succeed and fail together
+ * (rule 1 above, one level up). Resampling them independently counts a performance
+ * up to five times and gives intervals that are too narrow. Here the unit drawn is
+ * the CLUSTER (a performance with all of its rows), drawn with replacement WITHIN
+ * each stratum (dataset), and the statistic is the one the headline reports: per
+ * stratum the mean over its drawn rows (a ratio estimator, so a cluster with more
+ * conditions weighs in proportion), then the mean over strata. Pairing works as in
+ * `pairedDiffCI`: one draw per replicate serves both configs.
+ *
+ * `n` counts rows, `clusters` the clusters; `mde` is 2.8016 × the bootstrap SE, the
+ * same 80 %-power / α = 0.05 reading as the clip-level version. σ, ρ and σ_diff are
+ * the row-level descriptives. A stratum with a single cluster contributes its
+ * point difference to every replicate and no variance (`singletonStrata` counts
+ * them), so a row resting mostly on such strata is narrower than it should be.
+ */
+export function clusteredDiffCI(
+    pairs: ClusteredPair[],
+    { resamples = DEFAULT_RESAMPLES, seed = 1, alpha = 0.05 } = {},
+): ClusteredComparison {
+    const n = pairs.length
+    if (n === 0) {
+        return {
+            point: 0,
+            low: 0,
+            high: 0,
+            sigma: 0,
+            rho: 0,
+            sigmaDiff: 0,
+            mde: Infinity,
+            n: 0,
+            significant: false,
+            levelA: 0,
+            levelB: 0,
+            clusters: 0,
+            singletonStrata: 0,
+        }
+    }
+    // stratum → cluster → (Σa, Σb, rows); insertion order is the input order, so a
+    // given pair list always draws the same replicates.
+    const strata = new Map<string, Map<string, { a: number; b: number; rows: number }>>()
+    for (const p of pairs) {
+        const byCluster = strata.get(p.stratum) ?? new Map<string, { a: number; b: number; rows: number }>()
+        const c = byCluster.get(p.cluster) ?? { a: 0, b: 0, rows: 0 }
+        c.a += p.a
+        c.b += p.b
+        c.rows += 1
+        byCluster.set(p.cluster, c)
+        strata.set(p.stratum, byCluster)
+    }
+    const groups = [...strata.values()].map((m) => [...m.values()])
+    const levelOf = (side: 'a' | 'b'): number =>
+        mean(groups.map((cs) => cs.reduce((s, c) => s + c[side], 0) / cs.reduce((s, c) => s + c.rows, 0)))
+    const levelA = levelOf('a')
+    const levelB = levelOf('b')
+
+    const rand = rng(seed)
+    const boots: number[] = []
+    for (let r = 0; r < resamples; r += 1) {
+        let sum = 0
+        for (const cs of groups) {
+            let d = 0
+            let rows = 0
+            for (let i = 0; i < cs.length; i += 1) {
+                const c = cs[(rand() * cs.length) | 0]
+                d += c.b - c.a
+                rows += c.rows
+            }
+            sum += d / rows
+        }
+        boots.push(sum / groups.length)
+    }
+    boots.sort((x, y) => x - y)
+
+    const a = pairs.map((p) => p.a)
+    const b = pairs.map((p) => p.b)
+    const diffs = pairs.map((p) => p.b - p.a)
+    const sdA = sd(a)
+    const sdB = sd(b)
+    const muA = mean(a)
+    const muB = mean(b)
+    let cov = 0
+    for (let i = 0; i < n; i += 1) cov += (a[i] - muA) * (b[i] - muB)
+    cov /= Math.max(1, n - 1)
+
+    const low = boots[Math.floor((alpha / 2) * resamples)]
+    const high = boots[Math.floor((1 - alpha / 2) * resamples)]
+    return {
+        point: levelB - levelA,
+        low,
+        high,
+        sigma: (sdA + sdB) / 2,
+        rho: sdA > 0 && sdB > 0 ? cov / (sdA * sdB) : 0,
+        sigmaDiff: sd(diffs),
+        mde: 2.8016 * sd(boots),
+        n,
+        significant: low > 0 || high < 0,
+        levelA,
+        levelB,
+        clusters: groups.reduce((s, cs) => s + cs.length, 0),
+        singletonStrata: groups.filter((cs) => cs.length === 1).length,
+    }
+}
+
+/**
+ * Compact one-line rendering: `+0.062 [+0.021,+0.104] n=20 σ=.13 ρ=.71 mde=.041 *`;
+ * a clustered comparison adds `k=<clusters>` after `n`.
+ */
+export function formatComparison(c: PairedComparison | ClusteredComparison): string {
     const sign = (x: number): string => (x >= 0 ? `+${x.toFixed(3)}` : x.toFixed(3))
     return (
         `${sign(c.point)} [${sign(c.low)},${sign(c.high)}] ` +
-        `n=${c.n} σ=${c.sigma.toFixed(2)} ρ=${c.rho.toFixed(2)} ` +
+        `n=${c.n}${'clusters' in c ? ` k=${c.clusters}` : ''} σ=${c.sigma.toFixed(2)} ρ=${c.rho.toFixed(2)} ` +
         `mde=${c.mde.toFixed(3)}${c.significant ? ' *' : ''}`
     )
 }

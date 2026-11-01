@@ -154,13 +154,41 @@ Compare benchmark runs only with each other, through `compare`.
 
 ## Statistics
 
-`compare` uses `lib/stats.ts`: a paired bootstrap over **clips** (not notes —
-notes in one take share a singer, a room and a register and fail together),
-with one index draw per replicate shared by both configs so between-clip
-variance cancels. It also prints σ, ρ, n and the minimum detectable effect, so
-an underpowered null cannot pass as a real one. The dev/test split
-(`lib/split.ts`) is drawn over **performers**, not clips, so a voice never sits
-on both sides.
+`compare` uses `lib/stats.ts`: a paired bootstrap over **performances** (not
+notes — notes in one take share a singer, a room and a register and fail
+together), with one draw per replicate shared by both configs so
+between-performance variance cancels. It also prints σ, ρ, n and the minimum
+detectable effect, so an underpowered null cannot pass as a real one. The
+dev/test split (`lib/split.ts`) is drawn over **performers**, not clips, so a
+voice never sits on both sides.
+
+Since 2026-11-01 (`clusteredDiffCI`) every row is computed the way the headline
+is — the **mean of dataset means** over the paired rows — and the unit
+resampled is the **performance**: one clip with all the conditions it was
+scored under, drawn with replacement within its dataset. Before, each
+clip × condition row was drawn as if independent and the rows were clip-level
+means. On an all-condition run that counted a performance up to five times (its
+adverse variants are the same singer and phrasing as its clean take), so the
+intervals were too narrow, and the levels were not the headline's. Measured on
+the degrade-fix correction (`recipe-base-full` → `h0-fixed`, 2,813 rows): ALL
++0.034 [+0.026, +0.041] by performance against +0.026 [+0.022, +0.031] by
+row on the old arithmetic; instrument [+0.045, +0.074] against
+[+0.053, +0.068]. On a `--quick` run (one row per clip) only the arithmetic
+differs (dataset means instead of pooled clips). Each row prints `n` (rows) and `k` (performances); a dataset with a
+single performance in the compared half adds its point difference and no
+variance (the row says so), so read URMP's 1–4-clip halves as direction only.
+Options:
+
+- `--cluster group` resamples the split's performer groups (`splitGroupOf`)
+  instead of performances: a sensitivity check, unreliable where a dataset has
+  only a handful of performers (GuitarSet has 6).
+- `--clip-ci` prints the pre-2026-11 rows unchanged, to set a new number beside
+  one recorded before.
+- `compare` warns when a dataset's truth hash differs between A and B: those
+  rows measure a truth change (a correction), not a pipeline change.
+
+The ship bar in "The workflow" applies to the default (performance-cluster)
+interval.
 
 ## The synthetic corpus (`--synth`)
 

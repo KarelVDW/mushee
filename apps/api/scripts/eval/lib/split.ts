@@ -169,6 +169,16 @@ export function splitOf(dataset: string, clip: string): 'dev' | 'test' {
     return hash(`${as}/${groupKeyFor(as, clip)}`) % 2 === 0 ? 'dev' : 'test'
 }
 
+/**
+ * The performer group a clip is split by (`groupKeyFor`, through `SPLIT_AS`) —
+ * the coarsest independent unit the corpus knows. `benchmark.ts compare
+ * --cluster group` resamples by it.
+ */
+export function splitGroupOf(dataset: string, clip: string): string {
+    const as = SPLIT_AS[dataset] ?? dataset
+    return groupKeyFor(as, clip)
+}
+
 export function inSplit(dataset: string, clip: string, want: Split): boolean {
     return want === 'all' || splitOf(dataset, clip) === want
 }

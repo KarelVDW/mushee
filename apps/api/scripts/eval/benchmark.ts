@@ -8,7 +8,7 @@
  *   tsx scripts/eval/benchmark.ts run [--label <name>] [--conditions real,echoey-room,…]
  *                                     [--datasets a,b] [--materials singing,…] [--split dev|test]
  *                                     [--quick] [--cached | --scratch]
- *   tsx scripts/eval/benchmark.ts compare <a.json> <b.json> [--split dev|test|all]
+ *   tsx scripts/eval/benchmark.ts compare <a.json> <b.json> [--split dev|test|all] [--cluster clip|group] [--clip-ci]
  *   tsx scripts/eval/benchmark.ts rescore <result id|path> [--label <name>]
  *   tsx scripts/eval/benchmark.ts render [<result.json>]
  *   (add --synth to any of them for the realistic synthetic corpus, fixtures/eval-synth)
@@ -25,8 +25,13 @@
  *
  * `--quick` scores only the `real` condition (the adverse variants roughly double
  * the run). `compare` pairs the two results clip-by-clip (dataset, clip,
- * condition) and reports the paired-bootstrap Δ COnP per material, per dataset
- * and per condition — a change is only a result when its interval excludes zero.
+ * condition) and reports Δ COnP per material, per dataset and per condition on
+ * the headline's arithmetic (mean of dataset means), with a paired cluster
+ * bootstrap that resamples performances — a clip with all of its conditions —
+ * within each dataset (`lib/stats.ts` `clusteredDiffCI`; `--cluster group`
+ * resamples the split's performer groups instead, `--clip-ci` restores the
+ * pre-2026-11 clip × condition interval). A change is only a result when its
+ * interval excludes zero.
  * `rescore` rebuilds a recorded run from its cached notes against the CURRENT
  * truth (no model loaded), for when the truth changed after the run.
  *
@@ -87,8 +92,8 @@ import {
     truthFingerprint,
     type TruthSource,
 } from './lib/realCorpus'
-import { inSplit, type Split, splitOf } from './lib/split'
-import { formatComparison, pairedDiffCI } from './lib/stats'
+import { inSplit, type Split, splitGroupOf, splitOf } from './lib/split'
+import { clusteredDiffCI, formatComparison, pairedDiffCI } from './lib/stats'
 import { TrackCache } from './lib/trackCache'
 import { VariantTrackCache } from './lib/variantCache'
 import { printReport } from './run-eval'
@@ -234,7 +239,7 @@ function flag(name: string): boolean {
     return process.argv.includes(`--${name}`)
 }
 /** The options that take a value — everything else after the command is a flag or a positional. */
-const VALUED = ['--label', '--conditions', '--datasets', '--materials', '--split']
+const VALUED = ['--label', '--conditions', '--datasets', '--materials', '--split', '--cluster']
 /** A label as it appears in a result id. */
 function cleanLabel(v: string): string {
     return v.replace(/[^A-Za-z0-9._-]+/g, '-')
@@ -797,32 +802,69 @@ function compare(aPath: string, bPath: string): void {
         `paired clip×conditions: ${pairs.length} (split=${split}, benchmark-grade only)` +
             `${onlyA || onlyB ? `; unpaired: ${onlyA} only in A, ${onlyB} only in B` : ''}`,
     )
+    const truthChanged = Object.keys(b.meta.corpus ?? {}).filter(
+        (d) => a.meta.corpus?.[d] && a.meta.corpus[d].truthHash !== b.meta.corpus?.[d]?.truthHash,
+    )
+    if (truthChanged.length) {
+        console.log(
+            `⚠ truth differs between A and B for ${truthChanged.join(', ')}: those rows measure a truth change, not a pipeline change`,
+        )
+    }
+
+    // Default: the headline's own arithmetic (mean of dataset means) with a paired
+    // CLUSTER bootstrap — performances (a clip with all its conditions; `--cluster
+    // group`: the split's performer group) resampled within each dataset. `--clip-ci`
+    // keeps the pre-2026-11 rows (clip-level means, clip × condition resampled as
+    // independent) for comparison with numbers recorded before.
+    const clipCI = flag('clip-ci')
+    const clusterBy = arg('cluster') ?? 'clip'
+    if (clusterBy !== 'clip' && clusterBy !== 'group') throw new Error(`--cluster must be clip or group (got ${clusterBy})`)
+    const clusterOf = (p: Pair): string => (clusterBy === 'group' ? splitGroupOf(p.d, p.a.c) : p.a.c)
     console.log(
-        '\nΔ COnP = B − A, paired bootstrap over clips (* = 95 % CI excludes zero; mde = smallest detectable effect at 80 % power)\n',
+        clipCI
+            ? '\nΔ COnP = B − A, paired bootstrap over clip × condition rows as independent units (--clip-ci, the pre-2026-11 interval;\n' +
+                  'levels are clip-level means — read direction + significance, not the level)\n'
+            : '\nΔ COnP = B − A on the mean of dataset means (the RESULTS.md arithmetic); 95 % CI by a paired cluster bootstrap that\n' +
+                  `resamples ${clusterBy === 'group' ? "performer groups (lib/split.ts)" : 'performances (a clip with all of its conditions)'} within each dataset ` +
+                  '(n = rows, k = clusters; * = CI excludes zero; mde = smallest effect detectable at 80 % power)\n',
     )
 
     const row = (name: string, ps: Pair[]): void => {
         if (!ps.length) return
-        const ci = pairedDiffCI(
-            ps.map((p) => p.a.f1),
-            ps.map((p) => p.b.f1),
-        )
-        const ciOff = pairedDiffCI(
-            ps.map((p) => p.a.f1Off),
-            ps.map((p) => p.b.f1Off),
-        )
-        const meanA = ps.reduce((s, p) => s + p.a.f1, 0) / ps.length
-        const meanB = ps.reduce((s, p) => s + p.b.f1, 0) / ps.length
+        if (clipCI) {
+            const ci = pairedDiffCI(
+                ps.map((p) => p.a.f1),
+                ps.map((p) => p.b.f1),
+            )
+            const ciOff = pairedDiffCI(
+                ps.map((p) => p.a.f1Off),
+                ps.map((p) => p.b.f1Off),
+            )
+            const meanA = ps.reduce((s, p) => s + p.a.f1, 0) / ps.length
+            const meanB = ps.reduce((s, p) => s + p.b.f1, 0) / ps.length
+            console.log(
+                name.padEnd(28) +
+                    `${meanA.toFixed(3)} → ${meanB.toFixed(3)}  ` +
+                    formatComparison(ci).padEnd(52) +
+                    `COnPOff ${ciOff.point >= 0 ? '+' : ''}${ciOff.point.toFixed(3)}${ciOff.significant ? '*' : ''}`,
+            )
+            return
+        }
+        const ci = clusteredDiffCI(ps.map((p) => ({ stratum: p.d, cluster: clusterOf(p), a: p.a.f1, b: p.b.f1 })))
+        const ciOff = clusteredDiffCI(ps.map((p) => ({ stratum: p.d, cluster: clusterOf(p), a: p.a.f1Off, b: p.b.f1Off })))
         console.log(
             name.padEnd(28) +
-                `${meanA.toFixed(3)} → ${meanB.toFixed(3)}  ` +
-                formatComparison(ci).padEnd(52) +
-                `COnPOff ${ciOff.point >= 0 ? '+' : ''}${ciOff.point.toFixed(3)}${ciOff.significant ? '*' : ''}`,
+                `${ci.levelA.toFixed(3)} → ${ci.levelB.toFixed(3)}  ` +
+                formatComparison(ci).padEnd(62) +
+                `  COnPOff ${ciOff.point >= 0 ? '+' : ''}${ciOff.point.toFixed(3)}${ciOff.significant ? '*' : ''}` +
+                (ci.singletonStrata ? `  (${ci.singletonStrata} dataset(s) with one cluster: no variance from them)` : ''),
         )
     }
 
     console.log(
-        '--- by material (clip-level pairs; the RESULTS.md headline is a dataset-mean, so read direction + significance here, not the level) ---',
+        clipCI
+            ? '--- by material (clip-level pairs; the RESULTS.md headline is a dataset-mean, so read direction + significance here, not the level) ---'
+            : '--- by material (mean of dataset means, as the headline) ---',
     )
     for (const m of MATERIAL_ORDER)
         row(
@@ -845,7 +887,7 @@ function compare(aPath: string, bPath: string): void {
 
     const conds = [...new Set(pairs.map((p) => p.cond))]
     if (conds.length > 1) {
-        console.log('\n--- by condition ---')
+        console.log(clipCI ? '\n--- by condition ---' : '\n--- by condition (mean of the means of the datasets that have it) ---')
         for (const c of conds)
             row(
                 c,
@@ -1023,7 +1065,8 @@ async function main(): Promise<void> {
     console.log(
         'usage: benchmark.ts run [--label X] [--conditions a,b] [--datasets a,b] [--materials m,n] [--split dev|test]\n' +
             '                        [--quick] [--synth] [--cached | --scratch]\n' +
-            '       benchmark.ts compare <a.json> <b.json> [--split dev|test|all] [--synth] [--cached | --scratch]\n' +
+            '       benchmark.ts compare <a.json> <b.json> [--split dev|test|all] [--cluster clip|group] [--clip-ci]\n' +
+            '                            [--synth] [--cached | --scratch]\n' +
             '       benchmark.ts render [<result.json>] [--synth]\n' +
             '       benchmark.ts rescore <result id|path> [--label X] [--synth]',
     )
