@@ -8,6 +8,8 @@ import {
     PITCHDOWN_PROVIDER_NAME,
     SUSTAINED_ONSET_DIP_RATIO,
 } from '../../src/recordings/pipeline/profiles/pipeline-profile'
+import type { ProfileHint } from '../../src/recordings/pipeline/profiles/profile-resolver'
+import type { SourceAnalysis } from '../../src/recordings/pipeline/profiles/source-classifier'
 
 const n = (start: number, dur: number, midi: number, amp = 0.5) => ({
     startTimeSeconds: start,
@@ -142,5 +144,82 @@ describe('AudioConverter.bridgesSamePitchGaps (who gets the bridge)', () => {
         const anyLength = (await import('../../src/recordings/pipeline/audio-converter')).AudioConverter.cleanupFor(false, sustained)
         expect(anyLength).toMatchObject({ bridgeSamePitchGapSec: 0.12 })
         expect(anyLength).not.toHaveProperty('bridgeMaxFragmentSec')
+    })
+})
+
+/**
+ * Who gets the bridge through the RESOLVER, end to end: the family split the bridge
+ * reads (`onsetDipRatio`) comes from `applyOnsetPolicy`, so a change there changes
+ * the bridge's reach. The classifier's verdict is pinned (no model); the take is a
+ * held 220 Hz tone, which routes to the at-pitch provider.
+ */
+describe('who gets the bridge, through the resolver', () => {
+    const SR = 16000
+    const tone = new Float32Array(2 * SR).map(
+        (_, i) => 0.3 * Math.sin((2 * Math.PI * 220 * i) / SR) + 0.1 * Math.sin((4 * Math.PI * 220 * i) / SR),
+    )
+    const INSTRUMENT: SourceAnalysis = { source: 'instrument', whistling: false, struckOrPlucked: false }
+    const PLUCKED: SourceAnalysis = { source: 'instrument', whistling: false, struckOrPlucked: true }
+
+    async function bridgedUnder(analysis: SourceAnalysis | undefined, env: Record<string, string> = {}) {
+        vi.resetModules()
+        for (const [k, v] of Object.entries(env)) vi.stubEnv(k, v)
+        vi.stubEnv('RECORDING_SOURCE_CLASSIFY', '0')
+        const { SourceClassifier } = await import('../../src/recordings/pipeline/profiles/source-classifier')
+        const analyze = vi.spyOn(SourceClassifier.prototype, 'analyze').mockReturnValue(analysis)
+        const { ProfileResolver } = await import('../../src/recordings/pipeline/profiles/profile-resolver')
+        const { AudioConverter: Converter } = await import('../../src/recordings/pipeline/audio-converter')
+        const resolver = new ProfileResolver()
+        return { analyze, bridged: (hint: ProfileHint) => Converter.bridgesSamePitchGaps(resolver.resolve(tone, SR, hint)) }
+    }
+
+    afterEach(() => {
+        vi.restoreAllMocks()
+        vi.unstubAllEnvs()
+        vi.resetModules()
+    })
+
+    it('declared: struck/plucked scores never, sustained scores always — and the verdict is not consulted', async () => {
+        const { analyze, bridged } = await bridgedUnder(PLUCKED)
+        for (const id of ['guitar', 'piano', 'bass-guitar']) expect(bridged({ instrumentId: id, sourceKind: 'instrument' }), id).toBe(false)
+        for (const id of ['cello', 'violin', 'flute']) expect(bridged({ instrumentId: id, sourceKind: 'instrument' }), id).toBe(true)
+        expect(bridged({ instrumentId: 'cello', sourceKind: 'voice' })).toBe(false)
+        expect(analyze).not.toHaveBeenCalled()
+    })
+
+    it('undeclared, heard as a sustained instrument: the bridge on any non-plucked score, none on a plucked one', async () => {
+        const { bridged } = await bridgedUnder(INSTRUMENT)
+        expect(bridged({ instrumentId: 'voice-lead' })).toBe(true)
+        expect(bridged({})).toBe(true)
+        expect(bridged({ instrumentId: 'violin' })).toBe(true)
+        // The audio only moves a take INTO the struck/plucked family; the score still can.
+        expect(bridged({ instrumentId: 'guitar' })).toBe(false)
+    })
+
+    it('undeclared, heard as struck/plucked: no bridge on a voice or empty score; a named instrument still decides', async () => {
+        const { bridged } = await bridgedUnder(PLUCKED)
+        for (const hint of [{ instrumentId: 'voice-lead' }, {}, { instrumentId: 'piano' }]) {
+            expect(bridged(hint), JSON.stringify(hint)).toBe(false)
+        }
+        // The verdict's false positives are low sustained instruments (a tuba heard as
+        // "Bass guitar"), so it never overrules a score that names a sustained one.
+        for (const id of ['violin', 'cello', 'tuba']) expect(bridged({ instrumentId: id }), id).toBe(true)
+    })
+
+    it('undeclared, heard as a voice or abstaining: the voice route, or the score prior', async () => {
+        expect(
+            (await bridgedUnder({ source: 'voice', whistling: false, struckOrPlucked: false })).bridged({ instrumentId: 'violin' }),
+        ).toBe(false)
+        const abstain = (await bridgedUnder(undefined)).bridged
+        expect(abstain({ instrumentId: 'cello' })).toBe(true)
+        expect(abstain({ instrumentId: 'voice-lead' })).toBe(false)
+        expect(abstain({ instrumentId: 'guitar' })).toBe(false)
+    })
+
+    it('RECORDING_PLUCKED_DETECT=0 lets the score alone decide again', async () => {
+        const { bridged } = await bridgedUnder(PLUCKED, { RECORDING_PLUCKED_DETECT: '0' })
+        expect(bridged({ instrumentId: 'voice-lead' })).toBe(true)
+        expect(bridged({})).toBe(true)
+        expect(bridged({ instrumentId: 'guitar' })).toBe(false)
     })
 })

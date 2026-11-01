@@ -43,7 +43,7 @@ import { addOnsetClassStats, emptyOnsetClassStats, type OnsetClassStats, onsetRe
 import { discoverRealDatasets, isPooled, type Material, type RealDataset, type TruthSource } from './realCorpus'
 import { repairSecondsPer100, type SegErrorCounts, segErrors } from './segErrors'
 import { splitOf } from './split'
-import { harnessHint } from './trackCache'
+import { harnessHint, harnessNeedsClassifier } from './trackCache'
 
 const DETECT_SR = 16000
 
@@ -390,8 +390,9 @@ export async function buildTranscriber(o: EvalOptions, decoder: AudioDecoder): P
         await registry.initAll()
         const resolver = new ProfileResolver()
         // The source classifier loads asynchronously and abstains until it has:
-        // wait, so no clip's routing depends on how fast the model came up.
-        await resolver.ready()
+        // wait, so no clip's routing depends on how fast the model came up (and
+        // fail on a missing model whenever no sourceKind will be declared).
+        await resolver.ready(o.noHint || harnessNeedsClassifier())
         return async (scenario, buf, bpm) => {
             const det = await decoder.decode(buf, DETECT_SR, { loudnorm: false, highpassHz: 30 })
             const profile = resolver.resolve(det.samples, DETECT_SR, hintsFor(scenario, o.noHint))

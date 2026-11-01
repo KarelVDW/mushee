@@ -178,12 +178,75 @@ export type SourceVerdict = 'voice' | 'instrument'
 const WHISTLING_CLASS = 'Whistling'
 const WHISTLING_TOP_K = 3
 
-/** One YAMNet pass over the prefix: the voice/instrument verdict and the whistling verdict. */
+/**
+ * Struck / plucked against sustained instruments, the onset policy's family split
+ * (`ProfileResolver`'s `applyOnsetPolicy`) asked of the audio: published AudioSet
+ * classes sorted by how the instrument makes its note, fixed a priori from the
+ * ontology (Pizzicato is plucked, Double bass is filed under the bowed strings),
+ * and decided like the voice/instrument rule — each group's strongest member, the
+ * same abstain band. Generic classes (Musical instrument, Percussion, Orchestra,
+ * Synthesizer) vote for neither. Read by the resolver only when the caller
+ * declared no `sourceKind`; its measured recall and false positives are on
+ * `RECORDING_PLUCKED_DETECT` there.
+ */
+const STRUCK_OR_PLUCKED_CLASSES = new Set([
+    'Plucked string instrument',
+    'Guitar',
+    'Electric guitar',
+    'Bass guitar',
+    'Acoustic guitar',
+    'Steel guitar, slide guitar',
+    'Tapping (guitar technique)',
+    'Strum',
+    'Banjo',
+    'Sitar',
+    'Mandolin',
+    'Zither',
+    'Ukulele',
+    'Keyboard (musical)',
+    'Piano',
+    'Electric piano',
+    'Harpsichord',
+    'Harp',
+    'Pizzicato',
+    'Marimba, xylophone',
+    'Glockenspiel',
+    'Vibraphone',
+    'Steelpan',
+])
+const SUSTAINED_INSTRUMENT_CLASSES = new Set([
+    'Organ',
+    'Electronic organ',
+    'Hammond organ',
+    'Brass instrument',
+    'French horn',
+    'Trumpet',
+    'Trombone',
+    'Bowed string instrument',
+    'String section',
+    'Violin, fiddle',
+    'Cello',
+    'Double bass',
+    'Wind instrument, woodwind instrument',
+    'Flute',
+    'Saxophone',
+    'Clarinet',
+    'Harmonica',
+    'Accordion',
+    'Bagpipes',
+    'Didgeridoo',
+    'Shofar',
+    'Theremin',
+])
+
+/** One YAMNet pass over the prefix: the voice/instrument verdict, the whistling verdict and the struck/plucked verdict. */
 export interface SourceAnalysis {
     /** Undefined inside the abstain band (see `decideSource`). */
     source: SourceVerdict | undefined
     /** True when "Whistling" ranks in the top `WHISTLING_TOP_K` of the prefix's class scores. */
     whistling: boolean
+    /** True when the struck/plucked group beats the sustained-instrument group outside the abstain band. */
+    struckOrPlucked: boolean
 }
 
 /** Sigmoid the frame logits and average over frames: one score per class. */
@@ -198,16 +261,26 @@ function meanClassScores(frameLogits: Float32Array, frames: number, numClasses: 
     return mean
 }
 
-function sourceFromScores(mean: Float32Array, classNames: string[]): SourceVerdict | undefined {
-    let voice = 0
-    let instrument = 0
+/** Which of two class groups the prefix favours by its strongest member, or undefined inside the abstain band. */
+function strongerGroup(mean: Float32Array, classNames: string[], a: Set<string>, b: Set<string>): 'a' | 'b' | undefined {
+    let top = 0
+    let other = 0
     for (let c = 0; c < mean.length; c += 1) {
-        if (VOICE_CLASSES.has(classNames[c])) voice = Math.max(voice, mean[c])
-        if (INSTRUMENT_CLASSES.has(classNames[c])) instrument = Math.max(instrument, mean[c])
+        if (a.has(classNames[c])) top = Math.max(top, mean[c])
+        if (b.has(classNames[c])) other = Math.max(other, mean[c])
     }
-    if (Math.max(voice, instrument) < MIN_TOP) return undefined
-    if (Math.abs(voice - instrument) < MIN_MARGIN) return undefined
-    return voice > instrument ? 'voice' : 'instrument'
+    if (Math.max(top, other) < MIN_TOP) return undefined
+    if (Math.abs(top - other) < MIN_MARGIN) return undefined
+    return top > other ? 'a' : 'b'
+}
+
+function sourceFromScores(mean: Float32Array, classNames: string[]): SourceVerdict | undefined {
+    const group = strongerGroup(mean, classNames, VOICE_CLASSES, INSTRUMENT_CLASSES)
+    return group === undefined ? undefined : group === 'a' ? 'voice' : 'instrument'
+}
+
+function struckOrPluckedFromScores(mean: Float32Array, classNames: string[]): boolean {
+    return strongerGroup(mean, classNames, STRUCK_OR_PLUCKED_CLASSES, SUSTAINED_INSTRUMENT_CLASSES) === 'a'
 }
 
 /**
@@ -238,10 +311,14 @@ export function decideSource(
     return sourceFromScores(meanClassScores(frameLogits, frames, numClasses), classNames)
 }
 
-/** Both verdicts from one set of frame logits (pure, like `decideSource`). */
+/** Every verdict from one set of frame logits (pure, like `decideSource`). */
 export function analyzeScores(frameLogits: Float32Array, frames: number, numClasses: number, classNames: string[]): SourceAnalysis {
     const mean = meanClassScores(frameLogits, frames, numClasses)
-    return { source: sourceFromScores(mean, classNames), whistling: whistlingFromScores(mean, classNames) }
+    return {
+        source: sourceFromScores(mean, classNames),
+        whistling: whistlingFromScores(mean, classNames),
+        struckOrPlucked: struckOrPluckedFromScores(mean, classNames),
+    }
 }
 
 /** index,mid,display_name — display_name may be quoted and contain commas. */
@@ -294,9 +371,21 @@ export class SourceClassifier {
         }
     }
 
-    /** Resolves once the model has loaded (or failed). For tests and warm-up. */
-    async ready(): Promise<void> {
+    /**
+     * Resolves once the model has loaded (or failed). For tests and warm-up.
+     * `required`: a model that failed to load (missing directory, bad weights) is
+     * an error instead of a silent abstain — for a caller whose output is keyed as
+     * if the classifier had voted (the eval harness's caches under the undeclared
+     * mode or the whistle check). Switched off by `RECORDING_SOURCE_CLASSIFY=0` is
+     * not a failure: that is a choice, and the caller's cache key records it.
+     */
+    async ready(required = false): Promise<void> {
         await loading
+        if (required && CLASSIFY && !loaded) {
+            throw new Error(
+                `YAMNet source classifier unavailable (model at ${MODEL_DIR}) — its verdicts would silently fall back to the prior`,
+            )
+        }
     }
 
     /**
@@ -309,7 +398,7 @@ export class SourceClassifier {
     }
 
     /**
-     * Both verdicts from one model pass, or undefined when the model cannot
+     * Every verdict from one model pass, or undefined when the model cannot
      * answer at all (not ready / too short / wrong rate / disabled) — distinct
      * from an abstaining `source` on audio it did hear.
      */

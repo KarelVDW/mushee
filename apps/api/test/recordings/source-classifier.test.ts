@@ -1,7 +1,13 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { ProfileResolver } from '../../src/recordings/pipeline/profiles/profile-resolver'
-import { decideSource, parseClassMap, SourceClassifier, YAMNET_SAMPLE_RATE } from '../../src/recordings/pipeline/profiles/source-classifier'
+import {
+    analyzeScores,
+    decideSource,
+    parseClassMap,
+    SourceClassifier,
+    YAMNET_SAMPLE_RATE,
+} from '../../src/recordings/pipeline/profiles/source-classifier'
 
 /**
  * The classifier's decision rule is pure (logits in, verdict out), so it is
@@ -55,6 +61,48 @@ describe('decideSource', () => {
         all.set(b, NAMES.length)
         all.set(c, NAMES.length * 2)
         expect(decideSource(all, 3, NAMES.length, NAMES)).toBe('voice')
+    })
+})
+
+describe('analyzeScores (struck/plucked verdict)', () => {
+    const PLUCK_NAMES = ['Silence', 'Music', 'Guitar', 'Piano', 'Pizzicato', 'Cello', 'Flute', 'Double bass', 'Musical instrument']
+    const verdict = (hot: Record<string, number>) =>
+        analyzeScores(frame(PLUCK_NAMES, hot), 1, PLUCK_NAMES.length, PLUCK_NAMES).struckOrPlucked
+
+    it('says struck/plucked when a plucked or struck class beats every sustained one', () => {
+        expect(verdict({ Guitar: 2, Cello: 1 })).toBe(true)
+        expect(verdict({ Piano: 1.5, Music: 3 })).toBe(true)
+        expect(verdict({ Pizzicato: 2, 'Double bass': 1.5 })).toBe(true)
+    })
+
+    it('does not when a sustained class is stronger, and ignores the generic classes', () => {
+        expect(verdict({ Flute: 2, Guitar: 1 })).toBe(false)
+        expect(verdict({ 'Double bass': 2, Pizzicato: 1.5 })).toBe(false)
+        expect(verdict({ 'Musical instrument': 3, Cello: 1, Guitar: 0.5 })).toBe(false)
+    })
+
+    it('abstains like the source rule: nothing above the floor, or the groups within noise', () => {
+        expect(verdict({ Silence: 3 })).toBe(false)
+        expect(verdict({ Guitar: 1.001, Cello: 1.0 })).toBe(false)
+    })
+})
+
+describe('SourceClassifier.ready(required)', () => {
+    afterEach(() => {
+        vi.unstubAllEnvs()
+        vi.resetModules()
+    })
+
+    it('throws on a missing model only when the verdict is required, and never when classification is switched off', async () => {
+        vi.stubEnv('YAMNET_MODEL_DIR', '/nonexistent/model-yamnet')
+        vi.resetModules()
+        const missing = (await import('../../src/recordings/pipeline/profiles/source-classifier')).SourceClassifier
+        await expect(new missing().ready()).resolves.toBeUndefined()
+        await expect(new missing().ready(true)).rejects.toThrow(/unavailable/)
+        vi.stubEnv('RECORDING_SOURCE_CLASSIFY', '0')
+        vi.resetModules()
+        const off = (await import('../../src/recordings/pipeline/profiles/source-classifier')).SourceClassifier
+        await expect(new off().ready(true)).resolves.toBeUndefined()
     })
 })
 

@@ -56,6 +56,18 @@ import type { PitchProvider, PitchSession, PitchTranscribeOptions } from './prov
  * guitar and bass guitar exactly 0.
  * Wider veto margins (50–100 ms) were measured too: they save fewer repeats than
  * they cost fragment joins (URMP COnP lower at every margin).
+ *
+ * Undeclared input — what the app sends (no `sourceKind`; the score is whatever the
+ * user picked; `EVAL_UNDECLARED_SOURCE=1`, cached, all conditions, both splits as a
+ * guard, nothing tuned; 2026-11-01): the guards above were declared-hint only, and
+ * GuitarSet on a `voice-lead` or empty score got the sustained dip and this bridge.
+ * Bridge on vs off there: COnP +0.005 [+0.000, +0.009]* dev (rooms +0.009*, clean
+ * −0.004) / +0.005 n.s. test, but COnPOff −0.007* dev (clean −0.011*); synthetic
+ * piano / guitar / bass guitar −0.002 n.s. (home-phone −0.004). Such takes now get the
+ * struck/plucked family from the audio (`RECORDING_PLUCKED_DETECT`, profile-resolver.ts):
+ * on a `voice-lead` score, the declared `guitar` row note for note on test. A plucked or
+ * struck take on a score that names a SUSTAINED instrument still gets the dip and the
+ * bridge; the numbers above (voice-lead and empty scores) stand in for what that costs.
  */
 const BRIDGE_GAP_SEC = envNumber('EXTRACTOR_BRIDGE_GAP_SEC', 0.12)
 /** The bridge's fragment condition (`NoteExtractorOptions.bridgeMaxFragmentSec`); 0.2 s ships, `0` = any length. */
@@ -208,7 +220,18 @@ export class AudioConverter {
      * That last condition is the onset policy's own family split
      * (`applyOnsetPolicy`): struck / plucked instruments keep the detector's
      * default and leave `onsetDipRatio` unset, and a family that disables the
-     * detector sets it to 0. Under `ONSET_POLICY=legacy` nobody qualifies.
+     * detector sets it to 0. The family is the score's instrument or, when no
+     * `sourceKind` was declared and the score names no instrument (a voice part or
+     * none), what the audio sounds like (`RECORDING_PLUCKED_DETECT` in the
+     * resolver); a plucked or struck take on a score naming a sustained instrument
+     * still qualifies — measured on `EXTRACTOR_BRIDGE_GAP_SEC`.
+     *
+     * Coupled on purpose: `ONSET_POLICY=legacy` leaves every `onsetDipRatio` unset
+     * and `ONSET_DIP_RATIO=0` zeroes the sustained one, so either also switches the
+     * bridge off and an A/B of those knobs measures both changes (pin
+     * `EXTRACTOR_BRIDGE_GAP_SEC=0` in both arms to see the onset knob alone).
+     * Decoupling needs a family field of its own on the profile, and under a 0 dip
+     * the detector reports no re-attacks, which would leave the bridge's veto blind.
      */
     static bridgesSamePitchGaps(profile: PipelineProfile | undefined): boolean {
         return (

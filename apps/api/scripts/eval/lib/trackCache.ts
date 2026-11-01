@@ -118,12 +118,40 @@ const RESOLVER_ENV_KEYS = [
     'EVAL_UNDECLARED_SOURCE',
     'EVAL_UNDECLARED_HINT',
     'RECORDING_WHISTLE_ONSET_RAMP',
+    // The classifier's kill-switch: under the undeclared mode or the whistle check its
+    // verdicts are profile fields (and a missing model now throws, `harnessNeedsClassifier`).
+    'RECORDING_SOURCE_CLASSIFY',
+    // The heard struck/plucked onset family (profile-resolver.ts).
+    'RECORDING_PLUCKED_DETECT',
 ]
 export const DEFAULT_RESOLVER_ENV = 'default'
 
+/**
+ * The version of the classifier rules an UNDECLARED profile depends on, part of the
+ * signature under `EVAL_UNDECLARED_SOURCE=1` only. There the verdicts decide profile
+ * fields, so an entry resolved under older rules gets its own subtree instead of
+ * replaying stale; declared entries never read those verdicts (the whistle check has
+ * its own knob) and keep their signature. Bumped instead of CACHE_VERSION because the
+ * cache tree is shared with the lane worktrees, whose code still resolves the old rules.
+ *
+ * 2: the struck/plucked verdict moves heard-plucked takes into that onset family
+ *    (`RECORDING_PLUCKED_DETECT`, 2026-11-01). Version 1 is every entry before it.
+ */
+const UNDECLARED_RULES_VERSION = 2
+
 export function resolverEnvSignature(): string {
     const set = RESOLVER_ENV_KEYS.filter((k) => (process.env[k] ?? '') !== '').map((k) => `${k}=${process.env[k]}`)
+    if (process.env.EVAL_UNDECLARED_SOURCE === '1') set.push(`UNDECLARED_RULES=${UNDECLARED_RULES_VERSION}`)
     return set.length ? set.join(';') : DEFAULT_RESOLVER_ENV
+}
+
+/**
+ * Whether the harness will declare no `sourceKind`, so the classifier's verdicts are
+ * what the cached profile records — the resolver's `ready` must then fail loudly on a
+ * missing model rather than resolve by the prior under the same cache key.
+ */
+export function harnessNeedsClassifier(): boolean {
+    return process.env.EVAL_UNDECLARED_SOURCE === '1'
 }
 
 /**
@@ -267,7 +295,7 @@ export class TrackCache {
         // model is awaited anyway, because the whistle check and the undeclared
         // mode do ask it — and a cached profile must be a pure function of the
         // dataset, never of how fast YAMNet loaded.
-        await this.resolver.ready()
+        await this.resolver.ready(harnessNeedsClassifier())
         const profile = this.resolver.resolve(det.samples, DETECT_SR, harnessHint(ds.instrumentId, ds.kind))
         const provider = this.registry.get(profile.providerName)
         // Any provider exposing a frame-level trajectory is cacheable — that is

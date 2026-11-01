@@ -180,6 +180,61 @@ const WHISTLE_FAMILY = WHISTLE_DETECT || WHISTLE_PITCHDOWN || WHISTLE_ONSET_DIP 
  */
 const HIGH_BAND_PITCHDOWN = envFlag('RECORDING_HIGH_BAND_PITCHDOWN', false)
 
+/**
+ * The struck / plucked onset family from the AUDIO (2026-11-01): when the caller
+ * declared no `sourceKind` — the app never does — the score names no instrument
+ * (a voice part, which is also the app's fallback score, or none) and the
+ * classifier hears a struck or plucked instrument (`SourceAnalysis.struckOrPlucked`),
+ * the take gets that family's onset policy: the detector's default dip, and so no
+ * same-pitch gap bridge (`AudioConverter.bridgesSamePitchGaps` reads the family
+ * from `onsetDipRatio`). A declared `sourceKind` never reads the verdict, so every
+ * declared profile is unchanged; a score that names an instrument keeps deciding
+ * the family as before. `RECORDING_PLUCKED_DETECT=0` is the kill-switch.
+ *
+ * Why: the score is a prior, and a guitar or piano played into a voice or empty
+ * score was given the sustained dip and the bridge. The dip was measured to COST
+ * on plucked/struck takes (`SUSTAINED_ONSET_DIP_RATIO`: GuitarSet −0.008*), and the
+ * bridge's guards ("GuitarSet note-identical", "piano, guitar, bass exactly 0")
+ * were measured with declared hints only.
+ *
+ * Why only on a score that names no instrument: the verdict's false positives sit
+ * on low sustained instruments, which YAMNet often hears as plucked strings or a
+ * keyboard (first 4 s, both splits: URMP tuba 11 of 15 clip × conditions, synthetic
+ * contrabassoon 9/20, euphonium 7/24, tuba 7/24), so letting it overrule a `tuba`
+ * score would take the sustained policy from tubas recorded into their own part —
+ * the common case — to fix a guitar played into a tuba part. That case stays: a
+ * plucked or struck take on a score naming a sustained instrument still gets the
+ * sustained dip and the bridge (its cost is on `EXTRACTOR_BRIDGE_GAP_SEC`).
+ *
+ * ## Measured 2026-11-01 (rule fixed a priori, nothing tuned; both splits as guard looks)
+ *
+ * The verdict, at the production lock prefix (first pitched ≥ 1.2 s) / from 2.2 s /
+ * on the first 4 s the harness cache resolves on: GuitarSet 235 / 244 / 248 of 250
+ * clip × conditions (real 50/50, echoey 49/50, distant 40/50, measured RIRs 96/100 at
+ * the lock); synthetic piano, guitar and bass guitar 41 / 59 / 60 of 60. False
+ * positives at the lock (4 s): URMP + TinySOL 25/400 (31), synthetic sustained
+ * instruments 22/684 (31), singing app takes 1/52, whistles 1/142, synthetic voices 0/162.
+ *
+ * Undeclared rows (`EVAL_UNDECLARED_SOURCE=1`, score `voice-lead` / none; this vs
+ * `RECORDING_PLUCKED_DETECT=0`, which is the old resolver profile for profile):
+ *   GuitarSet (cached, all conditions): COnP +0.000 [−0.008, +0.009] dev, +0.002
+ *     [−0.010, +0.017] test (no score: +0.000 / +0.001); COnPOff +0.015* / +0.017*
+ *     (+0.014* / +0.019*); clean +0.011* / +0.009, rooms −0.002…−0.008 n.s. — the
+ *     bridge's room gain given back for the dip's clean loss: on a `voice-lead`
+ *     score it is the declared `guitar` row note for note, but for 2 dev distant-mic
+ *     clips the verdict misses.
+ *   Synthetic piano / guitar / bass guitar (model path, home-phone + room): +0.006
+ *     [+0.002, +0.011]* over both splits (dev +0.009*, test −0.001), COnPOff +0.015*.
+ *   What a false positive costs, sustained instruments on a `voice-lead` score: URMP
+ *     −0.002 [−0.003, −0.001]* dev, +0.003 test; synthetic, the 8 instruments it ever
+ *     fires on, home-phone −0.003 [−0.006, −0.000]* (both splits), room +0.000.
+ * The harness verdict sees 4 s where production sees the lock prefix, and a miss
+ * leaves a take exactly as before; keeping the gated rows only where the verdict fires
+ * at the lock: GuitarSet COnP −0.002…+0.003 (n.s.), COnPOff +0.013…+0.017* on every
+ * split × score; synthetic +0.004…+0.006*.
+ */
+const PLUCKED_DETECT = envFlag('RECORDING_PLUCKED_DETECT')
+
 function whistleOnsetDip(raw: string | undefined): number | undefined {
     if (raw === undefined || raw === '' || raw === 'legacy') return undefined
     if (raw === 'off') return 0
@@ -351,12 +406,13 @@ function applyVoice(base: PipelineProfile, isVoice: boolean): PipelineProfile {
  * struck / plucked instruments keep the detector's default. For sustained instruments
  * the deeper dip gives way to the default as the take gets more reverberant, since a
  * heavy room fills the short gap between tongued repeated notes. See
- * `SUSTAINED_ONSET_DIP_RATIO` for the measurements.
+ * `SUSTAINED_ONSET_DIP_RATIO` for the measurements. `struckOrPlucked` is the score's
+ * instrument or, undeclared, the audio (`RECORDING_PLUCKED_DETECT`).
  */
 function applyOnsetPolicy(
     base: PipelineProfile,
     isVoice: boolean,
-    instrumentId: string | undefined,
+    struckOrPlucked: boolean,
     reverberance: number,
     whistle = false,
 ): PipelineProfile {
@@ -368,7 +424,7 @@ function applyOnsetPolicy(
         return { ...base, onsetDipRatio: dip }
     }
     if (isVoice) return { ...base, onsetDipRatio: VOICE_DIP_OVERRIDE ?? VOICE_ONSET_DIP_RATIO }
-    if (isStruckOrPluckedInstrument(instrumentId)) return base
+    if (struckOrPlucked) return base
     const dry = SUSTAINED_DIP_OVERRIDE ?? SUSTAINED_ONSET_DIP_RATIO
     if (!SUSTAINED_REVERB_RAMP) return { ...base, onsetDipRatio: dry }
     return { ...base, onsetDipRatio: dry + (OnsetDetector.DEFAULT_DIP_RATIO - dry) * clamp(reverberance, 0, 1) }
@@ -406,10 +462,14 @@ export class ProfileResolver {
      * Resolves once the source classifier's model has loaded (or failed to).
      * Production never waits — until then the classifier abstains and the prior
      * decides — but a caller that needs the verdict to be a pure function of the
-     * audio (the eval harness's cache builds) awaits this first.
+     * audio (the eval harness's cache builds) awaits this first, and passes
+     * `requireClassifier` when it will declare no `sourceKind`: a missing model
+     * then throws instead of quietly resolving by the prior. The whistle check
+     * (`RECORDING_WHISTLE_DETECT`) reads the verdict whatever the caller declares,
+     * so under it a missing model always throws here.
      */
-    async ready(): Promise<void> {
-        await this.sourceClassifier.ready()
+    async ready(requireClassifier = false): Promise<void> {
+        await this.sourceClassifier.ready(requireClassifier || WHISTLE_DETECT)
     }
 
     /**
@@ -433,6 +493,10 @@ export class ProfileResolver {
             hint?.sourceKind === 'voice' ||
             (hint?.sourceKind === undefined && (classified !== undefined ? classified === 'voice' : isVoiceInstrument(hint?.instrumentId)))
         const isVoice = voiceOtherwise && !whistle
+        const scoreNamesNoInstrument = hint?.instrumentId === undefined || isVoiceInstrument(hint.instrumentId)
+        const heardStruckOrPlucked =
+            PLUCKED_DETECT && hint?.sourceKind === undefined && scoreNamesNoInstrument && analysis?.struckOrPlucked === true
+        const struckOrPlucked = isStruckOrPluckedInstrument(hint?.instrumentId) || heardStruckOrPlucked
         const sourceDecidedBy: PipelineProfile['sourceDecidedBy'] =
             whistle && voiceOtherwise
                 ? heardWhistling
@@ -455,7 +519,7 @@ export class ProfileResolver {
                 ...applyOnsetPolicy(
                     applyVoice(this.applyNoise(markWhistle(DEFAULT_PROFILE, whistle), noisy), isVoice),
                     isVoice,
-                    hint?.instrumentId,
+                    struckOrPlucked,
                     reverberance,
                     whistle,
                 ),
@@ -498,7 +562,7 @@ export class ProfileResolver {
             ...applyOnsetPolicy(
                 applyVoice(applyReverb(this.applyNoise(anchor, noisy), reverberance), isVoice),
                 isVoice,
-                hint?.instrumentId,
+                struckOrPlucked,
                 reverberance,
                 whistle,
             ),
@@ -518,7 +582,7 @@ export class ProfileResolver {
                 `reverberance=${reverberance.toFixed(2)}, ` +
                 `hint=${hint?.instrumentId ?? 'none'}/${hint?.sourceKind ?? 'auto'}` +
                 `${hint?.sourceKind === undefined ? `, classified=${classified ?? 'abstain'}` : ''}` +
-                `${profile.isVoice ? ' VOICE' : ''}${whistle ? ' WHISTLE' : ''})`,
+                `${profile.isVoice ? ' VOICE' : ''}${whistle ? ' WHISTLE' : ''}${heardStruckOrPlucked ? ' PLUCKED' : ''})`,
         )
         return profile
     }
