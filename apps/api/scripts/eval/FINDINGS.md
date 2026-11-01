@@ -2638,6 +2638,63 @@ A review of the pass found two medium issues; both are fixed. (ADV-H2's hardenin
   (median +1.0 s); no note appears earlier, the median time to screen goes 1.36 → 1.37 s. `check-streaming.ts`
   (`e0bb7de1`) now compares note lengths and has three held-note scenarios, all of which failed before the fix.
 
+### After the pass: SING-H1's condition-masked loss, diagnosed; one ship (SDRY-1, existence floor)
+
+**The finding.** The headline pools each dataset's conditions into one mean, and that hid two losses of the 0.05
+shift. Per dataset × condition on test (SING-H1 vs `h1-final`): annotated-vocalset **real −0.044\*** (211
+performances) beside its reverb rows +0.008 / +0.034\*; esmuc-choir **−0.011\***; hust −0.003; every other singing
+set positive. AVS's pooled row was −0.001 (n.s.) on test and +0.0025 (n.s.) on dev. Read singing A/Bs per dataset ×
+condition, not per dataset.
+
+**Mechanism (dev; cached; sequential counterfactuals on the replayed decoder → floor → re-attack split → quantise →
+collapse stages, a Python mirror validated exactly against the TypeScript on 8,760 clip × condition × shift rows).**
+The 0.07 → 0.05 change splits into onset timing and one side effect:
+
+| dev, 0.07 → 0.05 | total | timing only | existence floor (b1) | split + floor stages |
+|---|---|---|---|---|
+| annotated-vocalset real | −0.047\* | −0.047\* | −0.002 | +0.001 |
+| annotated-vocalset echoey / distant | +0.014\* / +0.041\* | +0.021\* / +0.039\* | −0.008\* / +0.002 | ≤ 0.001 |
+| esmuc-choir | −0.012\* | **+0.012\*** | **−0.026\*** | +0.002 |
+| hust-solfege | −0.004 | +0.003 | −0.008\* | +0.001 |
+| app-takes-singing / dagstuhl / n20emv2 | +0.019\* / +0.013 / +0.022\* | +0.031\* / +0.024\* / +0.027\* | −0.012\* / −0.010 / −0.008\* | ≤ 0.003 |
+| vocadito real / echoey / distant | +0.033\* / +0.036\* / +0.044\* | +0.031\* / +0.043\* / +0.049\* | +0.002 / −0.007\* / −0.005\* | ≤ 0.001 |
+
+- **The existence floor.** The decoder drops a run when `end − start < hop` *after* the shift. With `minNoteSec`
+  0.08 (4 frames at the 20 ms hop), 0.07 dropped every 4-frame run (0.01 s left) and 0.05 keeps it (0.03 s): the
+  shift silently lowered the minimum note from 100 to 80 ms. That admitted 2,784 extra raw notes on dev (all
+  exactly 30 ms), 1,046 of them on esmuc (7.7 per take: +7.1 written notes for +0.16 matches). Against the other
+  dev singers' parts of the same take, 40 % sit on a pitch only another singer is singing (23 % for every other
+  raw note) and 6 % on the singer's own (60 %): choir bleed. **esmuc's paradox** (onsets closer, COnP lower) is
+  this: its timing gained +0.012\*; the "within ±100 ms" share only counts notes with a same-pitch truth nearby,
+  which the 30 ms notes mostly lack. The esmuc/hust sawtooth in the shift sweep (0.06 below 0.05 and 0.07), part of
+  what the 2026-11 sweep read as a hop-lattice staircase, is the same floor: with existence fixed, both peak at 0.05.
+- **AVS real is its truth's onset convention, not the pipeline.** Its fetcher keeps only the pYIN "Sound" rows of
+  rows typed Rest / Sound / Transition. 86 % of AVS notes follow a Transition (median 116 ms), so the truth onset
+  is where the glide has *ended*. Raw decoder onsets at 0.05 sit −52 ms against legato notes and +15 ms against
+  notes after a rest (the other sets: +10…+30). Re-timing each legato truth onset to its Transition's midpoint (a
+  diagnostic only) moves AVS clean's optimum from 0.09 to 0.05, like every human-annotated set (COnP 0.538 →
+  0.657), and its reverb rows to 0.03, like vocadito's. Every VocalSet technique and exercise prefers 0.07–0.10 on
+  the shipped truth, and neither the decoder's pitch-arrival lag nor its legato/from-silence entry separates AVS
+  from the other sets. No inference-time signal sees an annotation rule, so **no onset rule was built for AVS**.
+
+**Shipped: the existence floor decoupled from the onset shift (SDRY-1; kill-switch
+`VOICE_ONSET_EXISTENCE_SHIFT_SEC=0.05`).** `SHIPPING_VOICE_OPTS.existenceShiftSec` = 0.07: existence is judged at
+the old calibration, onsets are reported at 0.05. One pre-registered rule, the previous value, nothing tuned.
+- Dev vs HEAD: singing **+0.0076\*** [+0.0057, +0.0094]; performer-grouped two-fold +0.0065\* / +0.0087\*; esmuc
+  +0.027\*, AVS real +0.002\*; no singing cell significantly negative.
+- **The one test look:** singing **+0.0079\* [+0.0067, +0.0091]** (0.599 → 0.607), ALL +0.0031\* [+0.0027, +0.0037],
+  human +0.0026\* [+0.0022, +0.0031], real-only singing +0.0072\*; esmuc +0.025\*, AVS real +0.002\* (the loss vs
+  `h1-final` −0.044 → −0.042), AVS echoey / distant +0.009\* / +0.007\*, app +0.015\*, hust +0.005\*; lowest cells
+  vocadito distant −0.002 and clean −0.001 (n.s.). Whistling and instruments exactly 0. Every bar met.
+- Knob off note-identical to HEAD on 2,813 / 2,813; the flipped default note-identical to the knob-on runs on
+  2,813 / 2,813, and the kill-switch to HEAD on 2,813 / 2,813. `check-streaming` rows identical.
+- Context (dev): humming (mir-qbsh) COnP +0.002; syllable onset recall (jacrc-students) −0.037\* and AVP onset F1
+  −0.029\*, about a third of what SING-H1 bought there (some 80 ms runs are real, unpitched events).
+- Realistic synthetic singing, exact truth, the real model (`--synth --scratch`, home-phone, 81 clips, against the
+  kill-switch): singing +0.006\* [+0.002, +0.010]; bass +0.009\*, alto / mezzo +0.015 / +0.014 (n.s.); no voice
+  significantly negative (soprano −0.001).
+- Write-up: the pass orchestrator's scratchpad `diag/sing-h1-dry.md`.
+
 ### Open after this pass
 
 - **Owner calls:**
@@ -2650,3 +2707,7 @@ A review of the pass found two medium issues; both are fixed. (ADV-H2's hardenin
 - `fixtures/eval` (scripted synthetic) must be regenerated (`generate.ts`) before any run-eval adverse row is quoted
   again.
 - OK5 / DEMAND would add room and noise diversity to the measured tier (needs an HDF5 reader).
+- AVS clean stays −0.042 against `h1-final`: its truth's onset convention (pitch arrival after each Transition).
+  Scoring AVS against Transition-midpoint onsets is a corpus question (a correction, not a pipeline change).
+- Every reverberant singing row (AVS and vocadito echoey / distant) peaks at a 0.03 shift, the clean rows at 0.05:
+  a reverb-conditional onset shift keyed on ADV-H2's confMed evidence is an untested lead.

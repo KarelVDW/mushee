@@ -57,6 +57,7 @@ Grid step alone: GuitarSet +0.017\*, Dagstuhl +0.033\*, app singing −0.027\*, 
 | whistle onset ramp | `RECORDING_WHISTLE_ONSET_RAMP` (off) | 0.627 vs 0.635 | — | — | null |
 | L3 step 0: dipDepth relief off | `RECORDING_REVERB_CONF_RELIEF=0` | AVS −0.018\* | — | — | relief kept (blind but not inert) |
 | L3 step 0: sustained ramp off | `SUSTAINED_ONSET_REVERB_RAMP=0` | URMP +0.001 n.s. | — | — | ramp inert; removal is a follow-up |
+| SDRY-1 existence floor (after the pass) | `VOICE_ONSET_EXISTENCE_SHIFT_SEC` (0.07 ships; 0.05 = off) | — | singing +0.0076\* (two-fold +0.0065\* / +0.0087\*) | **singing +0.0079\* [+0.0067, +0.0091]**, ALL +0.0031\*, human +0.0026\* (vs HEAD) | **SHIPPED** |
 
 ### Test, all at once and what ships
 
@@ -95,6 +96,22 @@ Both splits, cached, after the flips (`int-after-cached-all`, env {}): ALL 0.671
   still-sounding commits on 39 real dev takes; held notes (3.9 %) appear a median 1.0 s later.
 - **ADV-H2 hardening** (`a4a423dc`, `cd81950f`, built off): see owner decision 1.
 
+### After the pass: SING-H1's condition-masked loss (dry diagnosis, dev, then one test look)
+
+- **The finding:** the pooled dataset mean hid two SING-H1 losses on test, annotated-vocalset real −0.044\* and
+  esmuc −0.011\* (AVS's pooled row was −0.001 n.s. on test). Read singing A/Bs per dataset × condition.
+- **AVS real is the truth's onset convention:** its notes start where the pYIN glide (a dropped "Transition" row,
+  median 116 ms) ends. Re-timed to the glide midpoint, AVS peaks at 0.05 like every human-annotated set; nothing
+  the pipeline can observe separates it. No product rule.
+- **esmuc was not timing:** the shift also lowered the decoder's minimum note from 100 to 80 ms (its existence test
+  runs after the shift), admitting 7.7 short runs per take, mostly choir bleed; timing alone gained +0.012\*.
+- **Shipped SDRY-1** (`existenceShiftSec` 0.07, kill-switch `VOICE_ONSET_EXISTENCE_SHIFT_SEC=0.05`): one
+  pre-registered rule, the previous value. Test vs HEAD: singing +0.0079\* [+0.0067, +0.0091], ALL +0.0031\*, human
+  +0.0026\*, esmuc +0.025\*, AVS real +0.002\*, no singing cell significantly negative, whistling and instruments
+  exactly 0. Knob off, the flipped default and the kill-switch are each note-identical to their references on
+  2,813 / 2,813; `check-streaming` identical. Numbers in FINDINGS.md ("After the pass: SING-H1's condition-masked
+  loss").
+
 ## Owner decisions left open
 
 1. **ADV-H2**: ship despite the one non-significant negative cell (GuitarSet, rir-near) on the measured-RIR tier?
@@ -127,11 +144,12 @@ Both splits, cached, after the flips (`int-after-cached-all`, env {}): ALL 0.671
 | 15:05–15:27 | dev re-runs and interactions; the test looks (SING-H1, ADV-H2 + RIR, INST-H4, L1, stacked) |
 | 15:30 | `9c520676` SING-H1 ships, `edf8df6b` INST-H4 ships, `6a476dbc` built-off doc numbers |
 | 15:32–16:35 | model-path confirmation (`--scratch`, 7 shards per arm, ~50 min), `--synth` home-phone + room, notation-eval, check-streaming; docs |
+| 18:52–19:40 | SING-H1 dry diagnosis on dev (shift sweep, stage decomposition, AVS convention test); SDRY-1 pre-registered 19:09, two-fold dev check, one test look 19:14, flipped |
 
 ## Where things are
 
 - Lane write-ups and the integration log: the orchestrator's scratchpad `diag/{L0a,L0b,L1,L2,L3,L4}-results.md`,
-  `diag/integration.md` (not in the repo).
+  `diag/integration.md`, `diag/sing-h1-dry.md` (not in the repo).
 - Result files: `apps/api/scripts/eval/.cache/bench-scratch/real/*_{h0-fixed,grid-fixed,grid-fixed-rir,h1-final,int-*,pa-*}.json`.
 - Scratch tools: `apps/api/scripts/eval/.cache/scratch/{h0,l0b,l1,l2,l3,l4,int}/` (gitignored).
 - Worktrees `mushee-wt-l{1..4}-*` are left in place on their lane branches.
