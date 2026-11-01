@@ -356,8 +356,51 @@ export interface VoiceDecodeOptions {
      * instruments exactly 0; human-timed sets +0.020; AVS real −0.044 (its pYIN-
      * segmented timing) with its reverb rows +0.008 / +0.034; esmuc −0.011;
      * app-takes-singing +0.009 (n.s., 17 clips).
+     *
+     * The two losses, diagnosed (2026-11-01, dev): AVS clean is its truth's onset
+     * convention. 86 % of its notes follow a pYIN "Transition" segment (median 116 ms)
+     * and its onset is where that glide ends; re-timed to the glide's midpoint (a
+     * diagnostic only), AVS clean peaks at 0.05 like every human-annotated set, and every
+     * VocalSet technique and exercise prefers 0.07–0.10 on the shipped truth alike, so
+     * no inference-time signal separates it. esmuc was not timing at all: the 0.05 shift
+     * also lowered the decoder's minimum note length, fixed by `existenceShiftSec`.
      */
     onsetShiftSec?: number
+    /**
+     * The shift the decoder's **existence test** uses, when it should differ from the
+     * reporting shift `onsetShiftSec`. A run whose onset, moved by this shift, leaves
+     * less than one hop before the run's end is not written. Omit to judge existence
+     * at `onsetShiftSec` (the historical behaviour).
+     *
+     * Why the two are separable: the existence test was written to drop runs the shift
+     * pushes past their own end, which makes the effective minimum note length a
+     * function of the shift. At the 20 ms hop and `minNoteSec` 0.08 (4 frames), the
+     * 0.07 shift dropped every 4-frame run (0.08 − 0.07 < one hop), so every decoder
+     * number from 2026-08 to 2026-10 was measured with a 5-frame (100 ms) floor. The
+     * 2026-11 shift of 0.05 keeps them (0.03 s left), and so silently lowered the floor
+     * to 80 ms. Setting this to 0.07 restores that floor and keeps the 0.05 onsets.
+     *
+     * **0.07 SHIPS (2026-11-01, `SHIPPING_VOICE_OPTS`; kill-switch
+     * `VOICE_ONSET_EXISTENCE_SHIFT_SEC=0.05`).** Found by splitting SING-H1's per-dataset
+     * Δ into stages (cached, dev, all conditions): the shift's timing alone gains on every
+     * singing set except Annotated-VocalSet clean (whose truth marks the pitch's arrival
+     * after each legato transition), while the 2,784 four-frame runs it admitted, written
+     * as 30 ms notes, cost every set: esmuc −0.026 (7.7 extra notes per take, almost all
+     * choir bleed, which is why esmuc lost COnP while its onsets got closer), app-takes
+     * −0.012, hust −0.008, n20emv2 −0.008. One pre-registered rule, the previous value,
+     * nothing tuned. Against the shipped 0.05-only decode: dev singing +0.0076 [+0.0057,
+     * +0.0094] (performer-grouped two-fold: +0.0065 / +0.0087, both CIs above 0); **the
+     * one test look: singing +0.0079 [+0.0067, +0.0091]** (0.599 → 0.607), ALL +0.0031
+     * [+0.0027, +0.0037], human +0.0026 [+0.0022, +0.0031], real-only singing +0.0072;
+     * esmuc +0.025, AVS clean +0.002, every AVS and vocadito reverb row ≥ −0.002 (none
+     * significantly negative); whistling and instruments exactly 0; exact-truth synthetic
+     * singing through the real model +0.006 [+0.002, +0.010]. With it, 0.05 stays
+     * the best onset shift on dev and esmuc and hust move their optimum from 0.07 to 0.05
+     * with the human-annotated sets. Context: humming (mir-qbsh) +0.002; onset recall
+     * on syllables (jacrc-students) −0.037 and AVP onset F1 −0.029 give back about a third
+     * of what SING-H1 bought there, since some 80 ms runs are real (unpitched) events.
+     */
+    existenceShiftSec?: number
     /**
      * Sub-gate onset back-extension: a note entered from silence starts earlier,
      * over the contiguous frames just before it whose pitch already rounds to the
@@ -562,6 +605,7 @@ type OptionalKnob =
     | 'silenceMemory'
     | 'unvoicedChangeRelease'
     | 'backExtend'
+    | 'existenceShiftSec'
 
 /**
  * The decoder's own defaults — the pYIN literature baseline the sweeps start
@@ -631,6 +675,10 @@ const DEFAULTS: Required<Omit<VoiceDecodeOptions, OptionalKnob>> = {
  *    calibration was fitted on unquantised notes; on the quantised output the
  *    product scores, 0.05 centres the onset error. Test: singing +0.013
  *    [+0.009, +0.017] (see `onsetShiftSec`).
+ *  - `existenceShiftSec: 0.07` (2026-11): whether a run is a note is still judged at
+ *    the 0.07 calibration, so the 0.05 shift moves onsets without also lowering the
+ *    minimum note length to 80 ms. Test, on top of the 0.05 shift: singing +0.008
+ *    [+0.007, +0.009] (see `existenceShiftSec`).
  */
 export const SHIPPING_VOICE_OPTS: VoiceDecodeOptions = {
     transitionMode: 'direct',
@@ -638,11 +686,12 @@ export const SHIPPING_VOICE_OPTS: VoiceDecodeOptions = {
     evidenceDiscount: 0.35,
     trust: 0.7,
     onsetShiftSec: 0.05,
+    existenceShiftSec: 0.07,
     ...voiceOnsetEnvOverrides(),
 }
 
 /**
- * The A/B overrides of the voice decode's onset timing, read once at import. Both
+ * The A/B overrides of the voice decode's onset timing, read once at import. All
  * are unset in production, so `SHIPPING_VOICE_OPTS` is exactly the object above.
  *
  *  - `VOICE_ONSET_SHIFT_SEC=<seconds>` replaces `onsetShiftSec` (0.05 ships since
@@ -651,14 +700,19 @@ export const SHIPPING_VOICE_OPTS: VoiceDecodeOptions = {
  *  - `VOICE_ONSET_BACKEXTEND=<minConfidence>,<windowSec>` turns on `backExtend`
  *    (measured and kept off, see there). `off`, unset, or anything that is not two
  *    finite numbers leaves it off.
+ *  - `VOICE_ONSET_EXISTENCE_SHIFT_SEC=<seconds>` replaces `existenceShiftSec` (0.07
+ *    ships since 2026-11; `=0.05` is the kill-switch to judging existence at the
+ *    reporting shift, see `existenceShiftSec` for the numbers).
  *
- * Both act after the track and profile, so the eval's cached replay
+ * All three act after the track and profile, so the eval's cached replay
  * (`benchmark.ts run --cached`) scores them exactly.
  */
-function voiceOnsetEnvOverrides(): Pick<VoiceDecodeOptions, 'onsetShiftSec' | 'backExtend'> {
-    const out: Pick<VoiceDecodeOptions, 'onsetShiftSec' | 'backExtend'> = {}
+function voiceOnsetEnvOverrides(): Pick<VoiceDecodeOptions, 'onsetShiftSec' | 'backExtend' | 'existenceShiftSec'> {
+    const out: Pick<VoiceDecodeOptions, 'onsetShiftSec' | 'backExtend' | 'existenceShiftSec'> = {}
     const shift = envOptionalNumber('VOICE_ONSET_SHIFT_SEC')
     if (shift !== undefined) out.onsetShiftSec = shift
+    const existence = envOptionalNumber('VOICE_ONSET_EXISTENCE_SHIFT_SEC')
+    if (existence !== undefined) out.existenceShiftSec = existence
     const parts = (process.env.VOICE_ONSET_BACKEXTEND ?? '').split(',').map((s) => (s.trim() === '' ? NaN : Number(s)))
     if (parts.length === 2 && parts.every(Number.isFinite)) out.backExtend = { minConfidence: parts[0], windowSec: parts[1] }
     return out
@@ -745,7 +799,10 @@ export class VoiceNoteDecoder {
                     cents = this.noteCents(track, voiced, { ...run, start: from }) ?? cents
                 }
             }
-            if (end - start < track.hopSec) continue
+            // The existence test: judged at the reporting shift unless `existenceShiftSec`
+            // separates the two (unset keeps the historical arithmetic exactly).
+            const existenceStart = this.o.existenceShiftSec === undefined ? start : startFrame * track.hopSec + this.o.existenceShiftSec
+            if (end - existenceStart < track.hopSec) continue
             // Back-extension moves the onset of a note that exists; it must not decide
             // whether one does, so it is applied after the length test above (a run the
             // onset shift pushes past its own end stays dropped).

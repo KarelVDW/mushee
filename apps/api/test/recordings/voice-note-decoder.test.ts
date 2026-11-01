@@ -155,6 +155,34 @@ describe('VoiceNoteDecoder', () => {
         expect(kept.map((n) => n.pitchMidi)).toEqual([60, 61])
     })
 
+    it('judges existence at existenceShiftSec when set, and still reports the onset at onsetShiftSec', () => {
+        // An 80 ms (4-frame) blip between rests, and the same blip held 100 ms.
+        const take = (sec: number): ReturnType<typeof contour> =>
+            contour([
+                { midi: 60, sec: 0.5 },
+                { midi: null, sec: 0.3 },
+                { midi: 64, sec },
+                { midi: null, sec: 0.3 },
+                { midi: 62, sec: 0.5 },
+            ])
+        const blip = take(0.08)
+        // Judged at the 0.05 reporting shift (unset), the 4-frame run survives as a 30 ms note…
+        const atReporting = { existenceShiftSec: undefined }
+        expect(decoder(atReporting).decode(blip.track, blip.energy).map((n) => n.pitchMidi)).toEqual([60, 64, 62])
+        // …judged at 0.07 (what ships) it is dropped, as it was before the 2026-11 shift.
+        expect(SHIPPING_VOICE_OPTS.existenceShiftSec).toBe(0.07)
+        expect(decoder().decode(blip.track, blip.energy).map((n) => n.pitchMidi)).toEqual([60, 62])
+        // A 5-frame run exists either way, and its onset is the reporting shift's.
+        const held = take(0.1)
+        const shipped = decoder().decode(held.track, held.energy)
+        expect(decoder(atReporting).decode(held.track, held.energy)).toEqual(shipped)
+        expect(shipped[1].startTimeSeconds).toBeCloseTo(0.8 + 0.05, 6)
+        // Equal to the reporting shift, it is the same as leaving it unset.
+        expect(decoder({ existenceShiftSec: SHIPPING_VOICE_OPTS.onsetShiftSec }).decode(blip.track, blip.energy)).toEqual(
+            decoder(atReporting).decode(blip.track, blip.energy),
+        )
+    })
+
     describe('backExtend (sub-gate onset back-extension, off by default)', () => {
         const backExtend = { minConfidence: 0.15, windowSec: 0.15 }
         // A rest, then 80 ms of the next note's pitch at sub-gate confidence, then the note.
@@ -222,8 +250,8 @@ describe('VoiceNoteDecoder', () => {
                 { midi: null, sec: 0.3 },
             ])
             const over = { minNoteSec: 0.02 }
-            // The run is there (unshifted it is a note); only the shift drops it.
-            expect(decoder({ ...over, onsetShiftSec: 0 }).decode(track, energy)).toHaveLength(1)
+            // The run is there (unshifted, existence judged unshifted too, it is a note); only the shift drops it.
+            expect(decoder({ ...over, onsetShiftSec: 0, existenceShiftSec: undefined }).decode(track, energy)).toHaveLength(1)
             expect(decoder(over).decode(track, energy)).toEqual([])
             expect(decoder({ ...over, backExtend }).decode(track, energy)).toEqual([])
         })
@@ -231,7 +259,7 @@ describe('VoiceNoteDecoder', () => {
 })
 
 describe('SHIPPING_VOICE_OPTS env overrides', () => {
-    const KEYS = ['VOICE_ONSET_SHIFT_SEC', 'VOICE_ONSET_BACKEXTEND'] as const
+    const KEYS = ['VOICE_ONSET_SHIFT_SEC', 'VOICE_ONSET_BACKEXTEND', 'VOICE_ONSET_EXISTENCE_SHIFT_SEC'] as const
     const saved = Object.fromEntries(KEYS.map((k) => [k, process.env[k]]))
     afterEach(() => {
         for (const k of KEYS) {
@@ -247,8 +275,15 @@ describe('SHIPPING_VOICE_OPTS env overrides', () => {
         return (await import('../../src/recordings/pipeline/voice-note-decoder')).SHIPPING_VOICE_OPTS
     }
 
-    it('ships the 2026-11 onset shift (0.05) and no back-extension when unset', async () => {
-        expect(await shippingWith({})).toEqual({ transitionMode: 'direct', changeCost: 2.5, evidenceDiscount: 0.35, trust: 0.7, onsetShiftSec: 0.05 })
+    it('ships the 2026-11 onset shift (0.05), existence at 0.07 and no back-extension when unset', async () => {
+        expect(await shippingWith({})).toEqual({
+            transitionMode: 'direct',
+            changeCost: 2.5,
+            evidenceDiscount: 0.35,
+            trust: 0.7,
+            onsetShiftSec: 0.05,
+            existenceShiftSec: 0.07,
+        })
     })
 
     it('reads the onset shift (0.07 = the kill-switch) and the back-extension pair', async () => {
@@ -257,11 +292,18 @@ describe('SHIPPING_VOICE_OPTS env overrides', () => {
         expect(o.backExtend).toEqual({ minConfidence: 0.15, windowSec: 0.1 })
     })
 
+    it('reads the existence shift (0.05 = the kill-switch), separately from the onset shift', async () => {
+        const o = await shippingWith({ VOICE_ONSET_EXISTENCE_SHIFT_SEC: '0.05' })
+        expect(o.existenceShiftSec).toBe(0.05)
+        expect(o.onsetShiftSec).toBe(0.05)
+    })
+
     it('ignores malformed values instead of feeding NaN into the decode', async () => {
         for (const bad of ['off', '0.15', '0.15,', 'a,b', '0.1,0.2,0.3']) {
-            const o = await shippingWith({ VOICE_ONSET_SHIFT_SEC: 'abc', VOICE_ONSET_BACKEXTEND: bad })
+            const o = await shippingWith({ VOICE_ONSET_SHIFT_SEC: 'abc', VOICE_ONSET_BACKEXTEND: bad, VOICE_ONSET_EXISTENCE_SHIFT_SEC: 'abc' })
             expect(o.onsetShiftSec).toBe(0.05)
             expect(o.backExtend).toBeUndefined()
+            expect(o.existenceShiftSec).toBe(0.07)
         }
     })
 })

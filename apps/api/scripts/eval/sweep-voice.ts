@@ -94,6 +94,8 @@ const MODELS = {
  * Since 2026-11 production also sets `onsetShiftSec: 0.05` (`SHIPPING_VOICE_OPTS`,
  * fitted on the QUANTISED benchmark output); this unquantised sweep keeps the
  * decoder's 0.07, its own optimum, so its `ship` rows are 20 ms off production.
+ * Which runs become notes is the same in both: production judges existence at
+ * 0.07 too (`existenceShiftSec`), so only the reported onsets differ.
  */
 const BEST: VoiceDecodeOptions = {
     transitionMode: 'direct',
