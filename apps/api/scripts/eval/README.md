@@ -244,7 +244,7 @@ unattended. If whistling stays a supported input, record and annotate a corpus
 | Script                      | Purpose                                                                                                                                                                       |
 | --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `check-inference-parity.ts` | **Parity gate for the remote gRPC inference services** vs the in-process TF.js path — tensor diff + end-to-end pipeline. Referenced from the root README's inference section. |
-| `check-streaming.ts`        | Streaming-decode correctness: `StreamingDecoder` vs one-shot decode PCM parity, windowed-transcription equivalence.                                                           |
+| `check-streaming.ts`        | Streaming-decode correctness: `StreamingDecoder` vs one-shot PCM parity; paced vs whole-buffer notes (onsets, pitches, lengths), incl. held notes.                            |
 | `bench-streaming.ts`        | Performance proof of the O(n²)→O(n) streaming change (see `meta/notes.md` §4).                                                                                                |
 | `measure-concurrency.ts`    | Steady-state real-time factor of one session → sessions-per-core capacity estimate (see `meta/notes.md` §4).                                                                  |
 
