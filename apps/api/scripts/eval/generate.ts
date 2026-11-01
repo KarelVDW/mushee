@@ -77,6 +77,8 @@ function main(): void {
             const clipDur = lastNote ? lastNote.onsetSec + lastNote.durSec + 0.4 : 1
 
             for (const condition of CONDITIONS) {
+                // The measured-RIR tier is for the real corpus (fetch/degrade-real.ts), by name only.
+                if (condition.optIn) continue
                 const out = join(dir, `${melody.name}__${condition.id}.wav`)
                 // Capture-path tier: OPT-IN, like the intonation tier is scenario-gated.
                 // These conditions exist to ask one question (does the browser's codec

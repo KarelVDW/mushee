@@ -430,9 +430,12 @@ export async function buildTranscriber(o: EvalOptions, decoder: AudioDecoder): P
 }
 
 /** Which conditions a corpus can be scored under (real gets the `real` pseudo-condition first). */
-export function conditionsFor(real: boolean, synth = false): Condition[] {
+export function conditionsFor(real: boolean, synth = false, includeOptIn = false): Condition[] {
     if (synth) return SYNTH_CONDITIONS
-    return real ? [REAL_CONDITION, ...CONDITIONS.filter((c) => c.id !== 'clean')] : CONDITIONS
+    const all = real ? [REAL_CONDITION, ...CONDITIONS.filter((c) => c.id !== 'clean')] : CONDITIONS
+    // Opt-in tiers (the measured RIRs) exist on disk next to the clips; leaving them
+    // out here keeps a default run — and so the headline — what it always was.
+    return includeOptIn ? all : all.filter((c) => !c.optIn)
 }
 
 /** What a run scores: the corpus root, its datasets, and the scenarios × conditions selected. */
@@ -453,7 +456,8 @@ export function selectCorpus(o: EvalOptions): EvalCorpus {
         root,
         datasets,
         scenarios: allScenarios.filter((s) => !o.scenarioFilter || o.scenarioFilter.includes(s.id)),
-        conditions: conditionsFor(o.real, !!o.synth).filter((c) => !o.conditionFilter || o.conditionFilter.includes(c.id)),
+        // A named condition is scored even when it is opt-in; an unnamed one never is.
+        conditions: conditionsFor(o.real, !!o.synth, !!o.conditionFilter).filter((c) => !o.conditionFilter || o.conditionFilter.includes(c.id)),
     }
 }
 

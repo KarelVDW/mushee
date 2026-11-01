@@ -19,7 +19,12 @@ import { degrade } from '../lib/degrade'
 import { discoverRealDatasets } from '../lib/realCorpus'
 import { CONDITIONS } from '../scenarios'
 
-const REAL_ROOT = resolve(__dirname, '../../fixtures/eval-real')
+/**
+ * `DEGRADE_ROOT=<dir>` degrades another corpus tree of the same layout — the
+ * staged re-cuts under fixtures/eval-real-staged (2026-11 grid corrections),
+ * whose variants must be built before they are swapped in.
+ */
+const REAL_ROOT = process.env.DEGRADE_ROOT ? resolve(process.env.DEGRADE_ROOT) : resolve(__dirname, '../../fixtures/eval-real')
 const SAMPLE_RATE = 44100
 
 /**
@@ -74,7 +79,9 @@ function wavDurationSec(path: string): number | undefined {
 // multiplies eval runtime over ~140 clips. The capture-path tier
 // (`phone-opus-96k` etc.) is deliberately NOT here either: it answered its
 // question once (null, ±0.03 — see the README's findings log) and is reached by
-// naming it, e.g. DEGRADE_CONDITIONS=phone-opus-16k.
+// naming it, e.g. DEGRADE_CONDITIONS=phone-opus-16k. So is the measured-RIR tier
+// (DEGRADE_CONDITIONS=rir-near,rir-far; fetch/fetch-rirs.ts first), which is
+// `optIn` and never pooled.
 const DEFAULT_CONDITION_IDS = ['echoey-room', 'wind-outdoor', 'street-noise', 'distant-mic']
 
 /**

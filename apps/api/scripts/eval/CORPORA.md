@@ -149,6 +149,34 @@ in the real tiers — see the README's corpus layout.
   through measured rooms and phone microphones. Changes found on it ship only once
   the real corpus agrees (FINDINGS.md, 2026-09-27).
 
+## Measured-RIR tier (opt-in conditions, 2026-11-01)
+
+Two adverse conditions convolve the real takes with **measured** room impulse
+responses instead of the modelled exponential rooms (`fetch/fetch-rirs.ts` →
+`fixtures/eval-rir/`, `scenarios.ts` `rir-near` / `rir-far`). They are `optIn`:
+never in a default condition list, never pooled into a headline, scored only
+with `benchmark.ts run --conditions rir-near,rir-far`. Generated
+(`DEGRADE_CONDITIONS=rir-near,rir-far fetch/degrade-real.ts`) for vocadito,
+annotated-vocalset, guitarset-solo and the 13 URMP sets, both splits.
+
+| condition  | source (DOI, licence)                                                                                                                       | member                                            | RT60 (T30, 0.5/1/2 kHz mean) | DRR      | receiver |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------- | ---------------------------- | -------- | -------- |
+| `rir-near` | Arni variable-acoustics room, Aalto Acoustics Lab (Prawda, Schlecht, Välimäki 2022), `10.5281/zenodo.6985104`, **CC-BY-4.0** (record field) | `IR_numClosed_40_numComb_3942_mic_4_sweep_1.wav`  | 0.80 s                       | −2.5 dB  | 4, ≈1.7 m |
+| `rir-far`  | same record                                                                                                                                 | `IR_numClosed_55_numComb_0_mic_3_sweep_1.wav`     | 1.27 s                       | −10.8 dB | 3, ≈2.9 m |
+
+They are the measured twins of `echoey-room` (modelled 0.9 s / +2 dB) and
+`distant-mic` (1.3 s / −4 dB), one milder and one harsher, and exist so a reverb
+conclusion drawn on the modelled rooms is checked on a real one before it ships
+(the 2026-11-01 degrade defect showed the modelled chain can manufacture a
+feature). Conditioning follows synthetic-corpus's `RoomIR` (direct path at
+0.5 ms, tail cut at the noise floor); the IR's mean power gain over 200 Hz–4 kHz
+is −3 dB, and each variant gets one static gain keeping its peak ≤ −1 dBFS (a
+measured room builds up at its modes; at a fixed gain 69 of 1,076 variants
+clipped). Arni has no receiver nearer than ≈1.5 m. **OK5**
+(`10.5281/zenodo.18622201`, CC-BY-4.0, 25 real work rooms at 1.5/2/3 m) is the
+cleared room-diversity follow-up; it ships SOFA/HDF5, which the TypeScript
+harness cannot read without a new dependency.
+
 ## Resynth truth (2026-10-30/31)
 
 Every dataset marked `resynth` above got its note truth from `synthcorpus.resynth`
@@ -231,9 +259,10 @@ capability", not "find another dataset".
 
 - No genuinely RECORDED adverse takes — the adverse tier is synthetic
   degradation of real performances (whistle-vintage is the one real-adverse
-  specimen). Measured RIR/noise corpora to replace the modelled room/babble are
-  cleared with DOIs (DEMAND, Arni, OK5 — research/research-voice-datasets.md §6b–6d) but
-  not wired; new condition ids required so historical numbers keep meaning.
+  specimen). Since 2026-11-01 two MEASURED rooms (Arni) exist as the opt-in
+  `rir-near` / `rir-far` conditions (above); DEMAND noise beds and OK5's room
+  diversity are cleared with DOIs (research/research-voice-datasets.md §6b–6d)
+  but not wired; new condition ids required so historical numbers keep meaning.
 - N20EMv2 has no degraded variants (fetch/degrade-real.ts never run on it) — adverse
   voice evidence rests on annotated-vocalset + vocadito.
 - Real out-of-tune singing with intended-note truth: the R20 intonation tier is
@@ -281,7 +310,8 @@ PJS audio (labels already in hand, one curl to retry) · MRSSing upload ·
 SSVD/AID/CSD-re-annotation licence answers · Cadenza CLIP1 mapping ·
 paid routes if ever wanted (Meertens, Deeply, Opencpop).
 **Cleared but unwired** (adverse-tier upgrades, decisions already made):
-DEMAND noise beds, Arni/OK5 measured RIRs, MUSAN/FSDnoisy18k et al.
+DEMAND noise beds, OK5 measured RIRs (Arni is wired: the opt-in measured-RIR
+tier above), MUSAN/FSDnoisy18k et al.
 (research/research-voice-datasets.md §6b–d, research/research-benchmarks.md §5).
 
 ## Adding a corpus

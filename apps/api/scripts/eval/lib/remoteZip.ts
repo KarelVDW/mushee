@@ -18,7 +18,7 @@
  */
 
 import { execFileSync } from 'child_process'
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs'
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'fs'
 import { join } from 'path'
 import { inflateRawSync } from 'zlib'
 
@@ -61,9 +61,11 @@ export function readCentralDirectory(url: string, cacheDir: string): ZipEntry[] 
     mkdirSync(cacheDir, { recursive: true })
     const cdPath = join(cacheDir, 'central-directory.bin')
     const total = remoteSize(url)
-    const tailStart = Math.max(0, total - TAIL_BYTES)
-    if (!existsSync(cdPath)) curlRange(url, tailStart, total - 1, cdPath)
-    const buf = readFileSync(cdPath)
+    if (!existsSync(cdPath)) curlRange(url, Math.max(0, total - TAIL_BYTES), total - 1, cdPath)
+    let buf = readFileSync(cdPath)
+    // The cached read always ends at the archive's last byte; it may have been
+    // widened below, so its start is derived from its length.
+    let tailStart = total - buf.length
 
     let cdSize: number
     let cdOff: number
@@ -84,13 +86,17 @@ export function readCentralDirectory(url: string, cacheDir: string): ZipEntry[] 
     }
 
     if (cdOff < tailStart) {
-        // Buffer.subarray treats a negative start as counting from the END, so an
-        // out-of-window directory would silently parse as zero entries instead of
-        // failing — and a fetcher would then "select 0 stems" with no hint why.
-        throw new Error(
-            `central directory starts at ${cdOff}, before the fetched tail window ` +
-                `(${tailStart}); raise TAIL_BYTES above ${TAIL_BYTES}`,
-        )
+        // A directory larger than the tail window (Arni's IR zips hold ~25k members
+        // each): fetch the part before the window once and widen the cached read.
+        // Never parse a partial directory — Buffer.subarray treats a negative start
+        // as counting from the END, so it would silently yield zero entries.
+        const headPath = `${cdPath}.head`
+        curlRange(url, cdOff, tailStart - 1, headPath)
+        buf = Buffer.concat([readFileSync(headPath), buf])
+        if (buf.length !== total - cdOff) throw new Error(`short read widening the central directory of ${url}`)
+        writeFileSync(cdPath, buf)
+        rmSync(headPath, { force: true })
+        tailStart = cdOff
     }
     const cd = buf.subarray(cdOff - tailStart, cdOff - tailStart + cdSize)
     const entries: ZipEntry[] = []

@@ -8,13 +8,13 @@
 
 import { execFileSync } from 'child_process'
 import ffmpegPath from 'ffmpeg-static'
-import { existsSync, mkdirSync, rmSync, writeFileSync } from 'fs'
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'fs'
 import { tmpdir } from 'os'
-import { basename, join } from 'path'
+import { basename, join, resolve } from 'path'
 
 import type { Condition } from '../types'
 import { synthesizeRoomImpulse, synthesizeSpeechNoise, synthesizeWind } from './acoustics'
-import { floatToWav } from './wav'
+import { floatToWav, wavToFloat } from './wav'
 
 /**
  * Loudness normalisation, resampled back to the clip's rate. ffmpeg's loudnorm
@@ -42,7 +42,20 @@ function assetDir(): string {
     return dir
 }
 
+/**
+ * Measured room impulse responses (`Condition.ir.file`), fetched and conditioned
+ * by fetch/fetch-rirs.ts: direct path at t ≈ 0.5 ms, tail cut at the
+ * measurement's noise floor, mean power gain −3 dB over 200 Hz–4 kHz.
+ * Gitignored like the rest of fixtures/..
+ */
+export const RIR_ROOT = resolve(__dirname, '../../fixtures/eval-rir')
+
 function impulseResponsePath(ir: NonNullable<Condition['ir']>, sampleRate: number): string {
+    if ('file' in ir) {
+        const path = join(RIR_ROOT, ir.file)
+        if (!existsSync(path)) throw new Error(`measured RIR ${path} is missing — run fetch/fetch-rirs.ts`)
+        return path
+    }
     const key = `ir-${ir.rt60Sec}-${ir.wetDb}-${ir.preDelayMs ?? 12}-${sampleRate}`
     const cached = assetCache.get(key)
     if (cached && existsSync(cached)) return cached
@@ -148,8 +161,16 @@ export function degrade(inPath: string, outPath: string, condition: Condition, s
         // The direct spike lives at t=0 inside the IR, so convolution preserves
         // onset positions while adding the room's smear. gtype=none: the IR's own
         // direct/wet balance IS the level design — afir's default peak auto-gain
-        // (~1/sum|coeffs|) would crush the output ~35 dB.
-        stages.push(`[${current}][${irIndex}:a]afir=gtype=none[rev]`)
+        // (~1/sum|coeffs|) would crush the output ~35 dB. afir takes the IR's
+        // samples as they are, at the graph's rate, so a measured IR file (any
+        // rate) is resampled to the clip's rate first — the 192 kHz defect above
+        // was exactly an IR played at the wrong rate.
+        let irLabel = `${irIndex}:a`
+        if (condition.ir && 'file' in condition.ir) {
+            stages.push(`[${irIndex}:a]aresample=${sampleRate}[irr]`)
+            irLabel = 'irr'
+        }
+        stages.push(`[${current}][${irLabel}]afir=gtype=none[rev]`)
         current = 'rev'
     }
 
@@ -173,6 +194,26 @@ export function degrade(inPath: string, outPath: string, condition: Condition, s
     }
 
     if (maxDurationSec) args.push('-t', maxDurationSec.toFixed(3))
-    args.push('-ar', String(sampleRate), '-ac', '1', outPath)
+    if (!(condition.ir && 'file' in condition.ir)) {
+        args.push('-ar', String(sampleRate), '-ac', '1', outPath)
+        execFileSync(ffmpegPath, args, { stdio: ['ignore', 'ignore', 'inherit'] })
+        return
+    }
+    // A measured room builds up at its modes: at a static IR gain, 69 of 1,076
+    // rir-* variants clipped (a horn note on a room mode: 7,069 samples). So the
+    // convolved take is rendered in float and given ONE static gain that keeps its
+    // peak at or below PEAK_CEILING — no limiter, no dynamics change; the pipeline
+    // loudness-normalises its input anyway, so the level itself is immaterial.
+    const tmp = join(assetDir(), `rir-${process.pid}-${basename(outPath)}`)
+    args.push('-ar', String(sampleRate), '-ac', '1', '-c:a', 'pcm_f32le', tmp)
     execFileSync(ffmpegPath, args, { stdio: ['ignore', 'ignore', 'inherit'] })
+    const { samples } = wavToFloat(readFileSync(tmp))
+    rmSync(tmp, { force: true })
+    let peak = 0
+    for (const v of samples) peak = Math.max(peak, Math.abs(v))
+    const gain = peak > PEAK_CEILING ? PEAK_CEILING / peak : 1
+    writeFileSync(outPath, floatToWav(gain === 1 ? samples : samples.map((v) => v * gain), sampleRate))
 }
+
+/** Highest sample a measured-room variant may reach: −1 dBFS. */
+const PEAK_CEILING = 10 ** (-1 / 20)

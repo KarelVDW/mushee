@@ -140,6 +140,29 @@ export const CONDITIONS: Condition[] = [
         postFilter: 'volume=-11dB,lowpass=f=8000',
     },
 
+    // --- Measured-RIR tier (OPT-IN, never pooled, 2026-11-01) --------------------
+    // The adverse tier's rooms are modelled (an exponential noise tail). These two
+    // convolve the take with MEASURED impulse responses from one variable-acoustics
+    // room (Arni, Aalto Acoustics Lab, CC-BY-4.0, doi:10.5281/zenodo.6985104;
+    // fetch/fetch-rirs.ts), so a reverb conclusion drawn on the modelled rooms can be
+    // checked against a real one before it ships — the 2026-11 degrade defect showed
+    // the synthetic chain can manufacture a feature (dipDepth). Nothing else is
+    // added: no noise floor and no EQ beyond the measurement's own. `optIn` keeps
+    // them out of every default list, so the headline means what it meant; score
+    // them with `--conditions rir-near,rir-far`.
+    {
+        id: 'rir-near',
+        label: 'Measured room, near (Arni: RT60 0.80 s, receiver 4 ≈ 1.7 m, DRR −2.5 dB)',
+        ir: { file: 'arni-nc40-mic4.wav' },
+        optIn: true,
+    },
+    {
+        id: 'rir-far',
+        label: 'Measured room, far (Arni fully reflective: RT60 1.27 s, receiver 3 ≈ 2.9 m, DRR −10.8 dB)',
+        ir: { file: 'arni-nc55-mic3.wav' },
+        optIn: true,
+    },
+
     // --- Capture-path tier: the codec the product actually records through ------
     // Every number in this harness is measured on WAV; no user ever sends us one.
     // The browser's MediaRecorder gives us webm/Opus (Chrome, Edge, Firefox) or

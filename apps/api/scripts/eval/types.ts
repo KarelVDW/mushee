@@ -98,12 +98,22 @@ export interface Condition {
     /** Added background noise. Omit for a clean condition. */
     noise?: { color: 'pink' | 'white'; amplitude: number }
     /**
-     * Room reverberation: convolve with a synthetic impulse response
-     * (lib/acoustics.ts) via ffmpeg `afir` — applied to the source BEFORE any
-     * noise is mixed in (the room reverberates the performance; wind/babble
-     * arrive at the microphone).
+     * Room reverberation: convolve with an impulse response via ffmpeg `afir` —
+     * applied to the source BEFORE any noise is mixed in (the room reverberates
+     * the performance; wind/babble arrive at the microphone). Either a SYNTHETIC
+     * exponential room (lib/acoustics.ts), or `{ file }`: a MEASURED room impulse
+     * response under fixtures/eval-rir (fetch/fetch-rirs.ts), stored with its
+     * direct path at t ≈ 0.5 ms and its mean power gain over 200 Hz–4 kHz set to
+     * −3 dB, so the take keeps its loudness (without clipping) and its onset times.
      */
-    ir?: { rt60Sec: number; wetDb: number; preDelayMs?: number }
+    ir?: { rt60Sec: number; wetDb: number; preDelayMs?: number } | { file: string }
+    /**
+     * Never in a default condition list: scored, generated or swept only when
+     * named (`--conditions`, `EVAL_CONDITIONS`, `DEGRADE_CONDITIONS`). For tiers
+     * that must not change what a default run — and so the headline — means
+     * (the measured-RIR tier, since 2026-11-01).
+     */
+    optIn?: boolean
     /**
      * A synthesized noise bed (lib/acoustics.ts) mixed at `gainDb` relative to
      * the loudness-normalized source (≈ -SNR in dB).

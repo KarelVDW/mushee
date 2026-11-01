@@ -145,7 +145,10 @@ the two differ, and `compare` adds an `ALL (human truth)` row.
 Adverse conditions (`echoey-room`, `distant-mic`, `wind-outdoor`,
 `street-noise`) are synthetic degradations of the real performances, applied by
 `degrade-real.ts` — honest robustness measures, but modelled rooms, not recorded
-ones (measured RIR / noise corpora are cleared but unwired; see CORPORA.md).
+ones. Two MEASURED rooms exist beside them as the opt-in `rir-near` / `rir-far`
+conditions (Arni RIRs, CORPORA.md "Measured-RIR tier"): never pooled, never in
+a default run, scored with `--conditions rir-near,rir-far` to check that a
+reverb result is not an artefact of the modelled rooms.
 They pool into the headline together with `real`; the per-condition table
 separates them. This is why the benchmark headline (0.739 on the first
 recorded run) sits below the findings log's historical clean-only figures

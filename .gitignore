@@ -46,6 +46,10 @@ apps/api/scripts/eval/.cache/
 apps/api/scripts/eval/.freesound-token
 apps/api/scripts/fixtures/eval/
 apps/api/scripts/fixtures/eval-real/
+# Staged corpus corrections awaiting a swap into eval-real (diag swap scripts), and the
+# measured room impulse responses of the opt-in rir-* conditions (fetch/fetch-rirs.ts)
+apps/api/scripts/fixtures/eval-real-staged/
+apps/api/scripts/fixtures/eval-rir/
 # Realistic synthetic corpus export (hard links into synthetic-corpus/out, see its README)
 apps/api/scripts/fixtures/eval-synth/
 # Cached pitch trajectories for the eval harness — derived, large, and rebuilt on

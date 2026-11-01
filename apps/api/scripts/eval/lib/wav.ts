@@ -34,9 +34,10 @@ export function floatToWav(samples: Float32Array, sampleRate: number): Buffer {
 }
 
 /**
- * Read a mono PCM16 RIFF/WAVE file back to floats. The inverse of
- * `floatToWav`, and the only reader the harness needs: every wav it writes or
- * stages is normalised to mono PCM16 first (fetch-whistle-real.ts, generate.ts).
+ * Read a mono PCM16 (or 32-bit float) RIFF/WAVE file back to floats. The inverse
+ * of `floatToWav`, and the only reader the harness needs: every wav it writes or
+ * stages is normalised to mono PCM16 first (fetch-whistle-real.ts, generate.ts);
+ * float is read for lib/degrade.ts's measured-room renders.
  *
  * The `data` chunk is found by walking the chunk list rather than assuming
  * offset 44 — ffmpeg emits a `LIST`/`INFO` block ahead of it, so a fixed offset
@@ -48,6 +49,7 @@ export function wavToFloat(buf: Buffer): { samples: Float32Array; sampleRate: nu
         throw new Error('not a RIFF/WAVE file')
     }
     let sampleRate = 0
+    let format = 1
     let channels = 1
     let bitsPerSample = 16
     let offset = 12
@@ -55,21 +57,26 @@ export function wavToFloat(buf: Buffer): { samples: Float32Array; sampleRate: nu
         const id = buf.toString('ascii', offset, offset + 4)
         const size = buf.readUInt32LE(offset + 4)
         if (id === 'fmt ') {
+            format = buf.readUInt16LE(offset + 8)
+            if (format === 0xfffe && size >= 40) format = buf.readUInt16LE(offset + 8 + 24)
             channels = buf.readUInt16LE(offset + 10)
             sampleRate = buf.readUInt32LE(offset + 12)
             bitsPerSample = buf.readUInt16LE(offset + 22)
         }
         if (id === 'data') {
-            if (bitsPerSample !== 16) throw new Error(`expected PCM16, got ${bitsPerSample}-bit`)
+            // PCM16, or 32-bit IEEE float (format 3: lib/degrade.ts renders measured-room variants in float).
+            const float = format === 3 && bitsPerSample === 32
+            if (bitsPerSample !== 16 && !float) throw new Error(`expected PCM16 or float32, got ${bitsPerSample}-bit`)
+            const width = bitsPerSample / 8
             const bytes = Math.min(size, buf.length - offset - 8)
-            const frames = Math.floor(bytes / 2 / channels)
+            const frames = Math.floor(bytes / width / channels)
             const samples = new Float32Array(frames)
             let p = offset + 8
             for (let i = 0; i < frames; i += 1) {
                 // Channel 0 only; staged audio is mono, but a stray stereo file
                 // downmixes to its left channel rather than reading interleaved noise.
-                samples[i] = buf.readInt16LE(p) / 32768
-                p += 2 * channels
+                samples[i] = float ? buf.readFloatLE(p) : buf.readInt16LE(p) / 32768
+                p += width * channels
             }
             return { samples, sampleRate }
         }
