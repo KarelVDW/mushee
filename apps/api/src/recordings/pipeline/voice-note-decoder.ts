@@ -1,3 +1,4 @@
+import { envOptionalNumber } from './env'
 import type { NoteEventTime } from './note-event'
 import type { PitchTrack } from './pitch-track'
 
@@ -63,8 +64,8 @@ import type { PitchTrack } from './pitch-track'
  * measurements): `candidates`,
  * `intervalChange`, `silenceMemory`, `unvoicedChangeRelease`, `voicedQuorum`, the
  * unvoiced-gap fill (`fillUnvoicedGapSec`/`fillEnergyFloor`/`fillEnergyContextSec`),
- * `keepShortLoudRatio`, `dropLongQuiet`, `transitionMode: 'via-silence'`, and the
- * non-default `pitchEstimator` and `onsetAt` values.
+ * `keepShortLoudRatio`, `dropLongQuiet`, `transitionMode: 'via-silence'`, `backExtend`,
+ * and the non-default `pitchEstimator` and `onsetAt` values.
  *
  * ⚠ Deliberately voice-only. The global-config version of this model family was
  * measured at −0.06…−0.16 F1 across the whole corpus (see the findings log in
@@ -328,8 +329,50 @@ export interface VoiceDecodeOptions {
      * and measure worse (`'arrival'` +0.07, `'stable'` +0.05, vs +0.15 for the
      * constant): the lead is consistent, while any per-note estimate of it is noisy,
      * and the noise costs more than the bias it removes.
+     *
+     * **Re-fit on the quantised output, 2026-11 (`VOICE_ONSET_SHIFT_SEC`; 0.07 still
+     * ships).** The 70–100 ms optimum above was fitted on UNQUANTISED notes, where the
+     * ±100 ms window is hard and the best constant covers the most mass. The product
+     * snaps onsets to a 16th grid, which makes the window soft and rewards centring
+     * the error instead — and this decode is still a median +20…+60 ms late. Scored
+     * the way `benchmark.ts` scores (cached, all conditions, dev): **0.05 vs 0.07,
+     * singing +0.016 [+0.011, +0.021]** (human truth +0.014, human-timed sets +0.022;
+     * every reverb/noise row up, +0.016…+0.044); ALL +0.006; whistling and
+     * instruments exactly 0. Losers: AVS clean −0.047 (its timing is pYIN-segmented;
+     * its reverb rows gain +0.014/+0.041), esmuc −0.012. Shifts are compared only at
+     * equal phase mod the 20 ms hop (0.03 / 0.05 / 0.07 / 0.09: +0.010, +0.016, 0,
+     * −0.045), because at 120 bpm the hop lattice against the 125 ms grid turns the
+     * curve into a staircase; off that lattice, at 97 and 133 bpm, 0.05 is still
+     * +0.012 at both. Independent: realistic synthetic singing to the click +0.009
+     * (n.s., COnPOff +0.022), jacrc-students human syllable-onset recall +0.108,
+     * AVP onset F1 +0.082, humming (mir-qbsh) +0.038.
      */
     onsetShiftSec?: number
+    /**
+     * Sub-gate onset back-extension: a note entered from silence starts earlier,
+     * over the contiguous frames just before it whose pitch already rounds to the
+     * note's semitone (within ±50 ¢ of its rounded pitch) at a confidence of at
+     * least `minConfidence` — frames the voicing gate called unvoiced, so the
+     * decode put them in the silence before the note. At most `windowSec` back,
+     * and never past the start of that silence, so it cannot reach the previous
+     * note. Notes that follow another note directly are left alone, and the
+     * note's pitch is still measured over its own (gated) frames only.
+     *
+     * The case it targets is a quiet or reverberant onset after a rest: the
+     * pitch is there at sub-gate confidence before the gate opens, and the note
+     * comes out 100–200 ms late. Omit to report onsets as before.
+     *
+     * **Measured, and OFF: it fixes the same late onsets as a smaller
+     * `onsetShiftSec`** (`VOICE_ONSET_BACKEXTEND`, 2026-11, cached, all
+     * conditions, dev). On the shipping 0.07 shift, 0.15/0.15 is worth singing
+     * +0.008 [+0.006, +0.010]. On a 0.05 shift it adds only +0.003
+     * [+0.001, +0.004], flat across minConfidence 0.10–0.20 × windowSec
+     * 0.10–0.20. All of that is the reverb rows (echoey +0.016, distant +0.026);
+     * clean takes are null (human-truth real −0.001), wind and street exactly 0,
+     * and esmuc −0.006. The voicing gate is the more direct lever for those
+     * reverb rows.
+     */
+    backExtend?: { minConfidence: number; windowSec: number }
 
     // --- boundary evidence (§ Kroher & Gómez) ---
     /**
@@ -505,6 +548,7 @@ type OptionalKnob =
     | 'intervalChange'
     | 'silenceMemory'
     | 'unvoicedChangeRelease'
+    | 'backExtend'
 
 /**
  * The decoder's own defaults — the pYIN literature baseline the sweeps start
@@ -576,6 +620,29 @@ export const SHIPPING_VOICE_OPTS: VoiceDecodeOptions = {
     changeCost: 2.5,
     evidenceDiscount: 0.35,
     trust: 0.7,
+    ...voiceOnsetEnvOverrides(),
+}
+
+/**
+ * The A/B overrides of the voice decode's onset timing, read once at import. Both
+ * are unset in production, so `SHIPPING_VOICE_OPTS` is exactly the object above.
+ *
+ *  - `VOICE_ONSET_SHIFT_SEC=<seconds>` replaces `onsetShiftSec` (0.07 today;
+ *    0.05 is the 2026-11 candidate, see `onsetShiftSec` for its numbers).
+ *  - `VOICE_ONSET_BACKEXTEND=<minConfidence>,<windowSec>` turns on `backExtend`
+ *    (measured and kept off, see there). `off`, unset, or anything that is not two
+ *    finite numbers leaves it off.
+ *
+ * Both act after the track and profile, so the eval's cached replay
+ * (`benchmark.ts run --cached`) scores them exactly.
+ */
+function voiceOnsetEnvOverrides(): Pick<VoiceDecodeOptions, 'onsetShiftSec' | 'backExtend'> {
+    const out: Pick<VoiceDecodeOptions, 'onsetShiftSec' | 'backExtend'> = {}
+    const shift = envOptionalNumber('VOICE_ONSET_SHIFT_SEC')
+    if (shift !== undefined) out.onsetShiftSec = shift
+    const parts = (process.env.VOICE_ONSET_BACKEXTEND ?? '').split(',').map((s) => (s.trim() === '' ? NaN : Number(s)))
+    if (parts.length === 2 && parts.every(Number.isFinite)) out.backExtend = { minConfidence: parts[0], windowSec: parts[1] }
+    return out
 }
 
 export class VoiceNoteDecoder {
@@ -637,7 +704,8 @@ export class VoiceNoteDecoder {
         const runs = this.absorbShortRuns(this.runsOf(pitches, frames, reonset), minFrames, keepShortLoud)
 
         const notes: NoteEventTime[] = []
-        for (const run of runs) {
+        for (let r = 0; r < runs.length; r += 1) {
+            const run = runs[r]
             if (run.state < 0) continue
             if (longQuiet && energy && run.end - run.start >= longQuiet.minFrames && meanOver(energy, run) < longQuiet.floor) {
                 continue
@@ -659,9 +727,14 @@ export class VoiceNoteDecoder {
                 }
             }
             if (end - start < track.hopSec) continue
+            // Back-extension moves the onset of a note that exists; it must not decide
+            // whether one does, so it is applied after the length test above (a run the
+            // onset shift pushes past its own end stays dropped).
+            const extendedFrom = this.backExtendedStart(run, runs[r - 1], track, cents)
+            const reported = extendedFrom < run.start ? extendedFrom * track.hopSec + this.o.onsetShiftSec : start
             notes.push({
-                startTimeSeconds: start,
-                durationSeconds: end - start,
+                startTimeSeconds: reported,
+                durationSeconds: end - reported,
                 pitchMidi: Math.round(cents / 100),
                 // The unrounded pitch rides along for the NOTATION layer: a take sung
                 // consistently between keys is renamed there on its own grid
@@ -1173,6 +1246,22 @@ export class VoiceNoteDecoder {
         while (settled < run.end && attack[settled]) settled += 1
         if (settled >= run.end) return run.start
         return this.o.onsetAt === 'mid' ? Math.floor((run.start + settled) / 2) : settled
+    }
+
+    /**
+     * The first frame of `backExtend`'s sub-gate stretch before `run`, or
+     * `run.start` when the option is off, the run does not follow silence, or the
+     * frame just before it does not qualify. `before` is the run preceding `run`;
+     * the walk stops at its start, so it never reaches the note before the rest.
+     */
+    private backExtendedStart(run: Run, before: Run | undefined, track: PitchTrack, centsOfNote: number): number {
+        const be = this.o.backExtend
+        if (!be || !before || before.state >= 0) return run.start
+        const floor = Math.max(before.start, run.start - Math.round(be.windowSec / track.hopSec))
+        const target = Math.round(centsOfNote / 100) * 100
+        let f = run.start
+        while (f - 1 >= floor && Math.abs(track.cents[f - 1] - target) <= 50 && track.confidence[f - 1] >= be.minConfidence) f -= 1
+        return f
     }
 
     /**
