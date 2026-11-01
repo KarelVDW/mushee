@@ -36,7 +36,7 @@ import { ProviderRegistry } from '../../../src/recordings/pipeline/providers/pro
 import type { GroundTruth } from '../types'
 import type { AudioFrontEnd } from './dereverb'
 import type { RealDataset } from './realCorpus'
-import { resolverEnvDir, resolverEnvMatches, resolverEnvSignature } from './trackCache'
+import { harnessHint, resolverEnvDir, resolverEnvMatches, resolverEnvSignature } from './trackCache'
 
 /**
  * 2: the track gained per-frame pitch candidates (E3/R9) — see trackCache v6.
@@ -178,12 +178,10 @@ export class VariantTrackCache {
             snrDb: rawScan.snrDb,
             noisiness: rawScan.noisiness,
         }
-        const profile = this.resolver.resolve(det.samples, DETECT_SR, {
-            instrumentId: ds.instrumentId,
-            // Explicit so the audio source classifier never votes during a cache
-            // build — a cached profile must be a pure function of the dataset.
-            sourceKind: ds.kind === 'voice' ? 'voice' : 'instrument',
-        })
+        // As in `TrackCache`: the dataset's declaration (`harnessHint`), with the
+        // classifier's model awaited so its verdicts never depend on load timing.
+        await this.resolver.ready()
+        const profile = this.resolver.resolve(det.samples, DETECT_SR, harnessHint(ds.instrumentId, ds.kind))
         const provider = this.registry.get(profile.providerName)
         // Both CREPE variants expose `track()` (the octave-down wrapper since
         // 2026-08-22) — the same test `TrackCache` applies.
