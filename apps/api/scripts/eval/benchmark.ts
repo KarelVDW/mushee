@@ -610,7 +610,8 @@ function renderResult(r: BenchResult): string {
     lines.push(`## Latest run: \`${r.meta.id}\``, '')
     lines.push(
         `- **Date** ${r.meta.date.slice(0, 16).replace('T', ' ')} UTC · **commit** \`${r.meta.gitSha}\`` +
-            `${r.meta.gitDirty ? ' (dirty tree)' : ''} · **label** ${r.meta.label} · ${r.meta.durationSec} s · node ${r.meta.node}`,
+            `${r.meta.gitDirty ? ' (dirty tree)' : ''} · **label** ${r.meta.label} · ${r.meta.durationSec} s · node ${r.meta.node}` +
+            `${envOverrides(r) ? ` · **env** ${envOverrides(r)}` : ''}`,
     )
     if (r.meta.rescoredAt) {
         lines.push(
@@ -722,6 +723,13 @@ function resultLink(r: BenchResult): string {
     return `${relative(dirname(RESULTS_MD), RESULTS_DIR)}/${r.meta.id}.json`
 }
 
+/** The run's env overrides as inline code, '' when it measured the commit's defaults — without them a row misnames its pipeline. */
+function envOverrides(r: BenchResult): string {
+    return Object.entries(r.meta.env ?? {})
+        .map(([k, v]) => `\`${k}=${v}\``)
+        .join(' ')
+}
+
 function renderHistory(results: BenchResult[]): string {
     const lines: string[] = []
     lines.push('## History', '')
@@ -747,7 +755,7 @@ function renderHistory(results: BenchResult[]): string {
         const vp = r.perScenario.filter((s) => s.material === 'vocal-percussion')
         const vpOn = vp.length ? fmt(vp.reduce((a, s) => a + s.onsetF1, 0) / vp.length, 2) : '—'
         lines.push(
-            `| ${r.meta.date.slice(0, 16).replace('T', ' ')} | \`${r.meta.gitSha}\`${r.meta.gitDirty ? '*' : ''} | ${r.meta.label}${r.meta.rescoredAt ? ` (rescored ${r.meta.rescoredAt.slice(0, 10)})` : ''} | ` +
+            `| ${r.meta.date.slice(0, 16).replace('T', ' ')} | \`${r.meta.gitSha}\`${r.meta.gitDirty ? '*' : ''} | ${r.meta.label}${r.meta.rescoredAt ? ` (rescored ${r.meta.rescoredAt.slice(0, 10)})` : ''}${envOverrides(r) ? ` (env ${envOverrides(r)})` : ''} | ` +
                 `${r.meta.quick ? 'real' : r.meta.conditions.length + ' cond.'} | **${fmt(r.overallF1)}** | ` +
                 `${withHuman ? `${fmt(humanHeadline(r)?.f1)} | ` : ''}${m('singing')} | ${m('humming')} | ` +
                 `${m('whistling')} | ${m('instrument')} | ${vpOn} | [\`${r.meta.id}.json\`](${resultLink(r)}) |`,
@@ -756,7 +764,8 @@ function renderHistory(results: BenchResult[]): string {
     lines.push(
         '',
         '`*` = working tree was dirty when the run was recorded. _Italic_ = provisional (context-tier truth only). ' +
-            '"rescored" = the run’s notes scored again against the truth of that date (`benchmark.ts rescore`).',
+            '"rescored" = the run’s notes scored again against the truth of that date (`benchmark.ts rescore`). ' +
+            '"env" = pipeline overrides the run set; without it the run measured that commit’s defaults.',
         '',
     )
     return lines.join('\n')
@@ -840,7 +849,7 @@ function compare(aPath: string, bPath: string): void {
             ? '\nΔ COnP = B − A, paired bootstrap over clip × condition rows as independent units (--clip-ci, the pre-2026-11 interval;\n' +
                   'levels are clip-level means — read direction + significance, not the level)\n'
             : '\nΔ COnP = B − A on the mean of dataset means (the RESULTS.md arithmetic); 95 % CI by a paired cluster bootstrap that\n' +
-                  `resamples ${clusterBy === 'group' ? "performer groups (lib/split.ts)" : 'performances (a clip with all of its conditions)'} within each dataset ` +
+                  `resamples ${clusterBy === 'group' ? 'performer groups (lib/split.ts)' : 'performances (a clip with all of its conditions)'} within each dataset ` +
                   '(n = rows, k = clusters; * = CI excludes zero; mde = smallest effect detectable at 80 % power)\n',
     )
 
@@ -910,12 +919,9 @@ function compare(aPath: string, bPath: string): void {
             )
     }
 
-    // The dataset-mean headline, the way RESULTS.md reports it — so the two views agree.
-    const headline = (r: BenchResult): number => {
-        const ps = r.perScenario.filter((s) => s.pooled && s.clips > 0)
-        return ps.reduce((s, x) => s + x.f1, 0) / Math.max(1, ps.length)
-    }
-    console.log(`\nheadline (dataset-mean COnP): ${headline(a).toFixed(3)} → ${headline(b).toFixed(3)}`)
+    // The stored headlines, exactly as RESULTS.md prints them — so the two views agree. Re-averaging
+    // the per-dataset rows would not: each is rounded to three decimals, which can move the third.
+    console.log(`\nheadline (dataset-mean COnP): ${a.overallF1.toFixed(3)} → ${b.overallF1.toFixed(3)}`)
     const [ha, hb] = [humanHeadline(a), humanHeadline(b)]
     if (ha && hb) console.log(`human-truth headline: ${ha.f1.toFixed(3)} → ${hb.f1.toFixed(3)}`)
 }
