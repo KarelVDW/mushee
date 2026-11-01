@@ -68,7 +68,10 @@ export interface ReverbDecision {
  * −0.009*, because a lower gate on a random half of the takes is still a lower gate.
  * Knee 0.82…0.88 × slope 1.5…3 all land at ALL +0.007…+0.013; 0.85/2 lowers the
  * gate on the fewest clean takes (10 %). Streaming: the 1.5 s frozen prefix keeps
- * +0.009 of the +0.010 (ALL). Not yet confirmed on test or on measured RIRs.
+ * +0.009 of the +0.010 (ALL). On L0b's measured-RIR tier (Arni rooms, dev): ALL
+ * +0.018*, voice rir-near / rir-far +0.027* / +0.060*, every instrument row ≥ 0.
+ * Realistic synthetic corpus (exact truth, mild measured rooms, both parts on):
+ * studio −0.000, room +0.001, home-phone +0.002, all n.s. Not yet confirmed on test.
  *
  * ## 2. Instrument onset back-extension (ADV-H3, instrument part) — `RECORDING_INSTR_ONSET_BACKEXTEND=1`
  *
@@ -87,11 +90,13 @@ export interface ReverbDecision {
  *     on top of (1):    ALL +0.002*  instrument +0.004*  plucked +0.012 / +0.016*,
  *                       sustained +0.001 / +0.021*; clean GuitarSet −0.001, URMP ≥ 0
  *     both vs neither:  ALL +0.012* [+0.007, +0.016]  human +0.014*  instrument +0.017*
+ *     measured RIRs, on top of (1): plucked rir-near / rir-far +0.004* / +0.009*,
+ *                       sustained +0.006 / −0.002
  *
- * It fires on 11 % of clean non-voice dev takes (GuitarSet 5/25, URMP 4/24,
- * whistles 6/82, TinySOL 0/30) — sustained / legato takes that read like a room —
- * without a clean cost; a stricter gate (6 dB / 0.85, 2 % of clean takes) keeps about
- * half of the instrument gain (alone +0.005* vs +0.010*).
+ * It fires on 18 % of clean GuitarSet + URMP dev takes (5/25, 4/24; whistles 6/82,
+ * TinySOL 0/30) — sustained / legato takes that read like a room — without a clean
+ * cost; a stricter gate (6 dB / 0.85, 1/49) keeps about half of the instrument
+ * gain (alone +0.005* vs +0.010*).
  *
  * ## Streaming
  *
