@@ -2696,6 +2696,22 @@ the old calibration, onsets are reported at 0.05. One pre-registered rule, the p
   significantly negative (soprano −0.001).
 - Write-up: the pass orchestrator's scratchpad `diag/sing-h1-dry.md`.
 
+### The written score re-phases some sung takes (found through the timeline, 2026-11-01)
+
+The timeline scores the written score (the MusicXML round trip); the benchmark scores the extracted notes. On
+vocadito SING-H1 gave +0.033\* in the benchmark but +0.004 n.s. (ρ 0.43) on the timeline: 19 of 20 clips gain, and
+vocadito_11 falls 0.657 → 0.133 because its whole written take moved −0.25 s (half a beat at 120 bpm), every pitch
+right. The extracted notes are correct (1.25 / 1.75 / 2.25 s); the shift is `TakeSpelling.estimateGridPhaseBeats`
+(voice-notation.ts, from 0b217b4f): a sung take whose onsets mostly sit on one off-beat phase is written back on
+the beat when that at least halves its notation cost. SING-H1's 20 ms moved this take across that threshold.
+Replayed from the whole-take notes at 5302a5bb it fires on 10 of 382 timeline clips (VocalSet 3/40, whistle-real
+3/40, app-takes-singing 1/17, vocadito 1/20, n20emv2-test 1/9), and each one scores 0.04–0.78 below the
+benchmark in seconds. The estimator was built for takes sung against the app's click (a uniform 100–150 ms vocal
+lag); most corpora have a nominal 120 bpm and no click, so there the shift has nothing to correct. Seconds-COnP
+cannot judge it either way (the truth keeps the lag); it is a notation decision. **Owner call:** re-phase only
+takes recorded with the metronome on (the pipeline does not receive that today), and/or score the timeline
+phase-locked for nominal-tempo datasets. Nothing changed.
+
 ### Open after this pass
 
 - **Owner calls:**

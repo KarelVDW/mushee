@@ -128,6 +128,10 @@ Both splits, cached, after the flips (`int-after-cached-all`, env {}): ALL 0.671
 6. The corpus corrections (re-cut GuitarSet and Dagstuhl, app-take truth bpm, URMP `nominalTempo`) live in the
    gitignored fixtures; only the 48 app-take resynth annotations are tracked (commit `dadfb29b`). Rollback:
    `swap-grid.sh --rollback` from `.cache/scratch/l0b/pre-swap/`.
+7. **Voice grid-phase re-writing** (FINDINGS, 2026-11): the written score moves a sung take by a whole off-beat
+   phase when that halves its notation cost. It fires on ~3 % of timeline clips, mostly free-tempo corpora where
+   there is no click to lag behind, at 0.04–0.78 COnP per clip. Gate it on the metronome being on? (Needs the web
+   app to send that.)
 
 ## Timeline (2026-11-01, CET)
 
