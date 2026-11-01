@@ -47,7 +47,13 @@ import { splitOf } from './split'
 const DETECT_SR = 16000
 
 export const SYNTH_ROOT = resolve(__dirname, '../../fixtures/eval')
-export const REAL_ROOT = resolve(__dirname, '../../fixtures/eval-real')
+/**
+ * The real corpus. `EVAL_REAL_ROOT=<dir>` scores another tree of the same layout
+ * instead — a staged correction (fixtures/eval-real-staged) measured before it is
+ * swapped in; pair it with `EVAL_TRACK_CACHE_ROOT` / `EVAL_VARIANT_CACHE_ROOT`
+ * (benchmark.ts), because cache entries are keyed by dataset and clip, not by audio.
+ */
+export const REAL_ROOT = process.env.EVAL_REAL_ROOT ? resolve(process.env.EVAL_REAL_ROOT) : resolve(__dirname, '../../fixtures/eval-real')
 /** The realistic synthetic corpus (exported from synthetic-corpus/, see its README). */
 export const SYNTH_REALISTIC_ROOT = resolve(__dirname, '../../fixtures/eval-synth')
 const MODELS = {

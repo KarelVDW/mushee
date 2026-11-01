@@ -65,10 +65,18 @@ const ANNOT_ZIP = join(CACHE, 'annotation.zip')
 const ANNOT_DIR = join(CACHE, 'annotation')
 const AUDIO_ZIP = join(CACHE, AUDIO.zip)
 const AUDIO_DIR = join(CACHE, AUDIO.dir)
-const OUT = resolve(__dirname, '../../fixtures/eval-real/benchmark/guitarset-solo')
+/**
+ * `GUITARSET_OUT=<dir>` writes the dataset elsewhere — the 2026-11 grid
+ * correction was staged under fixtures/eval-real-staged before its swap.
+ */
+const OUT = process.env.GUITARSET_OUT
+    ? resolve(process.env.GUITARSET_OUT)
+    : resolve(__dirname, '../../fixtures/eval-real/benchmark/guitarset-solo')
 
-// Excerpt length per clip, and the audio kept before the first note so the
-// pipeline's pitch scan has a moment of noise floor to adapt to.
+// Excerpt length per clip, and the minimum audio kept before the first note so
+// the pipeline's pitch scan has a moment of noise floor to adapt to. The window
+// then opens on the last CLICK BEAT at or before that point (see pickWindow), so
+// up to one beat more is kept.
 const WINDOW_SEC = 15
 const LEAD_SEC = 0.25
 
@@ -132,19 +140,57 @@ interface Jams {
 }
 
 /**
+ * The excerpt's click grid: GuitarSet was played to a click, and its
+ * `beat_position` annotation is that click (beat k at k·60/bpm from the excerpt's
+ * start in every solo excerpt checked). `beatAtOrBefore(t)` is the last click
+ * at or before `t`, extrapolated at the grid's period outside the annotated
+ * beats and never before 0.
+ */
+class ClickGrid {
+    constructor(
+        private readonly beats: number[],
+        private readonly periodSec: number,
+    ) {}
+
+    static from(beats: number[], bpm: number): ClickGrid {
+        const sorted = [...beats].sort((a, b) => a - b)
+        return new ClickGrid(sorted.length ? sorted : [0], 60 / bpm)
+    }
+
+    beatAtOrBefore(t: number): number {
+        const first = this.beats[0]
+        let best: number
+        if (t >= first) {
+            best = first
+            for (const b of this.beats) if (b <= t + 1e-9) best = b
+            const last = this.beats[this.beats.length - 1]
+            if (t > last) best = last + Math.floor((t - last + 1e-9) / this.periodSec) * this.periodSec
+        } else {
+            best = first - Math.ceil((first - t - 1e-9) / this.periodSec) * this.periodSec
+        }
+        // The excerpt has no audio before 0: step forward to the grid's first point inside it.
+        while (best < -1e-9) best += this.periodSec
+        return Math.max(0, best)
+    }
+}
+
+/**
  * Merge the six per-string `note_midi` annotations into one monophonic line and
  * read the annotated tempo and excerpt length. Pitch is rounded to the nearest
  * semitone; rows outside the guitar's range are dropped as annotation errors.
  * `file_metadata.duration` matches the WAV byte length exactly for every solo
  * excerpt (verified), so it can bound the window without probing the audio.
  */
-function parseJams(path: string): { notes: TruthNote[]; bpm: number; durationSec: number } {
+function parseJams(path: string): { notes: TruthNote[]; bpm: number; beats: number[]; durationSec: number } {
     const jams = JSON.parse(readFileSync(path, 'utf8')) as Jams
     const notes: TruthNote[] = []
+    const beats: number[] = []
     let bpm = 0
     for (const ann of jams.annotations) {
         if (ann.namespace === 'tempo') {
             bpm = Math.round(ann.data[0]?.value ?? 0)
+        } else if (ann.namespace === 'beat_position') {
+            for (const obs of ann.data) if (Number.isFinite(obs.time)) beats.push(obs.time)
         } else if (ann.namespace === 'note_midi') {
             for (const obs of ann.data) {
                 const midi = Math.round(obs.value)
@@ -155,7 +201,7 @@ function parseJams(path: string): { notes: TruthNote[]; bpm: number; durationSec
         }
     }
     notes.sort((a, b) => a.onsetSec - b.onsetSec)
-    return { notes, bpm, durationSec: jams.file_metadata.duration }
+    return { notes, bpm, beats, durationSec: jams.file_metadata.duration }
 }
 
 /** Share of notes that attack simultaneously with their predecessor. */
@@ -185,17 +231,25 @@ interface Window {
  * runs past the end of the audio (the shortest solo excerpt is 14.4 s, i.e. just
  * under WINDOW_SEC, so a window can legitimately be short).
  *
+ * Every start is snapped back to the last click beat at or before
+ * (anchor − LEAD_SEC). The product starts a take ON beat 1 (capture begins as
+ * the count-off ends) and quantises on a grid anchored at the take's t = 0, so a
+ * window opening between clicks scored the quantiser on a grid shifted by an
+ * arbitrary fraction of a beat — 0.022 of GuitarSet's 0.054 quantiser loss was
+ * that phase (instrument lane, 2026-11-01). Until 2026-11-01 the window opened
+ * at exactly (anchor − LEAD_SEC).
+ *
  * Inclusion is by ONSET, not by full containment: a plucked guitar note rings
  * well past the phrase it belongs to, so requiring the whole note to fit would
  * drop notes whose attack is plainly audible inside the window and turn them
  * into false positives. Their ring is clipped at the window edge instead — which
  * only touches the offset-bias statistic, since matching is onset+pitch based.
  */
-function pickWindow(all: TruthNote[], durationSec: number): Window | null {
+function pickWindow(all: TruthNote[], durationSec: number, grid: ClickGrid): Window | null {
     let best: Window | null = null
-    const latestStart = Math.max(0, durationSec - WINDOW_SEC)
+    const latestStart = grid.beatAtOrBefore(Math.max(0, durationSec - WINDOW_SEC))
     for (const anchor of all) {
-        const startSec = Math.min(Math.max(0, anchor.onsetSec - LEAD_SEC), latestStart)
+        const startSec = Math.min(grid.beatAtOrBefore(Math.max(0, anchor.onsetSec - LEAD_SEC)), latestStart)
         const endSec = Math.min(startSec + WINDOW_SEC, durationSec)
         const inWindow = all.filter((n) => n.onsetSec >= startSec && n.onsetSec <= endSec - TAIL_SEC)
         if (inWindow.length < MIN_NOTES) continue
@@ -311,20 +365,21 @@ function main(): void {
             console.warn(`  ! ${clip}: audio missing, skipping`)
             continue
         }
-        const { notes, bpm, durationSec } = parseJams(join(ANNOT_DIR, file))
-        const window = pickWindow(notes, durationSec)
+        // 04_Jazz2-110-Bb_solo -> player 04, progression Jazz2, tempo 110.
+        const [player, rest] = clip.split('_')
+        const { notes, bpm: jamsBpm, beats, durationSec } = parseJams(join(ANNOT_DIR, file))
+        const bpm = jamsBpm || Number(rest.split('-')[1])
+        const window = pickWindow(notes, durationSec, ClickGrid.from(beats, bpm))
         if (!window) {
             noWindow += 1
             continue
         }
-        // 04_Jazz2-110-Bb_solo -> player 04, progression Jazz2, tempo 110.
-        const [player, rest] = clip.split('_')
         candidates.push({
             clip,
             wav,
             progression: rest.split('-')[0],
             player,
-            bpm: bpm || Number(rest.split('-')[1]),
+            bpm,
             window,
         })
     }
@@ -367,12 +422,17 @@ function main(): void {
         audioSet: AUDIO.dir,
         clips: chosen.length,
         totalNotes,
+        // Since 2026-11-01 every window opens on a click beat (pickWindow).
+        windowsOnClick: true,
+        windowStartSec: Object.fromEntries(chosen.map((c) => [c.clip, Number(c.window.startSec.toFixed(6))])),
         notes:
             `Subset of ${chosen.length}/${candidates.length} eligible solo excerpts (the corpus has ` +
             '180 solo and 180 comp excerpts; comp is strummed chordal playing and is excluded as ' +
             `polyphonic), spanning ${players.size} players and ${progressions.size} chord ` +
             `progressions. Each clip is the most note-dense ${WINDOW_SEC} s window of its excerpt ` +
-            `whose share of simultaneous attacks stays under ${MAX_CHORD_RATIO} (mean ` +
+            `that opens on the last click beat at least ${LEAD_SEC} s before a note (so the ` +
+            "take's t = 0 is a click, as in the app) and whose share of simultaneous attacks stays under " +
+            `${MAX_CHORD_RATIO} (mean ` +
             `${(chordSum / Math.max(chosen.length, 1)).toFixed(3)}); notes are included by onset and ` +
             'their ring is clipped at the window edge. Ground truth is the union of the six ' +
             'per-string note_midi JAMS annotations (hexaphonic-pickup pitch tracking, manually ' +

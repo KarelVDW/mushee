@@ -57,7 +57,9 @@
  *
  * Clips are cut into `DCS_EXCERPT_SEC` windows (default 30 s) because a whole
  * take is ~5 minutes; notes and the beat grid are sliced and rebased to each
- * excerpt's start.
+ * excerpt's start. Since 2026-11-01 an excerpt starts on the first annotated
+ * beat of its window (so its t = 0 is a beat, as an app take's is) and its bpm is
+ * the mean tempo over its annotated beats.
  *
  * Downloads only the bytes it needs, via `lib/remoteZip.ts`: the archive's
  * ZIP64 central directory is read by a ranged GET of its tail, then each
@@ -76,7 +78,8 @@ import type { GroundTruth, TruthNote } from '../types'
 const ZIP_URL = 'https://zenodo.org/api/records/4618287/files/DagstuhlChoirSet_V1.2.3.zip/content'
 
 const CACHE = resolve(__dirname, '../.cache', 'dagstuhl')
-const OUT = resolve(__dirname, '../../fixtures/eval-real/benchmark/dagstuhl-choir')
+/** `DCS_OUT=<dir>` writes the dataset elsewhere (the 2026-11 grid correction was staged before its swap). */
+const OUT = process.env.DCS_OUT ? resolve(process.env.DCS_OUT) : resolve(__dirname, '../../fixtures/eval-real/benchmark/dagstuhl-choir')
 
 /** Excerpt length; a whole take is ~5 min, far longer than any real recording. */
 const EXCERPT_SEC = Number(process.env.DCS_EXCERPT_SEC) || 30
@@ -129,17 +132,19 @@ function parseScore(csv: string): TruthNote[] {
     return notes
 }
 
-/** Median seconds-per-beat over the grid → the clip's representative bpm. */
-function medianBpm(marks: BeatMark[]): number {
-    const spb: number[] = []
-    for (let i = 1; i < marks.length; i += 1) {
-        const dt = marks[i].timeSec - marks[i - 1].timeSec
-        const db = marks[i].beat - marks[i - 1].beat
-        if (dt > 0 && db > 0) spb.push(dt / db)
-    }
-    if (!spb.length) return 120
-    spb.sort((a, b) => a - b)
-    return 60 / spb[Math.floor(spb.length / 2)]
+/**
+ * The excerpt's MEAN tempo: beats spanned over seconds spanned, from its first
+ * to its last mark inside [0, lengthSec]. A constant grid at this tempo from the
+ * excerpt's first beat (t = 0, see the cut in main) lands on the last annotated
+ * beat too; the median beat interval it replaced (until 2026-11-01) drifts by
+ * the whole excerpt's rubato.
+ */
+function meanBpm(marks: BeatMark[], lengthSec: number): number {
+    const inside = marks.filter((m) => m.timeSec >= -1e-9 && m.timeSec <= lengthSec + 1e-9)
+    if (inside.length < 2) return 120
+    const first = inside[0]
+    const last = inside[inside.length - 1]
+    return (60 * (last.beat - first.beat)) / (last.timeSec - first.timeSec)
 }
 
 /**
@@ -189,8 +194,10 @@ function toPcm16(data: Buffer, format: number, bits: number): Buffer {
 
 function writeWavSlice(samples: Buffer, sampleRate: number, startSec: number, endSec: number, dest: string): void {
     const bytesPerSample = 2
-    const from = Math.max(0, Math.floor(startSec * sampleRate) * bytesPerSample)
-    const to = Math.min(samples.length, Math.floor(endSec * sampleRate) * bytesPerSample)
+    // Rounded, not floored: a beat time like 60.2514285… s is sample 1,328,544 to
+    // within float error, and flooring 1,328,543.99999… cut one sample early.
+    const from = Math.max(0, Math.round(startSec * sampleRate) * bytesPerSample)
+    const to = Math.min(samples.length, Math.round(endSec * sampleRate) * bytesPerSample)
     const pcm = samples.subarray(from, to)
     const header = Buffer.alloc(44)
     header.write('RIFF', 0, 'ascii')
@@ -298,8 +305,17 @@ function main(): void {
         const durSec = samples.length / 2 / sampleRate
 
         for (let i = 0; i < MAX_EXCERPTS_PER_STEM; i += 1) {
-            const start = i * EXCERPT_SEC
-            const end = Math.min(durSec, start + EXCERPT_SEC)
+            // Each excerpt opens on its FIRST ANNOTATED BEAT, as an app take opens on
+            // beat 1 (capture starts when the count-off ends) and the quantiser's grid
+            // is anchored at the take's t = 0. Until 2026-11-01 it opened at exactly
+            // i·EXCERPT_SEC, a median 0.30 s (up to 0.69 s) before that beat, so every
+            // dagstuhl clip was quantised on a grid at an arbitrary phase. The end
+            // stays at (i+1)·EXCERPT_SEC: the excerpt is the old window minus its lead.
+            const windowStart = i * EXCERPT_SEC
+            const end = Math.min(durSec, windowStart + EXCERPT_SEC)
+            const firstBeat = marks.find((m) => m.timeSec >= windowStart)
+            if (!firstBeat) break
+            const start = firstBeat.timeSec
             if (end - start < EXCERPT_SEC * 0.6) break
 
             // Notes fully inside the window, rebased to the excerpt's own t=0.
@@ -331,7 +347,7 @@ function main(): void {
             const barOffset = 4 * Math.floor(beatAtStart / 4)
             for (const g of grid) g.beat -= barOffset
 
-            const bpm = medianBpm(grid)
+            const bpm = meanBpm(grid, end - start)
             const clip = `${takeId}_${s.singer}_${s.mic}_ex${String(i).padStart(2, '0')}`
             const truth: GroundTruth = { bpm, notes: inWin, beatGrid: grid }
             writeFileSync(join(OUT, `${clip}.truth.json`), JSON.stringify(truth, null, 2))
@@ -361,6 +377,8 @@ function main(): void {
         totalNotes,
         singers: singers.size,
         excerptSec: EXCERPT_SEC,
+        // Since 2026-11-01: each excerpt opens on its first annotated beat, bpm = its mean tempo.
+        excerptStartsOnBeat: true,
         bpmMin: bpms.length ? Number(bpms[0].toFixed(1)) : null,
         bpmMedian: bpms.length ? Number(bpms[Math.floor(bpms.length / 2)].toFixed(1)) : null,
         bpmMax: bpms.length ? Number(bpms[bpms.length - 1].toFixed(1)) : null,

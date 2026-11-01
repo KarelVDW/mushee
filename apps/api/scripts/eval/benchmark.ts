@@ -121,9 +121,17 @@ const RESULTS_DIR = SCRATCH ? resolve(__dirname, '.cache/bench-scratch', SYNTH ?
 const RESULTS_MD = join(BENCH_DIR, SYNTH ? 'RESULTS-SYNTH.md' : 'RESULTS.md')
 /** Per-run pipeline notes, `<result id>.jsonl` — gitignored with the rest of .cache. */
 const NOTES_DIR = resolve(__dirname, '.cache/notes')
-/** The track caches `--cached` replays (shared with the sweeps). */
-const TRACK_CACHE_ROOT = resolve(__dirname, '../fixtures/eval-cache')
-const VARIANT_CACHE_ROOT = resolve(__dirname, '../fixtures/eval-cache-variant')
+/**
+ * The track caches `--cached` replays (shared with the sweeps). A staged corpus
+ * (`EVAL_REAL_ROOT`, lib/evalRun.ts) must use its own: entries are keyed by
+ * dataset and clip, so re-cut audio would otherwise replay the live entries — or
+ * overwrite them.
+ */
+const TRACK_CACHE_ROOT = resolve(process.env.EVAL_TRACK_CACHE_ROOT || resolve(__dirname, '../fixtures/eval-cache'))
+const VARIANT_CACHE_ROOT = resolve(process.env.EVAL_VARIANT_CACHE_ROOT || resolve(__dirname, '../fixtures/eval-cache-variant'))
+if (process.env.EVAL_REAL_ROOT && CACHED && (!process.env.EVAL_TRACK_CACHE_ROOT || !process.env.EVAL_VARIANT_CACHE_ROOT)) {
+    throw new Error('EVAL_REAL_ROOT with --cached needs EVAL_TRACK_CACHE_ROOT and EVAL_VARIANT_CACHE_ROOT (its own caches)')
+}
 
 /** Display order: the product's inputs first, the special axis last. */
 const MATERIAL_ORDER: Material[] = ['singing', 'humming', 'whistling', 'instrument', 'vocal-percussion']
