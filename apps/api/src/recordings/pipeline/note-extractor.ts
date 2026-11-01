@@ -180,6 +180,7 @@ export interface ExtractOptions {
      * sustained note that spans more than one onset is split back into the
      * separate notes that were re-articulated — recovering repeated same-pitch
      * notes the trajectory providers can't see. Omit to disable splitting.
+     * Ascending, as `OnsetDetector` returns them (the bridge's veto searches them).
      */
     onsetTimesSec?: number[]
 }
@@ -432,7 +433,7 @@ export class NoteExtractor {
             if (prev && prev.pitchMidi === note.pitchMidi) {
                 const prevEnd = prev.startTimeSeconds + prev.durationSeconds
                 const gap = note.startTimeSeconds - prevEnd
-                const reattacked = onsets.some((t) => t >= prevEnd - VETO_MARGIN_SEC && t <= note.startTimeSeconds + VETO_MARGIN_SEC)
+                const reattacked = NoteExtractor.hasOnsetIn(onsets, prevEnd - VETO_MARGIN_SEC, note.startTimeSeconds + VETO_MARGIN_SEC)
                 const fragment = Math.min(prev.durationSeconds, note.durationSeconds) < this.bridgeMaxFragmentSec
                 if (gap > -TOUCH_EPSILON_SEC && gap <= limit && fragment && !reattacked) {
                     prev.durationSeconds = note.startTimeSeconds + note.durationSeconds - prev.startTimeSeconds
@@ -443,6 +444,22 @@ export class NoteExtractor {
             out.push({ ...note })
         }
         return out
+    }
+
+    /**
+     * Whether the ascending `onsets` hold a time in [lo, hi]: a binary search for
+     * the first onset ≥ lo, so the veto costs O(log onsets) per same-pitch pair on
+     * a long take instead of a scan.
+     */
+    private static hasOnsetIn(onsets: number[], lo: number, hi: number): boolean {
+        let first = 0
+        let end = onsets.length
+        while (first < end) {
+            const mid = (first + end) >> 1
+            if (onsets[mid] < lo) first = mid + 1
+            else end = mid
+        }
+        return first < onsets.length && onsets[first] <= hi
     }
 
     /**
