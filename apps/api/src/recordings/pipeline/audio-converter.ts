@@ -1,8 +1,49 @@
 import type { DecodeOptions } from './audio-decoder'
+import { envNumber } from './env'
 import { ExtractedNotes, NoteExtractor, type NoteExtractorOptions } from './note-extractor'
 import { OnsetDetector } from './onset-detector'
-import type { PipelineProfile } from './profiles/pipeline-profile'
+import { AT_PITCH_PROVIDER_NAME, type PipelineProfile } from './profiles/pipeline-profile'
 import type { PitchProvider, PitchSession, PitchTranscribeOptions } from './providers/pitch-provider'
+
+/**
+ * Same-pitch gap bridge for sustained instruments (INST-H4), in seconds; 0 = off
+ * (the default until its test confirmation). See
+ * `NoteExtractorOptions.bridgeSamePitchGapSec` for what it does and
+ * `AudioConverter.bridgesSamePitchGaps` for who gets it. Candidate setting:
+ * `EXTRACTOR_BRIDGE_GAP_SEC=0.12 EXTRACTOR_BRIDGE_FRAGMENT_SEC=0.2`.
+ *
+ * Measured 2026-11-01 on DEV only (cached replay of the production decode, all
+ * five conditions on the corrected adverse tier; Δ COnP on the mean of dataset
+ * means, CI = performance-cluster bootstrap within dataset; URMP dev is 24
+ * clips, 0–3 per instrument):
+ *
+ *   gap 0.06 / 0.08 / 0.10 / 0.12, any length: instrument +0.0076 / +0.0080 /
+ *     +0.0089 / +0.0098 [+0.0062, +0.0133]*; it saturates past 0.12 (0.15
+ *     +0.0104, 0.20 +0.0102). Bowed gain most (URMP bowed +0.020*), brass least.
+ *   gap 0.12 + fragment < 0.2 s (the candidate): instrument +0.0074
+ *     [+0.0045, +0.0102]*, URMP pooled by family +0.0064 [+0.0026, +0.0108]*,
+ *     ALL +0.0043*, human-only +0.0048*; every condition positive (real +0.006*,
+ *     echoey +0.008*, distant +0.012*, wind +0.005*, street +0.007*).
+ *   GuitarSet and singing: note-identical (the gate). TinySOL: note-identical.
+ *   Whistling +0.005* — at-pitch whistles count as sustained until a whistle
+ *     family sets the octave-down provider or a 0 dip (both leave the gate).
+ *
+ * The onset veto carries it: without it the same bridge is +0.0047 n.s. on URMP,
+ * against +0.0092* with it (performances pooled; the 2026-07 `merge` lesson: a
+ * trajectory segmenter's same-pitch neighbours are often real repeats). The fragment condition exists because the veto alone still
+ * eats repeats whose re-attack the detector misses: any-length joins cost URMP
+ * echoey-room same-pitch repeats (≤ 250 ms apart) 122 → 115 of 168, and on the
+ * realistic synthetic cello/contrabass (exact truth) re-onset recall 39 → 35 of
+ * 85, repeats 212 → 185 of 450. With the 0.2 s fragment limit: URMP repeats
+ * 665 → 666 of 840, synthetic 212 → 210, re-onset recall 197 → 199 / 39 → 39,
+ * synthetic COnP +0.0049 (n.s.). The limit was chosen after seeing that
+ * synthetic result.
+ * Wider veto margins (50–100 ms) were measured too: they save fewer repeats than
+ * they cost fragment joins (URMP COnP lower at every margin).
+ */
+const BRIDGE_GAP_SEC = envNumber('EXTRACTOR_BRIDGE_GAP_SEC', 0)
+/** The bridge's fragment condition (`NoteExtractorOptions.bridgeMaxFragmentSec`); unset or ≤ 0 = any length. */
+const BRIDGE_MAX_FRAGMENT_SEC = envNumber('EXTRACTOR_BRIDGE_FRAGMENT_SEC', 0)
 
 /**
  * Provider-agnostic audio → notes pipeline. Hands the PCM samples to the
@@ -125,6 +166,11 @@ export class AudioConverter {
         }
         return {
             steps: { pitchOutliers: false, merge: false },
+            ...(BRIDGE_GAP_SEC > 0 &&
+                AudioConverter.bridgesSamePitchGaps(profile) && {
+                    bridgeSamePitchGapSec: BRIDGE_GAP_SEC,
+                    ...(BRIDGE_MAX_FRAGMENT_SEC > 0 && { bridgeMaxFragmentSec: BRIDGE_MAX_FRAGMENT_SEC }),
+                }),
             // Scale the spurious-fragment floor to the clip's own median note length.
             // This is the one thing measured to help the remaining failure — sustained
             // vibrato-heavy singing shattering into fragments — because it engages only
@@ -135,6 +181,27 @@ export class AudioConverter {
             // 0.4 and 0.5 measured slightly worse; it shipped as 0 (disabled) until now.
             adaptiveFloorFraction: 0.3,
         }
+    }
+
+    /**
+     * Whether a (trajectory-provider) profile is a sustained instrument, the one
+     * family the same-pitch gap bridge is for: not a voice (by routing or by
+     * belief — under `RECORDING_VOICE_DECODE=0` a sung take reaches this cleanup
+     * set with `isVoice` unset), the at-pitch provider (the octave-down band is
+     * whistling / piccolo), and a re-attack detector set to a positive dip ratio.
+     * That last condition is the onset policy's own family split
+     * (`applyOnsetPolicy`): struck / plucked instruments keep the detector's
+     * default and leave `onsetDipRatio` unset, and a family that disables the
+     * detector sets it to 0. Under `ONSET_POLICY=legacy` nobody qualifies.
+     */
+    static bridgesSamePitchGaps(profile: PipelineProfile | undefined): boolean {
+        return (
+            profile !== undefined &&
+            !profile.isVoice &&
+            profile.sourceBelief !== 'voice' &&
+            profile.providerName === AT_PITCH_PROVIDER_NAME &&
+            (profile.onsetDipRatio ?? 0) > 0
+        )
     }
 
     /**
