@@ -93,7 +93,17 @@ const VOICE_ONSET_MIN_TROUGH_SEC = envOptionalNumber('VOICE_ONSET_MIN_TROUGH_SEC
  *   a fixed dip with no reverb ramp (WH-H1). Unset / `legacy`: the sustained
  *   policy as today.
  *
- * ## Measured 2026-11-01 (DEV half only; the one test look is still owed)
+ * ## Measured 2026-11-01 (dev tuning below; the test look failed — stays BUILT OFF)
+ *
+ * **The one test look** (final harness: grid/tempo corrections in, app takes at
+ * their session bpm; cached, `--split test`, the three knobs DETECT + PITCHDOWN +
+ * ONSET 0.2 vs production): whistling **−0.001 [−0.020, +0.017]** (0.642 → 0.641;
+ * whistle-real −0.003, app-takes-whistling +0.002; 60 clips, MDE 0.026), against
+ * +0.037 [+0.021, +0.056] on dev on the same harness. Every singing and instrument
+ * dataset note-identical on test, all conditions (the identity guarantee holds).
+ * Product-faithful (undeclared source, test): on a `voice-lead` score +0.033
+ * [+0.006, +0.061] (the verdict keeps whistles out of the voice decode, which costs
+ * them −0.042 against the declared row); on a `piano` score +0.011 (n.s.).
  *
  * Whistling material = mean of the whistle-real / app-takes-whistling /
  * whistled-high-register dataset means; cached replay = the benchmark note for

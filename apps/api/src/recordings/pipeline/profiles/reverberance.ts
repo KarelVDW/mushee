@@ -25,7 +25,8 @@ export interface ReverbDecision {
 }
 
 /**
- * Decode-side reverb adaptations, both BUILT OFF (env opt-in), decided per take
+ * Decode-side reverb adaptations, both BUILT OFF (env opt-in; neither passed its
+ * 2026-11 confirmation, see the numbers below), decided per take
  * from the take's own CREPE trajectory — the evidence the 2026-11-01 regenerated
  * adverse tier showed actually separates rooms from dry takes, where the
  * resolver's `dipDepth` does not (see `PitchTrack.reverbEvidence`).
@@ -71,7 +72,20 @@ export interface ReverbDecision {
  * +0.009 of the +0.010 (ALL). On L0b's measured-RIR tier (Arni rooms, dev): ALL
  * +0.018*, voice rir-near / rir-far +0.027* / +0.060*, every instrument row ≥ 0.
  * Realistic synthetic corpus (exact truth, mild measured rooms, both parts on):
- * studio −0.000, room +0.001, home-phone +0.002, all n.s. Not yet confirmed on test.
+ * studio −0.000, room +0.001, home-phone +0.002, all n.s.
+ *
+ * **Final 2026-11 harness (grid/tempo corrections in): dev unchanged, ALL +0.010
+ * [+0.005, +0.014]. The one test look: ALL +0.0057 [+0.005, +0.007]** (0.680 →
+ * 0.686), human +0.006, singing +0.008, instrument +0.005; voice echoey / distant
+ * +0.046 / +0.063, plucked +0.005 / +0.045, sustained +0.006 / +0.012; no pooled
+ * `real` row below −0.005 (AVS real +0.007, outside the ±0.003 band on the good
+ * side). **Measured-RIR tier, test half** (vs `grid-fixed-rir`): ALL +0.012
+ * [+0.008, +0.016]; voice rir-near / rir-far +0.022 / +0.071, sustained +0.007 /
+ * +0.006, plucked rir-far +0.016 — but **plucked rir-near −0.004 [−0.010, +0.002]**
+ * (GuitarSet, n.s.). The pre-registered rule was a positive sign in every
+ * condition × family cell of the measured rooms, so it stays BUILT OFF on that
+ * one cell: an owner call. Stacked with the shipped onset shift and gap bridge
+ * (and the whistle family) on test it adds about +0.004 ALL.
  *
  * ## 2. Instrument onset back-extension (ADV-H3, instrument part) — `RECORDING_INSTR_ONSET_BACKEXTEND=1`
  *
@@ -97,6 +111,12 @@ export interface ReverbDecision {
  * TinySOL 0/30) — sustained / legato takes that read like a room — without a clean
  * cost; a stricter gate (6 dB / 0.85, 1/49) keeps about half of the instrument
  * gain (alone +0.005* vs +0.010*).
+ *
+ * Re-checked on the final 2026-11 harness, where GuitarSet is re-cut on its click
+ * (dev, on top of (1)): reverb rows still +0.012 (plucked +0.016 / +0.010,
+ * sustained +0.001 / +0.021), but **clean GuitarSet −0.004 [−0.011, +0.000]**
+ * (2 of 25 takes, −0.022 / −0.077) — below its ≥ −0.002 clean bar, so it got no
+ * test look and stays BUILT OFF.
  *
  * ## Streaming
  *
