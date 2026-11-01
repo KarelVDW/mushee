@@ -117,6 +117,7 @@ const RESOLVER_ENV_KEYS = [
     // The harness's undeclared-source mode (`harnessHint`) changes the hint the resolver sees.
     'EVAL_UNDECLARED_SOURCE',
     'EVAL_UNDECLARED_HINT',
+    'RECORDING_WHISTLE_ONSET_RAMP',
 ]
 export const DEFAULT_RESOLVER_ENV = 'default'
 

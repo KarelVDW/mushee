@@ -124,6 +124,41 @@ describe('whistle family in the resolver', () => {
     })
 })
 
+describe('the built-off follow-ups', () => {
+    /** Repeated 1 kHz notes whose decay a room floors — reads reverberant to `estimateReverberance`. */
+    function wetMelody(): Float32Array {
+        const x = new Float32Array(4 * SR)
+        for (let i = 0; i < x.length; i += 1) {
+            const t = i / SR
+            const env = 0.6 * (Math.exp(-(t % 0.5) / 0.06) * 0.45 + 0.55)
+            x[i] = env * 0.3 * Math.sin(2 * Math.PI * 1000 * t)
+        }
+        return x
+    }
+
+    it('ramps the family dip toward the detector default only under RECORDING_WHISTLE_ONSET_RAMP', async () => {
+        const flat = await resolverUnder({ RECORDING_WHISTLE_ONSET: '0.2' })
+        expect(flat.resolve(wetMelody(), SR, { instrumentId: 'whistle', sourceKind: 'instrument' }).onsetDipRatio).toBe(0.2)
+        const ramped = await resolverUnder({ RECORDING_WHISTLE_ONSET: '0.2', RECORDING_WHISTLE_ONSET_RAMP: '1' })
+        expect(ramped.resolve(tone(1000), SR, { instrumentId: 'whistle', sourceKind: 'instrument' }).onsetDipRatio).toBe(0.2)
+        const wet = ramped.resolve(wetMelody(), SR, { instrumentId: 'whistle', sourceKind: 'instrument' }).onsetDipRatio ?? NaN
+        expect(wet).toBeGreaterThan(0.2)
+        expect(wet).toBeLessThanOrEqual(OnsetDetector.DEFAULT_DIP_RATIO)
+    })
+
+    it('sends a non-voice high-band take to the octave-down provider under RECORDING_HIGH_BAND_PITCHDOWN, never a voice', async () => {
+        const r = await resolverUnder({ RECORDING_HIGH_BAND_PITCHDOWN: '1' })
+        const flute = r.resolve(tone(800), SR, { instrumentId: 'flute', sourceKind: 'instrument' })
+        expect(flute.providerName).toBe(PITCHDOWN_PROVIDER_NAME)
+        expect(flute.id).toMatch(/^high\+pitchdown/)
+        const voice = r.resolve(tone(800), SR, { instrumentId: 'voice-lead', sourceKind: 'voice' })
+        expect(voice.providerName).not.toBe(PITCHDOWN_PROVIDER_NAME)
+        expect(voice.isVoice).toBe(true)
+        // Other bands are untouched.
+        expect(r.resolve(tone(330), SR, { instrumentId: 'flute', sourceKind: 'instrument' }).providerName).not.toBe(PITCHDOWN_PROVIDER_NAME)
+    })
+})
+
 describe('a zero re-attack dip', () => {
     it('never fires, even on cleanly separated repeated notes', () => {
         const x = new Float32Array(4 * SR)
