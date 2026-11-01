@@ -245,6 +245,15 @@ unattended. If whistling stays a supported input, record and annotate a corpus
 | `probe-source-classifier.ts` | Measures the stock-YAMNet voice/instrument classifier over every labeled real clip: forced-choice accuracy and the abstain-band trade table.                                                                                                                                                                                                                                                                                         |
 | `sweep-bands.ts`             | Does any gated feature want a PER-BAND (`PROFILE_BANDS`) setting? Paired Δ vs the production config within band × path strata over the cached corpus; `BAND_STRATA=band-rev\|ds-band` swaps in the confound strata (reverb flag / dataset) that decide whether an apparent band effect is real.                                                                                                                                      |
 
+Since 2026-11 every cached tool takes the shared dataset filter `EVAL_DATASETS=a,b`
+(exactly these, context sets by name) and `EVAL_MATERIALS=singing,whistling,…`
+(`selectDatasets` in `lib/realCorpus.ts`); the sweeps default to the pooled
+datasets. `sweep-voice.ts` reports a third slice, WHISTLE (the pooled whistling
+sets, which used to sit in GUARD). The track cache is v7 (onsets at the profile's
+onset policy; a non-default resolver env builds its own `.env-<hash>/` subtree),
+and `benchmark.ts run --cached` replays the benchmark's exact decode from it —
+see `benchmarks/README.md`.
+
 ### Realistic synthetic tier (`fixtures/eval-synth`, `EVAL_SYNTH=1`)
 
 The corpus knows every note's exact truth and how it was performed, so these

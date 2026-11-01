@@ -6,7 +6,8 @@
  * eval app), and compares two such results with paired confidence intervals.
  *
  *   tsx scripts/eval/benchmark.ts run [--label <name>] [--conditions real,echoey-room,…]
- *                                     [--datasets a,b] [--quick]
+ *                                     [--datasets a,b] [--materials singing,…] [--split dev|test]
+ *                                     [--quick] [--cached | --scratch]
  *   tsx scripts/eval/benchmark.ts compare <a.json> <b.json> [--split dev|test|all]
  *   tsx scripts/eval/benchmark.ts rescore <result id|path> [--label <name>]
  *   tsx scripts/eval/benchmark.ts render [<result.json>]
@@ -29,6 +30,16 @@
  * `rescore` rebuilds a recorded run from its cached notes against the CURRENT
  * truth (no model loaded), for when the truth changed after the run.
  *
+ * Experiment runs (not for committing): `--cached` replays the same production
+ * decode from the track caches (`lib/trackCache.ts`, `lib/variantCache.ts`;
+ * built on a miss) instead of running the model — seconds instead of hours, for
+ * anything downstream of CREPE (`lib/decodeCached.ts` `notesAsProduction`).
+ * `--scratch` runs the real path but, like `--cached`, writes the result under
+ * `.cache/bench-scratch/` and leaves RESULTS.md alone. `compare` resolves ids
+ * there when given either flag. `--split` scores only that half of every
+ * dataset (lib/split.ts); `--materials` narrows to datasets of those materials.
+ * `--cached` without `--datasets` scores the pooled datasets only.
+ *
  * Conventions (see benchmarks/README.md): headline metric COnP@±100 ms (onset +
  * pitch, no offset gate); COnPOff at the same window is the secondary,
  * publication-comparable column; pooled numbers are means of DATASET means over
@@ -46,6 +57,8 @@ import { execSync } from 'child_process'
 import { appendFileSync, copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, renameSync, statSync, writeFileSync } from 'fs'
 import { basename, dirname, join, relative, resolve } from 'path'
 
+import { ProviderRegistry } from '../../src/recordings/pipeline/providers/provider-registry'
+import { notesAsProduction } from './lib/decodeCached'
 import {
     aggregateEval,
     type ClipResult,
@@ -61,17 +74,23 @@ import {
     scoreClip,
     selectCorpus,
     SYNTH_REALISTIC_ROOT,
+    type TranscribeFn,
 } from './lib/evalRun'
 import type { EstNote } from './lib/metrics'
 import {
     discoverRealDatasets,
     inferTruthSource,
+    isPooled,
+    listRealClips,
     type Material,
     type RealDataset,
     truthFingerprint,
     type TruthSource,
 } from './lib/realCorpus'
+import { inSplit, type Split, splitOf } from './lib/split'
 import { formatComparison, pairedDiffCI } from './lib/stats'
+import { TrackCache } from './lib/trackCache'
+import { VariantTrackCache } from './lib/variantCache'
 import { printReport } from './run-eval'
 
 const BENCH_DIR = resolve(__dirname, 'benchmarks')
@@ -89,10 +108,17 @@ const DATA_DIR = resolve(__dirname, '../../../eval/data/benchmarks')
  * `render` does not read.
  */
 const SYNTH = process.argv.includes('--synth')
-const RESULTS_DIR = join(DATA_DIR, SYNTH ? 'synth' : 'real')
+/** `--cached` / `--scratch`: experiment runs, kept out of the committed history (see the header). */
+const CACHED = process.argv.includes('--cached')
+const SCRATCH = CACHED || process.argv.includes('--scratch')
+const COMMITTED_DIR = join(DATA_DIR, SYNTH ? 'synth' : 'real')
+const RESULTS_DIR = SCRATCH ? resolve(__dirname, '.cache/bench-scratch', SYNTH ? 'synth' : 'real') : COMMITTED_DIR
 const RESULTS_MD = join(BENCH_DIR, SYNTH ? 'RESULTS-SYNTH.md' : 'RESULTS.md')
 /** Per-run pipeline notes, `<result id>.jsonl` — gitignored with the rest of .cache. */
 const NOTES_DIR = resolve(__dirname, '.cache/notes')
+/** The track caches `--cached` replays (shared with the sweeps). */
+const TRACK_CACHE_ROOT = resolve(__dirname, '../fixtures/eval-cache')
+const VARIANT_CACHE_ROOT = resolve(__dirname, '../fixtures/eval-cache-variant')
 
 /** Display order: the product's inputs first, the special axis last. */
 const MATERIAL_ORDER: Material[] = ['singing', 'humming', 'whistling', 'instrument', 'vocal-percussion']
@@ -136,6 +162,10 @@ export interface BenchResult {
         durationSec: number
         conditions: string[]
         quick: boolean
+        /** `--cached`: notes decoded from the track caches, not by the model. */
+        cached?: boolean
+        /** `--split`: only that half of each dataset was scored. */
+        split?: 'dev' | 'test'
         /** Dataset ids actually scored (clips > 0). */
         datasets: string[]
         matchTol: EvalReport['matchTol']
@@ -204,7 +234,7 @@ function flag(name: string): boolean {
     return process.argv.includes(`--${name}`)
 }
 /** The options that take a value — everything else after the command is a flag or a positional. */
-const VALUED = ['--label', '--conditions', '--datasets', '--split']
+const VALUED = ['--label', '--conditions', '--datasets', '--materials', '--split']
 /** A label as it appears in a result id. */
 function cleanLabel(v: string): string {
     return v.replace(/[^A-Za-z0-9._-]+/g, '-')
@@ -380,18 +410,40 @@ async function run(): Promise<void> {
             : quick
               ? ['real']
               : conditionsFor(true).map((c) => c.id))
-    const datasetFilter = list(arg('datasets'))
+    const named = list(arg('datasets'))
+    const materials = list(arg('materials'))
+    const splitArg = arg('split')
+    if (splitArg && splitArg !== 'dev' && splitArg !== 'test') throw new Error(`--split must be dev or test (got ${splitArg})`)
+    const split = splitArg as Exclude<Split, 'all'> | undefined
+    const corpusDatasets = discoverRealDatasets(SYNTH ? SYNTH_REALISTIC_ROOT : REAL_ROOT)
+    // `--cached` defaults to the pooled datasets: the context sets add no headline, and
+    // HumTrans (1,538 clips) has no cache entries — replaying it means building them.
+    const byDefault = (d: RealDataset): boolean => !CACHED || isPooled(d)
+    const selected = corpusDatasets.filter(
+        (d) => (named ? named.includes(d.id) : byDefault(d)) && (!materials || materials.includes(d.material)),
+    )
+    const datasetFilter = named || materials || CACHED ? selected.map((d) => d.id) : undefined
+    const clipFilter = split
+        ? new Set(
+              selected.flatMap((d) =>
+                  listRealClips(d.dir)
+                      .filter((c) => inSplit(d.id, c, split))
+                      .map((c) => `${d.id}/${c}`),
+              ),
+          )
+        : undefined
     const started = Date.now()
-    console.log(`benchmark: label=${label} conditions=${conditions.join(',')}`)
+    console.log(
+        `benchmark: label=${label} conditions=${conditions.join(',')}` +
+            `${CACHED ? ' cached' : ''}${split ? ` split=${split}` : ''}${datasetFilter ? ` datasets=${datasetFilter.length}` : ''}`,
+    )
 
     // Provenance is taken before scoring: the code and truth a run loads at the
     // start are what it measures, whatever changes in the tree during a 3 h run.
     const sha = git('rev-parse --short HEAD') || 'nogit'
     const dirty = git(`status --porcelain -- ${DIRTY_PATHSPEC}`) !== ''
     const env = pipelineEnv()
-    const fingerprints = corpusFingerprints(
-        discoverRealDatasets(SYNTH ? SYNTH_REALISTIC_ROOT : REAL_ROOT).filter((d) => !datasetFilter || datasetFilter.includes(d.id)),
-    )
+    const fingerprints = corpusFingerprints(selected)
 
     // The notes go to a partial file while the run lasts; the result id (which
     // carries the finish time) names it at the end.
@@ -407,6 +459,8 @@ async function run(): Promise<void> {
             label,
             conditionFilter: conditions,
             scenarioFilter: datasetFilter,
+            clipFilter,
+            transcribe: CACHED ? await cachedTranscriber(selected) : undefined,
             onProgress: (line) => console.log(line),
             onClip: (c) =>
                 appendFileSync(
@@ -436,6 +490,8 @@ async function run(): Promise<void> {
         durationSec: Math.round((Date.now() - started) / 1000),
         conditions,
         quick,
+        ...(CACHED ? { cached: true } : {}),
+        ...(split ? { split } : {}),
         datasets: scored,
         matchTol: report.matchTol,
         env,
@@ -449,7 +505,35 @@ async function run(): Promise<void> {
     renameSync(partialNotes, notes)
     console.log(`\nResult written to ${out}${dirty ? '  (working tree DIRTY — label it as such)' : ''}`)
     console.log(`Notes written to ${notes}`)
-    render(out)
+    if (!SCRATCH) render(out)
+}
+
+/**
+ * `--cached`: the production decode replayed from the track caches — the clean
+ * take from `TrackCache`, an adverse variant from `VariantTrackCache` — so a
+ * change downstream of CREPE is scored in seconds. A missing or stale entry is
+ * built (the model runs once for it and the entry is written). Bit-identical to
+ * `run` only where the cached profile is what the resolver returns today; see
+ * the parity notes in `lib/decodeCached.ts`.
+ */
+async function cachedTranscriber(datasets: RealDataset[]): Promise<TranscribeFn> {
+    if (SYNTH) throw new Error('--cached has no cache for the synthetic corpus')
+    const registry = new ProviderRegistry({ crepeTiny: resolve(process.cwd(), 'model-crepe-tiny') })
+    await registry.initAll()
+    const tracks = new TrackCache(registry, TRACK_CACHE_ROOT)
+    const variants = new VariantTrackCache(registry, VARIANT_CACHE_ROOT)
+    const byId = new Map(datasets.map((d) => [d.id, d]))
+    return async (job) => {
+        const ds = byId.get(job.datasetId)
+        if (!ds) throw new Error(`no dataset ${job.datasetId}`)
+        const entry = job.condition === 'real' ? await tracks.load(ds, job.clipId) : await variants.load(ds, job.clipId, job.condition)
+        if (!entry) throw new Error('no cache entry (unreadable audio, or no trajectory)')
+        return notesAsProduction(entry, job.bpm).map((n) => ({
+            onsetSec: n.startTimeSeconds,
+            durSec: n.durationSeconds,
+            midi: n.pitchMidi,
+        }))
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -699,7 +783,9 @@ function compare(aPath: string, bPath: string): void {
     for (const ca of a.clips) {
         const cb = bByKey.get(keyOf(ca))
         if (!cb) continue
-        if (split !== 'all' && ca.split !== split) continue
+        // The current rule (lib/split.ts), not the field stored at run time: a
+        // dataset regrouped since (2026-11: the resynth sets) must pair on the same halves.
+        if (split !== 'all' && splitOf(ca.d, ca.c) !== split) continue
         if (!pooledIds.has(ca.d)) continue // never gate on derived / pitchless / constructed truth
         pairs.push({ key: keyOf(ca), d: ca.d, cond: ca.cond, material: materialById.get(ca.d) ?? 'singing', a: ca, b: cb })
     }
@@ -935,8 +1021,9 @@ async function main(): Promise<void> {
         return rescore(resolveResult(path))
     }
     console.log(
-        'usage: benchmark.ts run [--label X] [--conditions a,b] [--datasets a,b] [--quick] [--synth]\n' +
-            '       benchmark.ts compare <a.json> <b.json> [--split dev|test|all] [--synth]\n' +
+        'usage: benchmark.ts run [--label X] [--conditions a,b] [--datasets a,b] [--materials m,n] [--split dev|test]\n' +
+            '                        [--quick] [--synth] [--cached | --scratch]\n' +
+            '       benchmark.ts compare <a.json> <b.json> [--split dev|test|all] [--synth] [--cached | --scratch]\n' +
             '       benchmark.ts render [<result.json>] [--synth]\n' +
             '       benchmark.ts rescore <result id|path> [--label X] [--synth]',
     )
@@ -945,16 +1032,19 @@ async function main(): Promise<void> {
 /** Accept a bare result id / file name as well as a path. */
 function resolveResult(p: string): string {
     if (existsSync(p)) return p
-    const inDir = join(RESULTS_DIR, p.endsWith('.json') ? p : `${p}.json`)
-    if (existsSync(inDir)) return inDir
-    // An exact label first (`onset-policy` must not resolve to `pre-onset-policy`),
-    // then any unique substring of the id (e.g. the sha).
-    const files = existsSync(RESULTS_DIR) ? readdirSync(RESULTS_DIR).filter((f) => f.endsWith('.json')) : []
-    const key = basename(p)
-    const byLabel = files.filter((f) => f.endsWith(`_${key}.json`))
-    const hits = byLabel.length ? byLabel : files.filter((f) => f.includes(key))
-    if (hits.length > 1) throw new Error(`${p} matches ${hits.length} results: ${hits.join(', ')}`)
-    if (hits.length) return join(RESULTS_DIR, hits[0])
+    // Experiment runs look in the scratch dir first, then in the committed history.
+    for (const dir of SCRATCH ? [RESULTS_DIR, COMMITTED_DIR] : [RESULTS_DIR]) {
+        const inDir = join(dir, p.endsWith('.json') ? p : `${p}.json`)
+        if (existsSync(inDir)) return inDir
+        // An exact label first (`onset-policy` must not resolve to `pre-onset-policy`),
+        // then any unique substring of the id (e.g. the sha).
+        const files = existsSync(dir) ? readdirSync(dir).filter((f) => f.endsWith('.json')) : []
+        const key = basename(p)
+        const byLabel = files.filter((f) => f.endsWith(`_${key}.json`))
+        const hits = byLabel.length ? byLabel : files.filter((f) => f.includes(key))
+        if (hits.length > 1) throw new Error(`${p} matches ${hits.length} results: ${hits.join(', ')}`)
+        if (hits.length) return join(dir, hits[0])
+    }
     throw new Error(`no result matches ${p}`)
 }
 

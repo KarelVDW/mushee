@@ -80,7 +80,7 @@ import { SHIPPING_VOICE_OPTS } from '../../src/recordings/pipeline/voice-note-de
 import { type VoiceDecodeOptions, VoiceNoteDecoder } from '../../src/recordings/pipeline/voice-note-decoder'
 import { dereverbFrontEnd, type DereverbOptions } from './lib/dereverb'
 import { type EstNote, scoreNotes } from './lib/metrics'
-import { discoverRealDatasets, listRealClips, type RealDataset } from './lib/realCorpus'
+import { discoverRealDatasets, listRealClips, type RealDataset, selectDatasets } from './lib/realCorpus'
 import { inSplit, splitFromEnv } from './lib/split'
 import { formatComparison, pairedDiffCI } from './lib/stats'
 import { type CachedVariant, CLEAN_VARIANT, VariantTrackCache } from './lib/variantCache'
@@ -1255,7 +1255,8 @@ async function main(): Promise<void> {
     const limit = Number(process.env.SWEEP_REVERB_LIMIT) || Infinity
     const wantDatasets = envList('SWEEP_REVERB_DATASETS', DEFAULT_DATASETS)
     const variants = envList('SWEEP_REVERB_VARIANTS', DEFAULT_VARIANTS)
-    const datasets = discoverRealDatasets(REAL_ROOT).filter((d) => wantDatasets.includes(d.id))
+    // EVAL_DATASETS replaces SWEEP_REVERB_DATASETS; EVAL_MATERIALS narrows (lib/realCorpus.ts `selectDatasets`).
+    const datasets = selectDatasets(discoverRealDatasets(REAL_ROOT), (d) => wantDatasets.includes(d.id))
     if (!datasets.length) {
         console.error(`No datasets matched ${wantDatasets.join(',')} under ${REAL_ROOT}`)
         process.exit(1)

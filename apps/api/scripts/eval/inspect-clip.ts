@@ -10,6 +10,10 @@
  *
  * Run: pnpm --filter @mushee/api exec tsx scripts/eval/inspect-clip.ts <dataset> [clip]
  *      (omit clip to list the dataset's clips with their note counts)
+ *
+ * The PRODUCTION blocks are what the benchmark scores (`lib/decodeCached.ts`):
+ * the profile's decode, then its cleanup + 16th-grid snap at the truth's tempo.
+ * The LEGACY/HMM blocks below them are the older research views.
  */
 
 import { resolve } from 'path'
@@ -17,6 +21,8 @@ import { resolve } from 'path'
 import { NoteExtractor } from '../../src/recordings/pipeline/note-extractor'
 import { ProviderRegistry } from '../../src/recordings/pipeline/providers/provider-registry'
 import { segmentNotes } from '../../src/recordings/pipeline/semitone-segmenter'
+import { notesAsProduction, segmentAsProduction } from './lib/decodeCached'
+import { scoreNotesBest } from './lib/metrics'
 import { NoteSegmenter } from './lib/note-segmenter'
 import { discoverRealDatasets, listRealClips } from './lib/realCorpus'
 import { splitOf } from './lib/split'
@@ -131,7 +137,8 @@ async function main(): Promise<void> {
         `\n=== ${ds.id}/${c.clip} ===\n` +
             `  duration ${c.durationSec.toFixed(2)}s  profile=${c.profile.id} ` +
             `provider=${c.providerName} window=${c.profile.minFreqHz.toFixed(0)}-${c.profile.maxFreqHz.toFixed(0)}Hz ` +
-            `conf=${c.profile.confidenceThreshold ?? 0.5}\n` +
+            `conf=${c.profile.confidenceThreshold ?? 0.5} onsetDip=${c.profile.onsetDipRatio ?? 0.5} ` +
+            `bpm=${c.truth.bpm} split=${splitOf(ds.id, c.clip)}\n` +
             `  onsets(${c.onsetTimesSec.length}): ${c.onsetTimesSec.map((t) => t.toFixed(2)).join(' ')}`,
     )
 
@@ -143,6 +150,15 @@ async function main(): Promise<void> {
             pitchMidi: n.midi,
         })),
     )
+
+    dump(`PRODUCTION decode (${c.profile.isVoice ? 'voice' : 'semitone'})`, segmentAsProduction(c))
+    const production = notesAsProduction(c, c.truth.bpm)
+    const scored = scoreNotesBest(
+        c.truth,
+        production.map((n) => ({ onsetSec: n.startTimeSeconds, durSec: n.durationSeconds, midi: n.pitchMidi })),
+        { onsetTolSec: 0.1, timingTolSec: 0.3 },
+    )
+    dump(`PRODUCTION notes as the benchmark scores them — COnP ${scored.f1.toFixed(3)}, COnPOff ${scored.f1Off.toFixed(3)}`, production)
 
     const legacy = segmentNotes(c.track.cents, c.track.confidence, c.track.frames, {
         hopSize: 1,

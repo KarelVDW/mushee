@@ -10,6 +10,9 @@
  * clips are added or a dataset is re-fetched, and identical across machines.
  */
 
+import { existsSync, readdirSync, readFileSync } from 'fs'
+import { join, resolve } from 'path'
+
 /** FNV-1a — small, fast, and stable across runs and platforms. */
 function hash(s: string): number {
     let h = 0x811c9dc5
@@ -43,6 +46,20 @@ export type Split = 'dev' | 'test' | 'all'
  *   avp                 `avp_P10_HHclosed_Fixed`   → participant `P10`
  *   dagstuhl-choir      `DCS_LI_QuartetA_Take01_A1_HSM_ex01` → singer `QuartetA_A1`
  *   jacrc-students      `daxp-…-dx-S8_ex00`        → student `dx-S8`
+ *   jacrc-notes         the jacrc-students audio   → split AS jacrc-students (`SPLIT_AS`)
+ *   whistled-high-register `clip-01`               → one session (our own takes, 2026-08-22)
+ *
+ * Three resynth-truth datasets (2026-10-30/31) keep their source group outside
+ * the clip name, so `sourceGroups` reads it from the provenance their exporters
+ * recorded:
+ *   whistle-real        `freesound-112655`         → uploader (annotations/whistle-real/<clip>.meta.json)
+ *   app-takes-*         `dev-2026-05-23T16-43-38`  → day `2026-05-23`;
+ *                       `stored-6cd48ef6-b-audio`  → its score (session), from dataset.json `sources`
+ *
+ * Every dataset above whistled-high-register predates 2026-10-30 and keeps the
+ * assignment it had; dagstuhl-choir's rule is unchanged (its audio was re-fetched
+ * 2026-10-30, so its earlier numbers are void anyway). The 2026-11 groupings moved
+ * whistle-real, whistled-high-register and the app takes off the per-clip fallback.
  *
  * The last three all produce MANY clips per performer — AVP gives one participant
  * a clip per drum class and modality, and the two excerpted corpora give one
@@ -58,6 +75,9 @@ export type Split = 'dev' | 'test' | 'all'
  * honoured separately, by keeping their test songs in their own `n20emv2-test` dir.
  */
 function groupKeyFor(dataset: string, clip: string): string {
+    const source = sourceGroups(dataset)?.get(clip)
+    if (source) return source
+    if (dataset === 'whistled-high-register') return 'session-2026-08-22'
     if (dataset === 'mir-qbsh') {
         return clip.match(/person\d+/)?.[0] ?? clip
     }
@@ -94,12 +114,59 @@ function groupKeyFor(dataset: string, clip: string): string {
 }
 
 /**
+ * Datasets that are another dataset's audio under different truth, and must fall
+ * on the same side clip for clip (`jacrc-notes` hard-links jacrc-students' WAVs).
+ */
+const SPLIT_AS: Record<string, string> = { 'jacrc-notes': 'jacrc-students' }
+
+const EVAL_REAL = resolve(__dirname, '../../fixtures/eval-real')
+const ANNOTATIONS = resolve(__dirname, '../annotations')
+const sourceGroupMemo = new Map<string, Map<string, string> | null>()
+
+/**
+ * clip → source group for the datasets whose group is not in the clip name (see
+ * `groupKeyFor`), read once per dataset. Null for every other dataset; a clip
+ * with no recorded provenance falls back to itself.
+ */
+function sourceGroups(dataset: string): Map<string, string> | null {
+    const memo = sourceGroupMemo.get(dataset)
+    if (memo !== undefined) return memo
+    let groups: Map<string, string> | null = null
+    if (dataset === 'whistle-real') {
+        // The tracked per-clip provenance the fetcher wrote beside the draft labels.
+        groups = new Map()
+        const dir = join(ANNOTATIONS, dataset)
+        for (const f of existsSync(dir) ? readdirSync(dir).filter((f) => f.endsWith('.meta.json')) : []) {
+            const m = JSON.parse(readFileSync(join(dir, f), 'utf8')) as { clip?: string; provenance?: { attribution?: string } }
+            if (m.clip && m.provenance?.attribution) groups.set(m.clip, `uploader:${m.provenance.attribution}`)
+        }
+    } else if (dataset.startsWith('app-takes-')) {
+        groups = new Map()
+        const dir = ['benchmark', 'context'].map((t) => join(EVAL_REAL, t, dataset)).find((d) => existsSync(join(d, 'dataset.json')))
+        const manifest = dir
+            ? (JSON.parse(readFileSync(join(dir, 'dataset.json'), 'utf8')) as { sources?: Array<{ clip: string; source: string }> })
+            : {}
+        for (const { clip, source } of manifest.sources ?? []) {
+            // `storage/recordings/<user>/<score>/<recording>/audio.webm` → the score;
+            // `debug/recordings/2026-05-23T16-43-38-…/audio.webm` → the day.
+            const score = /^storage\/recordings\/[^/]+\/([^/]+)\//.exec(source)?.[1]
+            const day = /^debug\/recordings\/(\d{4}-\d\d-\d\d)/.exec(source)?.[1]
+            if (score) groups.set(clip, `score:${score}`)
+            else if (day) groups.set(clip, `day:${day}`)
+        }
+    }
+    sourceGroupMemo.set(dataset, groups)
+    return groups
+}
+
+/**
  * Which half a clip belongs to. Keyed on dataset too, so a name that happens to
  * appear in two datasets doesn't correlate their assignments, and on the *group*
  * rather than the clip so a performer never straddles the split.
  */
 export function splitOf(dataset: string, clip: string): 'dev' | 'test' {
-    return hash(`${dataset}/${groupKeyFor(dataset, clip)}`) % 2 === 0 ? 'dev' : 'test'
+    const as = SPLIT_AS[dataset] ?? dataset
+    return hash(`${as}/${groupKeyFor(as, clip)}`) % 2 === 0 ? 'dev' : 'test'
 }
 
 export function inSplit(dataset: string, clip: string, want: Split): boolean {

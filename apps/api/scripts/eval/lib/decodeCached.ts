@@ -11,8 +11,18 @@
  * The routing decision itself lives in the cached `PipelineProfile` — `TrackCache`
  * stores what `ProfileResolver` chose for that clip — so this only has to *honour*
  * it, never re-derive it.
+ *
+ * Parity with the benchmark (`benchmark.ts run` → `AudioConverter`, whole buffer):
+ * `notesAsProduction` reproduces it note for note when the entry is current —
+ * trackCache v7, built under the process's resolver env — because the cache holds
+ * the same resolver call, the same `track()`, the profile's own re-attack onsets,
+ * and the cleanup comes from `AudioConverter.cleanupFor` itself. Checked
+ * 2026-11-01 over every pooled dataset (see the eval README). What neither path
+ * models is the streaming server: the profile locked on the first pitched
+ * ≥ 1.2 s, the final-pass reroute, the MusicXML round-trip.
  */
 
+import { AudioConverter } from '../../../src/recordings/pipeline/audio-converter'
 import type { NoteEventTime } from '../../../src/recordings/pipeline/note-event'
 import { NoteExtractor, type NoteExtractorOptions } from '../../../src/recordings/pipeline/note-extractor'
 import { PITCHDOWN_PROVIDER_NAME } from '../../../src/recordings/pipeline/profiles/pipeline-profile'
@@ -22,13 +32,19 @@ import { VoiceNoteDecoder } from '../../../src/recordings/pipeline/voice-note-de
 import type { CachedClip } from './trackCache'
 
 /**
+ * What the decode reads from a cache entry — both `TrackCache` (`CachedClip`)
+ * and `VariantTrackCache` (`CachedVariant`) entries carry it.
+ */
+export type DecodableClip = Pick<CachedClip, 'profile' | 'providerName' | 'track' | 'energy' | 'onsetTimesSec'>
+
+/**
  * Frame-count knob as production's provider would see it. The octave-down
  * wrapper multiplies BOTH the declared value and its default by its slow-down
  * factor (its frames span half the real time), so replaying its cached
  * 10 ms-hop track needs the same counts — 8 frames = 80 ms real, matching the
  * at-pitch bands' 4 frames at 20 ms.
  */
-export function frameCount(c: CachedClip, declared: number | undefined): number {
+export function frameCount(c: DecodableClip, declared: number | undefined): number {
     return (declared ?? 4) * (c.providerName === PITCHDOWN_PROVIDER_NAME ? 2 : 1)
 }
 
@@ -42,7 +58,7 @@ function voiceEnabled(): boolean {
 }
 
 /** Raw notes from the decode the clip's profile selects. */
-export function segmentAsProduction(c: CachedClip): NoteEventTime[] {
+export function segmentAsProduction(c: DecodableClip): NoteEventTime[] {
     const gate = {
         confidenceThreshold: c.profile.confidenceThreshold ?? 0.5,
         minFreqHz: c.profile.minFreqHz,
@@ -67,36 +83,33 @@ export function segmentAsProduction(c: CachedClip): NoteEventTime[] {
 }
 
 /**
- * The cleanup set the clip's profile selects — a hand copy of
- * `AudioConverter.cleanupFor`, not a call to it. Its voice branch omits the
- * shipped `adaptiveFloorFraction: 0.3` and `seamFillBeats: 0.6`, so voice
- * numbers measured through it are not the shipped cleanup (adoption pending).
+ * The cleanup set the clip's profile selects: production's own
+ * `AudioConverter.cleanupFor`, so the voice branch carries the shipped adaptive
+ * floor and seam-fill. Under `RECORDING_VOICE_DECODE=0` the cached `isVoice` is
+ * ignored, as the resolver would not have set it.
  */
-export function cleanupAsProduction(c: CachedClip): NoteExtractorOptions {
-    // maxGridDivisor 4 everywhere: the MusicXML grid bottoms out at the 16th, so a
-    // finer snap is re-rounded by the round-trip and only shows up as onset error.
-    if (c.profile.isVoice && voiceEnabled()) {
-        return {
-            maxGridDivisor: 4,
-            steps: {
-                pitchOutliers: false,
-                merge: false,
-                transients: false,
-                monophonic: false,
-            },
-        }
-    }
-    return {
-        maxGridDivisor: 4,
-        steps: { pitchOutliers: false, merge: false },
-        adaptiveFloorFraction: 0.3,
-    }
+export function cleanupAsProduction(c: DecodableClip): NoteExtractorOptions {
+    return AudioConverter.cleanupFor(false, voiceEnabled() ? c.profile : { ...c.profile, isVoice: undefined })
 }
 
-/** Cleaned (performance-domain) notes — segmentation plus the profile's cleanup. */
-export function performanceAsProduction(c: CachedClip, bpm = 120): NoteEventTime[] {
+/** Cleaned (performance-domain) notes — segmentation plus the profile's cleanup, no quantisation. */
+export function performanceAsProduction(c: DecodableClip, bpm = 120): NoteEventTime[] {
     return new NoteExtractor(cleanupAsProduction(c)).clean(segmentAsProduction(c), {
         bpm,
         onsetTimesSec: c.onsetTimesSec,
     })
+}
+
+/**
+ * The notes the benchmark scores for this clip: `AudioConverter.convert` on the
+ * cached track — decode, the profile's cleanup with the profile's re-attack
+ * onsets (trackCache v7), the 16th-grid snap at the take's tempo and the
+ * one-note-per-slot collapse (`NoteExtractor.extract().deduced`). Pass the
+ * truth's `bpm`: the snap grid depends on it.
+ */
+export function notesAsProduction(c: DecodableClip, bpm: number): NoteEventTime[] {
+    return new NoteExtractor(cleanupAsProduction(c)).extract(segmentAsProduction(c), {
+        bpm,
+        onsetTimesSec: c.onsetTimesSec,
+    }).deduced
 }

@@ -23,6 +23,12 @@ pnpm exec tsx scripts/eval/benchmark.ts rescore <result> [--label <new-label>]
 pnpm exec tsx scripts/eval/benchmark.ts render
 # the realistic synthetic corpus: add --synth to any command (≈ 23 min per condition)
 pnpm exec tsx scripts/eval/benchmark.ts run --synth --conditions noisy-phone --label <what-changed>
+# experiments (results under scripts/eval/.cache/bench-scratch/, RESULTS.md untouched):
+#   --cached   replay the production decode from the track caches (seconds; changes downstream of CREPE)
+#   --scratch  the real path, kept out of the committed history
+#   --split dev|test, --materials singing,whistling,…  narrow what is scored
+pnpm exec tsx scripts/eval/benchmark.ts run --cached --quick --split dev --materials whistling --label <x>
+pnpm exec tsx scripts/eval/benchmark.ts compare <a> <b> --cached --split dev
 ```
 
 `pnpm eval:benchmark <command> …` is the same entry point. `<a>`/`<b>` accept a

@@ -18,6 +18,7 @@
  * the decoder must bump CACHE_VERSION.)
  */
 
+import { createHash } from 'crypto'
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs'
 import { join } from 'path'
 
@@ -52,6 +53,12 @@ import type { RealDataset } from './realCorpus'
  * 6: the track gained per-frame pitch CANDIDATES (E3/R9 — top-5 activation
  *    maxima with sub-bin cents), which only exist at decode time; a stale entry
  *    would replay a candidate-less track under a decoder expecting them.
+ * 7: the resolver gained the per-family onset policy (d77db1d, 2026-09-27), so a
+ *    v6 profile carries no `onsetDipRatio`, and its `onsetTimesSec` were detected
+ *    at the detector's default dip (0.5) where production uses 0.35 for voice and
+ *    sustained instruments. The stored onsets are now detected with the profile's
+ *    own onset options, as `AudioConverter` does. Every v6 entry also predated the
+ *    2026-10-30 dagstuhl re-fetch.
  *
  * NOT bumped for the 2026-08-22 basic-pitch removal, deliberately: every entry
  * this cache can hold is a crepe-tiny low/mid/high routing (basic-pitch
@@ -61,18 +68,21 @@ import type { RealDataset } from './realCorpus'
  * very-high band; the default fallback, which now caches where it used to
  * null) — additive, not stale.
  */
-const CACHE_VERSION = 6
+const CACHE_VERSION = 7
 const DETECT_SR = 16000
 
 /**
- * Every env knob the resolver reads that changes the PROFILE it returns. A cache
- * entry stores the resolved profile, so an entry built under an experiment flag
- * (the 2026-07 relief study built the whole variant cache with
- * `RECORDING_REVERB_CONF_RELIEF=0`, and every later reverb sweep inherited a
- * pre-relief baseline without knowing — see FINDINGS.md, 2026-09-01) must not
- * masquerade as production. The signature is stored with each entry and a
- * mismatch is treated as stale. Entries written before the field existed carry
- * no signature and are accepted only when no knob is set — i.e. as production.
+ * Every env knob upstream of the cache: what the resolver reads that changes the
+ * PROFILE it returns, plus the two that change the decoded audio or the
+ * trajectory itself. A cache entry stores the resolved profile, so an entry
+ * built under an experiment flag (the 2026-07 relief study built the whole
+ * variant cache with `RECORDING_REVERB_CONF_RELIEF=0`, and every later reverb
+ * sweep inherited a pre-relief baseline without knowing — see FINDINGS.md,
+ * 2026-09-01) must not masquerade as production. The signature is stored with
+ * each entry and a mismatch is treated as stale; since 2026-11 a non-default
+ * signature also gets its own subtree (`resolverEnvDir`). Entries written before
+ * the field existed carry no signature and are accepted only when no knob is
+ * set — i.e. as production.
  */
 const RESOLVER_ENV_KEYS = [
     'RECORDING_NOISE_ADAPT',
@@ -88,12 +98,34 @@ const RESOLVER_ENV_KEYS = [
     'RECORDING_REVERB_DIP_WET',
     'RECORDING_REVERB_MIN_MODULATION',
     'RECORDING_VOICE_DECODE',
+    // The onset policy (`applyOnsetPolicy`) writes the profile's onset options,
+    // and the stored onsets are detected with them.
+    'ONSET_POLICY',
+    'VOICE_ONSET_DIP_RATIO',
+    'ONSET_DIP_RATIO',
+    'SUSTAINED_ONSET_REVERB_RAMP',
+    'VOICE_ONSET_MIN_TROUGH_SEC',
+    // Not the resolver's, but upstream of the stored track: the denoise filter
+    // (audio-decoder.ts) and the Viterbi jump floor (crepe-provider.ts).
+    'RECORDING_DENOISE_FILTER',
+    'RECORDING_VITERBI_JUMP_FLOOR',
 ]
 export const DEFAULT_RESOLVER_ENV = 'default'
 
 export function resolverEnvSignature(): string {
     const set = RESOLVER_ENV_KEYS.filter((k) => (process.env[k] ?? '') !== '').map((k) => `${k}=${process.env[k]}`)
     return set.length ? set.join(';') : DEFAULT_RESOLVER_ENV
+}
+
+/**
+ * The subtree entries live in: none for the production env, `.env-<hash>/` for
+ * any other signature — so an experiment under a resolver knob builds its own
+ * entries beside the production ones instead of overwriting them (which every
+ * other process reading the cache would then rebuild). Since 2026-11.
+ */
+export function resolverEnvDir(): string {
+    const sig = resolverEnvSignature()
+    return sig === DEFAULT_RESOLVER_ENV ? '' : `.env-${createHash('sha1').update(sig).digest('hex').slice(0, 10)}`
 }
 
 /** True when a cached entry's recorded resolver env matches the current process. */
@@ -136,7 +168,7 @@ export interface CachedClip {
      */
     wavPath: string
     fluxPath: string
-    /** Amplitude re-attack times (seconds) from `OnsetDetector`. */
+    /** Amplitude re-attack times (seconds) from `OnsetDetector`, at the profile's onset options (v7). */
     onsetTimesSec: number[]
     /** Per-frame RMS energy on the track's frame grid — for onset/boundary work. */
     energy: Float32Array
@@ -184,7 +216,7 @@ export class TrackCache {
             return null
         }
 
-        const dir = join(this.cacheRoot, ds.id)
+        const dir = join(this.cacheRoot, resolverEnvDir(), ds.id)
         const metaPath = join(dir, `${clip}.meta.json`)
         const binPath = join(dir, `${clip}.bin`)
         const cached = this.readFromDisk(ds, clip, truth, metaPath, binPath)
@@ -229,7 +261,13 @@ export class TrackCache {
         // array the shipping detector saw.
         const fineEnergy = this.onsetDetector.envelope(decoded.samples, provider.sampleRate)
         const fineHop = Math.max(1, Math.round(this.onsetDetector.hopSec * provider.sampleRate))
-        const onsetTimesSec = this.onsetDetector.detectFromEnvelope(fineEnergy, fineHop, provider.sampleRate)
+        // The detector `AudioConverter` builds for this profile (the per-family dip
+        // ratio, trough length and report delay); the envelope does not depend on them.
+        const onsetTimesSec = new OnsetDetector({
+            delaySec: profile.onsetDelaySec,
+            dipRatio: profile.onsetDipRatio,
+            minTroughSec: profile.onsetMinTroughSec,
+        }).detectFromEnvelope(fineEnergy, fineHop, provider.sampleRate)
         // Shared with the production decode (see `frameEnergy`): the voice decoder's
         // dip and accent channels read this exact envelope at runtime, so a private
         // copy here would tune the sweep against something the pipeline never sees.

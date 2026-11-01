@@ -22,7 +22,7 @@ import { ProfileResolver } from '../../src/recordings/pipeline/profiles/profile-
 import { ProviderRegistry } from '../../src/recordings/pipeline/providers/provider-registry'
 import { type EstNote, scoreNotes } from './lib/metrics'
 import { runThroughPipeline } from './lib/pipelineRun'
-import { discoverRealDatasets, listRealClips } from './lib/realCorpus'
+import { discoverRealDatasets, listRealClips, selectDatasets } from './lib/realCorpus'
 import type { GroundTruth, TruthNote } from './types'
 
 const DETECT_SR = 16000
@@ -124,7 +124,8 @@ async function main(): Promise<void> {
         .split(',')
         .map((s) => s.trim())
         .filter(Boolean)
-    const datasets = discoverRealDatasets(REAL_ROOT).filter((d) => !filter.length || filter.includes(d.id))
+    // EVAL_DATASETS / EVAL_MATERIALS (lib/realCorpus.ts `selectDatasets`), then the CLI list.
+    const datasets = selectDatasets(discoverRealDatasets(REAL_ROOT)).filter((d) => !filter.length || filter.includes(d.id))
 
     // Batch path: the production adaptive resolve + convert, returning the
     // NoteExtractor's deduced notes (no MusicXML round-trip).

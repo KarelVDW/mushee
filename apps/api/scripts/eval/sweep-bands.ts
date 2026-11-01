@@ -40,7 +40,7 @@ import { SHIPPING_VOICE_OPTS } from '../../src/recordings/pipeline/voice-note-de
 import { type VoiceDecodeOptions, VoiceNoteDecoder } from '../../src/recordings/pipeline/voice-note-decoder'
 import { frameCount } from './lib/decodeCached'
 import { type EstNote, scoreNotesBest } from './lib/metrics'
-import { discoverRealDatasets, listRealClips } from './lib/realCorpus'
+import { discoverRealDatasets, isPooled, listRealClips, selectDatasets } from './lib/realCorpus'
 import { inSplit, splitFromEnv } from './lib/split'
 import { formatComparison, pairedDiffCI } from './lib/stats'
 import { type CachedClip, TrackCache } from './lib/trackCache'
@@ -273,19 +273,18 @@ async function main(): Promise<void> {
         discoverRealDatasets(REAL_ROOT)
             .filter(
                 (d) =>
-                    d.noteTruthDerived ||
-                    d.pitchless ||
-                    // Real timbre, spliced phrasing (tinysol-*): exact truth, but tuning
-                    // against a performance we assembled would tune against our splice.
-                    d.constructedPerformance ||
-                    d.corpusSplit === 'test',
+                    // `isPooled`: derived, pitchless, constructed (tinysol-*: exact truth,
+                    // but tuning against a performance we assembled would tune against
+                    // our splice), licence-restricted and `pooled: false` (whistle-vintage).
+                    !isPooled(d) || d.corpusSplit === 'test',
             )
             .filter((d) => !included.has(d.id))
             .map((d) => d.id),
     )
 
     const clips: CachedClip[] = []
-    for (const ds of discoverRealDatasets(REAL_ROOT)) {
+    // EVAL_DATASETS / EVAL_MATERIALS narrow further (lib/realCorpus.ts `selectDatasets`).
+    for (const ds of selectDatasets(discoverRealDatasets(REAL_ROOT))) {
         if (excludedDatasets.has(ds.id)) continue
         for (const clip of listRealClips(ds.dir)) {
             if (!inSplit(ds.id, clip, split)) continue

@@ -35,7 +35,7 @@ import { NoteExtractor } from '../../src/recordings/pipeline/note-extractor'
 import { ProviderRegistry } from '../../src/recordings/pipeline/providers/provider-registry'
 import { cleanupAsProduction, performanceAsProduction } from './lib/decodeCached'
 import { type BeatNote, NotationScorer, toBeats, truthToBeats } from './lib/notation'
-import { discoverRealDatasets, listRealClips } from './lib/realCorpus'
+import { discoverRealDatasets, listRealClips, selectDatasets } from './lib/realCorpus'
 import { inSplit, splitFromEnv } from './lib/split'
 import { type CachedClip, TrackCache } from './lib/trackCache'
 
@@ -93,7 +93,7 @@ async function main(): Promise<void> {
         .split(',')
         .map((s) => s.trim())
         .filter(Boolean)
-    const datasets = discoverRealDatasets(REAL_ROOT).filter((d) =>
+    const datasets = selectDatasets(discoverRealDatasets(REAL_ROOT)).filter((d) =>
         // A source corpus's held-out test half is an external yardstick; even a
         // diagnostic run against it invites tuning-by-eyeball. Name it explicitly
         // as the CLI filter to look anyway.

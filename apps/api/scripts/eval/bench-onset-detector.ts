@@ -42,11 +42,18 @@ const DATASETS = (process.env.ONSET_DATASETS ?? 'avp,jacrc-students').split(',')
 interface Config {
     name: string
     opts: OnsetDetectorOptions
+    /** The onsets the cache stored: detected with the clip's profile options, as `AudioConverter` does (trackCache v7). */
+    fromProfile?: boolean
 }
 
-/** The shipping point first; then each knob moved one way and the other. */
+/**
+ * The shipping point first — the per-family onset policy since 2026-09-27 (voice
+ * dip 0.35, read from each clip's profile); then the detector's own default and
+ * each knob moved one way and the other.
+ */
 const CONFIGS: Config[] = [
-    { name: 'shipped (dip .5 rise 1.8)', opts: {} },
+    { name: 'shipped (profile)', opts: {}, fromProfile: true },
+    { name: 'default (dip .5 rise 1.8)', opts: {} },
     { name: 'dip .35', opts: { dipRatio: 0.35 } },
     { name: 'dip .65', opts: { dipRatio: 0.65 } },
     { name: 'dip .8', opts: { dipRatio: 0.8 } },
@@ -102,14 +109,14 @@ async function main(): Promise<void> {
 
         let shippedF1: number[] = []
         for (const cfg of CONFIGS) {
-            const detector = new OnsetDetector(cfg.opts)
+            const detector = cfg.fromProfile ? null : new OnsetDetector(cfg.opts)
             const p: number[] = []
             const r: number[] = []
             const f1: number[] = []
             const counts: number[] = []
             for (const c of clips) {
                 const sr = 1 / c.fineHopSec // detectFromEnvelope wants hop in samples of some rate
-                const times = detector.detectFromEnvelope(c.fineEnergy, 1, sr)
+                const times = detector ? detector.detectFromEnvelope(c.fineEnergy, 1, sr) : c.onsetTimesSec
                 const m = scoreOnsets(c.truth.notes, onsetsAsNotes(times), TOL)
                 p.push(m.precision)
                 r.push(m.recall)

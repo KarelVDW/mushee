@@ -22,6 +22,8 @@
  *      SWEEP_ONLY=substr            run only configs whose name contains substr
  *      SWEEP_BASELINE=name          config the paired comparison is against
  *                                   (default the shipping segmenter)
+ *      EVAL_DATASETS=ds1,ds2        run on exactly these datasets (default: the pooled ones)
+ *      EVAL_MATERIALS=singing,…     only datasets of these materials
  *      SWEEP_EXCLUDE=ds1,ds2        datasets to drop from the mean AND the paired
  *                                   comparison. Use for corpora whose labels are
  *                                   not trustworthy — mir-qbsh's note events are
@@ -37,7 +39,7 @@ import { ProviderRegistry } from '../../src/recordings/pipeline/providers/provid
 import { segmentNotes } from '../../src/recordings/pipeline/semitone-segmenter'
 import { type EstNote, scoreNotesBest } from './lib/metrics'
 import { NoteSegmenter, type NoteSegmenterOptions } from './lib/note-segmenter'
-import { discoverRealDatasets, listRealClips } from './lib/realCorpus'
+import { discoverRealDatasets, isPooled, listRealClips, selectDatasets } from './lib/realCorpus'
 import { formatSegErrors, repairSecondsPer100, type SegErrorCounts, segErrors } from './lib/segErrors'
 import { inSplit, splitFromEnv } from './lib/split'
 import { formatComparison, pairedDiffCI } from './lib/stats'
@@ -542,7 +544,10 @@ async function main(): Promise<void> {
     })
 
     const selected = configs.filter((c) => c.name === baselineName || !only || c.name.includes(only))
-    const datasets = discoverRealDatasets(REAL_ROOT)
+    // The pooled (benchmark-grade) datasets by default — pitchless, derived and
+    // licence-restricted corpora have no note truth to gate on, and HumTrans has no
+    // cache entries (loading it builds 1,538). EVAL_DATASETS / EVAL_MATERIALS select.
+    const datasets = selectDatasets(discoverRealDatasets(REAL_ROOT), isPooled)
 
     // Load every clip once, up front, so config loops touch only arithmetic.
     const clips: CachedClip[] = []

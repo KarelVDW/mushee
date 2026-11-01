@@ -34,7 +34,7 @@ import { NoteExtractor } from '../../src/recordings/pipeline/note-extractor'
 import { ProviderRegistry } from '../../src/recordings/pipeline/providers/provider-registry'
 import { segmentNotes } from '../../src/recordings/pipeline/semitone-segmenter'
 import { type EstNote, scoreNotes } from './lib/metrics'
-import { discoverRealDatasets, listRealClips } from './lib/realCorpus'
+import { discoverRealDatasets, listRealClips, selectDatasets } from './lib/realCorpus'
 import { type CachedClip, TrackCache } from './lib/trackCache'
 import type { TruthNote } from './types'
 
@@ -173,7 +173,8 @@ async function main(): Promise<void> {
         .split(',')
         .map((s) => s.trim())
         .filter(Boolean)
-    const datasets = discoverRealDatasets(REAL_ROOT).filter((d) => !filter.length || filter.includes(d.id))
+    // EVAL_DATASETS / EVAL_MATERIALS (lib/realCorpus.ts `selectDatasets`), then the CLI list.
+    const datasets = selectDatasets(discoverRealDatasets(REAL_ROOT)).filter((d) => !filter.length || filter.includes(d.id))
 
     const VARIANTS = ['seg', 'clean', 'quant@120', 'quant@truthBpm', 'quant@ioi', 'quant@fit *', 'quant@oracle *', 'noquant *'] as const
 

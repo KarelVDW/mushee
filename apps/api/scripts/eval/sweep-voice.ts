@@ -5,11 +5,13 @@
  * Two things it does that the general sweep does not, both needed to make the
  * voice experiments legible:
  *
- *  - **It scores two slices at once.** The VOICE slice is what a change is trying
- *    to improve; the GUARD slice (every monophonic instrument corpus) is what it
- *    must not break. A voice decode is a profile-gated change, so a guard
- *    regression is not automatically fatal — but it has to be *visible*, and in the
- *    general sweep a 16-dataset mean hides it.
+ *  - **It scores three slices at once.** The VOICE slice (every pooled singing
+ *    corpus) is what a change is trying to improve; the WHISTLE slice (whistle-real,
+ *    app-takes-whistling, whistled-high-register — routed as instruments, resynth
+ *    truth since 2026-10-31) and the GUARD slice (every monophonic instrument
+ *    corpus) are what it must not break. A voice decode is a profile-gated change,
+ *    so a guard regression is not automatically fatal — but it has to be *visible*,
+ *    and in the general sweep a 16-dataset mean hides it.
  *  - **It reports where the loss is, not just how big.** COn (onset-only) beside
  *    COnP separates "the boundary is wrong" from "the pitch written on it is
  *    wrong"; `segErrors` says split vs merged vs missed; `onsetClasses` says
@@ -23,6 +25,9 @@
  *      VOICE_EXP=<group,...>     which experiment groups to run (default base,e1)
  *      VOICE_ONLY=substr         run only configs whose name contains substr
  *      VOICE_GUARD=0             skip the instrument guard slice (faster iteration)
+ *      VOICE_WHISTLE=0           skip the whistling slice
+ *      EVAL_DATASETS=a,b         exactly these datasets (default: pooled, not a corpus test half)
+ *      EVAL_MATERIALS=singing,…  only datasets of these materials
  *
  * Experiment groups, in the order they were run — the sequence matters, because
  * several later nulls are nulls only because an earlier group removed the failure
@@ -64,7 +69,7 @@ import { segmentNotes } from '../../src/recordings/pipeline/semitone-segmenter'
 import { type VoiceDecodeOptions, VoiceNoteDecoder } from '../../src/recordings/pipeline/voice-note-decoder'
 import { type EstNote, scoreNotesBest, scoreOnsets } from './lib/metrics'
 import { addOnsetClassStats, emptyOnsetClassStats, formatOnsetClasses, type OnsetClassStats, onsetRecallByClass } from './lib/onsetClasses'
-import { discoverRealDatasets, listRealClips } from './lib/realCorpus'
+import { discoverRealDatasets, isPooled, listRealClips, selectDatasets } from './lib/realCorpus'
 import { formatSegErrors, type SegErrorCounts, segErrors } from './lib/segErrors'
 import { ensureFluxCache, loadFlux, splitAtSpectralPeaks } from './lib/spectralFlux'
 import { inSplit, splitFromEnv } from './lib/split'
@@ -1380,6 +1385,7 @@ async function main(): Promise<void> {
     const split = splitFromEnv()
     const only = process.env.VOICE_ONLY
     const withGuard = process.env.VOICE_GUARD !== '0'
+    const withWhistle = process.env.VOICE_WHISTLE !== '0'
     const groups = new Set(
         (process.env.VOICE_EXP ?? 'base,e1')
             .split(',')
@@ -1387,28 +1393,26 @@ async function main(): Promise<void> {
             .filter(Boolean),
     )
 
-    // `constructedPerformance` (tinysol-*) is excluded with the same reasoning as
-    // derived truth: the guard slice must be real playing, not our own splices.
-    const datasets = discoverRealDatasets(REAL_ROOT).filter(
-        // …and `pitchless` (avp, jacrc-students): onset-only truth with placeholder
-        // MIDI, so COnP against it is meaningless — it was silently dragging the VOICE
-        // mean down and adding noise to every paired Δ since those corpora arrived.
-        (d) => !d.noteTruthDerived && !d.constructedPerformance && !d.pitchless && d.corpusSplit !== 'test',
-    )
-    const voiceIds = datasets
-        .filter((d) => d.kind === 'voice')
-        .map((d) => d.id)
-        .sort()
-    const guardIds = withGuard
-        ? datasets
-              .filter((d) => d.kind !== 'voice')
-              .map((d) => d.id)
-              .sort()
-        : []
+    // The pooled datasets (`isPooled`): `constructedPerformance` (tinysol-*) is
+    // excluded with the same reasoning as derived truth — the guard slice must be
+    // real playing, not our own splices — and `pitchless` (avp, jacrc-students) has
+    // onset-only truth with placeholder MIDI, so COnP against it is meaningless (it
+    // silently dragged the VOICE mean down until 2026-09-01). Restricted licences and
+    // `pooled: false` (whistle-vintage) stay out too. A corpus's own test half
+    // (n20emv2-test) is confirm-only.
+    const datasets = selectDatasets(discoverRealDatasets(REAL_ROOT), (d) => isPooled(d) && d.corpusSplit !== 'test')
+    const idsOf = (kind: string): string[] =>
+        datasets
+            .filter((d) => d.kind === kind)
+            .map((d) => d.id)
+            .sort()
+    const voiceIds = idsOf('voice')
+    const whistleIds = withWhistle ? idsOf('whistle') : []
+    const guardIds = withGuard ? idsOf('instrument') : []
 
     const clips: CachedClip[] = []
     for (const ds of datasets) {
-        if (!voiceIds.includes(ds.id) && !guardIds.includes(ds.id)) continue
+        if (!voiceIds.includes(ds.id) && !whistleIds.includes(ds.id) && !guardIds.includes(ds.id)) continue
         for (const clip of listRealClips(ds.dir)) {
             if (!inSplit(ds.id, clip, split)) continue
             let c: CachedClip | null = null
@@ -1421,10 +1425,12 @@ async function main(): Promise<void> {
         }
     }
     const voiceClips = clips.filter((c) => voiceIds.includes(c.dataset))
+    const whistleClips = clips.filter((c) => whistleIds.includes(c.dataset))
     const guardClips = clips.filter((c) => guardIds.includes(c.dataset))
     console.log(
         `split=${split} groups=${[...groups].join(',')} ` +
             `voice=${voiceClips.length} clips (${voiceIds.join(' ')}) ` +
+            `whistle=${whistleClips.length} clips (${whistleIds.join(' ')}) ` +
             `guard=${guardClips.length} clips (${guardIds.length} datasets)`,
     )
 
@@ -1466,6 +1472,7 @@ async function main(): Promise<void> {
         'config'.padEnd(26) +
         voiceIds.map((d) => `${d.slice(0, 12)} P/On/rat`.padEnd(16)).join('') +
         'VOICE'.padEnd(9) +
+        (whistleIds.length ? 'WHISTLE'.padEnd(9) : '') +
         (guardIds.length ? 'GUARD'.padEnd(9) : '')
     console.log('\n' + header)
     console.log('-'.repeat(header.length))
@@ -1473,14 +1480,17 @@ async function main(): Promise<void> {
     interface Result {
         name: string
         voice: SliceAcc
+        whistle: SliceAcc
         guard: SliceAcc
         voiceMean: number
+        whistleMean: number
         guardMean: number
     }
     const results: Result[] = []
 
     for (const cfg of configs) {
         const voice = newSlice()
+        const whistle = newSlice()
         const guard = newSlice()
         const extractor = cfg.cleanup ? new NoteExtractor(cfg.cleanup) : null
 
@@ -1501,13 +1511,21 @@ async function main(): Promise<void> {
             // Post pass (spectral splitter): sidecars exist only for the voice slice,
             // and `loadFlux` returns null elsewhere, so guard clips are untouched.
             if (cfg.post) notes = cfg.post(notes, c)
-            recordClip(voiceIds.includes(c.dataset) ? voice : guard, c, toEst(notes))
+            recordClip(voiceIds.includes(c.dataset) ? voice : whistleIds.includes(c.dataset) ? whistle : guard, c, toEst(notes))
         }
 
-        const voiceMean = mean(voiceIds.map((d) => mean(voice.perDataset.get(d)?.conp ?? [])))
-        const guardMean = guardIds.length ? mean(guardIds.map((d) => mean(guard.perDataset.get(d)?.conp ?? []))) : 0
-        console.log(cfg.name.padEnd(26) + sliceLine(voice, voiceIds) + (guardIds.length ? guardMean.toFixed(3).padEnd(9) : ''))
-        results.push({ name: cfg.name, voice, guard, voiceMean, guardMean })
+        const sliceMean = (acc: SliceAcc, ids: string[]): number =>
+            ids.length ? mean(ids.map((d) => mean(acc.perDataset.get(d)?.conp ?? []))) : 0
+        const voiceMean = sliceMean(voice, voiceIds)
+        const whistleMean = sliceMean(whistle, whistleIds)
+        const guardMean = sliceMean(guard, guardIds)
+        console.log(
+            cfg.name.padEnd(26) +
+                sliceLine(voice, voiceIds) +
+                (whistleIds.length ? whistleMean.toFixed(3).padEnd(9) : '') +
+                (guardIds.length ? guardMean.toFixed(3).padEnd(9) : ''),
+        )
+        results.push({ name: cfg.name, voice, whistle, guard, voiceMean, whistleMean, guardMean })
     }
 
     const baseline = results.find((r) => r.name === 'SHIPPED')
@@ -1532,12 +1550,18 @@ async function main(): Promise<void> {
 
     if (baseline) {
         console.log('\n--- vs SHIPPED, paired bootstrap over clips (* = CI excludes 0) ---')
-        console.log('config'.padEnd(26) + 'VOICE'.padEnd(46) + 'GUARD')
+        console.log('config'.padEnd(26) + 'VOICE'.padEnd(46) + (whistleIds.length ? 'WHISTLE'.padEnd(46) : '') + 'GUARD')
         for (const r of [...results].sort((a, b) => b.voiceMean - a.voiceMean)) {
             if (r === baseline) continue
             const v = pairedDiffCI(baseline.voice.perClip, r.voice.perClip)
+            const w = whistleIds.length ? pairedDiffCI(baseline.whistle.perClip, r.whistle.perClip) : null
             const g = guardIds.length ? pairedDiffCI(baseline.guard.perClip, r.guard.perClip) : null
-            console.log(r.name.padEnd(26) + formatComparison(v).padEnd(46) + (g ? formatComparison(g) : ''))
+            console.log(
+                r.name.padEnd(26) +
+                    formatComparison(v).padEnd(46) +
+                    (w ? formatComparison(w).padEnd(46) : '') +
+                    (g ? formatComparison(g) : ''),
+            )
         }
     }
 }

@@ -274,6 +274,28 @@ export function discoverRealDatasets(root: string): RealDataset[] {
 }
 
 /** Clip base names in a dataset dir (each has `<clip>.truth.json` + `<clip>__real.wav`). */
+/**
+ * The dataset filter every harness tool shares, so a slice is named the same way
+ * everywhere: `EVAL_DATASETS=a,b` replaces the tool's default set with exactly
+ * those ids (context datasets included, by name), and `EVAL_MATERIALS=singing,…`
+ * (`Material`) narrows whichever set is in force. Unset, a tool runs on
+ * `byDefault` — for anything that scores COnP that should be `isPooled` (or
+ * stricter): pitchless, derived and licence-restricted corpora have no
+ * gate-worthy note truth, and HumTrans has no track-cache entries.
+ */
+export function selectDatasets(all: RealDataset[], byDefault: (d: RealDataset) => boolean = () => true): RealDataset[] {
+    const env = (k: string): string[] | undefined => {
+        const v = (process.env[k] ?? '')
+            .split(',')
+            .map((s) => s.trim())
+            .filter(Boolean)
+        return v.length ? v : undefined
+    }
+    const ids = env('EVAL_DATASETS')
+    const materials = env('EVAL_MATERIALS')
+    return all.filter((d) => (ids ? ids.includes(d.id) : byDefault(d)) && (!materials || materials.includes(d.material)))
+}
+
 export function listRealClips(dir: string): string[] {
     return readdirSync(dir)
         .filter((f) => f.endsWith('.truth.json'))
