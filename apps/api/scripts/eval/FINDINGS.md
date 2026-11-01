@@ -2336,7 +2336,7 @@ the choir. The beat grids themselves were never affected (they come from the ann
 files, not the audio). Since 2026-10-31 the dataset's note truth is resynth (94/94 passed)
 and it pools; measure it fresh before quoting any dagstuhl number.
 
-## Findings log (2026-11-01: pipeline-accuracy pass — two measurement corrections, two ships)
+## Findings log (2026-11-01: pipeline-accuracy pass — two measurement corrections, three ships)
 
 Branch `pipeline-accuracy-2026-11`; plan, lane results and timeline in `meta/pipeline-accuracy-2026-11.md`.
 Four implementation lanes (L1 whistling, L2 voice onsets, L3 reverb front end, L4 instrument cleanup) tuned their
@@ -2407,10 +2407,11 @@ inflated `dipDepth`, which fired the reverb relief; on correct audio it does not
    voice confMed 0.868 → 0.763/0.722).
 10. **2026-08-20 per-band reverb strata** ("lowering the gate further costs"): contradicted on correct audio;
     lowering the voice gate under reverb gains (ADV-H2 below).
-11. **The scripted synthetic matrix `fixtures/eval`** (run-eval, `generate.ts`) still carries the broken graph and
-    was NOT regenerated. Its echoey/distant/wind/street/room-mic/noisy-phone rows, including the 2026-08-20
-    very-high / basic-pitch reverb columns, are void until `generate.ts` is re-run. Production COnP on the same
-    synthetic whistle clips: 0.553 broken against 0.858 re-rendered.
+11. **The scripted synthetic matrix `fixtures/eval`** (run-eval, `generate.ts`) carried the broken graph too, so its
+    echoey/distant/wind/street/room-mic/noisy-phone rows from before 2026-11-01 are void, including the 2026-08-20
+    very-high / basic-pitch reverb columns. Production COnP on the same synthetic whistle clips: 0.553 broken
+    against 0.858 re-rendered. Regenerated 2026-11-01 ~18:10 (668 WAVs): none of the 504 adverse files clips or
+    ends in a silent 2.5 s tail, so run-eval adverse rows from then on are valid.
 12. **Every recorded benchmark's adverse rows and pooled headlines** (RESULTS.md, the eval-app timeline) are low by
     the table above. A/B Δs between runs on the same broken files stay valid but are diluted 20–30 % on adverse rows.
 
@@ -2712,6 +2713,27 @@ cannot judge it either way (the truth keeps the lag); it is a notation decision.
 takes recorded with the metronome on (the pipeline does not receive that today), and/or score the timeline
 phase-locked for nominal-tempo datasets. Nothing changed.
 
+### The committed pair (RESULTS.md, model path)
+
+Two full `benchmark.ts run`s (every dataset, 16 conditions, both splits, clean trees), each note-identical to its
+cached replay on 2,813 / 2,813 pooled clip×conditions:
+
+| run | what it measures | ALL | human | singing | whistling | instrument |
+|---|---|---|---|---|---|---|
+| `test-data-2026-10` (d16420ef, rescored) | the pre-pass pipeline, broken adverse tier | 0.638 | 0.655 | 0.582 | 0.601 | 0.687 |
+| `harness-2026-11` (a9baf46e, `VOICE_ONSET_SHIFT_SEC=0.07` `EXTRACTOR_BRIDGE_GAP_SEC=0`) | the same pipeline, corrected harness | 0.672 | 0.699 | 0.590 | 0.589 | 0.748 |
+| `pipeline-accuracy-2026-11` (bf982160; code = 5302a5bb) | SING-H1 + INST-H4 + SDRY-1 + the review fixes | **0.684** | **0.710** | 0.612 | 0.592 | 0.754 |
+
+- **Rows 1 → 2 are the corrections**, not a gain: ALL +0.033\* [+0.025, +0.041], `real` −0.000.
+- **Rows 2 → 3 are the pipeline:**
+  - both splits: ALL +0.012\* [+0.010, +0.013], human +0.011\*, singing +0.022\*, instrument +0.006\*,
+    whistling +0.003\*;
+  - the test half: ALL +0.011\* [+0.009, +0.013], human +0.010\*, singing +0.021\*, instrument +0.005\*.
+- Every condition gains (both splits): real +0.009\*, echoey +0.012\*, distant +0.014\*, wind +0.007\*, street +0.006\*.
+  - The largest dataset gains are n20emv2-test and vocadito +0.035\*, urmp-contrabass +0.034\*, n20emv2 and
+    jacrc-notes +0.032\*, and app-takes-singing +0.027\*.
+  - No dataset loses significantly (urmp-trombone −0.003 n.s.).
+
 ### Open after this pass
 
 - **Owner calls:**
@@ -2721,8 +2743,6 @@ phase-locked for nominal-tempo datasets. Nothing changed.
     punishes correct quantisation at slow tempi.
 - The dipDepth relief is blind but not inert; replacing its trigger with confMed is ADV-H2 itself. Removing the
   inert sustained ramp is a clean-up.
-- `fixtures/eval` (scripted synthetic) must be regenerated (`generate.ts`) before any run-eval adverse row is quoted
-  again.
 - OK5 / DEMAND would add room and noise diversity to the measured tier (needs an HDF5 reader).
 - AVS clean stays −0.042 against `h1-final`: its truth's onset convention (pitch arrival after each Transition).
   Scoring AVS against Transition-midpoint onsets is a corpus question (a correction, not a pipeline change).

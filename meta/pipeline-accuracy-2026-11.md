@@ -112,11 +112,31 @@ Both splits, cached, after the flips (`int-after-cached-all`, env {}): ALL 0.671
   2,813 / 2,813; `check-streaming` identical. Numbers in FINDINGS.md ("After the pass: SING-H1's condition-masked
   loss").
 
+### Committed benchmark pair (RESULTS.md)
+
+Two full model-path runs: every dataset, all 16 conditions, both splits, clean trees. Each is note-identical to its
+cached replay on 2,813 / 2,813 pooled clip×conditions.
+
+| run | pipeline | ALL | human | singing | whistling | instrument |
+|---|---|---|---|---|---|---|
+| `test-data-2026-10` (d16420ef, rescored) | before the pass, broken degrade | 0.638 | 0.655 | 0.582 | 0.601 | 0.687 |
+| `harness-2026-11` (a9baf46e, env `VOICE_ONSET_SHIFT_SEC=0.07` `EXTRACTOR_BRIDGE_GAP_SEC=0`) | before the pass, corrected harness | 0.672 | 0.699 | 0.590 | 0.589 | 0.748 |
+| `pipeline-accuracy-2026-11` (bf982160 = 5302a5bb code) | shipped | **0.684** | **0.710** | 0.612 | 0.592 | 0.754 |
+
+- **Measurement correction** (first → second row): ALL +0.033\* [+0.025, +0.041], real-only −0.000. It is the same
+  pipeline, so this is not a gain.
+- **Pipeline gain** (second → third row, paired cluster bootstrap):
+  - both splits: ALL +0.012\* [+0.010, +0.013], human +0.011\*, singing +0.022\*, instrument +0.006\*, whistling
+    +0.003\*; every condition gains (real +0.009\*, distant-mic +0.014\*);
+  - the test half alone: ALL +0.011\* [+0.009, +0.013], singing +0.021\*.
+  - Per-dataset losses: none significant over both splits (urmp-trombone −0.003 n.s.). The test half's
+    urmp-tuba −0.008 is a single performance, so its "interval" has zero width.
+
 ## Owner decisions left open
 
 1. **ADV-H2**: ship despite the one non-significant negative cell (GuitarSet, rir-near) on the measured-RIR tier?
    Everything else passed (test ALL +0.0057\*, RIR ALL +0.012\*). One line: `envFlag('RECORDING_CONF_RELATIVE_GATE', true)`.
-   Flip it on top of `pa-advh2-hardening`: silent and noise-only takes no longer produce junk notes with it on, and
+   The hardening is merged (`a9baf46e`): silent and noise-only takes no longer produce junk notes with it on, and
    a final gate within 0.02 of the frozen one no longer rebuilds the score at stop. Benchmark notes are unchanged.
 2. **Whistle family**: the declared benchmark row is null on test, but the undeclared "whistling on a voice score"
    case gains +0.033\*. A DETECT-only variant (keep whistles out of the voice decode, nothing else) is the natural
@@ -124,7 +144,7 @@ Both splits, cached, after the flips (`int-after-cached-all`, env {}): ALL 0.671
 3. **INST-H4 shipped at the bar** (+0.0046 against ~+0.005); kill-switch `EXTRACTOR_BRIDGE_GAP_SEC=0`.
 4. **App-take tempo correction** lowers the reported whistling material (−0.011\*): seconds-COnP punishes correct
    quantisation at slow tempi. The beat-domain numbers (notation-eval) move the other way.
-5. **Committed benchmark run + RESULTS.md**: not done here; the orchestrator/Karel decides on the full committed run.
+5. **Committed benchmark run + RESULTS.md**: done (`6f5cb940`); see "Committed benchmark pair" above.
 6. The corpus corrections (re-cut GuitarSet and Dagstuhl, app-take truth bpm, URMP `nominalTempo`) live in the
    gitignored fixtures; only the 48 app-take resynth annotations are tracked (commit `dadfb29b`). Rollback:
    `swap-grid.sh --rollback` from `.cache/scratch/l0b/pre-swap/`.
@@ -148,7 +168,12 @@ Both splits, cached, after the flips (`int-after-cached-all`, env {}): ALL 0.671
 | 15:05–15:27 | dev re-runs and interactions; the test looks (SING-H1, ADV-H2 + RIR, INST-H4, L1, stacked) |
 | 15:30 | `9c520676` SING-H1 ships, `edf8df6b` INST-H4 ships, `6a476dbc` built-off doc numbers |
 | 15:32–16:35 | model-path confirmation (`--scratch`, 7 shards per arm, ~50 min), `--synth` home-phone + room, notation-eval, check-streaming; docs |
+| 17:16–18:01 | review fixes (`RECORDING_PLUCKED_DETECT`, streaming commit margin, ADV-H2 hardening) merged at `a9baf46e` |
+| 18:05–21:47 | committed run `harness-2026-11` (model path, the pre-pass knobs) |
 | 18:52–19:40 | SING-H1 dry diagnosis on dev (shift sweep, stage decomposition, AVS convention test); SDRY-1 pre-registered 19:09, two-fold dev check, one test look 19:14, flipped |
+| 19:45 | `5302a5bb` the existence test never judges below the reporting shift (verifier caveat; note-identical in three states) |
+| 19:45–20:00 | timeline points `a9baf46e` and `5302a5bb` scored; grid-phase finding `44692bbf` |
+| 19:45–23:24 | committed run `pipeline-accuracy-2026-11`; `69f83ab4` RESULTS.md shows a run's env; `6f5cb940` the pair |
 
 ## Where things are
 
@@ -156,4 +181,6 @@ Both splits, cached, after the flips (`int-after-cached-all`, env {}): ALL 0.671
   `diag/integration.md`, `diag/sing-h1-dry.md` (not in the repo).
 - Result files: `apps/api/scripts/eval/.cache/bench-scratch/real/*_{h0-fixed,grid-fixed,grid-fixed-rir,h1-final,int-*,pa-*}.json`.
 - Scratch tools: `apps/api/scripts/eval/.cache/scratch/{h0,l0b,l1,l2,l3,l4,int}/` (gitignored).
-- Worktrees `mushee-wt-l{1..4}-*` are left in place on their lane branches.
+- Committed results: `apps/eval/data/benchmarks/real/2026-11-01T*_{harness-2026-11,pipeline-accuracy-2026-11}.json`,
+  rendered in `apps/api/scripts/eval/benchmarks/RESULTS.md`.
+- The lane worktrees and `pa-*` branches are removed (all merged).
