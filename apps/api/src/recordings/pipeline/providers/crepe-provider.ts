@@ -98,7 +98,9 @@ class CrepeSession implements PitchSession {
      */
     frozenEvidence: ReverbEvidence | undefined
     /** Every distinct decision a pass of this session ran with, keyed — see `voicingAdaptationDrifted`. */
-    readonly decisions = new Set<string>()
+    readonly decisions = new Map<string, ReverbDecision>()
+    /** The latest pass's decision: after the final pass, the whole take's. */
+    lastDecision: ReverbDecision | undefined
 }
 
 /**
@@ -165,7 +167,7 @@ export class CrepeProvider implements TrajectoryProvider {
      * `freezeSec` of loud audio exist and then keeps that evidence, so the gate
      * stops moving under notes it has already committed; the final pass measures
      * the whole take again, and `voicingAdaptationDrifted` tells the pipeline when
-     * that changed a decision an earlier pass ran with.
+     * that moved the decision away from one an earlier pass ran with.
      */
     private reverbDecision(track: PitchTrack, energy: Float32Array, options: PitchTranscribeOptions | undefined, sess: CrepeSession): ReverbDecision {
         const adaptation = REVERB_DECODE_ADAPTATION
@@ -182,17 +184,24 @@ export class CrepeProvider implements TrajectoryProvider {
             options?.segmentMode === 'voice',
             realHopSec,
         )
-        sess.decisions.add(`${decision.gate}|${decision.backExtend ? 1 : 0}`)
+        sess.decisions.set(`${decision.gate}|${decision.backExtend ? 1 : 0}`, decision)
+        sess.lastDecision = decision
         return decision
     }
 
     /**
-     * True when the passes of `session` did not all run with one reverb decision
-     * — i.e. the notes committed live were decoded under a gate the final pass no
-     * longer uses. Always false with the adaptation off (production).
+     * True when an earlier pass of `session` ran with a reverb decision the latest
+     * (final) one does not agree with (`ReverbDecodeAdaptation.agrees`: the same
+     * onset treatment, gates within the drift tolerance) — i.e. notes committed live
+     * were decoded under a gate the final pass no longer uses. A final gate a hair
+     * off the frozen one is not drift: the live notes stand. Always false with the
+     * adaptation off (production).
      */
     voicingAdaptationDrifted(session: PitchSession): boolean {
-        return session instanceof CrepeSession && session.decisions.size > 1
+        const adaptation = REVERB_DECODE_ADAPTATION
+        if (!adaptation || !(session instanceof CrepeSession) || !session.lastDecision) return false
+        const final = session.lastDecision
+        return [...session.decisions.values()].some((d) => !adaptation.agrees(d, final))
     }
 
     /** The voice path: a note-level HMM over the trajectory *and* the envelope. */

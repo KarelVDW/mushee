@@ -415,9 +415,9 @@ export class RecordingPipeline {
         const extracted = await converter.convert(full, this.bpm, undefined, { final: isFinal })
         const tConvert = Date.now()
         // The decode-side reverb adaptation (built off) re-measures the whole take on
-        // the final pass; when that changed the gate an earlier pass committed notes
-        // under, those notes may contradict the final ones, so the final pass
-        // supersedes them — the same rebuild a re-routed take gets.
+        // the final pass; when that moved the gate past the drift tolerance from one an
+        // earlier pass committed notes under, those notes may contradict the final
+        // ones, so the final pass supersedes them — the same rebuild a re-routed take gets.
         if (isFinal && converter.voicingAdaptationDrifted()) {
             this.logger.debug('Final pass re-measured the reverb adaptation differently; rebuilding the score from it')
             this.discardCommitted()

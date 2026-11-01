@@ -166,6 +166,16 @@ describe('ReverbDecodeAdaptation.decide', () => {
     it('is off unless the env opts in', () => {
         expect(ReverbDecodeAdaptation.fromEnv()).toBeUndefined()
     })
+
+    it('agrees on decisions with the same onset treatment and gates within the drift tolerance', () => {
+        const a = new ReverbDecodeAdaptation(gate, undefined, 1.5)
+        const ext = { minConfidence: 0.15, maxFrames: 8 }
+        // 0.48 − 0.46 is 0.020000000000000018 in floating point: still within 0.02.
+        expect(a.agrees({ gate: 0.48 }, { gate: 0.46 })).toBe(true)
+        expect(a.agrees({ gate: 0.48 }, { gate: 0.45 })).toBe(false)
+        expect(a.agrees({ gate: 0.5, backExtend: ext }, { gate: 0.5 })).toBe(false)
+        expect(new ReverbDecodeAdaptation(gate, undefined, 1.5, 0).agrees({ gate: 0.48 }, { gate: 0.4799 })).toBe(false)
+    })
 })
 
 describe('CrepeProvider streaming with the relative gate on', () => {
@@ -204,19 +214,37 @@ describe('CrepeProvider streaming with the relative gate on', () => {
     it('freezes the evidence once enough loud audio exists, and the final pass re-measures it', async () => {
         const { p, b } = await provider({ RECORDING_CONF_RELATIVE_GATE: '1' })
         const s = p.createSession()
-        const decisions = (s as unknown as { decisions: Set<string> }).decisions
+        const decisions = (s as unknown as { decisions: Map<string, unknown> }).decisions
         // 2 s of loud audio at confidence 0.9: frozen at gate 0.5.
         await p.transcribe(tone(2), { confidenceThreshold: 0.5 }, s)
-        expect([...decisions]).toEqual(['0.5|0'])
+        expect([...decisions.keys()]).toEqual(['0.5|0'])
         // New audio at low confidence: the frozen evidence holds the gate.
         b.peak = 0.3
         await p.transcribe(tone(6), { confidenceThreshold: 0.5 }, s)
-        expect([...decisions]).toEqual(['0.5|0'])
+        expect([...decisions.keys()]).toEqual(['0.5|0'])
         expect(p.voicingAdaptationDrifted(s)).toBe(false)
         // The final pass measures the whole take (now mostly low confidence) and flags the drift.
         await p.transcribe(tone(6), { confidenceThreshold: 0.5, finalPass: true }, s)
         expect(decisions.size).toBe(2)
         expect(p.voicingAdaptationDrifted(s)).toBe(true)
+    })
+
+    it('keeps the live notes when the final gate lands within the drift tolerance of the frozen one', async () => {
+        for (const [later, drifts] of [
+            [0.83, false],
+            [0.8, true],
+        ] as const) {
+            const { p, b } = await provider({ RECORDING_CONF_RELATIVE_GATE: '1' })
+            const s = p.createSession()
+            // Frozen at confidence 0.84: gate 0.48.
+            b.peak = 0.84
+            await p.transcribe(tone(2), { confidenceThreshold: 0.5 }, s)
+            // The whole take reads 0.83 (gate 0.46, within 0.02: the same decision) or 0.80 (gate 0.40: drift).
+            b.peak = later
+            await p.transcribe(tone(6), { confidenceThreshold: 0.5, finalPass: true }, s)
+            expect((s as unknown as { decisions: Map<string, unknown> }).decisions.size).toBe(2)
+            expect(p.voicingAdaptationDrifted(s)).toBe(drifts)
+        }
     })
 
     it('never drifts with the adaptation off', async () => {

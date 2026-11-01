@@ -87,6 +87,8 @@ Both splits, cached, after the flips (`int-after-cached-all`, env {}): ALL 0.671
 
 1. **ADV-H2**: ship despite the one non-significant negative cell (GuitarSet, rir-near) on the measured-RIR tier?
    Everything else passed (test ALL +0.0057\*, RIR ALL +0.012\*). One line: `envFlag('RECORDING_CONF_RELATIVE_GATE', true)`.
+   Flip it on top of `pa-advh2-hardening`: silent and noise-only takes no longer produce junk notes with it on, and
+   a final gate within 0.02 of the frozen one no longer rebuilds the score at stop. Benchmark notes are unchanged.
 2. **Whistle family**: the declared benchmark row is null on test, but the undeclared "whistling on a voice score"
    case gains +0.033\*. A DETECT-only variant (keep whistles out of the voice decode, nothing else) is the natural
    next hypothesis; it needs its own dev/test cycle.

@@ -259,7 +259,7 @@ export class AudioConverter {
         return this.extractor.extract(raw, { bpm, onsetTimesSec })
     }
 
-    /** Whether this recording's passes decoded under different take-level decisions (`PitchProvider.voicingAdaptationDrifted`). */
+    /** Whether an earlier pass decoded under a take-level decision the final one does not agree with (`PitchProvider.voicingAdaptationDrifted`). */
     voicingAdaptationDrifted(): boolean {
         return this.provider.voicingAdaptationDrifted?.(this.session) ?? false
     }
