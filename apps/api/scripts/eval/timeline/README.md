@@ -1,7 +1,7 @@
 # The benchmark-score timeline
 
 How good was the transcription at each point in its history, measured with
-**today's** scorer and **today's** truth? Fourteen sampled pipeline states
+**today's** scorer and **today's** truth? Fifteen sampled pipeline states
 (`commits.json`) each transcribe the same fixed clip set (`clipset.json`) through
 their own `RecordingPipeline`; the notes are cached per commit, and scoring is a
 separate, seconds-long step that can be re-run whenever the truth improves. The
@@ -79,7 +79,8 @@ stubs `writeDebugBundle`.
 
 ## The clip set
 
-509 clips, 179.9 min of audio, from 33 datasets (clip-set hash `be3002101e09`):
+536 clips, 187.0 min of audio, from 34 datasets (clip-set hash `ffae19cba3d4`; redrawn 2026-11-01 when
+`lib/split.ts` regrouped whistle-real by uploader and the app takes by session):
 every pitched real dataset in `fixtures/eval-real` (benchmark and context
 tiers, including those whose truth is still being made), plus jacrc-students
 (its audio gets note truth in jacrc-notes); minus the byte-identical

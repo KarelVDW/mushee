@@ -127,6 +127,15 @@
             "era": "D",
             "why": "CONTROL: the 2026-10-22 refactors (claimed behaviour-preserving) and the AudioDecoder loudnorm-default flip; no pipeline change after. Should score ≈ d77db1db.",
             "needsLegacyDeps": false
+        },
+        {
+            "sha": "a9baf46e6fbf3cd7be2df130e53ba5f99a0b8b00",
+            "short": "a9baf46e",
+            "date": "2026-11-01T18:01:41+01:00",
+            "subject": "Merge branch 'pa-advh2-hardening': ADV-H2 neutral on silence/noise, drift tolerance",
+            "era": "D",
+            "why": "The 2026-11 pipeline-accuracy pass: voice onset shift 0.05 s (SING-H1), same-pitch gap bridge for sustained instruments (INST-H4), held notes committed at full length while streaming. Committed benchmark result at this sha (pipeline-accuracy-2026-11) for calibration.",
+            "needsLegacyDeps": false
         }
     ]
 }
