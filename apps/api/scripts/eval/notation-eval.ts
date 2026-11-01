@@ -39,8 +39,9 @@ import { discoverRealDatasets, listRealClips, selectDatasets } from './lib/realC
 import { inSplit, splitFromEnv } from './lib/split'
 import { type CachedClip, TrackCache } from './lib/trackCache'
 
-const REAL_ROOT = resolve(__dirname, '../fixtures/eval-real')
-const CACHE_ROOT = resolve(__dirname, '../fixtures/eval-cache')
+// EVAL_REAL_ROOT / EVAL_TRACK_CACHE_ROOT: a staged corpus with its own cache, as in benchmark.ts.
+const REAL_ROOT = resolve(process.env.EVAL_REAL_ROOT || resolve(__dirname, '../fixtures/eval-real'))
+const CACHE_ROOT = resolve(process.env.EVAL_TRACK_CACHE_ROOT || resolve(__dirname, '../fixtures/eval-cache'))
 const MODELS = {
     crepeTiny: resolve(process.cwd(), 'model-crepe-tiny'),
 }
