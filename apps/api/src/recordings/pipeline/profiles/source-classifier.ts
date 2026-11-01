@@ -164,6 +164,67 @@ const MAX_CLASSIFY_SEC = 4
 export type SourceVerdict = 'voice' | 'instrument'
 
 /**
+ * The stock AudioSet class for a person whistling (YAMNet index 35), and how high
+ * it must rank among all 521 class scores for the prefix to read as whistling.
+ *
+ * Whistling is neither of the two groups above: it is the human mouth making a
+ * near-sine, so the voice/instrument rule abstains on most whistle takes and the
+ * score's instrument prior decides — which sends a whistle on a voice score into
+ * the voice decode (measured −0.07 COnP there). The class is used as published,
+ * at a rank fixed a priori (top 3, not tuned), so nothing is fitted. Read by the
+ * resolver only under `RECORDING_WHISTLE_DETECT=1`; the measured recall and
+ * false-positive rate at the lock prefix are on `ProfileResolver`'s whistle family.
+ */
+const WHISTLING_CLASS = 'Whistling'
+const WHISTLING_TOP_K = 3
+
+/** One YAMNet pass over the prefix: the voice/instrument verdict and the whistling verdict. */
+export interface SourceAnalysis {
+    /** Undefined inside the abstain band (see `decideSource`). */
+    source: SourceVerdict | undefined
+    /** True when "Whistling" ranks in the top `WHISTLING_TOP_K` of the prefix's class scores. */
+    whistling: boolean
+}
+
+/** Sigmoid the frame logits and average over frames: one score per class. */
+function meanClassScores(frameLogits: Float32Array, frames: number, numClasses: number): Float32Array {
+    const mean = new Float32Array(numClasses)
+    for (let f = 0; f < frames; f += 1) {
+        for (let c = 0; c < numClasses; c += 1) {
+            mean[c] += 1 / (1 + Math.exp(-frameLogits[f * numClasses + c]))
+        }
+    }
+    for (let c = 0; c < numClasses; c += 1) mean[c] /= frames
+    return mean
+}
+
+function sourceFromScores(mean: Float32Array, classNames: string[]): SourceVerdict | undefined {
+    let voice = 0
+    let instrument = 0
+    for (let c = 0; c < mean.length; c += 1) {
+        if (VOICE_CLASSES.has(classNames[c])) voice = Math.max(voice, mean[c])
+        if (INSTRUMENT_CLASSES.has(classNames[c])) instrument = Math.max(instrument, mean[c])
+    }
+    if (Math.max(voice, instrument) < MIN_TOP) return undefined
+    if (Math.abs(voice - instrument) < MIN_MARGIN) return undefined
+    return voice > instrument ? 'voice' : 'instrument'
+}
+
+/**
+ * A tie counts against the class: on a near-silent prefix every absent class
+ * sits at the same ~0.5 floor (see the module notes), and a strict comparison
+ * would rank a floor-level "Whistling" second behind "Silence" — which is how a
+ * first draft of this rule fired on 2 % of non-whistle prefixes.
+ */
+function whistlingFromScores(mean: Float32Array, classNames: string[]): boolean {
+    const w = classNames.indexOf(WHISTLING_CLASS)
+    if (w < 0 || w >= mean.length) return false
+    let atOrAbove = 0
+    for (let c = 0; c < mean.length; c += 1) if (c !== w && mean[c] >= mean[w]) atOrAbove += 1
+    return atOrAbove < WHISTLING_TOP_K
+}
+
+/**
  * The decision rule, pure so it is testable without the model: sigmoid the
  * frame logits, average over frames, compare each group's strongest member,
  * abstain inside the band.
@@ -174,22 +235,13 @@ export function decideSource(
     numClasses: number,
     classNames: string[],
 ): SourceVerdict | undefined {
-    const mean = new Float32Array(numClasses)
-    for (let f = 0; f < frames; f += 1) {
-        for (let c = 0; c < numClasses; c += 1) {
-            mean[c] += 1 / (1 + Math.exp(-frameLogits[f * numClasses + c]))
-        }
-    }
-    let voice = 0
-    let instrument = 0
-    for (let c = 0; c < numClasses; c += 1) {
-        mean[c] /= frames
-        if (VOICE_CLASSES.has(classNames[c])) voice = Math.max(voice, mean[c])
-        if (INSTRUMENT_CLASSES.has(classNames[c])) instrument = Math.max(instrument, mean[c])
-    }
-    if (Math.max(voice, instrument) < MIN_TOP) return undefined
-    if (Math.abs(voice - instrument) < MIN_MARGIN) return undefined
-    return voice > instrument ? 'voice' : 'instrument'
+    return sourceFromScores(meanClassScores(frameLogits, frames, numClasses), classNames)
+}
+
+/** Both verdicts from one set of frame logits (pure, like `decideSource`). */
+export function analyzeScores(frameLogits: Float32Array, frames: number, numClasses: number, classNames: string[]): SourceAnalysis {
+    const mean = meanClassScores(frameLogits, frames, numClasses)
+    return { source: sourceFromScores(mean, classNames), whistling: whistlingFromScores(mean, classNames) }
 }
 
 /** index,mid,display_name — display_name may be quoted and contain commas. */
@@ -253,6 +305,15 @@ export class SourceClassifier {
      * and YAMNet has no control-flow ops so `execute` runs eagerly.
      */
     classify(samples: Float32Array, sampleRate: number): SourceVerdict | undefined {
+        return this.analyze(samples, sampleRate)?.source
+    }
+
+    /**
+     * Both verdicts from one model pass, or undefined when the model cannot
+     * answer at all (not ready / too short / wrong rate / disabled) — distinct
+     * from an abstaining `source` on audio it did hear.
+     */
+    analyze(samples: Float32Array, sampleRate: number): SourceAnalysis | undefined {
         if (!CLASSIFY || !loaded) return undefined
         if (sampleRate !== YAMNET_SAMPLE_RATE || samples.length < MIN_SAMPLES) {
             return undefined
@@ -266,7 +327,7 @@ export class SourceClassifier {
             const scoresT = outputs.find((t) => t.shape[t.shape.length - 1] === 521)
             if (!scoresT) return undefined
             const [frames, numClasses] = scoresT.shape as [number, number]
-            return decideSource(scoresT.dataSync() as Float32Array, frames, numClasses, loaded.classNames)
+            return analyzeScores(scoresT.dataSync() as Float32Array, frames, numClasses, loaded.classNames)
         } catch (err) {
             logger.warn(`YAMNet classify failed: ${describeError(err)}`)
             return undefined

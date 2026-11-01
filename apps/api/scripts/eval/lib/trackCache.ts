@@ -26,7 +26,7 @@ import { AudioDecoder } from '../../../src/recordings/pipeline/audio-decoder'
 import { OnsetDetector } from '../../../src/recordings/pipeline/onset-detector'
 import { PitchTrack } from '../../../src/recordings/pipeline/pitch-track'
 import type { PipelineProfile } from '../../../src/recordings/pipeline/profiles/pipeline-profile'
-import { ProfileResolver } from '../../../src/recordings/pipeline/profiles/profile-resolver'
+import { type ProfileHint, ProfileResolver } from '../../../src/recordings/pipeline/profiles/profile-resolver'
 import type { PitchProvider, PitchSession } from '../../../src/recordings/pipeline/providers/pitch-provider'
 import { ProviderRegistry } from '../../../src/recordings/pipeline/providers/provider-registry'
 import { frameEnergy } from '../../../src/recordings/pipeline/semitone-segmenter'
@@ -109,6 +109,15 @@ const RESOLVER_ENV_KEYS = [
     // (audio-decoder.ts) and the Viterbi jump floor (crepe-provider.ts).
     'RECORDING_DENOISE_FILTER',
     'RECORDING_VITERBI_JUMP_FLOOR',
+    // The whistle family (2026-11): admission, band and onset dip are all profile fields.
+    'RECORDING_WHISTLE_DETECT',
+    'RECORDING_WHISTLE_PITCHDOWN',
+    'RECORDING_WHISTLE_ONSET',
+    'RECORDING_HIGH_BAND_PITCHDOWN',
+    // The harness's undeclared-source mode (`harnessHint`) changes the hint the resolver sees.
+    'EVAL_UNDECLARED_SOURCE',
+    'EVAL_UNDECLARED_HINT',
+    'RECORDING_WHISTLE_ONSET_RAMP',
 ]
 export const DEFAULT_RESOLVER_ENV = 'default'
 
@@ -151,6 +160,26 @@ interface CacheMeta {
     fineHopSec: number
     /** Pitch candidates per frame stored in the blob (0 = none). */
     candK?: number
+}
+
+/**
+ * The source declaration the harness hands the resolver for a dataset: its
+ * instrument hint and an explicit `sourceKind`, so eval numbers measure the
+ * pipeline rather than the classifier's day. Two overrides model the product's
+ * undeclared input instead — the app sends no `sourceKind`, and the score's
+ * instrument is whatever the user picked:
+ *   `EVAL_UNDECLARED_SOURCE=1`      drop `sourceKind`, so the audio classifier votes;
+ *   `EVAL_UNDECLARED_HINT=<id>|none` replace the dataset's instrument hint (e.g. a
+ *                                   whistle take on a `voice-lead` or `piano` score).
+ * Both are in RESOLVER_ENV_KEYS, since they change the cached profile.
+ */
+export function harnessHint(instrumentId: string | undefined, kind: string): ProfileHint {
+    const hintOverride = process.env.EVAL_UNDECLARED_HINT
+    const undeclared = process.env.EVAL_UNDECLARED_SOURCE === '1'
+    return {
+        instrumentId: hintOverride ? (hintOverride === 'none' ? undefined : hintOverride) : instrumentId,
+        sourceKind: undeclared ? undefined : kind === 'voice' ? 'voice' : 'instrument',
+    }
 }
 
 /** One clip, with the expensive part already computed. */
@@ -233,12 +262,13 @@ export class TrackCache {
             loudnorm: false,
             highpassHz: 30,
         })
-        const profile = this.resolver.resolve(det.samples, DETECT_SR, {
-            instrumentId: ds.instrumentId,
-            // Explicit so the audio source classifier never votes during a cache
-            // build — a cached profile must be a pure function of the dataset.
-            sourceKind: ds.kind === 'voice' ? 'voice' : 'instrument',
-        })
+        // Explicit `sourceKind` (unless the undeclared mode is on) so the audio
+        // source classifier never votes on the source during a cache build; the
+        // model is awaited anyway, because the whistle check and the undeclared
+        // mode do ask it — and a cached profile must be a pure function of the
+        // dataset, never of how fast YAMNet loaded.
+        await this.resolver.ready()
+        const profile = this.resolver.resolve(det.samples, DETECT_SR, harnessHint(ds.instrumentId, ds.kind))
         const provider = this.registry.get(profile.providerName)
         // Any provider exposing a frame-level trajectory is cacheable — that is
         // both CREPE variants since the octave-down wrapper gained `track()`

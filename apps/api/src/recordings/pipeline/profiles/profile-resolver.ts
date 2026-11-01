@@ -74,6 +74,110 @@ const SUSTAINED_REVERB_RAMP = envFlag('SUSTAINED_ONSET_REVERB_RAMP')
 const VOICE_ONSET_MIN_TROUGH_SEC = envOptionalNumber('VOICE_ONSET_MIN_TROUGH_SEC')
 
 /**
+ * The whistle family (2026-11) — BUILT OFF: every knob defaults to today's
+ * behaviour, and with all of them unset no profile changes anywhere.
+ *
+ * A take belongs to the family when the score hint is exactly `whistle`, or when
+ * `RECORDING_WHISTLE_DETECT=1` and the stock YAMNet "Whistling" class ranks in
+ * the top 3 of the lock prefix (`SourceAnalysis.whistling`). A `tin-whistle`
+ * hint alone does not qualify: a tin whistle tongues, so its re-attacks are real
+ * and it keeps the sustained family. The whistle check runs even when the caller
+ * declared `sourceKind`, and a family member is never routed to the voice
+ * decode (whistling is the documented gap the voice literature does not cover).
+ *
+ * - `RECORDING_WHISTLE_DETECT=1`: let the verdict admit a take (WH-H3).
+ * - `RECORDING_WHISTLE_PITCHDOWN=1`: route the family to the octave-down
+ *   `very-high` band whatever its median (WH-H2).
+ * - `RECORDING_WHISTLE_ONSET=off|<dip>`: the family's re-attack dip — `off` is
+ *   0, which the detector can never fire on (no amplitude splitter); a number is
+ *   a fixed dip with no reverb ramp (WH-H1). Unset / `legacy`: the sustained
+ *   policy as today.
+ *
+ * ## Measured 2026-11-01 (DEV half only; the one test look is still owed)
+ *
+ * Whistling material = mean of the whistle-real / app-takes-whistling /
+ * whistled-high-register dataset means; cached replay = the benchmark note for
+ * note (`benchmark.ts run --cached`), paired bootstrap over 82 clips, `*` = CI
+ * excludes 0. The track caches the pitch-down routing builds are bit-identical to
+ * the 2026-11 diagnosis's forced-band tracks (30/30 clips).
+ *
+ * ```
+ *                                    material         clips Δ                    re-onset recall (43)
+ * production                         0.606            —                          0.58
+ * PITCHDOWN                          0.617            +0.019 [+0.007, +0.032]*   0.65
+ * PITCHDOWN + ONSET 0.2              0.623            +0.013 [+0.004, +0.023]* over PITCHDOWN
+ * DETECT + PITCHDOWN + ONSET 0.2     0.636            +0.035 [+0.018, +0.052]*   0.56
+ * DETECT + PITCHDOWN + ONSET off     0.653            +0.042 [+0.025, +0.059]*   0.40
+ * ```
+ *
+ * Why 0.2 and not `off`, although `off` scores higher: the splitter is the only
+ * channel for a repeated note whose gap a room fills. `off` loses 8 of the 43 real
+ * re-onsets and, on the exact-truth synthetic whistles (rendered with the fixed
+ * degrade), every repeat under a slapback room-mic (14/14 → 0/14, COnP −0.07);
+ * 0.2 keeps both at production's level. What 0.2 still gives up is the
+ * synthetic echoey/distant re-onsets (0.97 → 0.81 overall), where production's
+ * ramped dip finds them only by splitting 85 notes per 100 (est/ref 1.97 → 1.04,
+ * COnP +0.18 there). Dips 0.1 / 0.15 sit between (material 0.644 / 0.638).
+ *
+ * In a room (whistle-real dev re-rendered echoey / distant with the fixed degrade,
+ * not pooled): PITCHDOWN + 0.2 +0.004 / −0.005 (n.s.); pitch-down ALONE −0.013* /
+ * −0.013 — the 2026-08-20 reverb counter-signal, real but small and cancelled by
+ * the onset change. Undeclared input, as the app sends it (no sourceKind; the
+ * score is whatever the user picked — `EVAL_UNDECLARED_*`), all three knobs on:
+ * whistling on a voice score 0.607 → 0.631, clips +0.039 [+0.019, +0.059]*; on a
+ * piano score 0.588 → 0.630, +0.031 [+0.017, +0.045]* (the harness's verdict sees
+ * a clip's first 4 s, recall 0.84, so the lock's 0.77 makes this a slight
+ * overestimate).
+ *
+ * The verdict at the lock prefix (first pitched ≥ 1.2 s, +1 s passes, as
+ * `RecordingPipeline` locks): recall 63/82 dev whistles (0.77; 0.78 from 2.2 s,
+ * 0.84 on the first 4 s); false positives 1 / 1,730 non-whistle real dev clips (a
+ * TinySOL accordion top note), 0 / 652 adverse variants, 2 / 1,170 realistic
+ * synthetic clips (shakuhachi over a phone mic), 0 / 612 legacy synthetic. Top 5
+ * would reach 0.80 at the lock with the same false positives; top 3 was kept as
+ * fixed a priori. A miss costs nothing: the take routes as it does today.
+ */
+const WHISTLE_DETECT = envFlag('RECORDING_WHISTLE_DETECT', false)
+const WHISTLE_PITCHDOWN = envFlag('RECORDING_WHISTLE_PITCHDOWN', false)
+const WHISTLE_ONSET_DIP = whistleOnsetDip(process.env.RECORDING_WHISTLE_ONSET)
+/**
+ * `RECORDING_WHISTLE_ONSET_RAMP=1`: ramp the family dip toward the detector
+ * default with reverberance, as the sustained family does. Measured null on real
+ * whistles: material 0.627 for a ramped 0.2 vs 0.635 flat (stacked replay on
+ * PITCHDOWN), identical in the re-rendered rooms, because the reverberance
+ * estimate barely fires on real reverberant whistling. It only restores the
+ * synthetic echoey re-onsets (12/14) by bringing back their over-splitting.
+ */
+const WHISTLE_ONSET_RAMP = envFlag('RECORDING_WHISTLE_ONSET_RAMP', false)
+/** No family at all unless some whistle knob is on — the identity guarantee above. */
+const WHISTLE_FAMILY = WHISTLE_DETECT || WHISTLE_PITCHDOWN || WHISTLE_ONSET_DIP !== undefined
+
+/**
+ * WH-H2b — BUILT OFF: `RECORDING_HIGH_BAND_PITCHDOWN=1` sends every non-voice take
+ * the register router puts in the `high` band (flute, oboe, violin, at-pitch
+ * whistling) to the octave-down provider as well. Voice keeps its band: the voice
+ * overlay refuses the pitch-down provider, so a sung take there would lose the
+ * voice decode.
+ *
+ * Measured 2026-11-01, dev, all conditions (fixed adverse tier): it reroutes 7
+ * pooled dev clips (GuitarSet 3, URMP flute 2, oboe 2) and nothing else.
+ * GuitarSet +0.006 [−0.004, +0.018], URMP flute +0.020 [−0.025, +0.067], oboe
+ * −0.006 [−0.045, +0.028] — about +0.001 on the 14-set instrument material, under
+ * any ship bar; distant-mic −0.011 (n.s.), echoey +0.015. TinySOL high strata
+ * (exact truth, context) +0.032 [+0.008, +0.063]*, as the 2026-11 diagnosis found.
+ * The CREPE-tiny confidence gain on near-sines played at half speed is real, but
+ * the material it applies to is too thin in the pooled sets to show.
+ */
+const HIGH_BAND_PITCHDOWN = envFlag('RECORDING_HIGH_BAND_PITCHDOWN', false)
+
+function whistleOnsetDip(raw: string | undefined): number | undefined {
+    if (raw === undefined || raw === '' || raw === 'legacy') return undefined
+    if (raw === 'off') return 0
+    const v = Number(raw)
+    return Number.isFinite(v) && v >= 0 ? v : undefined
+}
+
+/**
  * Noise-adaptation thresholds (tuned against the adverse tier of the eval
  * corpus — scripts/eval). A recording counts as noisy when either a
  * meaningful share of its energetic frames are broadband (wind gusts,
@@ -244,13 +348,25 @@ function applyOnsetPolicy(
     isVoice: boolean,
     instrumentId: string | undefined,
     reverberance: number,
+    whistle = false,
 ): PipelineProfile {
     if (ONSET_POLICY_LEGACY || base.onsetDipRatio !== undefined) return base
+    if (whistle && WHISTLE_ONSET_DIP !== undefined) {
+        const dip = WHISTLE_ONSET_RAMP
+            ? WHISTLE_ONSET_DIP + (OnsetDetector.DEFAULT_DIP_RATIO - WHISTLE_ONSET_DIP) * clamp(reverberance, 0, 1)
+            : WHISTLE_ONSET_DIP
+        return { ...base, onsetDipRatio: dip }
+    }
     if (isVoice) return { ...base, onsetDipRatio: VOICE_DIP_OVERRIDE ?? VOICE_ONSET_DIP_RATIO }
     if (isStruckOrPluckedInstrument(instrumentId)) return base
     const dry = SUSTAINED_DIP_OVERRIDE ?? SUSTAINED_ONSET_DIP_RATIO
     if (!SUSTAINED_REVERB_RAMP) return { ...base, onsetDipRatio: dry }
     return { ...base, onsetDipRatio: dry + (OnsetDetector.DEFAULT_DIP_RATIO - dry) * clamp(reverberance, 0, 1) }
+}
+
+/** Tag a whistle-family anchor in its id, so the routing shows in logs and archived sessions. */
+function markWhistle(base: PipelineProfile, whistle: boolean): PipelineProfile {
+    return whistle ? { ...base, id: base.id + '+whistle' } : base
 }
 
 function band(id: string): PipelineProfile {
@@ -277,6 +393,16 @@ export class ProfileResolver {
     private readonly sourceClassifier = new SourceClassifier()
 
     /**
+     * Resolves once the source classifier's model has loaded (or failed to).
+     * Production never waits — until then the classifier abstains and the prior
+     * decides — but a caller that needs the verdict to be a pure function of the
+     * audio (the eval harness's cache builds) awaits this first.
+     */
+    async ready(): Promise<void> {
+        await this.sourceClassifier.ready()
+    }
+
+    /**
      * @param samples     mono PCM of the first ~seconds of the recording
      * @param sampleRate  sample rate of `samples`
      */
@@ -287,12 +413,26 @@ export class ProfileResolver {
         // itself decides (stock-YAMNet classifier, 98.7 % decided accuracy at this
         // very prefix), and only an abstention — near-silence, ambiguity, model
         // not loaded yet — falls back to the score's instrument prior.
-        const classified = hint?.sourceKind === undefined ? this.sourceClassifier.classify(samples, sampleRate) : undefined
-        const isVoice =
+        // One YAMNet pass answers both questions; it runs when the caller declared
+        // nothing, or when the whistle check is on (which ignores a declaration).
+        const analysis = hint?.sourceKind === undefined || WHISTLE_DETECT ? this.sourceClassifier.analyze(samples, sampleRate) : undefined
+        const classified = hint?.sourceKind === undefined ? analysis?.source : undefined
+        const heardWhistling = WHISTLE_DETECT && analysis?.whistling === true
+        const whistle = WHISTLE_FAMILY && (hint?.instrumentId === 'whistle' || heardWhistling)
+        const voiceOtherwise =
             hint?.sourceKind === 'voice' ||
             (hint?.sourceKind === undefined && (classified !== undefined ? classified === 'voice' : isVoiceInstrument(hint?.instrumentId)))
+        const isVoice = voiceOtherwise && !whistle
         const sourceDecidedBy: PipelineProfile['sourceDecidedBy'] =
-            hint?.sourceKind !== undefined ? 'explicit' : classified !== undefined ? 'classifier' : 'prior'
+            whistle && voiceOtherwise
+                ? heardWhistling
+                    ? 'classifier'
+                    : 'prior'
+                : hint?.sourceKind !== undefined
+                  ? 'explicit'
+                  : classified !== undefined
+                    ? 'classifier'
+                    : 'prior'
         const sourceBelief: PipelineProfile['sourceBelief'] = isVoice ? 'voice' : 'instrument'
         const noisy = (scan.snrDb !== undefined && scan.snrDb <= NOISY_MAX_SNR_DB) || scan.noisiness >= NOISY_MIN_NOISINESS
         const reverberance = estimateReverberance(samples, sampleRate)
@@ -303,10 +443,11 @@ export class ProfileResolver {
             // where pure-backdrop lead-ins land, instead of locking a garbage band.)
             const base = {
                 ...applyOnsetPolicy(
-                    applyVoice(this.applyNoise(DEFAULT_PROFILE, noisy), isVoice),
+                    applyVoice(this.applyNoise(markWhistle(DEFAULT_PROFILE, whistle), noisy), isVoice),
                     isVoice,
                     hint?.instrumentId,
                     reverberance,
+                    whistle,
                 ),
                 sourceBelief,
                 sourceDecidedBy,
@@ -333,12 +474,23 @@ export class ProfileResolver {
             highHz = Math.max(highHz, hintRange.maxHz)
         }
 
+        // The whistle family may leave the register router for the octave-down band.
+        const register = bandFor(scan.medianHz)
+        const anchor = markWhistle(
+            whistle && WHISTLE_PITCHDOWN
+                ? band('very-high')
+                : HIGH_BAND_PITCHDOWN && !isVoice && register.id === 'high'
+                  ? { ...band('very-high'), id: 'high+pitchdown' }
+                  : register,
+            whistle,
+        )
         const base = {
             ...applyOnsetPolicy(
-                applyVoice(applyReverb(this.applyNoise(bandFor(scan.medianHz), noisy), reverberance), isVoice),
+                applyVoice(applyReverb(this.applyNoise(anchor, noisy), reverberance), isVoice),
                 isVoice,
                 hint?.instrumentId,
                 reverberance,
+                whistle,
             ),
             sourceBelief,
             sourceDecidedBy,
@@ -356,7 +508,7 @@ export class ProfileResolver {
                 `reverberance=${reverberance.toFixed(2)}, ` +
                 `hint=${hint?.instrumentId ?? 'none'}/${hint?.sourceKind ?? 'auto'}` +
                 `${hint?.sourceKind === undefined ? `, classified=${classified ?? 'abstain'}` : ''}` +
-                `${profile.isVoice ? ' VOICE' : ''})`,
+                `${profile.isVoice ? ' VOICE' : ''}${whistle ? ' WHISTLE' : ''})`,
         )
         return profile
     }

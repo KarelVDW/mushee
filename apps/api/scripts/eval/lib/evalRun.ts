@@ -43,6 +43,7 @@ import { addOnsetClassStats, emptyOnsetClassStats, type OnsetClassStats, onsetRe
 import { discoverRealDatasets, isPooled, type Material, type RealDataset, type TruthSource } from './realCorpus'
 import { repairSecondsPer100, type SegErrorCounts, segErrors } from './segErrors'
 import { splitOf } from './split'
+import { harnessHint } from './trackCache'
 
 const DETECT_SR = 16000
 
@@ -372,16 +373,15 @@ type Transcribe = (scenario: Scenario, buf: Buffer, bpm: number) => Promise<EstN
 /**
  * The source declaration the production path is given for a dataset. The corpus
  * knows what each dataset is; in the app this is either the client's declaration
- * or (since the source classifier) the audio itself. ALWAYS explicit here —
+ * or (since the source classifier) the audio itself. Explicit here by default —
  * including for instruments — so eval numbers measure the pipeline, not the
- * classifier's day. Suppressed under noHint, which is also how to exercise the
- * classifier end-to-end.
+ * classifier's day; the `EVAL_UNDECLARED_*` overrides (`harnessHint`, shared with
+ * the track caches) model the app's undeclared input. Suppressed under noHint,
+ * which is also how to exercise the classifier end-to-end.
  */
 export function hintsFor(scenario: Scenario, noHint: boolean): ProfileHint {
-    return {
-        instrumentId: noHint ? undefined : scenario.instrumentId,
-        sourceKind: noHint ? undefined : scenario.kind === 'voice' ? 'voice' : 'instrument',
-    }
+    if (noHint) return { instrumentId: undefined, sourceKind: undefined }
+    return harnessHint(scenario.instrumentId, scenario.kind)
 }
 
 export async function buildTranscriber(o: EvalOptions, decoder: AudioDecoder): Promise<Transcribe> {
@@ -389,6 +389,9 @@ export async function buildTranscriber(o: EvalOptions, decoder: AudioDecoder): P
         const registry = new ProviderRegistry({ crepeTiny: MODELS.crepeTiny })
         await registry.initAll()
         const resolver = new ProfileResolver()
+        // The source classifier loads asynchronously and abstains until it has:
+        // wait, so no clip's routing depends on how fast the model came up.
+        await resolver.ready()
         return async (scenario, buf, bpm) => {
             const det = await decoder.decode(buf, DETECT_SR, { loudnorm: false, highpassHz: 30 })
             const profile = resolver.resolve(det.samples, DETECT_SR, hintsFor(scenario, o.noHint))
