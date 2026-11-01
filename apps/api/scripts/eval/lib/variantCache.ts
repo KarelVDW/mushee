@@ -31,15 +31,22 @@ import { PitchTrack } from '../../../src/recordings/pipeline/pitch-track'
 import type { PipelineProfile } from '../../../src/recordings/pipeline/profiles/pipeline-profile'
 import { scanPitch } from '../../../src/recordings/pipeline/profiles/pitch-scan'
 import { ProfileResolver } from '../../../src/recordings/pipeline/profiles/profile-resolver'
-import { CrepeProvider } from '../../../src/recordings/pipeline/providers/crepe-provider'
+import type { PitchProvider, TrajectoryProvider } from '../../../src/recordings/pipeline/providers/pitch-provider'
 import { ProviderRegistry } from '../../../src/recordings/pipeline/providers/provider-registry'
 import type { GroundTruth } from '../types'
 import type { AudioFrontEnd } from './dereverb'
 import type { RealDataset } from './realCorpus'
-import { resolverEnvMatches, resolverEnvSignature } from './trackCache'
+import { resolverEnvDir, resolverEnvMatches, resolverEnvSignature } from './trackCache'
 
-/** 2: the track gained per-frame pitch candidates (E3/R9) — see trackCache v6. */
-const CACHE_VERSION = 2
+/**
+ * 2: the track gained per-frame pitch candidates (E3/R9) — see trackCache v6.
+ * 3: onsets detected with the profile's onset options (the 2026-09-27 onset
+ *    policy) — see trackCache v7.
+ * 4: the adverse WAVs were regenerated after the `lib/degrade.ts` loudnorm fix
+ *    (2026-11-01: signal truncated ~2.5–2.9 s early, reverb conditions clipped);
+ *    an entry built from the old files describes audio that no longer exists.
+ */
+const CACHE_VERSION = 4
 const DETECT_SR = 16000
 
 /** The clean take plus the two reverberant conditions this study is about. */
@@ -86,7 +93,7 @@ export interface CachedVariant {
     scan: ScanTelemetry
     providerName: string
     track: PitchTrack
-    /** Amplitude re-attack times (seconds), at the shipping thresholds. */
+    /** Amplitude re-attack times (seconds), at the profile's onset options (v3). */
     onsetTimesSec: number[]
     /** Raw 100 Hz RMS envelope — replay `OnsetDetector.detectFromEnvelope` on it. */
     envelope: Float32Array
@@ -142,7 +149,7 @@ export class VariantTrackCache {
             return null
         }
 
-        const dir = join(this.cacheRoot, ds.id)
+        const dir = join(this.cacheRoot, resolverEnvDir(), ds.id)
         const suffix = frontEnd ? `__fe-${frontEnd.id}` : ''
         const metaPath = join(dir, `${clip}__${variant}${suffix}.meta.json`)
         const binPath = join(dir, `${clip}__${variant}${suffix}.bin`)
@@ -178,7 +185,9 @@ export class VariantTrackCache {
             sourceKind: ds.kind === 'voice' ? 'voice' : 'instrument',
         })
         const provider = this.registry.get(profile.providerName)
-        if (!(provider instanceof CrepeProvider)) return null
+        // Both CREPE variants expose `track()` (the octave-down wrapper since
+        // 2026-08-22) — the same test `TrackCache` applies.
+        if (!hasTrack(provider)) return null
 
         const rawDecoded = await this.decoder.decode(wav, provider.sampleRate, {
             loudnorm: provider.normalizeLoudness,
@@ -196,7 +205,12 @@ export class VariantTrackCache {
 
         const onsetHop = Math.max(1, Math.round(this.onsetDetector.hopSec * provider.sampleRate))
         const envelope = this.onsetDetector.envelope(decoded.samples, provider.sampleRate)
-        const onsetTimesSec = this.onsetDetector.detectFromEnvelope(envelope, onsetHop, provider.sampleRate)
+        // The detector `AudioConverter` builds for this profile (see trackCache v7).
+        const onsetTimesSec = new OnsetDetector({
+            delaySec: profile.onsetDelaySec,
+            dipRatio: profile.onsetDipRatio,
+            minTroughSec: profile.onsetMinTroughSec,
+        }).detectFromEnvelope(envelope, onsetHop, provider.sampleRate)
         const energy = frameEnergy(decoded.samples, provider.sampleRate, track.hopSec, track.frames)
 
         mkdirSync(dir, { recursive: true })
@@ -316,4 +330,9 @@ function frameEnergy(samples: Float32Array, sampleRate: number, hopSec: number, 
         out[f] = hi > lo ? Math.sqrt(sum / (hi - lo)) : 0
     }
     return out
+}
+
+/** A provider whose frame-level trajectory can be cached (as in `TrackCache`). */
+function hasTrack(p: PitchProvider): p is TrajectoryProvider {
+    return typeof (p as Partial<TrajectoryProvider>).track === 'function'
 }

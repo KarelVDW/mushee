@@ -16,7 +16,15 @@ import type { Condition } from '../types'
 import { synthesizeRoomImpulse, synthesizeSpeechNoise, synthesizeWind } from './acoustics'
 import { floatToWav } from './wav'
 
-const LOUDNORM = 'loudnorm=I=-16:TP=-3'
+/**
+ * Loudness normalisation, resampled back to the clip's rate. ffmpeg's loudnorm
+ * outputs 192 kHz, and inside the filter graph that rate leaked into everything
+ * after it: amix dropped the last ~2.5–2.9 s of the signal (the file kept its
+ * length because the noise bed carried on), and afir ran a 44.1 kHz impulse
+ * response at 192 kHz, gaining +7–10 dB and hard-clipping the s16 output. Every
+ * adverse variant built before 2026-11-01 carries both defects.
+ */
+const loudnorm = (sampleRate: number) => `loudnorm=I=-16:TP=-3,aresample=${sampleRate}`
 
 /** Longest noise bed we ever need; beds are trimmed to the clip by `-t`. */
 const BED_DURATION_SEC = 90
@@ -133,7 +141,7 @@ export function degrade(inPath: string, outPath: string, condition: Condition, s
     }
 
     const post = condition.postFilter ? `,${condition.postFilter}` : ''
-    const stages: string[] = [`[0:a]${LOUDNORM}[sig]`]
+    const stages: string[] = [`[0:a]${loudnorm(sampleRate)}[sig]`]
     let current = 'sig'
 
     if (irIndex >= 0) {
@@ -161,7 +169,7 @@ export function degrade(inPath: string, outPath: string, condition: Condition, s
         stages.push(`[${current}]anull${post}[out]`)
         args.push('-filter_complex', stages.join(';'), '-map', '[out]')
     } else {
-        args.push('-af', `${LOUDNORM}${post}`)
+        args.push('-af', `${loudnorm(sampleRate)}${post}`)
     }
 
     if (maxDurationSec) args.push('-t', maxDurationSec.toFixed(3))
