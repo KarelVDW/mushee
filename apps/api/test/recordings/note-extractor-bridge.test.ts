@@ -110,9 +110,9 @@ describe('AudioConverter.bridgesSamePitchGaps (who gets the bridge)', () => {
         expect(AudioConverter.bridgesSamePitchGaps(undefined)).toBe(false)
     })
 
-    it('leaves the shipped cleanup set unchanged while EXTRACTOR_BRIDGE_GAP_SEC is unset', () => {
-        expect(AudioConverter.cleanupFor(false, sustained)).not.toHaveProperty('bridgeSamePitchGapSec')
-        expect(AudioConverter.cleanupFor(false, sustained)).not.toHaveProperty('bridgeMaxFragmentSec')
+    it('ships the bridge (0.12 s, fragment < 0.2 s) for sustained instruments while the env is unset', () => {
+        expect(AudioConverter.cleanupFor(false, sustained)).toMatchObject({ bridgeSamePitchGapSec: 0.12, bridgeMaxFragmentSec: 0.2 })
+        expect(AudioConverter.cleanupFor(false, { ...sustained, onsetDipRatio: undefined })).not.toHaveProperty('bridgeSamePitchGapSec')
     })
 
     afterEach(() => {
@@ -121,13 +121,26 @@ describe('AudioConverter.bridgesSamePitchGaps (who gets the bridge)', () => {
     })
 
     it('reads EXTRACTOR_BRIDGE_GAP_SEC / EXTRACTOR_BRIDGE_FRAGMENT_SEC into the sustained set only', async () => {
-        vi.stubEnv('EXTRACTOR_BRIDGE_GAP_SEC', '0.12')
-        vi.stubEnv('EXTRACTOR_BRIDGE_FRAGMENT_SEC', '0.2')
+        vi.stubEnv('EXTRACTOR_BRIDGE_GAP_SEC', '0.08')
+        vi.stubEnv('EXTRACTOR_BRIDGE_FRAGMENT_SEC', '0.25')
         vi.resetModules()
         const { AudioConverter: Fresh } = await import('../../src/recordings/pipeline/audio-converter')
-        expect(Fresh.cleanupFor(false, sustained)).toMatchObject({ bridgeSamePitchGapSec: 0.12, bridgeMaxFragmentSec: 0.2 })
+        expect(Fresh.cleanupFor(false, sustained)).toMatchObject({ bridgeSamePitchGapSec: 0.08, bridgeMaxFragmentSec: 0.25 })
         expect(Fresh.cleanupFor(false, { ...sustained, onsetDipRatio: undefined })).not.toHaveProperty('bridgeSamePitchGapSec')
         expect(Fresh.cleanupFor(false, { ...sustained, isVoice: true })).not.toHaveProperty('bridgeSamePitchGapSec')
         expect(Fresh.cleanupFor(true, sustained)).toEqual({})
+    })
+
+    it('EXTRACTOR_BRIDGE_GAP_SEC=0 is the kill-switch; EXTRACTOR_BRIDGE_FRAGMENT_SEC=0 drops the fragment condition', async () => {
+        vi.stubEnv('EXTRACTOR_BRIDGE_GAP_SEC', '0')
+        vi.resetModules()
+        const off = (await import('../../src/recordings/pipeline/audio-converter')).AudioConverter
+        expect(off.cleanupFor(false, sustained)).not.toHaveProperty('bridgeSamePitchGapSec')
+        vi.unstubAllEnvs()
+        vi.stubEnv('EXTRACTOR_BRIDGE_FRAGMENT_SEC', '0')
+        vi.resetModules()
+        const anyLength = (await import('../../src/recordings/pipeline/audio-converter')).AudioConverter.cleanupFor(false, sustained)
+        expect(anyLength).toMatchObject({ bridgeSamePitchGapSec: 0.12 })
+        expect(anyLength).not.toHaveProperty('bridgeMaxFragmentSec')
     })
 })

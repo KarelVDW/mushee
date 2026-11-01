@@ -6,11 +6,23 @@ import { AT_PITCH_PROVIDER_NAME, type PipelineProfile } from './profiles/pipelin
 import type { PitchProvider, PitchSession, PitchTranscribeOptions } from './providers/pitch-provider'
 
 /**
- * Same-pitch gap bridge for sustained instruments (INST-H4), in seconds; 0 = off
- * (the default until its test confirmation). See
+ * Same-pitch gap bridge for sustained instruments (INST-H4), in seconds. SHIPPED
+ * 2026-11 at 0.12 s with the 0.2 s fragment condition; `EXTRACTOR_BRIDGE_GAP_SEC=0`
+ * is the kill-switch (`EXTRACTOR_BRIDGE_FRAGMENT_SEC=0` drops the fragment
+ * condition, i.e. the any-length rule below). See
  * `NoteExtractorOptions.bridgeSamePitchGapSec` for what it does and
- * `AudioConverter.bridgesSamePitchGaps` for who gets it. Candidate setting:
- * `EXTRACTOR_BRIDGE_GAP_SEC=0.12 EXTRACTOR_BRIDGE_FRAGMENT_SEC=0.2`.
+ * `AudioConverter.bridgesSamePitchGaps` for who gets it.
+ *
+ * Confirmed on the final 2026-11 harness (corrected adverse tier + grid/tempo
+ * corrections; cached replay, all conditions, performance-cluster CIs). Dev:
+ * instrument +0.0074 [+0.0045, +0.0102]. **The one test look: instrument +0.0046
+ * [+0.0030, +0.0062]** (0.759 → 0.764; URMP +0.0050, bowed +0.014, woodwind
+ * +0.003, brass −0.001; distant +0.008, wind +0.006, street +0.003 significant,
+ * real +0.003, echoey +0.004; one family cell negative, echoey × brass −0.007),
+ * ALL +0.0026, human +0.0030; singing and GuitarSet note-identical; URMP
+ * re-onsets 124 → 123 of 190 and same-pitch repeats 403 → 399 of 510 (both n.s.).
+ * Under the whistle family's pitch-down routing (`RECORDING_WHISTLE_PITCHDOWN`)
+ * whistles leave the gate: exactly 0 on top of it (dev).
  *
  * Measured 2026-11-01 on DEV only (cached replay of the production decode, all
  * five conditions on the corrected adverse tier; Δ COnP on the mean of dataset
@@ -20,7 +32,7 @@ import type { PitchProvider, PitchSession, PitchTranscribeOptions } from './prov
  *   gap 0.06 / 0.08 / 0.10 / 0.12, any length: instrument +0.0076 / +0.0080 /
  *     +0.0089 / +0.0098 [+0.0062, +0.0133]*; it saturates past 0.12 (0.15
  *     +0.0104, 0.20 +0.0102). Bowed gain most (URMP bowed +0.020*), brass least.
- *   gap 0.12 + fragment < 0.2 s (the candidate): instrument +0.0074
+ *   gap 0.12 + fragment < 0.2 s (what ships): instrument +0.0074
  *     [+0.0045, +0.0102]*, URMP pooled by family +0.0064 [+0.0026, +0.0108]*,
  *     ALL +0.0043*, human-only +0.0048*; every condition positive (real +0.006*,
  *     echoey +0.008*, distant +0.012*, wind +0.005*, street +0.007*).
@@ -45,9 +57,9 @@ import type { PitchProvider, PitchSession, PitchTranscribeOptions } from './prov
  * Wider veto margins (50–100 ms) were measured too: they save fewer repeats than
  * they cost fragment joins (URMP COnP lower at every margin).
  */
-const BRIDGE_GAP_SEC = envNumber('EXTRACTOR_BRIDGE_GAP_SEC', 0)
-/** The bridge's fragment condition (`NoteExtractorOptions.bridgeMaxFragmentSec`); unset or ≤ 0 = any length. */
-const BRIDGE_MAX_FRAGMENT_SEC = envNumber('EXTRACTOR_BRIDGE_FRAGMENT_SEC', 0)
+const BRIDGE_GAP_SEC = envNumber('EXTRACTOR_BRIDGE_GAP_SEC', 0.12)
+/** The bridge's fragment condition (`NoteExtractorOptions.bridgeMaxFragmentSec`); 0.2 s ships, `0` = any length. */
+const BRIDGE_MAX_FRAGMENT_SEC = envNumber('EXTRACTOR_BRIDGE_FRAGMENT_SEC', 0.2)
 
 /**
  * Provider-agnostic audio → notes pipeline. Hands the PCM samples to the
