@@ -83,6 +83,18 @@ Both splits, cached, after the flips (`int-after-cached-all`, env {}): ALL 0.671
 - `notation-eval`: app-takes-singing beat F1 +0.009, phase-locked +0.035; dagstuhl −0.003; readability counters
   unchanged.
 
+### Review fixes (benchmark notes unchanged on 2,813 / 2,813)
+
+- **Bridge on plucked takes in the app** (`12b97b36`, `b113fc40`): the web app declares no source, so a guitar
+  into a voice-lead score got the sustained dip and the bridge (GuitarSet COnPOff −0.007\* dev). YAMNet's new
+  `struckOrPlucked` verdict sends such takes to the struck/plucked onset family when the score names no instrument:
+  COnPOff +0.015\* / +0.017\* (dev / test), COnP ±0.002. Kill-switch `RECORDING_PLUCKED_DETECT=0`. Declared
+  profiles byte-identical.
+- **Streaming held notes** (`bf471983`, `e0bb7de1`; pre-existing): passes committed still-sounding notes at a
+  short length that stuck. Now a note commits only once its performed end is 0.4 s behind the audio: 37 → 0
+  still-sounding commits on 39 real dev takes; held notes (3.9 %) appear a median 1.0 s later.
+- **ADV-H2 hardening** (`a4a423dc`, `cd81950f`, built off): see owner decision 1.
+
 ## Owner decisions left open
 
 1. **ADV-H2**: ship despite the one non-significant negative cell (GuitarSet, rir-near) on the measured-RIR tier?

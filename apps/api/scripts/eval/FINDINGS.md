@@ -2610,6 +2610,34 @@ floor.
 - **`notation-eval.ts`**: see SING-H1 above. GuitarSet is unchanged.
 - **Code checks**: tsc, eslint and `vitest run` (apps/api, 586 tests) are clean.
 
+### Review fixes (after the ships; benchmark notes unchanged on 2,813 / 2,813)
+
+A review of the pass found two medium issues; both are fixed. (ADV-H2's hardening is under ADV-H2 above.)
+
+- **The bridge reached plucked takes in the app** (`12b97b36`). The gate read the score's instrument, but the web
+  app sends no `sourceKind`: a guitar played into a voice-lead score was classified "instrument", got the sustained
+  dip and so the bridge. Measured on that route (`EVAL_UNDECLARED_SOURCE=1`, hint voice-lead / none), bridge vs
+  `GAP_SEC=0`: GuitarSet COnP +0.005 but COnPOff **−0.007\*** on dev (clean takes −0.011\*). Fix: YAMNet's analysis
+  gains a `struckOrPlucked` verdict (strongest struck/plucked class vs strongest sustained-instrument class, the
+  voice/instrument rule's abstain band; fixed in advance, not tuned). It applies only when nothing is declared and
+  the score names no instrument; such a take then gets the struck/plucked onset family (default dip, no bridge).
+  Kill-switch `RECORDING_PLUCKED_DETECT=0`. Against the kill-switch: GuitarSet COnP +0.000 / +0.002 n.s., COnPOff
+  **+0.015\* / +0.017\*** (dev / test); synthetic plucked +0.006\* (COnPOff +0.015\*); false-positive cost URMP on a
+  voice-lead score −0.002\* / +0.003. On a voice-lead score, gated GuitarSet now gives the declared `guitar` route's
+  notes on every test clip. The verdict never overrules a score that names a sustained instrument: low brass and
+  reeds are often heard as plucked (URMP tuba 11/15), so a guitar into a violin score still gets the bridge.
+  Every declared profile is byte-identical (4,664 real, 2,315 synthetic). Also: `RECORDING_SOURCE_CLASSIFY` and
+  `RECORDING_PLUCKED_DETECT` joined the cache signature; the bridge's onset veto is a binary search (`b113fc40`).
+- **Streaming committed held notes short** (`bf471983`, pre-existing). A pass committed a note once its *written*
+  end was 0.4 s behind the audio, and that end is floor-snapped and capped, so a still-sounding note was committed
+  at a short length that later passes could never lengthen. Measured on 39 real dev clip×conditions through the
+  real RecordingPipeline (paced webm vs whole-buffer, same profile): 37 notes committed while still sounding, 44
+  shorter than whole-buffer (50.25 beats; URMP oboe held notes of 6 and 5.5 beats written as 2); COnPOff paced
+  0.2221 vs whole 0.2291. Fix: commit only once the *performed* end is also 0.4 s behind. Still-sounding commits
+  37 → 0, shorter-than-whole 44 → 18, COnPOff paced 0.2251. Cost: the 3.9 % of notes that are held appear later
+  (median +1.0 s); no note appears earlier, the median time to screen goes 1.36 → 1.37 s. `check-streaming.ts`
+  (`e0bb7de1`) now compares note lengths and has three held-note scenarios, all of which failed before the fix.
+
 ### Open after this pass
 
 - **Owner calls:**
