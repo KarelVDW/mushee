@@ -61,6 +61,14 @@ that helps singing and hurts instruments is visible as such — a routing-gated
 change (voice-only, whistle-only) must show **exactly zero** on the materials it
 does not route to, which is the strongest evidence it is what it claims.
 
+**Corrections are not results.** A change to the corpus or the harness (truth, audio, grid, degradation) is
+recorded as a correction: the same pipeline scored before and after, with `compare`'s "truth differs" warning on
+the affected datasets, reported in its own FINDINGS entry and never folded into a pipeline Δ. The 2026-11-01 pass
+had two (the degrade fix, ALL +0.034\*; the grid/tempo alignment, ALL ±0.000) and then measured every pipeline
+candidate against the corrected baseline only. In a multi-candidate pass the dev half is used for tuning and for one
+re-run of each candidate on the final harness; each surviving hypothesis then gets exactly one cached test look,
+plus one look at the stacked set, and nothing is re-tuned after it (`meta/pipeline-accuracy-2026-11.md`).
+
 ## What is measured
 
 The scorer is `lib/evalRun.ts` running the **production path**: coarse pitch

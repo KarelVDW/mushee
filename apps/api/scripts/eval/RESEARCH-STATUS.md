@@ -27,10 +27,10 @@ metronome at a tempo they chose).
 | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Source routing            | Stock-YAMNet class scores decide voice vs instrument from the first ~1 s (98.7 % decided, 11.8 % abstain → score-instrument prior); explicit client declaration wins                                                                                                                             | research-voice-transcription §7 (the training-free variant it named)                                                                                                                               |
 | Register routing          | Noise-hardened harmonic-summation pitch scan → low / mid / high / very-high band → dynamic frequency window + high-pass; instrument hint widens the window                                                                                                                                       | 2026-06 rework; research-pitch-models §1a-bis (ceiling analysis)                                                                                                                                   |
-| Reverb adaptation         | Voicing gate relaxed in proportion to a blind reverberance estimate (`dipDepth` ramp), +0.024/+0.043 on the reverb tier, clean-neutral                                                                                                                                                           | 2026-07 accuracy push (own diagnosis: reverb halves CREPE confidence, barely touches pitch)                                                                                                        |
+| Reverb adaptation         | Voicing gate relaxed in proportion to a blind reverberance estimate (`dipDepth` ramp). Its 2026-07 numbers (+0.024/+0.043) were measured on a truncated, clipped adverse tier; on correct audio the trigger does not separate rooms (AUC ≈ 0.46) but switching it off still costs AVS −0.018\* (2026-11). The confidence-relative gate that would replace the trigger is built off (§6)                                                                                                                                                           | 2026-07 accuracy push (own diagnosis: reverb halves CREPE confidence, barely touches pitch)                                                                                                        |
 | f0                        | CREPE-tiny, Viterbi-decoded, at pitch; **octave-down CREPE** (same checkpoint, audio read at half speed) for the very-high band ≈3.9 kHz                                                                                                                                                         | research-pitch-models wanted HarmoF0/SwiftF0 for range; both lost on our corpora, the wrapper collected the prize instead (+0.150 TinySOL very-high, +0.275 whistle-real)                          |
-| Note decode — instruments | Semitone-run segmenter, 4-frame median smoother, amplitude re-attack splitter (`OnsetDetector`), fragment-guarded merge, vibrato A-B-A folder, adaptive length floor                                                                                                                             | 2026-06/07 own tuning; pYIN/Tony conventions (research-daw-products §13)                                                                                                                           |
-| Note decode — voice       | `VoiceNoteDecoder`: pYIN-style note HMM with silence state (reached by pricing, `changeCost 2.5`), attack/stable σ 5/0.9, boundary-evidence discount (volume decay + pitch dip), α-trimmed-mean pitch, **+70 ms onset calibration**. +0.123 held-out, +0.129 on three corpora adopted afterwards | research-voice-transcription §4/§10 (Dynamic HumTrans silence state, Kroher & Gómez channels, Molina pitch); the calibration constant was the doc's biggest omission and the single largest effect |
+| Note decode — instruments | Semitone-run segmenter, 4-frame median smoother, amplitude re-attack splitter (`OnsetDetector`), same-pitch onset-vetoed gap bridge for sustained instruments (2026-11), fragment-guarded merge, vibrato A-B-A folder, adaptive length floor                                                                                                                             | 2026-06/07 own tuning; pYIN/Tony conventions (research-daw-products §13)                                                                                                                           |
+| Note decode — voice       | `VoiceNoteDecoder`: pYIN-style note HMM with silence state (reached by pricing, `changeCost 2.5`), attack/stable σ 5/0.9, boundary-evidence discount (volume decay + pitch dip), α-trimmed-mean pitch, **+50 ms onset calibration** (+70 ms until 2026-11, re-fitted on quantised output). +0.123 held-out, +0.129 on three corpora adopted afterwards | research-voice-transcription §4/§10 (Dynamic HumTrans silence state, Kroher & Gómez channels, Molina pitch); the calibration constant was the doc's biggest omission and the single largest effect |
 | Cleanup / quantisation    | 16th-grid onset snap with coarseness penalty, seam-fill (0.3 beat; 0.6 for voice), metrical duration speller (dotted-vs-tie, boundary splits, no barline crossing)                                                                                                                               | research-rhythm §2.1/§2.4/§6.4                                                                                                                                                                     |
 | Spelling                  | Per-take circular-mean tuning offset + key-signature vote + ≥35 ¢ ambiguity-band snap, voice takes only; grid-phase estimate (voice only)                                                                                                                                                        | research-voice-transcription §5, research-daw-products §18.12; Dressler & Streich                                                                                                                  |
 | Streaming                 | Streaming ffmpeg decode, CREPE session cache, 0.4 s commit margin, profile locked from the first pitched ≥1.2 s (deferred while unvoiced, up to 8 s; re-resolved on the final pass — 2026-09-01)                                                                                                 | 2026-06 O(n²) fix; E5/R12 measured the margin                                                                                                                                                      |
@@ -199,9 +199,12 @@ phone-mic truth, and it de-skews the low-voice stratum from operatic males.
 in the pitch scan instead of "loudest band". The whole `whistle-vintage` result
 and a general product mode (recording over a backing track). 1–3 days.
 
-**F. Recorded RIRs + noise beds as new adverse conditions** (Arni for the RT60
-axis, OK5 for room diversity, DEMAND for noise; all CC-BY-4.0). De-risks every
-reverb conclusion, which today rests on modelled rooms. ~1 day.
+**F. Recorded RIRs + noise beds as new adverse conditions** — partly DONE
+2026-11-01: Arni is wired as the opt-in `rir-near` / `rir-far` conditions (CORPORA.md
+"Measured-RIR tier"), and it already decided one ship question (ADV-H2 stays built
+off on it, §6). Left: OK5 for
+room diversity (SOFA/HDF5 only, needs a reader), DEMAND noise beds, a receiver
+nearer than Arni's ≈1.5 m.
 
 **G. DeepFilterNet3 with observation-adding** — the last front-end candidate
 for the +0.14/+0.23 reverb oracle. ~2 days to measure; domain-shift risk.
@@ -277,3 +280,35 @@ Details are in FINDINGS.md, "Findings log (2026-09-27: the realistic synthetic c
     - Corpus v1.2 realism leads (vowel-only voices, fast sung notes too precise, no
       humming/whistling synthesis, no free-tempo tier). DEFERRED; see
       `synthetic-corpus/README.md` "Status (2026-10-30)".
+
+## 6. Addendum (2026-11-01): the pipeline-accuracy pass
+
+Details: FINDINGS.md "Findings log (2026-11-01: pipeline-accuracy pass …)"; plan and timeline in
+`meta/pipeline-accuracy-2026-11.md`.
+
+- **Two measurement corrections** (same pipeline): the adverse tier was truncated and clipped (degrade fix, ALL
+  +0.034\*, instruments +0.060\*, `real` bit-identical), and four corpora were quantised on the wrong grid
+  (GuitarSet click, Dagstuhl first beat + mean tempo, app takes at their session tempo; ALL ±0.000, whistling
+  −0.011\*). Twelve earlier conclusions that rested on the broken adverse files are listed there with their status;
+  the ones that change this document: the reverb relief's evidence (§1) is void, the R21 closure is void, the
+  per-band reverb strata are contradicted, the fallback census is void, and the scripted synthetic matrix
+  (`fixtures/eval`) still needs regenerating.
+- **SHIPPED:** voice onset shift 0.05 s (kill-switch `VOICE_ONSET_SHIFT_SEC=0.07`; test singing +0.013\*) and the
+  same-pitch gap bridge for sustained instruments (kill-switch `EXTRACTOR_BRIDGE_GAP_SEC=0`; test instrument
+  +0.0046\*). Together on test: ALL +0.008\*, human +0.007\*.
+- **BUILT-OFF after a test look:** the confidence-relative voicing gate (test ALL +0.0057\*, but one n.s. negative
+  cell on the measured-RIR tier against a pre-registered sign rule — an owner call); the whistle family (dev
+  +0.037\*, test −0.001; undeclared voice score +0.033\*).
+- **BUILT-OFF at dev:** instrument onset back-extension (clean GuitarSet −0.004 on the re-cut corpus), voice
+  back-extension (+0.002 on top of the shift), high-band pitch-down (null), whistle onset ramp (null).
+- **DISCARDED at planning** (measured by the diagnosis lanes): sub-16th phase / no coarseness penalty (INST-H3,
+  fits the misaligned grid), the joint DP quantiser (INST-H5, ≤ +0.001 — closes the §5 lead), MFCC-novelty
+  re-onsets (SING-H2, ≤ +0.002 and partly circular), the voice splitter ramp under reverb (ADV-H4, ≈ +0.001).
+  DeepFilterNet3 (§3 G) stays deferred.
+- **New leads:**
+  - A DETECT-only whistle variant: keep whistles out of the voice decode on an undeclared take (the product case
+    the family fixed on test), without the provider or splitter changes that did not hold up.
+  - Remove the inert sustained onset reverb ramp; decide whether the blind dipDepth trigger should give way to
+    CREPE's median confidence (that is ADV-H2).
+  - The streaming gap for any reverb adaptation: through the real RecordingPipeline the prefix-locked profile
+    keeps a quarter of the whole-buffer gain (paced +0.005 vs instant +0.020 on 22 reverberant takes).

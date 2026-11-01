@@ -2335,3 +2335,276 @@ audio" and "the cause is the audio, not the alignment" described the decoding bu
 the choir. The beat grids themselves were never affected (they come from the annotation
 files, not the audio). Since 2026-10-31 the dataset's note truth is resynth (94/94 passed)
 and it pools; measure it fresh before quoting any dagstuhl number.
+
+## Findings log (2026-11-01: pipeline-accuracy pass — two measurement corrections, two ships)
+
+Branch `pipeline-accuracy-2026-11`; plan, lane results and timeline in `meta/pipeline-accuracy-2026-11.md`.
+Four implementation lanes (L1 whistling, L2 voice onsets, L3 reverb front end, L4 instrument cleanup) tuned their
+hypotheses on the **dev** half in git worktrees, every knob built off. An integration step merged them, swapped in
+the corpus corrections, re-ran every candidate on dev on the final harness, and gave each surviving candidate
+**one** test look. Method throughout: `benchmark.ts run --cached` (the production decode replayed from the track
+caches; model-path parity checked below), all five conditions, Δ COnP on the mean of dataset means, 95 % CI from
+the paired bootstrap that resamples **performances** within each dataset (`compare`'s default since this pass, see
+benchmarks/README.md "Statistics"). `*` = the interval excludes 0. Every A/B pair has equal `meta.corpus` truth
+hashes unless it is a correction.
+
+### Correction 1 (measurement, not the pipeline): the adverse tier was truncated and clipped
+
+`lib/degrade.ts` ran `loudnorm` inside a `-filter_complex` graph, and loudnorm outputs 192 kHz. Two failures:
+
+1. **Truncation.** Through `amix` the last ~2.5–2.9 s of the signal never reached the output (loudnorm's 3 s
+   look-ahead; the noise inputs and the `-t` pin kept the file length exact, so no length check saw it). Reverb
+   tails were digital silence (−55…−66 dB below the real take), wind/street tails the bare noise bed, 91 of 400
+   annotated-vocalset variants entirely silent, 13–43 % of truth notes after the signal end. The 2026-07
+   "degrade-real truncated 10–13 s clips" fix had pinned the length, not the content.
+2. **Clipping.** `afir` convolved the 44.1 kHz IR at 192 kHz (+7–10 dB), and the s16 output hard-clipped 1.3–4.4 %
+   of samples in 75–100 % of the reverb files.
+
+**Every adverse-condition number since 2026-07 was measured on these files.** Fix `3444df59`
+(`loudnorm=I=-16:TP=-3,aresample=<sampleRate>`, variant cache v4); all 1,452 adverse WAVs regenerated (604/604 dev
+files byte-identical to an independently built mirror). Audits: tails within −0.6…+0.8 dB of the real take (0 files
+below −15 dB), 1 of 1,452 files with > 10 clipped samples (72 samples), head lag 0; model path == cached path on
+220 clip×conditions (9,387 notes). The broken originals are kept in `.cache/scratch/h0/broken-variants/`.
+
+| scope | old (= HEAD d16420ef) | `h0-fixed` | Δ both splits | dev | test |
+|---|---|---|---|---|---|
+| ALL (27) | 0.638 | 0.672 | **+0.034\*** [+0.026, +0.041] | +0.032\* | +0.038\* |
+| human truth (21) | 0.655 | 0.698 | **+0.043\*** [+0.034, +0.053] | +0.042\* | +0.047\* |
+| singing / whistling / instrument | 0.582 / 0.601 / 0.687 | 0.589 / 0.601 / 0.746 | +0.007\* / 0 / +0.060\* | | |
+| `real` condition (ALL / human) | 0.728 / 0.770 | identical | 0 of 1,561 clips differ | | |
+
+Per condition: echoey 0.565 → 0.654 (+0.089\*), distant 0.474 → 0.524 (+0.050\*), wind 0.755 → 0.833 (+0.079\*),
+street 0.751 → 0.825 (+0.073\*). Distant-mic singing barely moves (+0.005 n.s.): on the broken files the clipping
+inflated `dipDepth`, which fired the reverb relief; on correct audio it does not (voice gate median under reverb
+0.49/0.50, against 0.25–0.35 before).
+
+**Prior conclusions that rest on the broken files**, with their status after this pass:
+
+1. **The reverberance relief (`applyReverb`) and its `dipDepth` anchors** (2026-07 "+0.024 echoey / +0.043 distant"):
+   void as evidence. On correct audio dipDepth does not separate rooms for voice or sustained instruments (AUC
+   0.45–0.47; plucked 0.82). The relief fires on about half of all voice takes, room or not, and more under noise
+   beds than in rooms. But it is **not inert**: switching it off (`RECORDING_REVERB_CONF_RELIEF=0`, per-env build)
+   costs AVS −0.018\* (echoey −0.028\*, distant −0.027\*) and vocadito clean −0.009\*, because a lower gate on a
+   random half of the takes still helps. Kept; removal is a follow-up.
+2. **The sustained-instrument onset reverb ramp and its real-room guard** (2026-09-27): the guard is void, and on
+   correct audio the ramp is inert (`SUSTAINED_ONSET_REVERB_RAMP=0`: URMP +0.001 n.s., 9 of 120 clip×conditions
+   change). Its eval-synth numbers stand.
+3. **R21 dropout fill and its 2026-09-01 closure**: the closure is void (it assumed a relief that fires on rooms).
+   The question it called a ghost, a reverberance feature that does not false-fire, is answered below: CREPE's own
+   median confidence (AUC 0.90/0.94 voice, 0.94/0.96 plucked, 0.65/0.72 sustained).
+4. **The reverb oracle "+0.14 / +0.23" and the spectral-subtraction verdict** (`lib/dereverb.ts`): re-measure
+   before citing them (fixed oracle: voice +0.123/+0.274, plucked +0.15/+0.21, sustained +0.08/+0.22). WPE stands;
+   it was killed by mechanism tests before it reached the corpus.
+5. **The 2026-08-20 fallback census** (188 `default-wide` AVS variants) and "the DEFAULT_PROFILE is
+   provider-immaterial": void. 0 of 1,452 regenerated variants resolve to `default-wide`. The 2026-09-01
+   profile-lock change stands; it was validated separately with `probe-leadin.ts`.
+6. **The 2026-07 adverse accuracy row** (~0.55 / ~0.44): replaced by the table above.
+7. **2026-07 reverb and noise dead ends**: "constant onset back-shift for reverb" stands on its clean cost. The
+   noise-adapt / `afftdn` wind/street rows were diluted about 20 %; the sign plausibly holds (re-measure if
+   revisited).
+8. **"Under heavy reverb the voice decode is neutral"** (2026-08): re-measure on the regenerated tier.
+9. **R15/R19 adverse legs**: the clean verdicts stand. R19's "reverb halves CREPE's confidence" is overstated (fixed:
+   voice confMed 0.868 → 0.763/0.722).
+10. **2026-08-20 per-band reverb strata** ("lowering the gate further costs"): contradicted on correct audio;
+    lowering the voice gate under reverb gains (ADV-H2 below).
+11. **The scripted synthetic matrix `fixtures/eval`** (run-eval, `generate.ts`) still carries the broken graph and
+    was NOT regenerated. Its echoey/distant/wind/street/room-mic/noisy-phone rows, including the 2026-08-20
+    very-high / basic-pitch reverb columns, are void until `generate.ts` is re-run. Production COnP on the same
+    synthetic whistle clips: 0.553 broken against 0.858 re-rendered.
+12. **Every recorded benchmark's adverse rows and pooled headlines** (RESULTS.md, the eval-app timeline) are low by
+    the table above. A/B Δs between runs on the same broken files stay valid but are diluted 20–30 % on adverse rows.
+
+Unaffected: the `real` condition, whistling (no variants), the capture-codec tier (single-input `-af` chain),
+`fixtures/eval-synth` (pre-recorded through measured RIRs) and the intonation tier.
+
+### Correction 2 (measurement, not the pipeline): four corpora were quantised on grids the product does not use
+
+The product starts a take on beat 1 at the take's recording tempo. The benchmark quantised:
+- GuitarSet windows that opened 0.25 s before a note, between clicks;
+- Dagstuhl excerpts that opened a median 0.30 s before their first beat, at the median beat interval;
+- every app take at a nominal 120 bpm, though 48 of 71 were recorded at 60–160.
+
+Fixes: `fetch-guitarset.ts` snaps each window to a click beat; `fetch-dagstuhl.ts` cuts at the first annotated beat,
+uses the mean tempo and rounds slices instead of flooring them; app-take truth carries the session tempo
+(session.json, or the debug plot's barline spacing for the 42 Apr–Jun takes, which agrees on 25/25 takes that have
+both; 2 takes keep 120). URMP's score MIDIs fit no constant grid (score-tempo p90 residual 503 ms; best constant
+73 ms; 5/48 clips under 40 ms), so it stays at 120, flagged `nominalTempo: true`. Swapped in with L0b's
+`swap-grid.sh` (backup and `--rollback` in `.cache/scratch/l0b/pre-swap/`). h0-fixed → `grid-fixed`, cached;
+every other dataset Δ 0.000:
+
+| dataset | Δ both splits | dev | test |
+|---|---|---|---|
+| guitarset-solo | **+0.017\*** [+0.003, +0.031] | +0.020\* | +0.014 |
+| dagstuhl-choir | **+0.033\*** [+0.011, +0.054] (cut +0.008, mean tempo +0.025\*) | +0.011 | +0.040\* |
+| app-takes-singing | **−0.027\*** [−0.050, −0.005] | −0.025 | −0.033\* |
+| app-takes-whistling | **−0.034\*** [−0.058, −0.013] | −0.069\* | −0.018\* |
+| ALL / human / whistling | −0.000 / +0.001\* / −0.011\* | | |
+
+The app-take drop is the known seconds-COnP artefact of quantised output. The singers did follow the click (8th-grid
+phase concentration R 0.54 at the session tempo against 0.15 at 120), and snapping humanly-jittered onsets to the
+right but coarser grid moves them further than the wrong, finer one did. In beats the right tempo wins clearly
+(notation-eval, bpm = truth: app singing beat F1 0.562 against 0.312 at 120; GuitarSet phase-locked beat F1
+0.655 → 0.763). App-take capture latency against the click shows no consistent offset (median −4 / +5 ms), so
+there is nothing to compensate. Hazard: `annotations/resynth/dagstuhl-choir/*` still describe the pre-cut
+excerpts, so a resynth re-export of that dataset must re-apply the cut.
+
+**The chain (same pipeline throughout):**
+
+| scope | old HEAD | h0-fixed | **h1-final** (both corrections) | total Δ |
+|---|---|---|---|---|
+| ALL (27) | 0.6385 | 0.6721 | **0.6717** | +0.033\* [+0.025, +0.041] |
+| human (21) | 0.6549 | 0.6981 | **0.6989** | +0.044\* [+0.034, +0.054] |
+| singing | 0.5824 | 0.5895 | 0.5900 | +0.008\* |
+| whistling | 0.6009 | 0.6009 | 0.5895 | −0.011\* |
+| instrument | 0.6867 | 0.7464 | 0.7476 | +0.061\* |
+| real only (ALL / human) | 0.7280 / 0.7700 | same | 0.7280 / 0.7713 | −0.000 |
+| ALL dev / test | 0.6292 / 0.6425 | 0.6613 / 0.6802 | 0.6588 / 0.6803 | +0.030\* / +0.038\* |
+
+`2026-11-01T14-03-50_dadfb29b_h1-final` is the baseline every pipeline Δ below is measured against. The eval-app
+timeline is discontinuous at both corrections: the adverse rows of 16 datasets, and the four re-gridded datasets.
+
+### Harness added this pass
+
+- `compare` reports every row on the headline's arithmetic with the performance-cluster bootstrap. `--clip-ci`
+  restores the old rows and `--cluster group` resamples performer groups. On the degrade correction the new
+  interval is about twice as wide as the old clip × condition one.
+- **Measured-RIR tier**: opt-in conditions `rir-near` (Arni, RT60 0.80 s, DRR −2.5 dB, ≈1.7 m) and `rir-far`
+  (1.27 s, −10.8 dB, ≈2.9 m), never pooled, for vocadito, AVS, GuitarSet and the 13 URMP sets (1,076 variants,
+  none clipped). Baseline after the swap, `2026-11-01T14-02-16_dadfb29b_grid-fixed-rir`: rir-near 0.698 against the
+  modelled echoey 0.654; rir-far 0.516 against the modelled distant 0.524. OK5 is not wired (HDF5 only).
+- Undeclared-source mode (`EVAL_UNDECLARED_SOURCE=1`, `EVAL_UNDECLARED_HINT=<id>|none`). Every cache build now
+  awaits the YAMNet load, so no-hint runs are deterministic.
+
+### Shipped: voice onset shift 0.05 s (SING-H1; kill-switch `VOICE_ONSET_SHIFT_SEC=0.07`)
+
+`SHIPPING_VOICE_OPTS.onsetShiftSec` is now 0.05. The 70–100 ms calibration (2026-08) was fitted on unquantised
+notes, where the ±100 ms window is hard. The product quantises to a 16th grid, which makes the window soft and
+rewards centring the error; the decode is a median +20…+60 ms late. Shifts were compared only at equal phase mod
+the 20 ms hop: 0.03 / 0.05 / 0.07 / 0.09 give singing +0.010 / **+0.016** / 0 / −0.045 (dev); off the 120 bpm
+lattice (97 / 133 bpm) 0.05 is still +0.012.
+- **Dev, final harness:** singing +0.016\* [+0.012, +0.021]. app-takes-singing at its session bpm +0.019\*; it was
+  +0.035\* at 120, so the tempo correction halves it, as L2 predicted.
+- **Test:** singing **+0.013\* [+0.009, +0.017]** (0.586 → 0.599), ALL +0.005\*, human +0.004\*, real-only +0.003\*.
+  - Whistling and instruments exactly 0.
+  - Voice by condition: echoey +0.022\*, distant +0.039\*, wind +0.030\*, street +0.036\*, real −0.005 (n.s.).
+  - Human-timed sets +0.020\*. AVS real −0.044\* (its pYIN-segmented timing), with its reverb rows +0.008 /
+    +0.034\*. esmuc −0.011\*. app-takes-singing +0.009 (n.s.).
+- **Independent checks (dev):** realistic synthetic singing to the click +0.009 (n.s., COnPOff +0.022\*);
+  jacrc-students human syllable-onset recall +0.108\*; AVP onset F1 +0.082\*; mir-qbsh +0.038\*.
+- **Notation** (final harness, both splits): app-takes-singing beat F1 0.562 → 0.571, phase-locked 0.515 → 0.550,
+  note values 0.451 → 0.461; dagstuhl 0.306 → 0.303, 0.134 unchanged, 0.375 → 0.366. Readability unchanged (0
+  tuplets / sub-16ths / off-grid); distinct durations +0.1…+0.3 per clip on the singing sets.
+
+### Shipped: same-pitch gap bridge for sustained instruments (INST-H4; kill-switch `EXTRACTOR_BRIDGE_GAP_SEC=0`)
+
+`EXTRACTOR_BRIDGE_GAP_SEC` now defaults to 0.12 and `EXTRACTOR_BRIDGE_FRAGMENT_SEC` to 0.2. The bridge rejoins
+consecutive same-MIDI raw notes across a gap of at most 120 ms, unless a detected onset lies within 30 ms of the
+gap, and only when the shorter note is a fragment (< 0.2 s). It applies to sustained instruments on the at-pitch
+provider only.
+- The plan's any-length rule had the larger dev gain (+0.0098\*) but ate re-bowed repeats the detector misses
+  (synthetic cello/contrabass re-onsets 39 → 35 of 85, repeats 212 → 185 of 450). The fragment limit, the shipped
+  `mergeAdjacent`'s own condition, was chosen after that result, so the fresh check is the other 34 synthetic
+  instruments: COnP +0.0010\*, re-onsets 95 → 96 of 312, repeats 1026 → 1022 of 2496.
+- The onset veto carries the gain: without it, +0.0047 n.s. on URMP.
+- **Dev, final harness:** instrument +0.0074\* [+0.0045, +0.0102]; every instrument condition positive; GuitarSet
+  and singing note-identical.
+- **Test:** instrument **+0.0046\* [+0.0030, +0.0062]** (0.759 → 0.764), at the ~+0.005 bar.
+  - URMP +0.0050\*: bowed +0.014\*, woodwind +0.003, brass −0.001 (echoey × brass −0.007\*, 3 of 10 clip×conditions).
+  - ALL +0.0026\*, human +0.0030\*. Singing and GuitarSet exactly 0.
+  - URMP Yong re-onsets 124 → 123 of 190, same-pitch repeats ≤ 250 ms 403 → 399 of 510 (both n.s.).
+  - At-pitch whistles pass the gate: test +0.002 (n.s.), dev +0.005\*.
+
+### Built off after its test look
+
+- **Confidence-relative voicing gate (ADV-H2, `RECORDING_CONF_RELATIVE_GATE=1`).**
+  - Rule: gate = min(profile gate, max(0.20, 0.5 − 2·max(0, 0.85 − confMed))), where confMed is CREPE's median
+    confidence over loud frames. It is skipped when the take's P95 100-ms level drop is ≥ 12 dB (a dry-take veto,
+    added on dev after two dry, noisy app takes failed the clean guard). It is `min` with the shipped relief,
+    never `replace`, which always cost clean takes.
+  - Dev ALL +0.010\* [+0.005, +0.014]. Streaming: the 1.5 s frozen prefix keeps 89 % of it and `check-streaming`
+    rows are identical; but through the real RecordingPipeline on 22 reverberant webm takes the paced gain is
+    +0.005 against +0.020 instant, because the prefix-locked profile's relief already lowers many live gates.
+  - **Test:** ALL **+0.0057\* [+0.005, +0.007]**, human +0.006\*, singing +0.008\*, instrument +0.005\*; voice
+    echoey / distant +0.046\* / +0.063\*; every pooled `real` row ≥ −0.001 (AVS real +0.007\*).
+  - **Measured-RIR tier, test:** ALL +0.012\* [+0.008, +0.016]; voice rir-near / rir-far +0.022\* / +0.071\*;
+    sustained +0.007 / +0.006\*; plucked rir-far +0.016\*; **plucked rir-near −0.004 [−0.010, +0.002].**
+  - The pre-registered rule required a positive sign in every condition × family cell of the measured rooms, so
+    it does not ship. The failing cell is GuitarSet in the milder room and is not significant. **Owner call**:
+    `envFlag('RECORDING_CONF_RELATIVE_GATE', true)` ships it; stacked on the shipped set it adds about +0.004 ALL
+    on test.
+- **Whistle family (WH-H1/H2/H3; `RECORDING_WHISTLE_DETECT=1 RECORDING_WHISTLE_PITCHDOWN=1 RECORDING_WHISTLE_ONSET=0.2`).**
+  - Rule: a whistle hint, or YAMNet "Whistling" in the top 3 (ties count against), means the take is never voice,
+    goes to the octave-down provider whatever its band, and gets a flat 0.2 re-attack dip.
+  - Dev, final harness: whistling **+0.037\*** [+0.021, +0.056] (WR +0.036\*, APP +0.037\*, WHR +0.038\*).
+  - **Test: −0.001 [−0.020, +0.017]** (WR −0.003: 16 clips up, 12 down, five losses ≥ 0.13; APP +0.002; 60 clips,
+    MDE 0.026), so it **does not ship**.
+  - Exactly 0 elsewhere on test: in the benchmark only the WR/APP note lists change, and profile identity on 2,658
+    test profiles shows 0 non-family differences (one context false positive, a TinySOL viola top note).
+  - Verdict recall at the production lock prefix is 0.77 on dev (target 0.8 missed; top 5 would give 0.80).
+  - Product-faithful (undeclared source, test): whistling on a `voice-lead` score **+0.033\* [+0.006, +0.061]**
+    (otherwise whistles take the voice decode, −0.042\* against the declared row); on a `piano` score +0.011 (n.s.).
+  - The `off` dip (dev +0.047) fails the re-onset guard: room-mic repeats go 14 → 0 on exact-truth synthetic
+    whistles.
+
+### Built off at dev (no test look)
+
+- **Instrument onset back-extension (ADV-H3, `RECORDING_INSTR_ONSET_BACKEXTEND=1`):** on top of ADV-H2, dev ALL
+  +0.002\* and reverb rows +0.012; but on the re-cut GuitarSet, clean takes −0.004 [−0.011, +0.000] (2 of 25 takes,
+  −0.022 / −0.077), below its ≥ −0.002 clean bar. It fires on 18 % of clean GuitarSet + URMP takes (the < 5 %
+  target was missed).
+- **Voice back-extension (`VOICE_ONSET_BACKEXTEND=0.15,0.15`):** singing +0.003\* on top of the 0.05 shift and
+  +0.002 n.s. on top of the shift and ADV-H2. It fixes the same late onsets as the shift and stays under its
+  +0.004 bar.
+- **High-band pitch-down (WH-H2b, `RECORDING_HIGH_BAND_PITCHDOWN=1`):** reroutes 7 pooled dev clips; instrument
+  ≈ +0.001 (TinySOL high strata +0.032\*, context). Null.
+- **Whistle onset ramp (`RECORDING_WHISTLE_ONSET_RAMP=1`):** material 0.627 against 0.635 flat. Null.
+
+### Interactions (dev, final harness)
+
+- SING-H1 and ADV-H2 add up: the shift on top of the gate gives singing +0.015\* (alone +0.016\*); both together
+  against base give ALL +0.015\* and voice echoey / distant +0.068\* / +0.095\*.
+- INST-H4 on top of ADV-H2: instrument +0.0067\* (alone +0.0074\*). Its distant-mic part halves (+0.0068 against
+  +0.0125), where both fill sub-gate gaps.
+- ADV-H2 on top of the whistle family: +0.000 on whistling.
+- INST-H4 on top of the whistle family: exactly 0, because the pitch-down family leaves the bridge's gate.
+
+### The stacked test look and what ships
+
+All four dev survivors at once (`int-stack-all4-test`): ALL **+0.012\*** [+0.009, +0.014], human +0.012\*
+[+0.010, +0.015], singing +0.020\*, whistling −0.001, instrument +0.007\*, real only +0.005\* / human +0.004\*;
+echoey +0.018\*, distant +0.031\*, wind +0.005\*, street +0.001.
+
+**What ships (SING-H1 + INST-H4), test:** ALL **+0.008\* [+0.006, +0.010]** (0.680 → 0.688), human **+0.007\***
+[+0.005, +0.009], singing +0.013\*, instrument +0.005\*, whistling +0.002 (n.s.), real only +0.005\* / human
++0.004\*. The plan expected ALL +0.012…+0.025: the shipped half lands under that range, and the full stack at its
+floor.
+
+### Model-path confirmation of what ships
+
+- **The real model, no caches** (`benchmark.ts run --scratch`, 7 identical dataset shards per arm, all pooled
+  datasets, all conditions, both splits). Before = every 2026-11 knob forced off; after = the new defaults.
+  - Before is note-identical to the cached `h1-final` on 2,813 / 2,813 clip×conditions, and after to the cached
+    shipped set on 2,813 / 2,813. So the model-path Δ is the cached Δ exactly.
+  - Test: ALL +0.008\* [+0.006, +0.010], human +0.007\*, singing +0.013\*, instrument +0.005\*.
+  - Both splits: ALL +0.009\* [+0.007, +0.011] (0.672 → 0.681), human +0.009\* (0.699 → 0.708), singing
+    +0.015\*, instrument +0.006\*, whistling +0.003\*, real only +0.006\*.
+- **Realistic synthetic corpus** (`--synth --scratch`, home-phone + room, exact truth, both splits, 926
+  clip×conditions): ALL +0.002\* [+0.001, +0.004], singing +0.008\* [+0.001, +0.015] (home-phone +0.009, room
+  +0.007; alto −0.008 n.s. is the only voice below 0), instrument +0.001\*; no dataset significantly negative.
+- **`check-streaming.ts`** (the real RecordingPipeline, paced against whole-buffer): identical rows before and
+  after.
+- **`notation-eval.ts`**: see SING-H1 above. GuitarSet is unchanged.
+- **Code checks**: tsc, eslint and `vitest run` (apps/api, 586 tests) are clean.
+
+### Open after this pass
+
+- **Owner calls:**
+  - ship ADV-H2 despite its one n.s. negative RIR cell;
+  - the whistle family for the undeclared voice-score case only (a new hypothesis: DETECT alone);
+  - the app-take tempo correction, which lowers the reported whistling material (−0.011\*) because seconds-COnP
+    punishes correct quantisation at slow tempi.
+- The dipDepth relief is blind but not inert; replacing its trigger with confMed is ADV-H2 itself. Removing the
+  inert sustained ramp is a clean-up.
+- `fixtures/eval` (scripted synthetic) must be regenerated (`generate.ts`) before any run-eval adverse row is quoted
+  again.
+- OK5 / DEMAND would add room and noise diversity to the measured tier (needs an HDF5 reader).

@@ -57,14 +57,14 @@ the provenance and caveats.
 | `esmuc-choir`                   | benchmark | singing          | human       | 271 / 16,955       | yes                          |
 | `csd`                           | benchmark | singing          | human       | 96 / 3,580         | yes                          |
 | `hust-solfege`                  | benchmark | singing          | human       | 73 / 3,671         | yes                          |
-| `dagstuhl-choir`                | benchmark | singing          | resynth     | 94 / 2,193         | yes                          |
+| `dagstuhl-choir`                | benchmark | singing          | resynth     | 94 / 2,175         | yes                          |
 | `jacrc-notes`                   | benchmark | singing          | resynth     | 175 / 12,496       | yes                          |
 | `app-takes-singing`             | benchmark | singing          | resynth     | 52 / 1,675         | yes                          |
 | `whistle-real`                  | benchmark | whistling        | resynth     | 117 / 2,243        | yes                          |
 | `app-takes-whistling`           | benchmark | whistling        | resynth     | 19 / 597           | yes                          |
 | `whistled-high-register`        | benchmark | whistling        | resynth     | 6 / 60             | yes                          |
 | `urmp-*` (13 instruments)       | benchmark | instrument       | human       | 48 / 1,326         | yes                          |
-| `guitarset-solo`                | benchmark | instrument       | human       | 50 / 2,535         | yes                          |
+| `guitarset-solo`                | benchmark | instrument       | human       | 50 / 2,523         | yes                          |
 | `avp`                           | benchmark | vocal-percussion | onsets      | 280 / 9,778 onsets | no (pitchless)               |
 | `jacrc-students`                | benchmark | singing          | onsets      | 175 / 5,175 onsets | no (pitchless)               |
 | `humtrans` + `humtrans-aligned` | context   | humming          | derived     | 769 / 19,955       | no (derived, CC BY-NC)       |
@@ -94,7 +94,7 @@ Voice and whistling — resynth note truth (pooled; see _Resynth truth_ below):
 
 | Dataset                  | Clips / notes | Truth provenance                                                                                 | Licence                       | Caveats that survive adoption                                                                                                                                                                                                                                                                   |
 | ------------------------ | ------------- | ------------------------------------------------------------------------------------------------ | ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `dagstuhl-choir`         | 94 / 2,193    | Resynth, 94/94 passed 2026-10-31; the DTW score alignment is kept as `<clip>.truth-derived.json` | CC-BY-4.0                     | Quartet stems with mic bleed. Re-fetched as 94 clips after the 2026-10-30 float-stem fix (37f7ea02): every earlier dagstuhl number is void (FINDINGS.md, 2026-10-31)                                                                                                                            |
+| `dagstuhl-choir`         | 94 / 2,175    | Resynth, 94/94 passed 2026-10-31; the DTW score alignment is kept as `<clip>.truth-derived.json` | CC-BY-4.0                     | Quartet stems with mic bleed. Re-fetched as 94 clips after the 2026-10-30 float-stem fix (37f7ea02): every earlier dagstuhl number is void (FINDINGS.md, 2026-10-31)                                                                                                                            |
 | `jacrc-notes`            | 175 / 12,496  | Resynth anchored on jacrc-students' human syllable onsets, 175/175 passed 2026-10-31             | CC-BY-4.0                     | Same audio as `jacrc-students` (hard links); amateur jingju, melismatic                                                                                                                                                                                                                         |
 | `app-takes-singing`      | 52 / 1,675    | Resynth from a blind f0 segmentation, 52/52 passed                                               | internal — our own recordings | Real takes through the product recording chain (Opus, browser AGC and noise suppression), from `apps/api/debug/recordings` and `storage/recordings`. 40 takes of the 2026-06-17 batch were the vocadito corpus re-encoded through the server path and are excluded (`excluded` in dataset.json) |
 | `whistle-real`           | 117 / 2,243   | Resynth with the `lib/sineTrack.ts` drafts as prior, 117/117 passed 2026-10-30                   | CC0 / PD / CC BY-SA, per clip | 112 Freesound CC0 previews + 5 Wikimedia Commons clips; the never-verified label-TSV drafts are kept as `<clip>.truth-derived.json`                                                                                                                                                             |
@@ -106,7 +106,7 @@ Instruments — note-level truth:
 | Dataset                   | Clips / notes | Truth provenance                                                        | Licence   | Caveats                                                            |
 | ------------------------- | ------------- | ----------------------------------------------------------------------- | --------- | ------------------------------------------------------------------ |
 | `urmp-*` (13 instruments) | 48 / 1,326    | Score alignment + manually corrected pitch tracking by the URMP authors | CC0-1.0   | 2–4 clips per instrument — per-instrument strata are unpowered     |
-| `guitarset-solo`          | 50 / 2,535    | Hexaphonic-pickup tracking, author-corrected                            | CC-BY-4.0 | Ring-over between plucked notes; comp (strummed) excerpts excluded |
+| `guitarset-solo`          | 50 / 2,523    | Hexaphonic-pickup tracking, author-corrected                            | CC-BY-4.0 | Ring-over between plucked notes; comp (strummed) excerpts excluded |
 
 Special-axis benchmarks (trusted truth on an axis other than note-F1):
 
@@ -176,6 +176,24 @@ clipped). Arni has no receiver nearer than ≈1.5 m. **OK5**
 (`10.5281/zenodo.18622201`, CC-BY-4.0, 25 real work rooms at 1.5/2/3 m) is the
 cleared room-diversity follow-up; it ships SOFA/HDF5, which the TypeScript
 harness cannot read without a new dependency.
+
+## Grid and tempo corrections (2026-11-01, swapped in)
+
+The product starts a take on beat 1 at the take's recording tempo; four corpora were quantised on a grid it does
+not use. Corrected by L0b of the 2026-11 pass, staged, then swapped into `eval-real` by the integration step
+(`swap-grid.sh`; backup and `--rollback` in `scripts/eval/.cache/scratch/l0b/pre-swap/`). Each dataset.json
+records what changed (`gridCorrection` / `windowsOnClick` / `nominalTempo` + `tempoTest`). Numbers before and after
+the swap are not comparable on these four datasets (FINDINGS.md 2026-11-01, "Correction 2").
+
+| dataset | change | effect on its COnP (both splits) |
+| --- | --- | --- |
+| `guitarset-solo` | every 15 s window starts on the last JAMS click beat at or before (anchor − 0.25 s) (`fetch-guitarset.ts`); audio, truth and variants re-cut; 2,523 notes (was 2,535) | +0.017\* |
+| `dagstuhl-choir` | each excerpt starts on its first annotated beat, bpm = the mean tempo over its marks, slices rounded (`fetch-dagstuhl.ts`); resynth notes shifted by −b0 (57 clamped to 0, 18 dropped; 2,175 notes) | +0.033\* |
+| `app-takes-singing`, `app-takes-whistling` | truth bpm = the take's recording tempo (session.json for 27 stored takes; the debug plot's barline spacing for 42 Apr–Jun debug takes, 25/25 agreement; 2 takes keep 120, flagged `unknown`); the tracked resynth annotations carry the same bpm | −0.027\* / −0.034\* (the seconds-COnP artefact of the right but coarser grid; beat F1 0.56 vs 0.31) |
+| `urmp-*` | score MIDIs fit no constant grid (score-tempo p90 503 ms; best constant 73 ms; 5/48 under 40 ms): bpm stays 120, flagged `nominalTempo: true` | 0 |
+
+Hazard: `annotations/resynth/dagstuhl-choir/*.resynth.json` still describe the pre-cut excerpts. A resynth
+re-export of dagstuhl-choir must re-apply the cut (the staged `dataset.json` `gridCorrection` says how).
 
 ## Resynth truth (2026-10-30/31)
 

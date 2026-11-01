@@ -148,6 +148,29 @@ COnP, paired over clips, from FINDINGS.md "Findings log (2026-09-27…)".
 
 `STAGES_REAL=1` (`stages-synth.ts`) is an eval-only switch, not a pipeline lever.
 
+### Pipeline-accuracy knobs (2026-11)
+
+From the 2026-11-01 pass (FINDINGS.md "Findings log (2026-11-01: pipeline-accuracy pass …)"). Two shipped with a
+kill-switch; the rest are built off with their numbers on their doc comments. Δ COnP on the mean of dataset means,
+cached replay, all conditions, performance-cluster CI, against `h1-final`. `upstream` knobs are in
+`RESOLVER_ENV_KEYS` (lib/trackCache.ts) and build their own cache subtree; the others replay exactly.
+
+| Variable | Kind | Where | What it does | Measured status |
+| --- | --- | --- | --- | --- |
+| `VOICE_ONSET_SHIFT_SEC=<s>` | kill-switch (`0.07`) | voice-note-decoder.ts | Voice-decode onset shift; ships 0.05 | **Shipped.** Test singing +0.013 [+0.009, +0.017]\*, whistling/instruments exactly 0 |
+| `EXTRACTOR_BRIDGE_GAP_SEC=<s>` / `EXTRACTOR_BRIDGE_FRAGMENT_SEC=<s>` | kill-switch (`GAP=0`) | audio-converter.ts | Same-pitch, onset-vetoed gap bridge for sustained instruments; ships 0.12 / 0.2 (`FRAGMENT=0` = any length) | **Shipped.** Test instrument +0.0046 [+0.0030, +0.0062]\*, singing/GuitarSet exactly 0 |
+| `RECORDING_CONF_RELATIVE_GATE=1` (+ `_KNEE` 0.85, `_SLOPE` 2, `_FLOOR` 0.2, `_MODE` min, `_DRY_DROP_DB` 12, `_FREEZE_SEC` 1.5) | opt-in | profiles/reverberance.ts | Lowers the voicing gate by CREPE's own median confidence (decode-side) | Built off: test ALL +0.0057\*, measured-RIR ALL +0.012\* but one cell (plucked rir-near −0.004 n.s.) breaks the pre-registered sign rule; owner call |
+| `RECORDING_INSTR_ONSET_BACKEXTEND=1` (+ `_MAX_DROP_DB`, `_MAX_CONF_MED`, `_CONF`, `_WINDOW_SEC`) | opt-in | profiles/reverberance.ts | Moves instrument note starts back over sub-gate frames at pitch, on takes that read reverberant | Built off: clean GuitarSet −0.004 on the re-cut corpus (bar ≥ −0.002); no test look |
+| `VOICE_ONSET_BACKEXTEND=<conf>,<sec>` | opt-in | voice-note-decoder.ts | The voice decode's sub-gate back-extension after a rest | Built off: +0.002 n.s. on top of the shipped shift and the confidence gate |
+| `RECORDING_WHISTLE_DETECT=1`, `RECORDING_WHISTLE_PITCHDOWN=1`, `RECORDING_WHISTLE_ONSET=off\|<dip>` | opt-in, upstream | profiles/profile-resolver.ts | Whistle family: YAMNet "Whistling" verdict, octave-down provider, flat or no re-attack dip | Built off: dev whistling +0.037\*, test −0.001 [−0.020, +0.017]; undeclared voice score +0.033\* |
+| `RECORDING_WHISTLE_ONSET_RAMP=1` | opt-in, upstream | profiles/profile-resolver.ts | Ramps the family dip toward 0.5 with reverberance | Null (0.627 vs 0.635 flat) |
+| `RECORDING_HIGH_BAND_PITCHDOWN=1` | opt-in, upstream | profiles/profile-resolver.ts | Non-voice `high`-band takes to the octave-down provider | Null (instrument ≈ +0.001) |
+| `EVAL_UNDECLARED_SOURCE=1`, `EVAL_UNDECLARED_HINT=<id>\|none` | eval only, upstream | lib/trackCache.ts `harnessHint` | Model the app's undeclared input (no sourceKind; another score hint) | Harness mode |
+
+`RECORDING_REVERB_CONF_RELIEF=0` and `SUSTAINED_ONSET_REVERB_RAMP=0` (existing) were re-measured on the corrected
+adverse tier: the dipDepth relief's trigger is blind but switching it off costs AVS −0.018\*; the sustained ramp is
+inert (URMP +0.001 n.s.).
+
 ## Scripts
 
 ### Harness core
