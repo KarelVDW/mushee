@@ -46,7 +46,7 @@ export class CrepePitchdownProvider implements TrajectoryProvider {
 
     constructor(backend: ModelBackend, name: string = PITCHDOWN_PROVIDER_NAME) {
         this.name = name
-        this.inner = new CrepeProvider(backend, name)
+        this.inner = new CrepeProvider(backend, name, this.factor)
         this.sampleRate = this.inner.sampleRate * this.factor
     }
 
@@ -56,6 +56,10 @@ export class CrepePitchdownProvider implements TrajectoryProvider {
 
     createSession(): PitchSession {
         return this.inner.createSession()
+    }
+
+    voicingAdaptationDrifted(session: PitchSession): boolean {
+        return this.inner.voicingAdaptationDrifted(session)
     }
 
     async transcribe(samples: Float32Array, options?: PitchTranscribeOptions, session?: PitchSession): Promise<NoteEventTime[]> {

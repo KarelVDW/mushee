@@ -2,14 +2,129 @@
  * Blind reverberance of a take — a pure signal measurement beside `scanPitch`.
  * `ProfileResolver` reads it to relax the voicing gate (`applyReverb`) and to
  * ramp the sustained-instrument onset dip back toward the detector's default.
+ *
+ * `ReverbDecodeAdaptation` is the decode-side counterpart (built off): it reads
+ * the take's own trajectory (`PitchTrack.reverbEvidence`) instead of the
+ * envelope's fill.
  */
 
-import { envNumber } from '../env'
+import { envFlag, envNumber } from '../env'
 import { OnsetDetector } from '../onset-detector'
+import type { ReverbEvidence } from '../pitch-track'
 
 function clamp(x: number, lo: number, hi: number): number {
     return Math.max(lo, Math.min(hi, x))
 }
+
+/** What `ReverbDecodeAdaptation.decide` hands the segmenters for one take. */
+export interface ReverbDecision {
+    /** The voicing gate the segmenter / voice decoder runs with. */
+    gate: number
+    /** Set when the instrument onset back-extension applies (frames of real `windowSec`). */
+    backExtend?: { minConfidence: number; maxFrames: number }
+}
+
+/**
+ * Decode-side reverb adaptations, both BUILT OFF (env opt-in), decided per take
+ * from the take's own CREPE trajectory — the evidence the 2026-11-01 regenerated
+ * adverse tier showed actually separates rooms from dry takes, where the
+ * resolver's `dipDepth` does not (see `PitchTrack.reverbEvidence`).
+ *
+ * Decode-side on purpose: the stored track and profile are untouched, so the eval
+ * harness's cached replay (`scripts/eval/lib/decodeCached.ts`) runs this exact
+ * class on the cached track and reproduces production note for note.
+ *
+ * ## 1. Confidence-relative voicing gate (ADV-H2) — `RECORDING_CONF_RELATIVE_GATE=1`
+ *
+ *     gate = min(profile gate, max(FLOOR, BASE − SLOPE · max(0, KNEE − confMed)))
+ *
+ * A take whose loud frames CREPE hears with median confidence at or above KNEE
+ * keeps its profile's gate exactly; below it the gate is lowered in proportion,
+ * never under FLOOR and never raised. `_MODE=replace` drops the profile's own
+ * reverb relief (`applyReverb`, triggered by `dipDepth`) and uses this rule alone
+ * against the band anchor BASE (0.5 on every band; the noisy-take bump ships at 0).
+ *
+ * ## 2. Instrument onset back-extension (ADV-H3, instrument part) — `RECORDING_INSTR_ONSET_BACKEXTEND=1`
+ *
+ * On a NON-voice take that reads reverberant (P95 100-ms level drop under
+ * `_MAX_DROP_DB` AND confMed under `_MAX_CONF_MED`), each raw note's start moves
+ * back over the sub-gate frames already at its pitch (`PitchTrack.backExtendOnsets`).
+ * Ungated it costs dry plucked/sustained takes (a note's own pre-attack noise at
+ * pitch), hence the take-level gate.
+ *
+ * ## Streaming
+ *
+ * The provider measures the evidence on every pass until `_FREEZE_SEC` of loud
+ * audio exist, then freezes it for the rest of the take; the FINAL pass measures
+ * the whole take again. When the final decision differs from one an earlier pass
+ * used, the pipeline discards the notes committed under it and rebuilds the score
+ * from the final pass (`RecordingPipeline`), so the final score is the whole-take
+ * transcription the benchmark measures.
+ */
+export class ReverbDecodeAdaptation {
+    constructor(
+        private readonly relativeGate:
+            | { knee: number; slope: number; floor: number; base: number; mode: 'min' | 'replace'; dryDropDb: number }
+            | undefined,
+        private readonly backExtend: { maxDropDb: number; maxConfMed: number; minConfidence: number; windowSec: number } | undefined,
+        /** Seconds of loud audio after which a streaming session freezes its evidence. */
+        readonly freezeSec: number,
+    ) {}
+
+    /** The adaptation the env selects; undefined when both parts are off (production). */
+    static fromEnv(): ReverbDecodeAdaptation | undefined {
+        const gateOn = envFlag('RECORDING_CONF_RELATIVE_GATE', false)
+        const extendOn = envFlag('RECORDING_INSTR_ONSET_BACKEXTEND', false)
+        if (!gateOn && !extendOn) return undefined
+        return new ReverbDecodeAdaptation(
+            gateOn
+                ? {
+                      knee: envNumber('RECORDING_CONF_RELATIVE_GATE_KNEE', 0.85),
+                      slope: envNumber('RECORDING_CONF_RELATIVE_GATE_SLOPE', 2),
+                      floor: envNumber('RECORDING_CONF_RELATIVE_GATE_FLOOR', 0.2),
+                      base: 0.5,
+                      mode: process.env.RECORDING_CONF_RELATIVE_GATE_MODE === 'replace' ? 'replace' : 'min',
+                      dryDropDb: envNumber('RECORDING_CONF_RELATIVE_GATE_DRY_DROP_DB', Infinity),
+                  }
+                : undefined,
+            extendOn
+                ? {
+                      maxDropDb: envNumber('RECORDING_INSTR_ONSET_BACKEXTEND_MAX_DROP_DB', 10),
+                      maxConfMed: envNumber('RECORDING_INSTR_ONSET_BACKEXTEND_MAX_CONF_MED', 0.87),
+                      minConfidence: envNumber('RECORDING_INSTR_ONSET_BACKEXTEND_CONF', 0.15),
+                      windowSec: envNumber('RECORDING_INSTR_ONSET_BACKEXTEND_WINDOW_SEC', 0.15),
+                  }
+                : undefined,
+            envNumber('RECORDING_CONF_RELATIVE_GATE_FREEZE_SEC', 1.5),
+        )
+    }
+
+    /**
+     * The gate and onset treatment for a take with this evidence.
+     * @param profileGate the resolved profile's voicing gate
+     * @param voice       whether the take is decoded by the voice decoder (the back-extension is instrument-only)
+     * @param realHopSec  real seconds per track frame, to turn the back-extension window into frames
+     */
+    decide(evidence: ReverbEvidence, profileGate: number, voice: boolean, realHopSec: number): ReverbDecision {
+        let gate = profileGate
+        const rel = this.relativeGate
+        // A take whose level can still fall `dryDropDb` in 100 ms is not in a room:
+        // its low confidence is noise or breath, which a lower gate only turns into notes.
+        if (rel && evidence.maxDropDb < rel.dryDropDb) {
+            const relative = Math.max(rel.floor, rel.base - rel.slope * Math.max(0, rel.knee - evidence.confMed))
+            gate = rel.mode === 'replace' ? Math.min(rel.base, relative) : Math.min(profileGate, relative)
+        }
+        const ext = this.backExtend
+        const extend = ext && !voice && evidence.maxDropDb < ext.maxDropDb && evidence.confMed < ext.maxConfMed
+        return {
+            gate,
+            ...(extend && { backExtend: { minConfidence: ext.minConfidence, maxFrames: Math.round(ext.windowSec / realHopSec) } }),
+        }
+    }
+}
+
+/** The decode-side reverb adaptation this process runs with (undefined = production: off). */
+export const REVERB_DECODE_ADAPTATION = ReverbDecodeAdaptation.fromEnv()
 
 /**
  * `dipDepth` anchors for the reverberance ramp: the measured medians of the

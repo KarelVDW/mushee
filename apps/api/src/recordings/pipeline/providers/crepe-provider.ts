@@ -2,7 +2,8 @@ import { Logger } from '@nestjs/common'
 
 import { envOptionalNumber } from '../env'
 import type { NoteEventTime } from '../note-event'
-import { PitchTrack } from '../pitch-track'
+import { PitchTrack, type ReverbEvidence } from '../pitch-track'
+import { REVERB_DECODE_ADAPTATION, type ReverbDecision } from '../profiles/reverberance'
 import { frameEnergy, SEGMENT_DEFAULTS, segmentNotes, type SegmentOptions } from '../semitone-segmenter'
 import { SHIPPING_VOICE_OPTS, VoiceNoteDecoder } from '../voice-note-decoder'
 import { localCentsFromPath, normalizeFrame, topKCandidates, viterbi, type ViterbiOptions } from './crepe-decoding'
@@ -91,6 +92,13 @@ class CrepeSession implements PitchSession {
     cachedFrames = 0
     activations: Float32Array = new Float32Array(0)
     confidence: Float32Array = new Float32Array(0)
+    /**
+     * Reverb evidence frozen once enough loud audio exists (`ReverbDecodeAdaptation`):
+     * a live take keeps one gate instead of one per pass. Only with the adaptation on.
+     */
+    frozenEvidence: ReverbEvidence | undefined
+    /** Every distinct decision a pass of this session ran with, keyed — see `voicingAdaptationDrifted`. */
+    readonly decisions = new Set<string>()
 }
 
 /**
@@ -110,9 +118,15 @@ export class CrepeProvider implements TrajectoryProvider {
     private readonly logger = new Logger(CrepeProvider.name)
     private readonly centMapping: Float32Array = buildCentMapping()
 
+    /**
+     * @param timeScale model seconds per real second of the audio this provider is
+     *   fed — 1 at pitch; the octave-down wrapper feeds it half-speed audio (2). Only
+     *   the decode-side reverb adaptation reads it, so its seconds stay real seconds.
+     */
     constructor(
         private readonly backend: ModelBackend,
         name: string,
+        private readonly timeScale = 1,
     ) {
         this.name = name
         this.logger.log(`${name} provider ready`)
@@ -127,22 +141,62 @@ export class CrepeProvider implements TrajectoryProvider {
     }
 
     async transcribe(samples: Float32Array, options?: PitchTranscribeOptions, session?: PitchSession): Promise<NoteEventTime[]> {
-        const track = await this.track(samples, session)
+        const sess = session instanceof CrepeSession ? session : new CrepeSession()
+        const track = await this.track(samples, sess)
         if (!track) return []
-        return options?.segmentMode === 'voice'
-            ? this.decodeVoice(track, samples, options)
-            : segmentNotes(track.cents, track.confidence, track.frames, this.segmentOptionsFrom(options))
+        const voice = options?.segmentMode === 'voice'
+        // The envelope on the trajectory's own frame grid: the voice decoder's dip and
+        // accent channels read it, and so does the reverb evidence. Computed here
+        // because this is the only place holding both the decoded PCM and the grid it
+        // must align to — the channels are meaningless if the two are off by a frame.
+        const energy = voice || REVERB_DECODE_ADAPTATION ? frameEnergy(samples, SAMPLE_RATE, track.hopSec, track.frames) : undefined
+        const decision = energy && REVERB_DECODE_ADAPTATION ? this.reverbDecision(track, energy, options, sess) : undefined
+        const tuned = decision ? { ...options, confidenceThreshold: decision.gate } : options
+        if (voice && energy) return this.decodeVoice(track, energy, tuned ?? {})
+        const notes = segmentNotes(track.cents, track.confidence, track.frames, this.segmentOptionsFrom(tuned))
+        return decision?.backExtend ? track.backExtendOnsets(notes, decision.backExtend) : notes
     }
 
     /**
-     * The voice path: a note-level HMM over the trajectory *and* the envelope.
+     * The decode-side reverb adaptation for this pass (`ReverbDecodeAdaptation`).
      *
-     * The envelope is computed here rather than passed in because this is the only
-     * place holding both the decoded PCM and the frame grid it must align to — the
-     * dip and accent channels are meaningless if the two are off by a frame.
+     * One whole-buffer call — the benchmark, the eval harness's cached replay —
+     * measures the whole take. A streaming session measures every pass until
+     * `freezeSec` of loud audio exist and then keeps that evidence, so the gate
+     * stops moving under notes it has already committed; the final pass measures
+     * the whole take again, and `voicingAdaptationDrifted` tells the pipeline when
+     * that changed a decision an earlier pass ran with.
      */
-    private decodeVoice(track: PitchTrack, samples: Float32Array, options: PitchTranscribeOptions): NoteEventTime[] {
-        const energy = frameEnergy(samples, SAMPLE_RATE, track.hopSec, track.frames)
+    private reverbDecision(track: PitchTrack, energy: Float32Array, options: PitchTranscribeOptions | undefined, sess: CrepeSession): ReverbDecision {
+        const adaptation = REVERB_DECODE_ADAPTATION
+        if (!adaptation) throw new Error('reverbDecision without an adaptation')
+        const realHopSec = track.hopSec / this.timeScale
+        let evidence = sess.frozenEvidence
+        if (!evidence || options?.finalPass) {
+            evidence = track.reverbEvidence(energy, realHopSec)
+            if (!options?.finalPass && evidence.loudFrames * realHopSec >= adaptation.freezeSec) sess.frozenEvidence = evidence
+        }
+        const decision = adaptation.decide(
+            evidence,
+            options?.confidenceThreshold ?? SEGMENT_OPTS.confidenceThreshold,
+            options?.segmentMode === 'voice',
+            realHopSec,
+        )
+        sess.decisions.add(`${decision.gate}|${decision.backExtend ? 1 : 0}`)
+        return decision
+    }
+
+    /**
+     * True when the passes of `session` did not all run with one reverb decision
+     * — i.e. the notes committed live were decoded under a gate the final pass no
+     * longer uses. Always false with the adaptation off (production).
+     */
+    voicingAdaptationDrifted(session: PitchSession): boolean {
+        return session instanceof CrepeSession && session.decisions.size > 1
+    }
+
+    /** The voice path: a note-level HMM over the trajectory *and* the envelope. */
+    private decodeVoice(track: PitchTrack, energy: Float32Array, options: PitchTranscribeOptions): NoteEventTime[] {
         return new VoiceNoteDecoder({
             ...SHIPPING_VOICE_OPTS,
             confidenceThreshold: options.confidenceThreshold ?? SEGMENT_OPTS.confidenceThreshold,

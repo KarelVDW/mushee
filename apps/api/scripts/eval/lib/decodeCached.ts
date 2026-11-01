@@ -26,6 +26,7 @@ import { AudioConverter } from '../../../src/recordings/pipeline/audio-converter
 import type { NoteEventTime } from '../../../src/recordings/pipeline/note-event'
 import { NoteExtractor, type NoteExtractorOptions } from '../../../src/recordings/pipeline/note-extractor'
 import { PITCHDOWN_PROVIDER_NAME } from '../../../src/recordings/pipeline/profiles/pipeline-profile'
+import { REVERB_DECODE_ADAPTATION } from '../../../src/recordings/pipeline/profiles/reverberance'
 import { segmentNotes } from '../../../src/recordings/pipeline/semitone-segmenter'
 import { SHIPPING_VOICE_OPTS } from '../../../src/recordings/pipeline/voice-note-decoder'
 import { VoiceNoteDecoder } from '../../../src/recordings/pipeline/voice-note-decoder'
@@ -57,21 +58,29 @@ function voiceEnabled(): boolean {
     return process.env.RECORDING_VOICE_DECODE !== '0'
 }
 
-/** Raw notes from the decode the clip's profile selects. */
+/**
+ * Raw notes from the decode the clip's profile selects. The decode-side reverb
+ * adaptation (`ReverbDecodeAdaptation`, env opt-in) is the provider's own class run
+ * on the cached track and envelope, exactly as one whole-buffer pass runs it — the
+ * cached track's hop is already real time (the octave-down wrapper's is 10 ms).
+ */
 export function segmentAsProduction(c: DecodableClip): NoteEventTime[] {
+    const voice = Boolean(c.profile.isVoice && voiceEnabled())
+    const profileGate = c.profile.confidenceThreshold ?? 0.5
+    const decision = REVERB_DECODE_ADAPTATION?.decide(c.track.reverbEvidence(c.energy, c.track.hopSec), profileGate, voice, c.track.hopSec)
     const gate = {
-        confidenceThreshold: c.profile.confidenceThreshold ?? 0.5,
+        confidenceThreshold: decision?.gate ?? profileGate,
         minFreqHz: c.profile.minFreqHz,
         maxFreqHz: c.profile.maxFreqHz,
     }
-    if (c.profile.isVoice && voiceEnabled()) {
+    if (voice) {
         return new VoiceNoteDecoder({
             ...SHIPPING_VOICE_OPTS,
             ...gate,
             minNoteSec: frameCount(c, c.profile.minFramesPerNote) * c.track.hopSec,
         }).decode(c.track, c.energy)
     }
-    return segmentNotes(c.track.cents, c.track.confidence, c.track.frames, {
+    const notes = segmentNotes(c.track.cents, c.track.confidence, c.track.frames, {
         hopSize: 1,
         sampleRate: 1 / c.track.hopSec,
         ...gate,
@@ -80,6 +89,7 @@ export function segmentAsProduction(c: DecodableClip): NoteEventTime[] {
         mode: c.profile.segmentMode === 'median' ? 'median' : 'semitone',
         smoothFrames: frameCount(c, c.profile.smoothFrames),
     })
+    return decision?.backExtend ? c.track.backExtendOnsets(notes, decision.backExtend) : notes
 }
 
 /**
