@@ -115,6 +115,29 @@ export interface NoteExtractorOptions {
      */
     adaptiveFloorFraction?: number
     /**
+     * Same-pitch gap bridge, in SECONDS; 0 disables (the default). Rejoins two
+     * consecutive raw notes of the SAME MIDI pitch across a gap of at most this
+     * length, unless the onset detector found a re-attack in
+     * [first end − 30 ms, second start + 30 ms]. Soft bowed and blown notes dip
+     * below the voicing gate mid-note, and the segmenter then writes one held
+     * note as two; a genuine repeat is re-tongued or re-bowed, which is exactly
+     * what the onset veto keeps. Runs first in `clean`, on the provider's raw
+     * notes, so the onset split later still separates any re-attack inside the
+     * joined note. Only `AudioConverter.cleanupFor` sets it, and only for
+     * sustained instruments — see `EXTRACTOR_BRIDGE_GAP_SEC` there for the
+     * measurements.
+     */
+    bridgeSamePitchGapSec?: number
+    /**
+     * Restricts the bridge to joins where the SHORTER of the two notes is under
+     * this many seconds — a fragment, the way `mergeAdjacent` only fires on a
+     * genuine short fragment. Two full-length notes of one pitch a frame apart
+     * are a re-bowed or re-tongued repeat far more often than a dropout, and the
+     * onset detector misses exactly those re-attacks when the bow or tongue
+     * barely dips the envelope. Unset (the default): any length.
+     */
+    bridgeMaxFragmentSec?: number
+    /**
      * Which cleanup steps run. All default ON, so omitting this reproduces the
      * historical behavior exactly.
      *
@@ -184,6 +207,8 @@ export class NoteExtractor {
     private readonly seamFillBeats: number
     private readonly vibratoMaxSec: number
     private readonly adaptiveFloorFraction: number
+    private readonly bridgeGapSec: number
+    private readonly bridgeMaxFragmentSec: number
     private readonly steps: Required<CleanupSteps>
     private readonly gridPenalties: typeof GRID_PENALTIES
 
@@ -196,6 +221,8 @@ export class NoteExtractor {
         // Class default 0 (off); both shipping cleanup sets enable 0.3 — see
         // `AudioConverter.cleanupFor` for the measurements behind each.
         this.adaptiveFloorFraction = opts.adaptiveFloorFraction ?? 0
+        this.bridgeGapSec = opts.bridgeSamePitchGapSec ?? 0
+        this.bridgeMaxFragmentSec = opts.bridgeMaxFragmentSec ?? Number.POSITIVE_INFINITY
         this.steps = { ...ALL_STEPS, ...opts.steps }
         // Default caps onset snapping at the quarter-beat (16th-note) grid the
         // MusicXML notation can actually represent, so the deduced notes survive the
@@ -253,7 +280,9 @@ export class NoteExtractor {
      */
     clean(raw: NoteEventTime[], options: ExtractOptions): NoteEventTime[] {
         const s = this.steps
-        let notes = s.monophonic ? this.selectMonophonic(raw, options.bpm) : [...raw]
+        // Off unless the profile's cleanup set enables it (sustained instruments only).
+        const bridged = this.bridgeGapSec > 0 ? this.bridgeSamePitchGaps(raw, options.onsetTimesSec) : raw
+        let notes = s.monophonic ? this.selectMonophonic(bridged, options.bpm) : [...bridged]
         if (s.pitchOutliers) notes = this.filterPitchOutliers(notes)
         // Remove pitch-transient artifacts (wide-vibrato flutter and portamento
         // glide notes) before merging/quantizing — see suppressTransients.
@@ -379,6 +408,39 @@ export class NoteExtractor {
                 continue
             }
             out.push({ ...cur })
+        }
+        return out
+    }
+
+    /**
+     * Rejoin consecutive same-pitch notes across a gap of at most `bridgeGapSec`
+     * when the shorter of the two is under `bridgeMaxFragmentSec` (see
+     * `NoteExtractorOptions.bridgeSamePitchGapSec`). A detected onset in
+     * [prevEnd − 30 ms, nextStart + 30 ms] vetoes the join: that gap is a real
+     * re-articulation, not a dip below the voicing gate. Chains: a third fragment
+     * extends the already-joined note. Never touches different pitches.
+     */
+    private bridgeSamePitchGaps(notes: NoteEventTime[], onsetTimesSec: number[] | undefined): NoteEventTime[] {
+        const VETO_MARGIN_SEC = 0.03
+        // Gaps are whole frames computed two ways (see TOUCH_EPSILON_SEC): a gap of
+        // exactly the limit must not miss it by a rounding error.
+        const limit = this.bridgeGapSec + 1e-6
+        const onsets = onsetTimesSec ?? []
+        const out: NoteEventTime[] = []
+        for (const note of notes) {
+            const prev = out[out.length - 1]
+            if (prev && prev.pitchMidi === note.pitchMidi) {
+                const prevEnd = prev.startTimeSeconds + prev.durationSeconds
+                const gap = note.startTimeSeconds - prevEnd
+                const reattacked = onsets.some((t) => t >= prevEnd - VETO_MARGIN_SEC && t <= note.startTimeSeconds + VETO_MARGIN_SEC)
+                const fragment = Math.min(prev.durationSeconds, note.durationSeconds) < this.bridgeMaxFragmentSec
+                if (gap > -TOUCH_EPSILON_SEC && gap <= limit && fragment && !reattacked) {
+                    prev.durationSeconds = note.startTimeSeconds + note.durationSeconds - prev.startTimeSeconds
+                    prev.amplitude = Math.max(prev.amplitude, note.amplitude)
+                    continue
+                }
+            }
+            out.push({ ...note })
         }
         return out
     }
