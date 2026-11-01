@@ -183,6 +183,28 @@ describe('VoiceNoteDecoder', () => {
         )
     })
 
+    it('never judges existence below the reporting shift, so no note is shorter than one hop', () => {
+        const take = (sec: number): ReturnType<typeof contour> =>
+            contour([
+                { midi: 60, sec: 0.5 },
+                { midi: null, sec: 0.3 },
+                { midi: 64, sec },
+                { midi: null, sec: 0.3 },
+                { midi: 62, sec: 0.5 },
+            ])
+        // Both kill-switches at once (report at 0.07, judge at 0.05) is the pre-2026-11 decode exactly.
+        for (const sec of [0.08, 0.1, 0.12]) {
+            const { track, energy } = take(sec)
+            const both = decoder({ onsetShiftSec: 0.07, existenceShiftSec: 0.05 }).decode(track, energy)
+            expect(both).toEqual(decoder({ onsetShiftSec: 0.07, existenceShiftSec: undefined }).decode(track, energy))
+            // A reporting shift past the existence shift drops the run rather than writing it below one hop.
+            for (const onsetShiftSec of [0.09, 0.1, 0.12]) {
+                const notes = decoder({ onsetShiftSec, existenceShiftSec: 0.07 }).decode(track, energy)
+                expect(notes.every((n) => n.durationSeconds >= 0.02 - 1e-9)).toBe(true)
+            }
+        }
+    })
+
     describe('backExtend (sub-gate onset back-extension, off by default)', () => {
         const backExtend = { minConfidence: 0.15, windowSec: 0.15 }
         // A rest, then 80 ms of the next note's pitch at sub-gate confidence, then the note.

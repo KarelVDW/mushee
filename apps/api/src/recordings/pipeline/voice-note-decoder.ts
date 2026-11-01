@@ -358,8 +358,8 @@ export interface VoiceDecodeOptions {
      * app-takes-singing +0.009 (n.s., 17 clips).
      *
      * The two losses, diagnosed (2026-11-01, dev): AVS clean is its truth's onset
-     * convention. 86 % of its notes follow a pYIN "Transition" segment (median 116 ms)
-     * and its onset is where that glide ends; re-timed to the glide's midpoint (a
+     * convention. 86 % of its notes follow a pYIN "Transition" segment (median 93 ms)
+     * and its onset is one or two pYIN hops after that glide ends; re-timed to the glide's midpoint (a
      * diagnostic only), AVS clean peaks at 0.05 like every human-annotated set, and every
      * VocalSet technique and exercise prefers 0.07–0.10 on the shipped truth alike, so
      * no inference-time signal separates it. esmuc was not timing at all: the 0.05 shift
@@ -370,7 +370,9 @@ export interface VoiceDecodeOptions {
      * The shift the decoder's **existence test** uses, when it should differ from the
      * reporting shift `onsetShiftSec`. A run whose onset, moved by this shift, leaves
      * less than one hop before the run's end is not written. Omit to judge existence
-     * at `onsetShiftSec` (the historical behaviour).
+     * at `onsetShiftSec` (the historical behaviour). A value below `onsetShiftSec` acts
+     * as `onsetShiftSec`: existence is never judged at an earlier onset than the one
+     * reported, which would write notes shorter than one hop (or of negative length).
      *
      * Why the two are separable: the existence test was written to drop runs the shift
      * pushes past their own end, which makes the effective minimum note length a
@@ -394,9 +396,9 @@ export interface VoiceDecodeOptions {
      * [+0.0027, +0.0037], human +0.0026 [+0.0022, +0.0031], real-only singing +0.0072;
      * esmuc +0.025, AVS clean +0.002, every AVS and vocadito reverb row ≥ −0.002 (none
      * significantly negative); whistling and instruments exactly 0; exact-truth synthetic
-     * singing through the real model +0.006 [+0.002, +0.010]. With it, 0.05 stays
-     * the best onset shift on dev and esmuc and hust move their optimum from 0.07 to 0.05
-     * with the human-annotated sets. Context: humming (mir-qbsh) +0.002; onset recall
+     * singing through the real model +0.006 [+0.002, +0.010]. With it (a dev sweep run
+     * after the test look, so post hoc), 0.05 stays the best onset shift and esmuc and hust
+     * move their optimum from 0.07 to 0.05 with the human-annotated sets. Context: humming (mir-qbsh) +0.002; onset recall
      * on syllables (jacrc-students) −0.037 and AVP onset F1 −0.029 give back about a third
      * of what SING-H1 bought there, since some 80 ms runs are real (unpitched) events.
      */
@@ -800,8 +802,12 @@ export class VoiceNoteDecoder {
                 }
             }
             // The existence test: judged at the reporting shift unless `existenceShiftSec`
-            // separates the two (unset keeps the historical arithmetic exactly).
-            const existenceStart = this.o.existenceShiftSec === undefined ? start : startFrame * track.hopSec + this.o.existenceShiftSec
+            // separates the two (unset keeps the historical arithmetic exactly). Never at
+            // less than the reporting shift, so no note is written shorter than one hop.
+            const existenceStart =
+                this.o.existenceShiftSec === undefined
+                    ? start
+                    : startFrame * track.hopSec + Math.max(this.o.existenceShiftSec, this.o.onsetShiftSec)
             if (end - existenceStart < track.hopSec) continue
             // Back-extension moves the onset of a note that exists; it must not decide
             // whether one does, so it is applied after the length test above (a run the
