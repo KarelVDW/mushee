@@ -1,7 +1,7 @@
 # The benchmark-score timeline
 
 How good was the transcription at each point in its history, measured with
-**today's** scorer and **today's** truth? Fifteen sampled pipeline states
+**today's** scorer and **today's** truth? Sixteen sampled pipeline states
 (`commits.json`) each transcribe the same fixed clip set (`clipset.json`) through
 their own `RecordingPipeline`; the notes are cached per commit, and scoring is a
 separate, seconds-long step that can be re-run whenever the truth improves. The
