@@ -168,10 +168,16 @@ export class AudioConverter {
      * One pass: transcribe `samples`, then clean and beat-quantize the notes at `bpm`.
      * `pitchOptions` replaces the profile's tuning wholesale — for unprofiled runs
      * (a fixed provider in the eval harness); production passes nothing.
+     * `pass.final` marks a streaming session's last pass (see `finalPass`).
      */
-    async convert(samples: Float32Array, bpm: number, pitchOptions = this.pitchOptions): Promise<ExtractedNotes> {
+    async convert(samples: Float32Array, bpm: number, pitchOptions = this.pitchOptions, pass: { final?: boolean } = {}): Promise<ExtractedNotes> {
         const onsetTimesSec = this.onsetDetector?.detect(samples, this.provider.sampleRate)
-        const raw = await this.provider.transcribe(samples, pitchOptions, this.session)
+        const raw = await this.provider.transcribe(samples, pass.final ? { ...pitchOptions, finalPass: true } : pitchOptions, this.session)
         return this.extractor.extract(raw, { bpm, onsetTimesSec })
+    }
+
+    /** Whether this recording's passes decoded under different take-level decisions (`PitchProvider.voicingAdaptationDrifted`). */
+    voicingAdaptationDrifted(): boolean {
+        return this.provider.voicingAdaptationDrifted?.(this.session) ?? false
     }
 }

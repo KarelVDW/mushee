@@ -412,8 +412,16 @@ export class RecordingPipeline {
 
         const duration = full.length / provider.sampleRate
 
-        const extracted = await converter.convert(full, this.bpm)
+        const extracted = await converter.convert(full, this.bpm, undefined, { final: isFinal })
         const tConvert = Date.now()
+        // The decode-side reverb adaptation (built off) re-measures the whole take on
+        // the final pass; when that changed the gate an earlier pass committed notes
+        // under, those notes may contradict the final ones, so the final pass
+        // supersedes them — the same rebuild a re-routed take gets.
+        if (isFinal && converter.voicingAdaptationDrifted()) {
+            this.logger.debug('Final pass re-measured the reverb adaptation differently; rebuilding the score from it')
+            this.discardCommitted()
+        }
         this.emitFromExtracted(extracted, duration, isFinal)
         const tEnd = Date.now()
 
@@ -550,6 +558,14 @@ export class RecordingPipeline {
         void this.streamDecoder.finalize().catch(() => undefined)
         this.lockProfile(profile)
         this.streamDecoder = this.spawnDecoder()
+        this.discardCommitted()
+    }
+
+    /**
+     * Forget every committed note so the next (final) emission rebuilds the score
+     * from that pass alone — every measure, including ones that end up empty.
+     */
+    private discardCommitted(): void {
         this.emittedNotes.length = 0
         this.emittedKeys.clear()
         this.reemitAll = true

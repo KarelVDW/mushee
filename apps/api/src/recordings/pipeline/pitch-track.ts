@@ -1,3 +1,15 @@
+import type { NoteEventTime } from './note-event'
+
+/** What a take says about its room — see `PitchTrack.reverbEvidence`. */
+export interface ReverbEvidence {
+    /** Median confidence over the loud frames (1 when there are none). */
+    confMed: number
+    /** Frames the median is over. */
+    loudFrames: number
+    /** P95 100-ms level drop in dB (99 when nothing is loud enough to measure). */
+    maxDropDb: number
+}
+
 /**
  * A frame-level pitch trajectory: what a trajectory provider (CREPE) actually
  * measures, before anything decides where notes begin and end.
@@ -120,6 +132,92 @@ export class PitchTrack {
             i = end
         }
         return new PitchTrack(cents, confidence, this.frames, this.hopSec, this.candCents, this.candStrength, this.candK)
+    }
+
+    /**
+     * What a take's own trajectory and envelope say about the room it was
+     * recorded in — the evidence `ReverbDecodeAdaptation` (profiles/reverberance.ts)
+     * decides on. Over the first `frames` frames (default: all), so a streaming
+     * caller can measure a prefix.
+     *
+     *  - `confMed`: the median model confidence over the LOUD frames (energy ≥ 10 %
+     *    of the peak frame's). A room smears every note into the next, and CREPE's
+     *    confidence on those frames falls while their level does not: on the
+     *    regenerated adverse tier (2026-11-01, dev) voice reads 0.868 clean →
+     *    0.763 echoey / 0.722 distant (AUC 0.90 / 0.94), plucked AUC 0.94 / 0.96,
+     *    sustained 0.65 / 0.72 — where the shipped `dipDepth` reads AUC 0.45–0.47
+     *    for voice and sustained.
+     *  - `loudFrames`: how many frames that median is over (the streaming freeze
+     *    waits for enough of them).
+     *  - `maxDropDb`: the 95th percentile of the level drop over 100 ms of real time,
+     *    from frames ≥ −30 dB re peak. A room caps how fast a level can fall; dry
+     *    instrument takes have releases that fall 15–16 dB in 100 ms (median).
+     *
+     * `energy` is the per-frame RMS on this track's grid (`frameEnergy`), and
+     * `realHopSec` the real time one frame spans (the octave-down provider's frames
+     * span half its model hop).
+     */
+    reverbEvidence(energy: Float32Array, realHopSec: number, frames = this.frames): ReverbEvidence {
+        const n = Math.min(frames, this.frames, energy.length)
+        let peak = 0
+        for (let i = 0; i < n; i += 1) if (energy[i] > peak) peak = energy[i]
+        const loud: number[] = []
+        for (let i = 0; i < n; i += 1) if (energy[i] >= 0.1 * peak) loud.push(this.confidence[i])
+        loud.sort((a, b) => a - b)
+
+        const lag = Math.max(1, Math.round(0.1 / realHopSec))
+        const db = (v: number): number => 20 * Math.log10(v + 1e-9)
+        const drops: number[] = []
+        for (let i = 0; i + lag < n; i += 1) {
+            if (energy[i] < peak * 0.0316) continue
+            drops.push(db(energy[i]) - db(Math.max(energy[i + lag], peak * 1e-3)))
+        }
+        drops.sort((a, b) => a - b)
+        return {
+            confMed: loud.length ? loud[loud.length >> 1] : 1,
+            loudFrames: loud.length,
+            maxDropDb: drops.length ? drops[Math.floor(drops.length * 0.95)] : 99,
+        }
+    }
+
+    /**
+     * Move each note's start BACK over the frames just before it that already sit
+     * at its pitch but under the voicing gate — a reverberant onset (ADV-H3).
+     *
+     * Under reverb the true attack is there in the trajectory (argmax at the new
+     * pitch) but its confidence sits below the gate until the previous note's
+     * wash decays, so the note is detected late. Only frames whose pitch is
+     * within `toleranceCents` of the note and whose confidence is ≥
+     * `minConfidence` are taken, at most `maxFrames`, and never into (or
+     * touching) the previous note — so it only ever fills a gap the gate left,
+     * never moves a boundary between two notes. Notes come back sorted by start.
+     */
+    backExtendOnsets(notes: NoteEventTime[], opts: { minConfidence: number; maxFrames: number; toleranceCents?: number }): NoteEventTime[] {
+        const tol = opts.toleranceCents ?? 50
+        const hop = this.hopSec
+        const frameOf = (t: number): number => Math.round(t / hop)
+        const out = notes.map((n) => ({ ...n })).sort((a, b) => a.startTimeSeconds - b.startTimeSeconds)
+        for (let i = 0; i < out.length; i += 1) {
+            const note = out[i]
+            const prev = i > 0 ? out[i - 1] : undefined
+            const first = frameOf(note.startTimeSeconds)
+            const floor = Math.max(0, prev ? frameOf(prev.startTimeSeconds + prev.durationSeconds) + 1 : 0, first - opts.maxFrames)
+            const target = note.pitchMidi * 100
+            let f = first
+            while (
+                f - 1 >= floor &&
+                f - 1 < this.frames &&
+                Math.abs(this.cents[f - 1] - target) <= tol &&
+                this.confidence[f - 1] >= opts.minConfidence
+            )
+                f -= 1
+            const start = f * hop
+            if (f < first && start < note.startTimeSeconds) {
+                note.durationSeconds = note.startTimeSeconds + note.durationSeconds - start
+                note.startTimeSeconds = start
+            }
+        }
+        return out
     }
 
     /**

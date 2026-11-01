@@ -47,6 +47,12 @@ export interface PitchTranscribeOptions {
     smoothFrames?: number
     /** Semitone-mode per-clip tuning-offset correction; default on. */
     tuningCorrect?: boolean
+    /**
+     * Set on a session's LAST pass (the whole take). Read only by the decode-side
+     * reverb adaptation (`ReverbDecodeAdaptation`, built off), which re-measures the
+     * whole take there instead of the evidence it froze mid-take.
+     */
+    finalPass?: boolean
 }
 
 /**
@@ -103,6 +109,14 @@ export interface PitchProvider {
      * `session` between concurrent recordings.
      */
     transcribe(samples: Float32Array, options?: PitchTranscribeOptions, session?: PitchSession): Promise<NoteEventTime[]>
+
+    /**
+     * True when the passes of `session` decoded under different take-level
+     * decisions (the decode-side reverb adaptation's gate), so notes committed by
+     * an earlier pass may contradict the final one. Optional: a provider with no
+     * take-level adaptation never drifts.
+     */
+    voicingAdaptationDrifted?(session: PitchSession): boolean
 }
 
 /**
