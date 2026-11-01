@@ -37,7 +37,11 @@ import type { PitchProvider, PitchSession, PitchTranscribeOptions } from './prov
  * 85, repeats 212 → 185 of 450. With the 0.2 s fragment limit: URMP repeats
  * 665 → 666 of 840, synthetic 212 → 210, re-onset recall 197 → 199 / 39 → 39,
  * synthetic COnP +0.0049 (n.s.). The limit was chosen after seeing that
- * synthetic result.
+ * synthetic result, so the other 34 synthetic instruments (home-phone + room,
+ * 362 performances, scored only afterwards) are the fresh check: COnP +0.0010
+ * [+0.0003, +0.0017]*, re-onset recall 95 → 96 of 312, repeats 1026 → 1022 of
+ * 2496 (any-length rule: 95 → 90, 1026 → 977); brass −0.0007 n.s.; piano,
+ * guitar and bass guitar exactly 0.
  * Wider veto margins (50–100 ms) were measured too: they save fewer repeats than
  * they cost fragment joins (URMP COnP lower at every margin).
  */
