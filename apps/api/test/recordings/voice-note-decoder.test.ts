@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { PitchTrack } from '../../src/recordings/pipeline/pitch-track'
 import { SHIPPING_VOICE_OPTS, VoiceNoteDecoder } from '../../src/recordings/pipeline/voice-note-decoder'
@@ -20,6 +20,8 @@ interface NoteSpec {
     vibratoCents?: number
     /** Semitones below the target the note scoops from, over its first 60 ms. */
     scoopSemitones?: number
+    /** Frame confidence (default 0.9); below the 0.5 gate the pitch is present but unvoiced. */
+    conf?: number
 }
 
 /**
@@ -44,8 +46,8 @@ function contour(spec: NoteSpec[]): { track: PitchTrack; energy: Float32Array } 
             const scoopFrames = Math.round(0.06 / HOP)
             const scoop = n.scoopSemitones && i < scoopFrames ? -100 * n.scoopSemitones * (1 - i / scoopFrames) : 0
             cents.push(n.midi * 100 + vib + scoop)
-            conf.push(0.9)
-            energy.push(0.2)
+            conf.push(n.conf ?? 0.9)
+            energy.push(n.conf !== undefined && n.conf < 0.5 ? 0.02 : 0.2)
         }
     }
     return {
@@ -151,5 +153,115 @@ describe('VoiceNoteDecoder', () => {
         ])
         const kept = decoder({ mergeGuard: guard }).decode(held.track, held.energy)
         expect(kept.map((n) => n.pitchMidi)).toEqual([60, 61])
+    })
+
+    describe('backExtend (sub-gate onset back-extension, off by default)', () => {
+        const backExtend = { minConfidence: 0.15, windowSec: 0.15 }
+        // A rest, then 80 ms of the next note's pitch at sub-gate confidence, then the note.
+        const quietOnset = (): ReturnType<typeof contour> =>
+            contour([
+                { midi: 60, sec: 0.5 },
+                { midi: null, sec: 0.3 },
+                { midi: 64, sec: 0.08, conf: 0.3 },
+                { midi: 64, sec: 0.5 },
+            ])
+
+        it('starts a note entered from silence where its pitch was already present below the gate', () => {
+            const { track, energy } = quietOnset()
+            const plain = decoder().decode(track, energy)
+            const extended = decoder({ backExtend }).decode(track, energy)
+            expect(extended.map((n) => n.pitchMidi)).toEqual(plain.map((n) => n.pitchMidi))
+            // The four sub-gate frames move the onset 80 ms earlier; the end stays put.
+            expect(plain[1].startTimeSeconds - extended[1].startTimeSeconds).toBeCloseTo(0.08, 6)
+            const end = (n: { startTimeSeconds: number; durationSeconds: number }): number => n.startTimeSeconds + n.durationSeconds
+            expect(end(extended[1])).toBeCloseTo(end(plain[1]), 6)
+            // The first note has nothing before it to extend over.
+            expect(extended[0]).toEqual(plain[0])
+        })
+
+        it('reaches back at most windowSec and never into the previous note', () => {
+            const { track, energy } = quietOnset()
+            const short = decoder({ backExtend: { minConfidence: 0.15, windowSec: 0.04 } }).decode(track, energy)
+            const plain = decoder().decode(track, energy)
+            expect(plain[1].startTimeSeconds - short[1].startTimeSeconds).toBeCloseTo(0.04, 6)
+
+            // The whole rest at the next pitch: the onset stops at the rest's first frame.
+            const legato = contour([
+                { midi: 60, sec: 0.5 },
+                { midi: 62, sec: 0.1, conf: 0.3 },
+                { midi: 62, sec: 0.5 },
+            ])
+            const notes = decoder({ backExtend: { minConfidence: 0.15, windowSec: 0.5 } }).decode(legato.track, legato.energy)
+            expect(notes).toHaveLength(2)
+            expect(notes[1].startTimeSeconds).toBeGreaterThanOrEqual(notes[0].startTimeSeconds + notes[0].durationSeconds)
+        })
+
+        it('leaves frames at another pitch or under minConfidence alone', () => {
+            const offPitch = contour([
+                { midi: null, sec: 0.3 },
+                { midi: 66, sec: 0.08, conf: 0.3 },
+                { midi: 64, sec: 0.5 },
+            ])
+            const quiet = contour([
+                { midi: null, sec: 0.3 },
+                { midi: 64, sec: 0.08, conf: 0.1 },
+                { midi: 64, sec: 0.5 },
+            ])
+            for (const { track, energy } of [offPitch, quiet]) {
+                expect(decoder({ backExtend }).decode(track, energy)).toEqual(decoder().decode(track, energy))
+            }
+        })
+
+        it('moves onsets of notes that exist but never makes one', () => {
+            // 60 ms of voice: the 70 ms onset shift pushes its start past its end, so the
+            // decode drops it — and lengthening it backwards must not bring it back.
+            const { track, energy } = contour([
+                { midi: null, sec: 0.3 },
+                { midi: 64, sec: 0.1, conf: 0.3 },
+                { midi: 64, sec: 0.06 },
+                { midi: null, sec: 0.3 },
+            ])
+            const over = { minNoteSec: 0.02 }
+            // The run is there (unshifted it is a note); only the shift drops it.
+            expect(decoder({ ...over, onsetShiftSec: 0 }).decode(track, energy)).toHaveLength(1)
+            expect(decoder(over).decode(track, energy)).toEqual([])
+            expect(decoder({ ...over, backExtend }).decode(track, energy)).toEqual([])
+        })
+    })
+})
+
+describe('SHIPPING_VOICE_OPTS env overrides', () => {
+    const KEYS = ['VOICE_ONSET_SHIFT_SEC', 'VOICE_ONSET_BACKEXTEND'] as const
+    const saved = Object.fromEntries(KEYS.map((k) => [k, process.env[k]]))
+    afterEach(() => {
+        for (const k of KEYS) {
+            if (saved[k] === undefined) delete process.env[k]
+            else process.env[k] = saved[k]
+        }
+        vi.resetModules()
+    })
+    async function shippingWith(env: Partial<Record<(typeof KEYS)[number], string>>): Promise<typeof SHIPPING_VOICE_OPTS> {
+        for (const k of KEYS) delete process.env[k]
+        Object.assign(process.env, env)
+        vi.resetModules()
+        return (await import('../../src/recordings/pipeline/voice-note-decoder')).SHIPPING_VOICE_OPTS
+    }
+
+    it('adds nothing when unset, so production decodes exactly as before', async () => {
+        expect(await shippingWith({})).toEqual({ transitionMode: 'direct', changeCost: 2.5, evidenceDiscount: 0.35, trust: 0.7 })
+    })
+
+    it('reads the onset shift and the back-extension pair', async () => {
+        const o = await shippingWith({ VOICE_ONSET_SHIFT_SEC: '0.05', VOICE_ONSET_BACKEXTEND: '0.15,0.1' })
+        expect(o.onsetShiftSec).toBe(0.05)
+        expect(o.backExtend).toEqual({ minConfidence: 0.15, windowSec: 0.1 })
+    })
+
+    it('ignores malformed values instead of feeding NaN into the decode', async () => {
+        for (const bad of ['off', '0.15', '0.15,', 'a,b', '0.1,0.2,0.3']) {
+            const o = await shippingWith({ VOICE_ONSET_SHIFT_SEC: 'abc', VOICE_ONSET_BACKEXTEND: bad })
+            expect(o.onsetShiftSec).toBeUndefined()
+            expect(o.backExtend).toBeUndefined()
+        }
     })
 })
