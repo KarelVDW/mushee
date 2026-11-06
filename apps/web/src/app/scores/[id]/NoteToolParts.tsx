@@ -242,18 +242,24 @@ export const ICON_VIEW_HEIGHT = 32
 export const ICON_HEAD_HALF = 180 * GLYPH_SCALE
 /** CSS px per view-box unit: the 30-unit view drew at 28px, and the taller view keeps that scale. */
 const ICON_PX_PER_UNIT = 28 / 30
+/**
+ * The flag's glyph scale. Bravura's flags hang about 3¼ staff spaces, sized for the score's
+ * 3½-space stem; on the icon's shorter stem a full-size flag would hang past the notehead,
+ * so it draws at 0.6 of that and its tail ends beside the head's upper half, as in print.
+ */
+export const ICON_FLAG_SCALE = GLYPH_SCALE * 0.6
 
 /** How far a duration's glyph reaches to the right of its notehead's left edge (layout units). */
 function glyphExtent(type: DurationType): number {
     const duration = new Duration({ type })
     const head = Bravura.width(duration.noteheadGlyph)
     const flag = duration.flagGlyph('up')
-    return flag ? head + Bravura.width(flag) : head
+    return flag ? head + Bravura.width(flag, ICON_FLAG_SCALE) : head
 }
 
 /**
- * One view-box width for every value, wide enough for the widest (the flagged eighth and
- * sixteenth, the whole notehead), so the five glyphs share a scale and none is clipped.
+ * One view-box width for every value, wide enough for the widest (the flagged sixteenth),
+ * so the five glyphs share a scale and none is clipped.
  */
 const ICON_VIEW_WIDTH = Math.ceil(Math.max(...DURATION_TYPES.map(glyphExtent)) + 2)
 
@@ -324,7 +330,7 @@ export function DurationIcon({ dur, dotted = false }: { dur: DurationType; dotte
             aria-hidden>
             <g transform={`translate(0 ${layout.offsetY})`}>
                 {layout.hasStem && <line x1={stemX} y1={ICON_NOTE_Y} x2={stemX} y2={stemY2} stroke="currentColor" strokeWidth={1.2} />}
-                {flagName && <Glyph name={flagName} x={stemX} y={stemY2} fill="currentColor" />}
+                {flagName && <Glyph name={flagName} x={stemX} y={stemY2} scale={ICON_FLAG_SCALE} fill="currentColor" />}
                 <Glyph name={noteGlyph} x={noteX} y={ICON_NOTE_Y} fill="currentColor" />
                 {/* The augmentation dot: a drawn mark beside the head, never a "·" character. */}
                 {dotted && <circle cx={stemX + dotGap} cy={ICON_NOTE_Y - 2} r={1.9} fill="currentColor" />}
