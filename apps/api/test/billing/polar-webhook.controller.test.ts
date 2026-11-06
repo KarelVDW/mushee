@@ -36,7 +36,9 @@ function makeController() {
         into: () => qb,
         values: () => qb,
         orIgnore: () => qb,
-        execute: vi.fn(() => Promise.resolve({ identifiers: [{ id: 'x' }] })),
+        returning: () => qb,
+        // As TypeORM on Postgres reports a fresh insert: a RETURNING row in `raw`.
+        execute: vi.fn(() => Promise.resolve({ identifiers: [{ id: 'x' }], raw: [{ id: 'x' }] })),
     }
     const manager = {
         createQueryBuilder: () => qb,

@@ -82,10 +82,22 @@ export class PolarWebhookService {
         ])
     }
 
-    /** Insert the delivery id; false means we've already seen it. */
+    /**
+     * Insert the delivery id; false means we've already seen it. Only the
+     * RETURNING rows (`raw`) tell the two apart: ON CONFLICT DO NOTHING returns
+     * none. `identifiers` can't — TypeORM fills it from the values passed in,
+     * inserted or not.
+     */
     private async markProcessed(deliveryId: string, em: EntityManager): Promise<boolean> {
-        const result = await em.createQueryBuilder().insert().into(ProcessedWebhookEvent).values({ id: deliveryId }).orIgnore().execute()
-        return (result.identifiers?.length ?? 0) > 0
+        const result = await em
+            .createQueryBuilder()
+            .insert()
+            .into(ProcessedWebhookEvent)
+            .values({ id: deliveryId })
+            .orIgnore()
+            .returning('id')
+            .execute()
+        return Array.isArray(result.raw) && result.raw.length > 0
     }
 
     private async applyEvent(event: PolarWebhookEvent, em: EntityManager): Promise<void> {

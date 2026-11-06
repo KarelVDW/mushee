@@ -55,15 +55,20 @@ function makeService(
         revokePackSeconds: vi.fn(() => Promise.resolve()),
     }
     // Minimal EntityManager: the dedupe insert query builder + a transaction
-    // that simply runs the callback against itself.
+    // that simply runs the callback against itself. The insert result mirrors
+    // TypeORM on Postgres: `identifiers` is always filled from the passed
+    // values; only the RETURNING rows (`raw`) are empty when ON CONFLICT DO
+    // NOTHING skipped a duplicate.
     const insertResult = {
-        identifiers: opts.duplicateDelivery ? [] : [{ id: 'wh-1' }],
+        identifiers: [{ id: 'wh-1' }],
+        raw: opts.duplicateDelivery ? [] : [{ id: 'wh-1' }],
     }
     const qb = {
         insert: () => qb,
         into: () => qb,
         values: () => qb,
         orIgnore: () => qb,
+        returning: () => qb,
         execute: vi.fn(() => Promise.resolve(insertResult)),
     }
     const manager = {
@@ -307,6 +312,16 @@ describe('handleWebhook', () => {
         const { service, credits } = makeService()
         await expect(service.handleWebhook(rawBody, WEBHOOK_HEADERS)).resolves.toBe(true)
         expect(credits.grantPackSeconds).toHaveBeenCalledWith(USER.id, 15 * 60, expect.anything())
+    })
+
+    it('does not grant pack seconds twice when Polar retries an order.paid delivery', async () => {
+        deliver({
+            type: 'order.paid',
+            data: { product_id: PACK_SINGLE, customer: { external_id: USER.id }, metadata: {} },
+        })
+        const { service, credits } = makeService({ duplicateDelivery: true })
+        await expect(service.handleWebhook(rawBody, WEBHOOK_HEADERS)).resolves.toBe(false)
+        expect(credits.grantPackSeconds).not.toHaveBeenCalled()
     })
 
     it('falls back to checkout metadata when the order has no external customer id', async () => {
