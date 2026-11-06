@@ -1,23 +1,22 @@
 /**
- * Typed access to `@polar-sh/sdk/webhooks` (standard-webhooks signature
- * validation). The SDK publishes it as a package-exports subpath which Node
- * resolves fine at runtime, but this project's commonjs/node10 TypeScript
- * moduleResolution cannot type-resolve — so it is loaded via require with
- * the narrow surface we use typed here.
+ * Polar webhook signature verification, for the API version pinned in ./sdk.
+ * A module of its own so service tests can mock it at this seam.
+ *
+ * `validateEvent` is async. It accepts both of Polar's signing-key schemes:
+ * the legacy key (the UTF-8 bytes of the whole secret) and the Standard
+ * Webhooks key (the base64-decoded part after `whsec_`), which every secret
+ * created since 2026-09-08 uses. It returns the parsed JSON payload as Polar
+ * sent it: snake_case fields, timestamps as ISO strings.
+ *
+ * Errors: `WebhookVerificationError` for a bad or stale signature (→ 403);
+ * `WebhookUnknownTypeError` for a correctly signed event whose type the pinned
+ * version does not model (acknowledge it, don't fail it).
  */
 
-export interface PolarWebhookEvent {
-    type: string
-    data: unknown
-}
+import { webhooks } from './sdk'
 
-interface PolarWebhooksModule {
-    validateEvent: (body: string | Buffer, headers: Record<string, string>, secret: string) => PolarWebhookEvent
-    WebhookVerificationError: new (message: string) => Error
-}
-
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const webhooks = require('@polar-sh/sdk/webhooks') as PolarWebhooksModule
+export type PolarWebhookEvent = webhooks.WebhookPayload
 
 export const validateEvent = webhooks.validateEvent
-export const WebhookVerificationError = webhooks.WebhookVerificationError
+export const WebhookVerificationError = webhooks.PolarWebhookVerificationError
+export const WebhookUnknownTypeError = webhooks.PolarWebhookUnknownTypeError

@@ -1,11 +1,11 @@
 import 'reflect-metadata'
 
 import { BadRequestException, ForbiddenException, Logger, ServiceUnavailableException } from '@nestjs/common'
-import type { Polar } from '@polar-sh/sdk'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { BillingService } from '../../src/billing/billing.service'
 import { isBillingConfigured, polarClient } from '../../src/billing/polar/client'
+import { type Polar, PolarClientError } from '../../src/billing/polar/sdk'
 import type { RecordingCreditsService } from '../../src/recordings/recording-credits.service'
 import type { SubscriptionsService } from '../../src/subscriptions/subscriptions.service'
 
@@ -28,10 +28,10 @@ function fakePolar() {
             create: vi.fn(() => Promise.resolve({ url: 'https://polar.sh/checkout/1' })),
         },
         customerSessions: {
-            create: vi.fn(() => Promise.resolve({ customerPortalUrl: 'https://polar.sh/portal/1' })),
+            create: vi.fn(() => Promise.resolve({ customer_portal_url: 'https://polar.sh/portal/1' })),
         },
         subscriptions: { update: vi.fn(() => Promise.resolve({})) },
-        customers: { deleteExternal: vi.fn(() => Promise.resolve({})) },
+        customers: { deleteExternal: vi.fn(() => Promise.resolve()) },
     }
 }
 
@@ -172,10 +172,10 @@ describe('createCheckout', () => {
         })
         expect(polar.checkouts.create).toHaveBeenCalledWith({
             products: [PRO_MONTHLY],
-            externalCustomerId: USER.id,
-            customerEmail: USER.email,
-            customerIpAddress: '203.0.113.7',
-            successUrl: 'https://app.example.com/settings?checkout=success',
+            external_customer_id: USER.id,
+            customer_email: USER.email,
+            customer_ip_address: '203.0.113.7',
+            success_url: 'https://app.example.com/settings?checkout=success',
             metadata: { userId: USER.id },
         })
     })
@@ -214,11 +214,30 @@ describe('createPackCheckout', () => {
         })
         expect(polar.checkouts.create).toHaveBeenCalledWith({
             products: [PACK_SINGLE],
-            externalCustomerId: USER.id,
-            customerEmail: USER.email,
-            customerIpAddress: '203.0.113.7',
-            successUrl: 'https://app.example.com/settings?pack=success',
+            external_customer_id: USER.id,
+            customer_email: USER.email,
+            customer_ip_address: '203.0.113.7',
+            success_url: 'https://app.example.com/settings?pack=success',
             metadata: { userId: USER.id, packId: 'single' },
+        })
+    })
+})
+
+describe('createPortalSession', () => {
+    it('answers 503 when Polar is not configured', async () => {
+        const { service } = makeService()
+        await expect(service.createPortalSession(USER.id)).rejects.toBeInstanceOf(ServiceUnavailableException)
+    })
+
+    it('opens the hosted portal for the external customer, returning to settings', async () => {
+        process.env.WEB_APP_URL = 'https://app.example.com/'
+        const polar = fakePolar()
+        configurePolar(polar)
+        const { service } = makeService()
+        await expect(service.createPortalSession(USER.id)).resolves.toEqual({ url: 'https://polar.sh/portal/1' })
+        expect(polar.customerSessions.create).toHaveBeenCalledWith({
+            external_customer_id: USER.id,
+            return_url: 'https://app.example.com/settings',
         })
     })
 })
@@ -243,10 +262,7 @@ describe('changePlan', () => {
             row: { tierId: 'pro', polarSubscriptionId: 'sub-1', polarProductId: PRO_MONTHLY },
         })
         const state = await service.changePlan(USER.id, 'pro', 'yearly')
-        expect(polar.subscriptions.update).toHaveBeenCalledWith({
-            id: 'sub-1',
-            subscriptionUpdate: { productId: PRO_YEARLY },
-        })
+        expect(polar.subscriptions.update).toHaveBeenCalledWith('sub-1', { product_id: PRO_YEARLY })
         expect(subscriptions.upsert).toHaveBeenCalledWith(USER.id, {
             tierId: 'pro',
             polarProductId: PRO_YEARLY,
@@ -271,19 +287,13 @@ describe('cancelAtPeriodEnd / resumeSubscription', () => {
         })
 
         await service.cancelAtPeriodEnd(USER.id)
-        expect(polar.subscriptions.update).toHaveBeenLastCalledWith({
-            id: 'sub-1',
-            subscriptionUpdate: { cancelAtPeriodEnd: true },
-        })
+        expect(polar.subscriptions.update).toHaveBeenLastCalledWith('sub-1', { cancel_at_period_end: true })
         expect(subscriptions.upsert).toHaveBeenLastCalledWith(USER.id, {
             cancelAtPeriodEnd: true,
         })
 
         await service.resumeSubscription(USER.id)
-        expect(polar.subscriptions.update).toHaveBeenLastCalledWith({
-            id: 'sub-1',
-            subscriptionUpdate: { cancelAtPeriodEnd: false },
-        })
+        expect(polar.subscriptions.update).toHaveBeenLastCalledWith('sub-1', { cancel_at_period_end: false })
         expect(subscriptions.upsert).toHaveBeenLastCalledWith(USER.id, {
             cancelAtPeriodEnd: false,
         })
@@ -301,14 +311,12 @@ describe('deletePolarCustomer', () => {
         configurePolar(polar)
         const { service } = makeService()
         await service.deletePolarCustomer(USER.id)
-        expect(polar.customers.deleteExternal).toHaveBeenCalledWith({
-            externalId: USER.id,
-        })
+        expect(polar.customers.deleteExternal).toHaveBeenCalledWith(USER.id)
     })
 
     it('swallows a 404 (customer never checked out)', async () => {
         const polar = fakePolar()
-        polar.customers.deleteExternal.mockRejectedValue(Object.assign(new Error('not found'), { statusCode: 404 }))
+        polar.customers.deleteExternal.mockRejectedValue(new PolarClientError(404, { detail: 'Not found' }))
         configurePolar(polar)
         const { service } = makeService()
         await expect(service.deletePolarCustomer(USER.id)).resolves.toBeUndefined()
@@ -316,9 +324,10 @@ describe('deletePolarCustomer', () => {
 
     it('rethrows other Polar errors so the purge cron retries', async () => {
         const polar = fakePolar()
-        polar.customers.deleteExternal.mockRejectedValue(Object.assign(new Error('rate limited'), { status: 429 }))
+        const rateLimited = new PolarClientError(429, 'Too many requests')
+        polar.customers.deleteExternal.mockRejectedValue(rateLimited)
         configurePolar(polar)
         const { service } = makeService()
-        await expect(service.deletePolarCustomer(USER.id)).rejects.toThrow('rate limited')
+        await expect(service.deletePolarCustomer(USER.id)).rejects.toBe(rateLimited)
     })
 })

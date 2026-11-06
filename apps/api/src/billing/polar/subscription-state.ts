@@ -3,11 +3,12 @@
  * patches. Kept free of Nest/TypeORM so the billing state machine is easy
  * to unit test.
  *
- * Polar's canonical customer key is `externalCustomerId`, which we always
- * set to the Solkey user id at checkout.
+ * Polar's canonical customer key is the customer's `external_id`, which we
+ * always set to the Solkey user id at checkout.
  */
 
 import { isPaidTierId } from './products'
+import type { models } from './sdk'
 
 export interface SubscriptionSnapshot {
     id: string
@@ -18,6 +19,33 @@ export interface SubscriptionSnapshot {
     cancelAtPeriodEnd?: boolean
     /** Polar's `modified_at` — used to drop out-of-order webhook retries. */
     modifiedAt?: Date | null
+}
+
+/** A subscription as Polar sends it: in subscription.* events, or inside a
+ *  customer.state_changed snapshot (which carries no customer id). */
+export type PolarSubscription = models.Subscription | models.CustomerStateSubscription
+
+/**
+ * Our view of a Polar subscription. Polar payloads are snake_case with ISO
+ * timestamp strings; the state machine below works on Dates.
+ */
+export function snapshotFromPolar(sub: PolarSubscription): SubscriptionSnapshot {
+    return {
+        id: sub.id,
+        status: sub.status,
+        productId: sub.product_id,
+        customerId: 'customer_id' in sub ? sub.customer_id : undefined,
+        currentPeriodEnd: parseTimestamp(sub.current_period_end),
+        cancelAtPeriodEnd: sub.cancel_at_period_end,
+        modifiedAt: parseTimestamp(sub.modified_at),
+    }
+}
+
+/** An ISO timestamp from a Polar payload; null when absent or unparseable. */
+function parseTimestamp(value: string | null | undefined): Date | null {
+    if (!value) return null
+    const date = new Date(value)
+    return Number.isNaN(date.getTime()) ? null : date
 }
 
 export interface SubscriptionRowPatch {

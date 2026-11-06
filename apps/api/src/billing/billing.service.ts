@@ -1,5 +1,4 @@
 import { BadRequestException, ForbiddenException, Injectable, Logger, ServiceUnavailableException } from '@nestjs/common'
-import type { Polar } from '@polar-sh/sdk'
 
 import { isBetaMode } from '../beta/beta-config'
 import { webAppUrl } from '../config/app-urls'
@@ -8,6 +7,7 @@ import { SubscriptionsService } from '../subscriptions/subscriptions.service'
 import { isBillingConfigured, polarClient } from './polar/client'
 import { PackId, productIdForPack } from './polar/packs'
 import { BillingInterval, intervalForProduct, PaidTierId, productIdFor } from './polar/products'
+import { type Polar, PolarClientError } from './polar/sdk'
 
 export interface BillingState {
     tierId: string
@@ -132,10 +132,10 @@ export class BillingService {
     ): Promise<{ url: string }> {
         const checkout = await polar.checkouts.create({
             products: [productId],
-            externalCustomerId: user.id,
-            customerEmail: user.email,
-            customerIpAddress: customerIp,
-            successUrl: `${webAppUrl()}/settings?${opts.successQuery}`,
+            external_customer_id: user.id,
+            customer_email: user.email,
+            customer_ip_address: customerIp,
+            success_url: `${webAppUrl()}/settings?${opts.successQuery}`,
             metadata: opts.metadata,
         })
         return { url: checkout.url }
@@ -145,10 +145,10 @@ export class BillingService {
     async createPortalSession(userId: string): Promise<{ url: string }> {
         const polar = this.requirePolar()
         const session = await polar.customerSessions.create({
-            externalCustomerId: userId,
-            returnUrl: `${webAppUrl()}/settings`,
+            external_customer_id: userId,
+            return_url: `${webAppUrl()}/settings`,
         })
-        return { url: session.customerPortalUrl }
+        return { url: session.customer_portal_url }
     }
 
     /**
@@ -163,10 +163,7 @@ export class BillingService {
             throw new BadRequestException('No active subscription to change — start a checkout instead.')
         }
         const productId = this.planProductId(tierId, interval)
-        await polar.subscriptions.update({
-            id: row.polarSubscriptionId,
-            subscriptionUpdate: { productId },
-        })
+        await polar.subscriptions.update(row.polarSubscriptionId, { product_id: productId })
         await this.subscriptions.upsert(userId, { tierId, polarProductId: productId })
         return this.getState(userId)
     }
@@ -187,10 +184,7 @@ export class BillingService {
         if (!row?.polarSubscriptionId) {
             throw new BadRequestException('No active subscription to change.')
         }
-        await polar.subscriptions.update({
-            id: row.polarSubscriptionId,
-            subscriptionUpdate: { cancelAtPeriodEnd: cancel },
-        })
+        await polar.subscriptions.update(row.polarSubscriptionId, { cancel_at_period_end: cancel })
         // Mirror immediately; the webhook confirms shortly after.
         await this.subscriptions.upsert(userId, { cancelAtPeriodEnd: cancel })
         return this.getState(userId)
@@ -201,14 +195,13 @@ export class BillingService {
         const polar = polarClient()
         if (!polar) return
         try {
-            await polar.customers.deleteExternal({ externalId: userId })
+            await polar.customers.deleteExternal(userId)
             this.logger.log(`Deleted Polar customer for purged account ${userId}`)
         } catch (err: unknown) {
             // Not existing is fine (the user never checked out). Anything else must
             // fail the purge so the hourly cron retries — the privacy policy
             // promises we ask Polar to delete the customer record.
-            const { statusCode, status } = err as { statusCode?: number; status?: number }
-            if ((statusCode ?? status) === 404) return
+            if (err instanceof PolarClientError && err.statusCode === 404) return
             throw err
         }
     }
