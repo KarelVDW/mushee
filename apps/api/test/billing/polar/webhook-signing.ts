@@ -6,11 +6,14 @@ import { createHmac, randomBytes } from 'node:crypto'
  *  - Standard Webhooks (every secret created since 2026-09-08): the secret is
  *    `whsec_<base64 key>` and the HMAC key is the base64-decoded remainder.
  *    @polar-sh/sdk 0.47.1 could not verify these.
- *  - Legacy Polar: the HMAC key is the UTF-8 bytes of the whole secret
- *    string, `whsec_` prefix included when there is one.
+ *  - Legacy Polar HMAC (secrets created before then): the secret also looks
+ *    like `whsec_…` (a hex remainder), but the HMAC key is the UTF-8 bytes of
+ *    the whole string, prefix included.
  *
  * Either way the signature is base64 HMAC-SHA256 over
  * `${webhook-id}.${webhook-timestamp}.${raw body}`, sent as `v1,<sig>`.
+ * webhook-verify.test.ts pins this signer to the published Standard Webhooks
+ * test vector, so the tests don't just agree with themselves.
  */
 
 export function standardWebhooksSecret(): { secret: string; key: Buffer } {
@@ -18,8 +21,10 @@ export function standardWebhooksSecret(): { secret: string; key: Buffer } {
     return { secret: `whsec_${key.toString('base64')}`, key }
 }
 
+/** A pre-2026-09-08 secret. Its hex remainder is valid base64 too, so the
+ *  verifier must still try the UTF-8 key when the remainder decodes. */
 export function legacySecret(): { secret: string; key: Buffer } {
-    const secret = `polar_whs_${randomBytes(24).toString('hex')}`
+    const secret = `whsec_${randomBytes(16).toString('hex')}`
     return { secret, key: Buffer.from(secret, 'utf8') }
 }
 
