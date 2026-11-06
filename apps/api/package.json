@@ -41,7 +41,7 @@
         "@nestjs/schedule": "^5.0.0",
         "@nestjs/typeorm": "^11.0.0",
         "@nestjs/websockets": "^11.1.19",
-        "@polar-sh/sdk": "^0.47.1",
+        "@polar-sh/sdk": "^1.0.2",
         "@sendgrid/mail": "^8.1.6",
         "@tensorflow/tfjs": "^4.22.0",
         "@tensorflow/tfjs-backend-wasm": "^4.22.0",

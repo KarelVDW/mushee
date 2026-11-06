@@ -5,17 +5,28 @@ import type { EntityManager, Repository } from 'typeorm'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { ProcessedWebhookEvent } from '../../src/billing/entities/processed-webhook-event.entity'
-import { validateEvent, WebhookVerificationError } from '../../src/billing/polar/webhook-verify'
+import {
+    type PolarWebhookEvent,
+    validateEvent,
+    WebhookUnknownTypeError,
+    WebhookVerificationError,
+} from '../../src/billing/polar/webhook-verify'
 import { PolarWebhookService } from '../../src/billing/polar-webhook.service'
 import type { RecordingCreditsService } from '../../src/recordings/recording-credits.service'
 import type { SubscriptionsService } from '../../src/subscriptions/subscriptions.service'
 
-// The webhook signature shim is third-party code; the entity's TypeORM
-// decorators need emitDecoratorMetadata, which vitest's esbuild transform
-// doesn't emit — mock both at the module seam.
+// Signature verification is covered against the real SDK in
+// polar/webhook-verify.test.ts; the entity's TypeORM decorators need
+// emitDecoratorMetadata, which vitest's esbuild transform doesn't emit —
+// mock both at the module seam.
 vi.mock('../../src/billing/polar/webhook-verify', () => {
     class WebhookVerificationError extends Error {}
-    return { validateEvent: vi.fn(), WebhookVerificationError }
+    class WebhookUnknownTypeError extends Error {
+        constructor(readonly eventType: string | null) {
+            super(`Unknown webhook event type: ${JSON.stringify(eventType)}`)
+        }
+    }
+    return { validateEvent: vi.fn(), WebhookVerificationError, WebhookUnknownTypeError }
 })
 vi.mock('../../src/billing/entities/processed-webhook-event.entity', () => ({
     ProcessedWebhookEvent: class ProcessedWebhookEvent {},
@@ -64,7 +75,7 @@ function makeService(
         subscriptions as unknown as SubscriptionsService,
         credits as unknown as RecordingCreditsService,
     )
-    return { service, subscriptions, credits }
+    return { service, subscriptions, credits, dedupeInsert: qb.execute }
 }
 
 const ENV_KEYS = [
@@ -102,15 +113,25 @@ afterEach(() => {
 describe('handleWebhook', () => {
     const rawBody = Buffer.from('{}')
 
-    function subscriptionEvent(data: Record<string, unknown>) {
-        vi.mocked(validateEvent).mockReturnValue({
-            type: 'subscription.active',
+    /** Make validateEvent resolve to this (partial, Polar-shaped) payload. */
+    function deliver(event: { type: string; data: Record<string, unknown> }) {
+        vi.mocked(validateEvent).mockResolvedValue(event as unknown as PolarWebhookEvent)
+    }
+
+    /** A subscription event as Polar 2026-10 sends it: snake_case, ISO timestamps. */
+    function subscriptionEvent(data: Record<string, unknown>, type = 'subscription.active') {
+        deliver({
+            type,
             data: {
                 id: 'sub-1',
                 status: 'active',
-                productId: PRO_MONTHLY,
-                customer: { externalId: USER.id },
-                modifiedAt: new Date('2026-07-08T12:00:00Z'),
+                product_id: PRO_MONTHLY,
+                customer_id: 'cus-1',
+                customer: { id: 'cus-1', external_id: USER.id },
+                metadata: {},
+                current_period_end: '2026-08-08T12:00:00.000000Z',
+                cancel_at_period_end: false,
+                modified_at: '2026-07-08T12:00:00.000000Z',
                 ...data,
             },
         })
@@ -124,11 +145,19 @@ describe('handleWebhook', () => {
     })
 
     it('propagates signature failures from validateEvent', async () => {
-        vi.mocked(validateEvent).mockImplementation(() => {
-            throw new WebhookVerificationError('bad signature')
-        })
-        const { service } = makeService()
+        vi.mocked(validateEvent).mockRejectedValue(new WebhookVerificationError('bad signature'))
+        const { service, dedupeInsert } = makeService()
         await expect(service.handleWebhook(rawBody, WEBHOOK_HEADERS)).rejects.toBeInstanceOf(WebhookVerificationError)
+        expect(dedupeInsert).not.toHaveBeenCalled()
+    })
+
+    it('acknowledges a correctly signed event of an unknown type without recording or applying it', async () => {
+        vi.mocked(validateEvent).mockRejectedValue(new WebhookUnknownTypeError('subscription.teleported'))
+        const { service, subscriptions, credits, dedupeInsert } = makeService()
+        await expect(service.handleWebhook(rawBody, WEBHOOK_HEADERS)).resolves.toBe(false)
+        expect(dedupeInsert).not.toHaveBeenCalled()
+        expect(subscriptions.upsert).not.toHaveBeenCalled()
+        expect(credits.grantPackSeconds).not.toHaveBeenCalled()
     })
 
     it('returns false for a duplicate delivery id without applying anything', async () => {
@@ -145,32 +174,65 @@ describe('handleWebhook', () => {
         expect(validateEvent).toHaveBeenCalledWith(rawBody, WEBHOOK_HEADERS, 'whsec_test')
         expect(subscriptions.upsert).toHaveBeenCalledWith(
             USER.id,
-            expect.objectContaining({
+            {
                 tierId: 'pro',
+                polarCustomerId: 'cus-1',
                 polarSubscriptionId: 'sub-1',
                 polarProductId: PRO_MONTHLY,
                 status: 'active',
-            }),
+                currentPeriodEnd: new Date('2026-08-08T12:00:00Z'),
+                cancelAtPeriodEnd: false,
+                lastPolarEventAt: new Date('2026-07-08T12:00:00Z'),
+            },
             expect.anything(),
         )
     })
 
+    it('mirrors a scheduled cancellation from subscription.canceled', async () => {
+        subscriptionEvent({ cancel_at_period_end: true }, 'subscription.canceled')
+        const { service, subscriptions } = makeService()
+        await expect(service.handleWebhook(rawBody, WEBHOOK_HEADERS)).resolves.toBe(true)
+        expect(subscriptions.upsert).toHaveBeenCalledWith(
+            USER.id,
+            expect.objectContaining({ tierId: 'pro', status: 'active', cancelAtPeriodEnd: true }),
+            expect.anything(),
+        )
+    })
+
+    it('drops the paid tier on subscription.revoked', async () => {
+        subscriptionEvent({ status: 'canceled' }, 'subscription.revoked')
+        const { service, subscriptions } = makeService()
+        await expect(service.handleWebhook(rawBody, WEBHOOK_HEADERS)).resolves.toBe(true)
+        expect(subscriptions.upsert).toHaveBeenCalledWith(
+            USER.id,
+            expect.objectContaining({ tierId: 'free', polarSubscriptionId: null, status: 'canceled' }),
+            expect.anything(),
+        )
+    })
+
+    it('falls back to checkout metadata when the subscription has no external customer id', async () => {
+        subscriptionEvent({ customer: { id: 'cus-1', external_id: null }, metadata: { userId: USER.id } })
+        const { service, subscriptions } = makeService()
+        await expect(service.handleWebhook(rawBody, WEBHOOK_HEADERS)).resolves.toBe(true)
+        expect(subscriptions.upsert).toHaveBeenCalledWith(USER.id, expect.objectContaining({ tierId: 'pro' }), expect.anything())
+    })
+
     it('acknowledges but ignores events without an external customer id', async () => {
-        subscriptionEvent({ customer: {}, metadata: {} })
+        subscriptionEvent({ customer: { id: 'cus-1' }, metadata: {} })
         const { service, subscriptions } = makeService()
         await expect(service.handleWebhook(rawBody, WEBHOOK_HEADERS)).resolves.toBe(true)
         expect(subscriptions.upsert).not.toHaveBeenCalled()
     })
 
     it('acknowledges but ignores products that are not mapped to a tier', async () => {
-        subscriptionEvent({ productId: 'someone-elses-product' })
+        subscriptionEvent({ product_id: 'someone-elses-product' })
         const { service, subscriptions } = makeService()
         await expect(service.handleWebhook(rawBody, WEBHOOK_HEADERS)).resolves.toBe(true)
         expect(subscriptions.upsert).not.toHaveBeenCalled()
     })
 
     it('drops out-of-order events older than the last applied one', async () => {
-        subscriptionEvent({ modifiedAt: new Date('2026-07-01T00:00:00Z') })
+        subscriptionEvent({ modified_at: '2026-07-01T00:00:00Z' })
         const { service, subscriptions } = makeService({
             row: { tierId: 'free', lastPolarEventAt: new Date('2026-07-05T00:00:00Z') },
         })
@@ -179,12 +241,21 @@ describe('handleWebhook', () => {
     })
 
     it('reconciles customer.state_changed snapshots', async () => {
-        vi.mocked(validateEvent).mockReturnValue({
+        deliver({
             type: 'customer.state_changed',
             data: {
                 id: 'cus-1',
-                externalId: USER.id,
-                activeSubscriptions: [{ id: 'sub-2', status: 'active', productId: PRO_MONTHLY }],
+                external_id: USER.id,
+                active_subscriptions: [
+                    {
+                        id: 'sub-2',
+                        status: 'active',
+                        product_id: PRO_MONTHLY,
+                        current_period_end: '2026-08-08T12:00:00Z',
+                        cancel_at_period_end: false,
+                        modified_at: null,
+                    },
+                ],
             },
         })
         const { service, subscriptions } = makeService()
@@ -195,22 +266,43 @@ describe('handleWebhook', () => {
                 tierId: 'pro',
                 polarSubscriptionId: 'sub-2',
                 polarCustomerId: 'cus-1',
+                currentPeriodEnd: new Date('2026-08-08T12:00:00Z'),
             }),
             expect.anything(),
         )
     })
 
+    it('downgrades a paid user whose customer.state_changed snapshot has no active subscription', async () => {
+        deliver({
+            type: 'customer.state_changed',
+            data: { id: 'cus-1', external_id: USER.id, active_subscriptions: [] },
+        })
+        const { service, subscriptions } = makeService({ row: { tierId: 'pro' } })
+        await expect(service.handleWebhook(rawBody, WEBHOOK_HEADERS)).resolves.toBe(true)
+        expect(subscriptions.upsert).toHaveBeenCalledWith(USER.id, expect.objectContaining({ tierId: 'free' }), expect.anything())
+    })
+
     it('acknowledges unrelated event types without mirroring anything', async () => {
-        vi.mocked(validateEvent).mockReturnValue({ type: 'benefit.created', data: {} })
+        deliver({ type: 'benefit.created', data: {} })
         const { service, subscriptions } = makeService()
         await expect(service.handleWebhook(rawBody, WEBHOOK_HEADERS)).resolves.toBe(true)
         expect(subscriptions.upsert).not.toHaveBeenCalled()
     })
 
     it('grants pack seconds on order.paid for a pack product', async () => {
-        vi.mocked(validateEvent).mockReturnValue({
+        deliver({
             type: 'order.paid',
-            data: { productId: PACK_SINGLE, customer: { externalId: USER.id } },
+            data: { product_id: PACK_SINGLE, customer: { external_id: USER.id }, metadata: {} },
+        })
+        const { service, credits } = makeService()
+        await expect(service.handleWebhook(rawBody, WEBHOOK_HEADERS)).resolves.toBe(true)
+        expect(credits.grantPackSeconds).toHaveBeenCalledWith(USER.id, 15 * 60, expect.anything())
+    })
+
+    it('reads the product from the nested product when product_id is absent', async () => {
+        deliver({
+            type: 'order.paid',
+            data: { product_id: null, product: { id: PACK_SINGLE }, customer: { external_id: USER.id }, metadata: {} },
         })
         const { service, credits } = makeService()
         await expect(service.handleWebhook(rawBody, WEBHOOK_HEADERS)).resolves.toBe(true)
@@ -218,9 +310,9 @@ describe('handleWebhook', () => {
     })
 
     it('falls back to checkout metadata when the order has no external customer id', async () => {
-        vi.mocked(validateEvent).mockReturnValue({
+        deliver({
             type: 'order.paid',
-            data: { productId: PACK_SINGLE, customer: {}, metadata: { userId: USER.id } },
+            data: { product_id: PACK_SINGLE, customer: {}, metadata: { userId: USER.id } },
         })
         const { service, credits } = makeService()
         await expect(service.handleWebhook(rawBody, WEBHOOK_HEADERS)).resolves.toBe(true)
@@ -228,9 +320,9 @@ describe('handleWebhook', () => {
     })
 
     it('ignores order.paid for subscription invoices (non-pack products)', async () => {
-        vi.mocked(validateEvent).mockReturnValue({
+        deliver({
             type: 'order.paid',
-            data: { productId: PRO_MONTHLY, customer: { externalId: USER.id } },
+            data: { product_id: PRO_MONTHLY, customer: { external_id: USER.id }, metadata: {} },
         })
         const { service, credits } = makeService()
         await expect(service.handleWebhook(rawBody, WEBHOOK_HEADERS)).resolves.toBe(true)
@@ -238,9 +330,9 @@ describe('handleWebhook', () => {
     })
 
     it('ignores order.created even for pack products (only order.paid grants)', async () => {
-        vi.mocked(validateEvent).mockReturnValue({
+        deliver({
             type: 'order.created',
-            data: { productId: PACK_SINGLE, customer: { externalId: USER.id } },
+            data: { product_id: PACK_SINGLE, customer: { external_id: USER.id }, metadata: {} },
         })
         const { service, credits } = makeService()
         await expect(service.handleWebhook(rawBody, WEBHOOK_HEADERS)).resolves.toBe(true)
@@ -248,9 +340,9 @@ describe('handleWebhook', () => {
     })
 
     it('acknowledges but ignores a pack order without any user id', async () => {
-        vi.mocked(validateEvent).mockReturnValue({
+        deliver({
             type: 'order.paid',
-            data: { productId: PACK_SINGLE, customer: {}, metadata: {} },
+            data: { product_id: PACK_SINGLE, customer: {}, metadata: {} },
         })
         const { service, credits } = makeService()
         await expect(service.handleWebhook(rawBody, WEBHOOK_HEADERS)).resolves.toBe(true)
@@ -258,17 +350,17 @@ describe('handleWebhook', () => {
     })
 
     it('revokes pack seconds on order.refunded, but only for pack products', async () => {
-        vi.mocked(validateEvent).mockReturnValue({
+        deliver({
             type: 'order.refunded',
-            data: { productId: PACK_SINGLE, customer: { externalId: USER.id } },
+            data: { product_id: PACK_SINGLE, customer: { external_id: USER.id }, metadata: {} },
         })
         const { service, credits } = makeService()
         await expect(service.handleWebhook(rawBody, WEBHOOK_HEADERS)).resolves.toBe(true)
         expect(credits.revokePackSeconds).toHaveBeenCalledWith(USER.id, 15 * 60, expect.anything())
 
-        vi.mocked(validateEvent).mockReturnValue({
+        deliver({
             type: 'order.refunded',
-            data: { productId: PRO_MONTHLY, customer: { externalId: USER.id } },
+            data: { product_id: PRO_MONTHLY, customer: { external_id: USER.id }, metadata: {} },
         })
         const second = makeService()
         await expect(second.service.handleWebhook(rawBody, WEBHOOK_HEADERS)).resolves.toBe(true)

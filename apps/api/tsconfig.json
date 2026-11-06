@@ -13,7 +13,14 @@
         "sourceMap": true,
         "removeComments": true,
         "incremental": true,
-        "strictPropertyInitialization": false
+        "strictPropertyInitialization": false,
+        // @polar-sh/sdk 1.x ships each Polar API version as a package-exports
+        // subpath, which node10 resolution cannot type-resolve. Point the types
+        // at the CJS declarations; emitted code keeps the bare specifier and
+        // Node resolves it through the package's exports map at runtime.
+        "paths": {
+            "@polar-sh/sdk/2026-10": ["./node_modules/@polar-sh/sdk/dist/2026-10/index.d.cts"]
+        }
     },
     "include": ["src/**/*", "test/**/*", "scripts/**/*", "vitest.config.ts"],
     "exclude": ["node_modules", "dist"]

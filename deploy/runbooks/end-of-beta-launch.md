@@ -64,6 +64,20 @@ sandbox test matrix is in `meta/notes.md` §1: checkout → webhook → tier fli
 in Settings; cancel → resume; plan change (`POST /billing/change` must update
 the existing subscription with proration, never create a second one).
 
+**Pinned Polar API version: `2026-10`.** The API uses `@polar-sh/sdk` 1.x
+imported as `@polar-sh/sdk/2026-10` (`apps/api/src/billing/polar/sdk.ts`).
+Every API call sends `Polar-Version: 2026-10`, so Polar's moving "current"
+version (2027-01 from 2027-01-01, which drops order/subscription fields)
+can't change responses under us. Webhook payloads are shaped by the
+**endpoint's own API-version setting** in the Polar dashboard, and the code
+reads 2026-10 field names (`snake_case`). Keep that setting on `2026-10` in
+sandbox and production. To change versions, ship the code first (the import
+in `sdk.ts` plus the matching `paths` entry in `apps/api/tsconfig.json`), then
+switch the endpoint. Both secret schemes verify: Standard Webhooks `whsec_…`
+(every secret created since 2026-09-08) and legacy Polar secrets. Rotating
+the secret needs no code change. A correctly signed event of a type 2026-10
+doesn't model is answered 202 and ignored; it is not an error.
+
 Production sequence:
 
 1. Polar dashboard (production org): create **6 subscription products** —
@@ -75,7 +89,8 @@ Production sequence:
    `apps/web/src/lib/plans.ts` — change all three together or the landing
    and /pricing pages lie.
 2. Create an access token; add a webhook endpoint pointing at
-   `https://api.solkey.io/billing/webhooks/polar`, subscribed to
+   `https://api.solkey.io/billing/webhooks/polar`, API version `2026-10`
+   (see the pin above), subscribed to
    `subscription.*` + `customer.state_changed` + `order.paid` +
    `order.refunded` (packs land via `order.paid`); note the webhook secret.
 3. Add to `Secret/api-secrets` (carry existing keys — recreate-and-apply as
