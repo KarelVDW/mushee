@@ -91,10 +91,11 @@ describe('TimeSignaturePopover', () => {
     const render = (beatAmount: number, beatType: number) =>
         renderToStaticMarkup(createElement(TimeSignaturePopover, { active: { beatAmount, beatType }, onSelect: noop, onDismiss: noop }))
 
-    it('offers the common meters first, captioned', () => {
+    it('offers the common meters first, as bare numerals', () => {
         const markup = render(4, 4)
         expect(markup).toContain('How many beats fit in each bar.')
-        expect(markup).toContain('2 swaying beats')
+        expect(markup).toContain('Set 6/8 time')
+        expect(markup).not.toContain('swaying beats')
         expect(markup).toContain('More time signatures')
         expect(markup).not.toContain('Set 9/8 time')
     })

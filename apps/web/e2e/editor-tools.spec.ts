@@ -185,13 +185,13 @@ test('a rarer clef is one "More clefs" away, and stays in view once in use', asy
     await page.keyboard.press('Escape')
 })
 
-test('the time popover names meters by their beats and keeps the rest behind More', async ({ page }) => {
+test('the time popover leads with the common meters and keeps the rest behind More', async ({ page }) => {
     await page.getByRole('button', { name: /^Time signature:/ }).click()
     const popover = page.getByRole('dialog', { name: 'Select time signature' })
-    await expect(popover.getByRole('button', { name: 'Set 6/8 time' })).toContainText('2 swaying beats')
+    await expect(popover.getByRole('button', { name: 'Set 6/8 time' })).toBeVisible()
     await expect(popover.getByRole('button', { name: 'Set 3/8 time' })).toHaveCount(0)
     await popover.getByRole('button', { name: 'More time signatures' }).click()
-    await expect(popover.getByRole('button', { name: 'Set 3/8 time' })).toContainText('3 quick beats')
+    await expect(popover.getByRole('button', { name: 'Set 3/8 time' })).toBeVisible()
     await page.keyboard.press('Escape')
 })
 

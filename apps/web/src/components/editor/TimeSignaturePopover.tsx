@@ -33,9 +33,8 @@ interface TimeSignaturePopoverProps {
 }
 
 /**
- * The meter picker: the four common meters first, each captioned with its beats in plain
- * words, and the rest behind "More time signatures" — open from the start when the score's
- * meter is one of them.
+ * The meter picker: the four common meters first, as bare numerals, and the rest behind
+ * "More time signatures" — open from the start when the score's meter is one of them.
  */
 export function TimeSignaturePopover({
     active,
@@ -50,22 +49,17 @@ export function TimeSignaturePopover({
     const [expanded, setExpanded] = useState(() => MORE_METERS.some(isActive))
     const sheet = variant === 'sheet'
 
-    // Content hangs from the top, the numerals in a fixed box: every meter's digits share one
-    // line however its caption wraps. Phones fill the sheet in four fluid columns.
+    // The numerals alone, centred in a tile; the picked check sits in its corner so the digits
+    // never shift. Phones fill the sheet in four fluid columns.
     const cell = (meter: TimeSignature) => (
         <PopoverOption
             key={`${meter.beatAmount}/${meter.beatType}`}
             active={isActive(meter)}
             ariaLabel={`Set ${meter.beatAmount}/${meter.beatType} time`}
             onClick={() => onSelect(meter.beatAmount, meter.beatType)}
-            layout="cell"
-            className={`flex-col justify-start gap-1.5 h-20 px-1 pt-3 ${sheet ? 'w-full min-w-0' : 'w-18'}`}>
-            <span className="flex h-7.5 items-center">
-                <TimeSignatureIcon beatAmount={meter.beatAmount} beatType={meter.beatType} size={30} />
-            </span>
-            <span className={`font-label font-medium leading-tight text-center text-balance ${sheet ? 'text-[11px]' : 'text-[12px]'}`}>
-                {meter.plainName}
-            </span>
+            layout="tile"
+            className={`justify-center h-14 ${sheet ? 'w-full min-w-0' : 'w-18'}`}>
+            <TimeSignatureIcon beatAmount={meter.beatAmount} beatType={meter.beatType} size={30} />
         </PopoverOption>
     )
     const row = sheet ? 'grid grid-cols-4 gap-1.5' : 'flex flex-wrap gap-1.5'

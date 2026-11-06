@@ -556,9 +556,9 @@ function isTextEntry(target: EventTarget | null): boolean {
 /**
  * Where a picked option's check sits. `row`: a SelectedMark trailing the row (the clef rows).
  * `tile`: a 14px SelectedMark in the top-right corner of a tile at least 64px wide (the further
- * clefs). `cell`: an inline 12px check beside the label of a small cell (keys, time signatures,
- * interval sizes and qualities) — ahead of the label under a glyph (a time signature's numerals
- * over its name), after a lone label — never over the glyph.
+ * clefs, time signatures). `cell`: an inline 12px check beside the label of a small cell (keys,
+ * interval sizes and qualities) — ahead of the label under a glyph (a key's staff over its
+ * name), after a lone label — never over the glyph.
  */
 export type PopoverOptionLayout = 'row' | 'tile' | 'cell'
 
