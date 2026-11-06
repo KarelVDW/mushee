@@ -11,7 +11,6 @@ import { SHOW_SHORTCUTS_KEY } from './commands'
 import { HistoryMenu, HistoryTools } from './HistoryTools'
 import { STOP_RECORDING_FIRST } from './NoteToolParts'
 import { PitchTools } from './PitchTools'
-import { RecordingsMenu } from './RecordingsMenu'
 import type { ScoreManipulator } from './ScoreManipulator'
 import { ShareMenu } from './ShareMenu'
 import { TransportControls, type TransportControlsProps } from './TransportControls'
@@ -25,13 +24,13 @@ export const UNTITLED_SCORE = 'Untitled score'
  * the queries the page matches to pick {@link HeaderFit}. Under 1280px the full set of labelled
  * chips no longer fits beside the centred transport (with a long instrument name, the wordmark
  * and a title at its floor, the full header needs about 1260px); under 1024px (iPad portrait,
- * half a laptop) not even with Share, Recordings and Export icon-only.
+ * half a laptop) not even with Share and Export icon-only.
  */
 export const HEADER_FIT_QUERIES = { medium: '(max-width: 1279px)', narrow: '(max-width: 1023px)' } as const
 
 /**
- * The desktop header's layout step. `full` labels everything. `medium` turns Share, Recordings
- * and Export icon-only (names in their tooltips) and drops the wordmark. `narrow` also turns
+ * The desktop header's layout step. `full` labels everything. `medium` turns Share and Export
+ * icon-only (names in their tooltips) and drops the wordmark. `narrow` also turns
  * Transpose icon-only, folds Undo, Redo and the shortcuts list into one chip, and lets the
  * transport's hidden Stop give up its slot.
  */
@@ -87,7 +86,7 @@ const EDIT_FADE = 'transition-opacity duration-150 ease-solkey motion-reduce:tra
 /**
  * The editor's slim header: back to the library, the title, the instrument chip and the save
  * status; the transport centred; then the document-level chrome — pitch and history tools,
- * keyboard shortcuts, and the Share / Recordings / Export chips.
+ * keyboard shortcuts, and the Share / Export chips.
  *
  * Its chrome tone and blur sit on a layer of their own (like the dock's): a bar with a
  * backdrop-filter would be the backdrop root of every menu and tooltip opened inside it.
@@ -171,8 +170,8 @@ export function EditorHeader({
             </div>
             {!compact && <TransportControls {...transport} collapseStop={narrow} />}
             {/* Three groups, a step apart (16px; 8px within each): Transpose, then the history well
-                with the shortcuts list (one chip on a narrow header), then Share, Recordings and
-                Export. Phones keep only the last, its round chips 6px apart, each opening a sheet. */}
+                with the shortcuts list (one chip on a narrow header), then Share and Export.
+                Phones keep only the last, its round chips 6px apart, each opening a sheet. */}
             <div inert={takenOver} className={`flex items-center shrink-0 sm:flex-1 justify-end ${compact ? 'gap-1.5' : 'gap-4'} ${fade}`}>
                 {/* Pitch and history tools are document-level chrome (see PitchTools /
                     HistoryTools); on phones they move into the dock instead. A score of rests
@@ -204,7 +203,6 @@ export function EditorHeader({
                 )}
                 <div className={`flex items-center ${compact ? 'gap-1.5' : 'gap-2'}`}>
                     <ShareMenu scoreId={scoreId} shareToken={shareToken} compact={iconChips} sheet={compact} />
-                    <RecordingsMenu scoreId={scoreId} compact={iconChips} sheet={compact} />
                     <ExportMenu score={score} title={title} compact={iconChips} sheet={compact} getSvg={getSvg} />
                 </div>
             </div>

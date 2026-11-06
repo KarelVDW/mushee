@@ -31,23 +31,6 @@ export function formatRelativeTime(iso: string, now = Date.now()): string {
     return 'Just now'
 }
 
-/** When a recording take started: "Today, 14:02" / "Yesterday, 09:10" / "3 Sep, 14:02" / "3 Sep 2025, 14:02". */
-export function formatTakeDate(iso: string, now = new Date()): string {
-    const date = new Date(iso)
-    const time = date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
-    const sameDay = (a: Date, b: Date) => a.toDateString() === b.toDateString()
-    const yesterday = new Date(now)
-    yesterday.setDate(now.getDate() - 1)
-    if (sameDay(date, now)) return `Today, ${time}`
-    if (sameDay(date, yesterday)) return `Yesterday, ${time}`
-    const day = date.toLocaleDateString(undefined, {
-        day: 'numeric',
-        month: 'short',
-        ...(date.getFullYear() !== now.getFullYear() && { year: 'numeric' }),
-    })
-    return `${day}, ${time}`
-}
-
 /**
  * The day a soft-deleted account is purged ("October 29"), for the sentences that
  * name it; null when the API sent no date. Each sentence words that case itself, around

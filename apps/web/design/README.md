@@ -31,7 +31,7 @@ Every decision answers to this person: what we build, what we leave out, where a
 
 **The dabbler test** — run it on every screen and every change: _could someone who has never used notation software do this on the first try, without reading anything?_ If not, simplify it. If it still needs explaining, explain it in the UI, in one plain line.
 
-**How we say it's monophonic.** Solkey writes melodies, one note at a time. We say so plainly at the five moments it matters — the landing page's How it works step 02, the first FAQ answer (landing and pricing), when a chordal instrument is picked (the instrument picker and onboarding), the empty score, and an import notice when chords really were reduced — once per moment, and never as a banner, warning, icon or apology. Nowhere else: not in tooltips, toasts, the count-in, the microphone step or the Recordings panel. The exact strings are in the [monophonic copy table](#what-solkey-doesnt-do).
+**How we say it's monophonic.** Solkey writes melodies, one note at a time. We say so plainly at the five moments it matters — the landing page's How it works step 02, the first FAQ answer (landing and pricing), when a chordal instrument is picked (the instrument picker and onboarding), the empty score, and an import notice when chords really were reduced — once per moment, and never as a banner, warning, icon or apology. Nowhere else: not in tooltips, toasts, the count-in or the microphone step. The exact strings are in the [monophonic copy table](#what-solkey-doesnt-do).
 
 ---
 
@@ -146,7 +146,7 @@ There is **one product**: the web app. The UI kit covers Landing → Auth → On
 
 One name per thing, everywhere in the UI (code identifiers may keep their old names):
 
-- **recording** — the audio a user records, and the act of recording. Never "take" in UI copy, accessible names included ("Recordings", "Recording 3", "Undo this recording"). "Take" may live on in code and in these docs.
+- **recording** — the audio a user records, and the act of recording. Never "take" in UI copy, accessible names included ("Stop recording", "Undo this recording"). "Take" may live on in code and in these docs.
 - **score** — what the user writes and keeps. Never "piece" or "composition". An empty title is "Untitled score".
 - **bar** — never "measure" ("Add bar", "Remove last bar", "Added bars 3–6").
 - **half step** — never "semitone" in the main path ("Half step higher", "2 half steps higher").
@@ -169,7 +169,7 @@ The monophonic copy lives at exactly these five moments (owner decision, 2026-10
 | Empty score body                               | `Press record, wait for the count-in, then go. Solkey writes melodies, one note at a time.` (phones `Tap record, …`)                                                                                                                       |
 | Import reduced chords (only when it happened)  | `Solkey keeps one note at a time, so chords were reduced to their top note.` / `Solkey keeps one note at a time, so notes played together were reduced to the top one.`                                                                    |
 
-Not in: tooltips, toasts, banners, the count-in, the Recordings empty state, the beta waitlist tip, or the onboarding microphone step — that step describes listening and privacy only ("Solkey uses your microphone to hear you sing, hum, whistle or play. It only listens while you press Record, never in the background.").
+Not in: tooltips, toasts, banners, the count-in, the beta waitlist tip, or the onboarding microphone step — that step describes listening and privacy only ("Solkey uses your microphone to hear you sing, hum, whistle or play. It only listens while you press Record, never in the background.").
 
 ### Errors, limits and disabled controls
 
@@ -466,7 +466,7 @@ The registry also carries **reserved glyphs** with no call sites yet — navigat
 | Glyph                         | Means                                                                                                                                                                                                                                 |
 | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `metronome`                   | The metronome — and nothing else.                                                                                                                                                                                                     |
-| `audio-lines`                 | Recorded audio: the Recordings chip, the Settings → Recordings tab.                                                                                                                                                                   |
+| `audio-lines`                 | Sound played back: the landing page's "Hear it back" feature card.                                                                                                                                                                    |
 | `square`                      | Stop: the Stop button, and the record button while a take runs ("Stop recording").                                                                                                                                                    |
 | `more-horizontal`             | A "More" menu or sheet (library row actions, the phone dock's More tile).                                                                                                                                                             |
 | `chevron-up` / `chevron-down` | Higher / lower (pitch), and open / close on disclosures.                                                                                                                                                                              |

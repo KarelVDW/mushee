@@ -5,7 +5,7 @@ import { DEFAULT_SETTINGS_TAB, SETTINGS_TABS, settingsTabFrom, settingsTabPath }
 describe('settings tabs in the URL', () => {
     it('reads the tab a ?tab= names', () => {
         expect(settingsTabFrom('?tab=plan')).toBe('plan')
-        expect(settingsTabFrom('?tab=recordings&plan=pro')).toBe('recordings')
+        expect(settingsTabFrom('?tab=account&plan=pro')).toBe('account')
         expect(settingsTabFrom('?tab=account')).toBe('account')
         expect(settingsTabFrom('?tab=profile')).toBe('profile')
     })
@@ -14,6 +14,8 @@ describe('settings tabs in the URL', () => {
         expect(settingsTabFrom('')).toBeNull()
         expect(settingsTabFrom('?plan=pro')).toBeNull()
         expect(settingsTabFrom('?tab=billing')).toBeNull()
+        // The recordings tab is gone; an old link lands on the default tab.
+        expect(settingsTabFrom('?tab=recordings')).toBeNull()
         expect(settingsTabFrom('?tab=')).toBeNull()
     })
 
@@ -21,7 +23,6 @@ describe('settings tabs in the URL', () => {
         expect(DEFAULT_SETTINGS_TAB).toBe('profile')
         expect(settingsTabPath('profile')).toBe('/settings')
         expect(settingsTabPath('plan')).toBe('/settings?tab=plan')
-        expect(settingsTabPath('recordings')).toBe('/settings?tab=recordings')
         expect(settingsTabPath('account')).toBe('/settings?tab=account')
     })
 

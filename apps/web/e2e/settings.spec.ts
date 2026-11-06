@@ -1,4 +1,4 @@
-import { expect, MOCK_SCORE_ID, MOCK_TITLE, mockBilling, test } from './fixtures'
+import { expect, mockBilling, test } from './fixtures'
 
 /**
  * Mocked-API settings e2e: the four tabs and their ?tab= deep links, profile save, the
@@ -32,9 +32,9 @@ test('the top-nav "New score" lands in the library with the create dialog open',
     await expect(page.getByRole('dialog', { name: 'New score' })).toBeVisible()
 })
 
-test('tabs: four tabs, the current one selected, each kept in the URL across a reload', async ({ page }) => {
+test('tabs: three tabs, the current one selected, each kept in the URL across a reload', async ({ page }) => {
     const tabs = page.getByRole('tablist', { name: 'Settings' }).getByRole('tab')
-    await expect(tabs).toHaveText(['Profile', 'Plan', 'Recordings', 'Account'])
+    await expect(tabs).toHaveText(['Profile', 'Plan', 'Account'])
     await expect(page.getByRole('tab', { name: 'Profile' })).toHaveAttribute('aria-selected', 'true')
 
     await page.getByRole('tab', { name: 'Account' }).click()
@@ -58,88 +58,10 @@ test('tabs: arrow keys move between tabs', async ({ page }) => {
     await expect(page.getByRole('tab', { name: 'Account' })).toHaveAttribute('aria-selected', 'true')
 })
 
-test('recordings tab: lists every recording with its score and deletes one', async ({ page, apiMock }) => {
-    await page.getByRole('tab', { name: 'Recordings' }).click()
-    await expect(page).toHaveURL(/\/settings\?tab=recordings$/)
-    const rows = page.getByRole('list', { name: 'Recordings' }).getByRole('listitem')
-    await expect(rows).toHaveCount(4)
-    await expect(rows.first()).toContainText(MOCK_TITLE)
-    await rows.first().getByRole('button', { name: 'Delete recording' }).click()
-    await rows.first().getByRole('button', { name: 'Delete', exact: true }).click()
-    await expect(rows).toHaveCount(3)
-    expect(apiMock.recordingDeletes).toEqual(['take-2'])
-})
-
-test('recordings tab: links each score, labels orphans "Deleted score", and disables play without audio', async ({ page }) => {
+test('an old ?tab=recordings link lands on the Profile tab', async ({ page }) => {
     await page.goto('/settings?tab=recordings')
-    const rows = page.getByRole('list', { name: 'Recordings' }).getByRole('listitem')
-    await expect(rows).toHaveCount(4)
-
-    // Recordings on a live score link to it; the orphan's score is gone, so its name is plain text.
-    const live = rows.filter({ hasText: MOCK_TITLE })
-    await expect(live).toHaveCount(3)
-    await expect(live.first().getByRole('link', { name: MOCK_TITLE })).toHaveAttribute('href', `/scores/${MOCK_SCORE_ID}`)
-    const orphan = rows.filter({ hasText: 'Deleted score' })
-    await expect(orphan).toHaveCount(1)
-    await expect(orphan).not.toContainText(MOCK_TITLE)
-    await expect(orphan.getByRole('link')).toHaveCount(0)
-    await expect(orphan.getByRole('button', { name: 'Play recording' })).toBeEnabled()
-
-    // The audio-less recording (7 s) cannot be played; the others can.
-    const silent = rows.filter({ hasText: '0:07' })
-    await expect(silent).toHaveCount(1)
-    const silentPlay = silent.getByRole('button', { name: 'Play recording' })
-    await expect(silentPlay).toBeDisabled()
-    await expect(silentPlay).toHaveAccessibleDescription('No audio was kept for this recording')
-    await expect(rows.getByRole('button', { name: 'Play recording', disabled: false })).toHaveCount(3)
-})
-
-test.describe('on a phone-sized screen', () => {
-    test.use({ viewport: { width: 390, height: 844 } })
-
-    test('recordings tab: a row never cuts into the time that tells two takes apart', async ({ page }) => {
-        const at = (daysAgo: number, hours: number, minutes: number) => {
-            const date = new Date()
-            date.setDate(date.getDate() - daysAgo)
-            date.setHours(hours, minutes, 0, 0)
-            return date.toISOString()
-        }
-        const takes = [
-            { id: 'take-today', scoreId: MOCK_SCORE_ID, startedAt: at(0, 20, 16), endedAt: null, seconds: 12, hasAudio: true },
-            { id: 'take-yesterday', scoreId: MOCK_SCORE_ID, startedAt: at(1, 20, 16), endedAt: null, seconds: 9, hasAudio: true },
-            { id: 'take-older', scoreId: MOCK_SCORE_ID, startedAt: at(40, 20, 16), endedAt: null, seconds: 5, hasAudio: true },
-        ]
-        await page.route(
-            (url) => url.port === '4999' && url.pathname.endsWith('/recordings'),
-            (route) =>
-                route.request().method() === 'GET'
-                    ? route.fulfill({
-                          json: takes,
-                          headers: {
-                              'access-control-allow-origin': route.request().headers()['origin'] ?? '*',
-                              'access-control-allow-credentials': 'true',
-                          },
-                      })
-                    : route.fallback(),
-        )
-        await page.goto('/settings?tab=recordings')
-        const rows = page.getByRole('list', { name: 'Recordings' }).getByRole('listitem')
-        await expect(rows).toHaveCount(3)
-        await expect(rows.nth(1)).toContainText('Yesterday, ')
-        // Each title's two unbreakable parts (the number, the date) sit wholly inside the title's box.
-        const clipped = await rows.evaluateAll((items) =>
-            items.flatMap((item) => {
-                const title = item.querySelector<HTMLElement>('.text-pretty')
-                if (!title) return ['no title line']
-                const box = title.getBoundingClientRect()
-                const cut = [...title.querySelectorAll('.whitespace-nowrap')].some(
-                    (part) => part.getBoundingClientRect().right > box.right + 1,
-                )
-                return cut || title.scrollWidth > title.clientWidth + 1 ? [title.textContent ?? ''] : []
-            }),
-        )
-        expect(clipped).toEqual([])
-    })
+    await expect(page.getByRole('tab', { name: 'Profile' })).toHaveAttribute('aria-selected', 'true')
+    await expect(page.getByRole('tab', { name: 'Recordings' })).toHaveCount(0)
 })
 
 test('account tab: "Download my data" produces a zip archive of the account', async ({ page }) => {

@@ -3,7 +3,7 @@
  * upgrade button, a reload or a shared link lands on the exact tab to act in. The default
  * tab, Profile, lives at the bare `/settings`.
  */
-export const SETTINGS_TABS = ['profile', 'plan', 'recordings', 'account'] as const
+export const SETTINGS_TABS = ['profile', 'plan', 'account'] as const
 
 export type SettingsTab = (typeof SETTINGS_TABS)[number]
 

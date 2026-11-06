@@ -8,17 +8,17 @@ into two layers with a deliberate boundary between them.
 - `recordings.gateway.ts` — WebSocket gateway that receives audio chunks and
   streams score updates back to the client. Every frame it sends is a member of
   its `RecordingServerFrame` union, each documented there.
-- `recordings.controller.ts` — the owner's takes over HTTP: list per score,
-  replay the archived audio (signed URL or stream), delete one (audio first,
-  then the row).
 - `recording-sessions.service.ts` — the live-recording engine: owns the pitch
   model registry and profile resolver, and opens one session per take (slot
   lock, credit check, pipeline); the gateway's only recordings service (it
   also injects `ScoresService` for the score-ownership check and `BetaService`
   for the beta gate).
-- `recordings.service.ts` — the takes behind the controller (list, replay,
-  delete), the admin console's support replay (`audioForSupport`), and the
-  account purge's audio sweep (`deleteAudioForUser`).
+- `recordings.service.ts` — takes after the fact, operator-only: the admin
+  console's replay (`audioForSupport`, behind `AdminController`) and the
+  account purge's audio sweep (`deleteAudioForUser`). There is deliberately no
+  user-facing HTTP surface over takes — no list, replay or delete — because
+  storage reads and egress would scale with every replay. Audio is written
+  once, when a take is recorded, and read only by the admin console.
 - `recording-credits.service.ts` / `recording-locks.service.ts` — credit
   accounting (the daily budget per tier plus purchased pack seconds) and the
   one-recording-per-user lock.

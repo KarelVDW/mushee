@@ -495,7 +495,7 @@ for (const { width, step } of [
     test(`at ${width}px the header fits with ${step}, the transport clear of the title and instrument`, async ({ page }) => {
         await page.setViewportSize({ width, height: 800 })
         await expectHeaderFitsViewport(page)
-        // Share, Recordings and Export drop their labels; the names stay.
+        // Share and Export drop their labels; the names stay.
         await expect(page.getByRole('button', { name: 'Share score', exact: true })).toHaveText('')
         const play = await page.getByRole('button', { name: 'Play', exact: true }).boundingBox()
         for (const control of [
@@ -639,36 +639,9 @@ test('navigates back to the library', async ({ page }) => {
     await expect(page).toHaveTitle('Your scores — Solkey')
 })
 
-test('recordings menu lists the score’s recordings and deletes one after confirmation', async ({ page, apiMock }) => {
-    await page.getByRole('button', { name: 'Recordings', exact: true }).click()
-    const panel = page.getByRole('dialog', { name: 'Recordings' })
-    await expect(panel).toBeVisible()
-    const rows = panel.getByRole('list', { name: 'Recordings' }).getByRole('listitem')
-    await expect(rows).toHaveCount(3)
-    // Numbered by age, newest first, so two from the same minute still differ.
-    await expect(rows.nth(0)).toContainText('Recording 3')
-    await expect(rows.nth(0)).toContainText('0:42')
-    await expect(rows.nth(1)).toContainText('Recording 2')
-    await expect(rows.nth(1)).toContainText('2:05')
-    // A recording from before audio archiving cannot be played.
-    await expect(rows.nth(2).getByRole('button', { name: 'Play recording' })).toBeDisabled()
-
-    // Delete asks first, says the notes stay, and lands on "Keep", which backs out without a request.
-    await rows.nth(0).getByRole('button', { name: 'Delete recording' }).click()
-    await expect(rows.nth(0)).toContainText('Delete this recording? Your notes stay.')
-    await expect(rows.nth(0).getByRole('button', { name: 'Keep' })).toBeFocused()
-    await rows.nth(0).getByRole('button', { name: 'Keep' }).click()
-    expect(apiMock.recordingDeletes).toEqual([])
-
-    await rows.nth(0).getByRole('button', { name: 'Delete recording' }).click()
-    await rows.nth(0).getByRole('button', { name: 'Delete', exact: true }).click()
-    await expect(rows).toHaveCount(2)
-    expect(apiMock.recordingDeletes).toEqual(['take-2'])
-    await expect(page.getByRole('status').first()).toContainText('Recording deleted')
-
-    // Escape closes the panel.
-    await page.keyboard.press('Escape')
-    await expect(panel).toHaveCount(0)
+test('the header offers no recordings list: recorded audio stays server-side', async ({ page }) => {
+    await expect(page.getByRole('button', { name: 'Share score' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Recordings', exact: true })).toHaveCount(0)
 })
 
 test('share menu creates and copies the read-only link in one press, and turns it off after a confirm', async ({

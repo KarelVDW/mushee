@@ -1,13 +1,11 @@
 'use client'
 
-import { Skeleton, TextLink } from '@mushee/ui'
+import { TextLink } from '@mushee/ui'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { type KeyboardEvent, useEffect, useLayoutEffect, useRef, useState } from 'react'
 
-import { TakesList } from '@/components/TakesList'
 import {
-    Alert,
     Avatar,
     Container,
     Footer,
@@ -25,7 +23,7 @@ import { track } from '@/lib/analytics'
 import { useSession } from '@/lib/auth-client'
 import { downloadBlob } from '@/lib/FileDownload'
 import { type PlanTier, requestedPlanFrom } from '@/lib/plans'
-import { useAllRecordings, useExportAccountData, useRefreshBillingState, useScores, useSignOut, useUpdateProfile } from '@/lib/queries'
+import { useExportAccountData, useRefreshBillingState, useSignOut, useUpdateProfile } from '@/lib/queries'
 import { rovingIndexForKey } from '@/lib/useRadioGroup'
 
 import { BillingSection } from './BillingSection'
@@ -197,13 +195,11 @@ export default function SettingsPage() {
 
                             {tab === 'plan' && <BillingSection requestedPlan={requestedPlan} requestedPacks={requestedPacks} />}
 
-                            {tab === 'recordings' && <RecordingsSection />}
-
                             {tab === 'account' && (
                                 <>
                                     <SettingsSection
                                         title="Your data"
-                                        subtitle="Download everything Solkey holds for you: your profile, your settings and every score, in files other music apps can open."
+                                        subtitle="Download your profile, your settings and every score, in files other music apps can open."
                                         action={
                                             <SecondaryButton onClick={handleExport} disabled={exportData.isPending}>
                                                 {exportData.isPending ? 'Preparing your download…' : 'Download my data'}
@@ -265,62 +261,9 @@ export default function SettingsPage() {
     )
 }
 
-/**
- * Every recording the account holds, across scores, with replay and delete, always
- * listed. The export leaves audio out (it is deleted with the account), so this is
- * where it can be heard and removed one by one.
- */
-function RecordingsSection() {
-    const takes = useAllRecordings()
-    const scores = useScores()
-    // Score names link to their score; without the score list (it failed) rows just skip the name
-    // rather than calling every score deleted.
-    const titles = scores.data && new Map(scores.data.map((score) => [score.id, score.title]))
-
-    return (
-        <SettingsSection
-            title="Recordings"
-            subtitle="Every recording you make is kept here, audio included, so you can listen back. ‘Download my data’ covers your scores, not the audio.">
-            {takes.isPending || scores.isPending ? (
-                <RecordingsSkeleton />
-            ) : takes.isError ? (
-                <Alert onRetry={() => void takes.refetch()}>Couldn&apos;t load your recordings.</Alert>
-            ) : takes.data.length === 0 ? (
-                <p className="font-body font-normal text-[13px] leading-normal text-on-surface-variant m-0">
-                    No recordings yet — press record in any score and your recordings show up here.
-                </p>
-            ) : (
-                <TakesList
-                    takes={takes.data}
-                    scroll={false}
-                    scoreTitleFor={titles ? (take) => titles.get(take.scoreId) ?? null : undefined}
-                />
-            )}
-        </SettingsSection>
-    )
-}
-
-/** Two placeholder rows in TakesList's own geometry: the play well, a title and a meta line. */
-function RecordingsSkeleton() {
-    return (
-        <div aria-hidden="true" className="flex flex-col gap-1.5">
-            {['', '[animation-delay:120ms]'].map((delay) => (
-                <div key={delay} className="flex items-center gap-3 rounded-md px-3 py-2.5 bg-surface-container-low">
-                    <Skeleton className={`size-9 rounded-full bg-surface-container-lowest ${delay}`} />
-                    <div className="flex flex-col gap-1 flex-1 min-w-0 py-0.5">
-                        <Skeleton className={`h-3.5 w-32 rounded-sm ${delay}`} />
-                        <Skeleton className={`h-3 w-48 max-w-full rounded-sm ${delay}`} />
-                    </div>
-                </div>
-            ))}
-        </div>
-    )
-}
-
 const TABS: readonly { readonly id: SettingsTab; readonly label: string; readonly icon: IconName }[] = [
     { id: 'profile', label: 'Profile', icon: 'user' },
     { id: 'plan', label: 'Plan', icon: 'credit-card' },
-    { id: 'recordings', label: 'Recordings', icon: 'audio-lines' },
     { id: 'account', label: 'Account', icon: 'shield' },
 ]
 
@@ -328,7 +271,7 @@ const tabId = (tab: SettingsTab) => `settings-tab-${tab}`
 const panelId = (tab: SettingsTab) => `settings-panel-${tab}`
 
 /**
- * The settings tabs: a side rail on desktop, a row of labels on phones (no icons, so all four
+ * The settings tabs: a side rail on desktop, a row of labels on phones (no icons, so all three
  * fit at 360px). The current tab pairs its fill with a shape — a 4px cyan stripe on the rail,
  * the 3px cyan underline on the row — and is aria-selected. Arrow keys, Home and End move
  * between tabs (the ARIA tabs pattern, activating as they go); only the current tab is in

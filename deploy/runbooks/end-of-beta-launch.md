@@ -35,15 +35,15 @@ audience is still small and forgiving.
 - [ ] Restore rehearsal green within the last quarter (Runbook 4 §2).
 - [x] GDPR data export exists (master-todo item 14, done 2026-09-05:
       Settings → Account → "Download my data", built client-side). The
-      download deliberately leaves audio out; the recordings half of "your
-      data" is the takes inventory below.
-- [x] **Takes / recordings inventory** shipped 2026-09-05: per-score "Takes"
-      panel in the editor header and the all-scores inventory in Settings →
-      Your data (replay + two-step delete; `GET /recordings`,
-      `DELETE /recordings/:id`). The privacy policy's "yours, delete any time"
-      is now literally true, so nothing here blocks the flip — but spot-check
-      once on production that playback streams and a delete removes both the
-      audio folder and the row.
+      download deliberately leaves audio out (see the next item).
+- [x] **No user-facing recordings surface** (removed 2026-11-07; it shipped
+      2026-09-05 as an editor "Recordings" panel + Settings → Recordings tab).
+      Users never list, replay or delete takes — storage reads/egress would
+      scale with every replay. Audio is archived once per take and read only by
+      the admin console (`GET /admin/recordings/:id/audio`); it is deleted with
+      the account. The privacy policy and terms promise only that (no in-app
+      replay or per-recording delete). A GDPR access request for the audio goes
+      to privacy@solkey.io and is served by hand from the admin console.
 - [ ] **Share links** (`/s/<token>`, shipped 2026-09-05) — confirm on
       production before strangers arrive: a shared page carries `noindex` and
       `robots.txt` disallows `/s/`; the public `GET /shared/:token` payload is

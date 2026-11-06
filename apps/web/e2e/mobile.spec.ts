@@ -690,10 +690,10 @@ test('the first tap on a note teaches where its actions are, once', async ({ pag
     await expect(tip).toHaveCount(0)
 })
 
-// --- Header chips: share / takes / export collapse to icon-only on phones ---
+// --- Header chips: share / export collapse to icon-only on phones ---
 
 test('header chips are icon-only on phones and the header fits the viewport', async ({ page }) => {
-    for (const name of ['Share score', 'Recordings', 'Export score']) {
+    for (const name of ['Share score', 'Export score']) {
         const chip = page.getByRole('button', { name, exact: true })
         await expect(chip).toBeVisible()
         // The visible label is dropped in compact mode; the accessible name carries it.
@@ -782,29 +782,6 @@ test('Add bar and Remove last bar are 40px touch targets that stay apart', async
     const patch = waitForAutosave(page)
     await add.tap()
     await patch
-})
-
-test('recordings chip: lists the score’s recordings and deletes one after confirmation', async ({ page, apiMock }) => {
-    await page.getByRole('button', { name: 'Recordings', exact: true }).tap()
-    const panel = page.getByRole('dialog', { name: 'Recordings' })
-    await expect(panel).toBeVisible()
-    const rows = panel.getByRole('list', { name: 'Recordings' }).getByRole('listitem')
-    await expect(rows).toHaveCount(3)
-    await expect(rows.nth(0)).toContainText('0:42')
-    await expect(rows.nth(1)).toContainText('2:05')
-
-    await rows.nth(0).getByRole('button', { name: 'Delete recording' }).tap()
-    await expect(rows.nth(0)).toContainText('Your notes stay.')
-    await rows.nth(0).getByRole('button', { name: 'Keep' }).tap()
-    expect(apiMock.recordingDeletes).toEqual([])
-
-    await rows.nth(0).getByRole('button', { name: 'Delete recording' }).tap()
-    await rows.nth(0).getByRole('button', { name: 'Delete', exact: true }).tap()
-    await expect(rows).toHaveCount(2)
-    expect(apiMock.recordingDeletes).toEqual(['take-2'])
-
-    await expectHeaderCard(page, panel)
-    await expectHeaderFitsViewport(page)
 })
 
 test('export chip: the format menu opens from the icon-only chip', async ({ page }) => {

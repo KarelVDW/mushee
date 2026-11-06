@@ -60,37 +60,6 @@ const SCORE_PARTWISE = JSON.parse(readFileSync(resolve(process.cwd(), 'e2e/fixtu
  */
 const RAW_DOCUMENT = { raw: '<score-partwise/>' }
 
-/** Two archived takes on the mock score, one legacy row without audio, and an orphan take on a deleted score. */
-const TAKES = [
-    {
-        id: 'take-2',
-        scoreId: MOCK_SCORE_ID,
-        startedAt: '2026-09-04T14:02:00.000Z',
-        endedAt: '2026-09-04T14:02:42.000Z',
-        seconds: 42,
-        hasAudio: true,
-    },
-    {
-        id: 'take-1',
-        scoreId: MOCK_SCORE_ID,
-        startedAt: '2026-09-03T09:10:00.000Z',
-        endedAt: '2026-09-03T09:12:05.000Z',
-        seconds: 125,
-        hasAudio: true,
-    },
-    { id: 'take-0', scoreId: MOCK_SCORE_ID, startedAt: '2026-08-01T09:10:00.000Z', endedAt: null, seconds: 7, hasAudio: false },
-    // An orphan: its score is gone, so the settings inventory labels it "Deleted score".
-    // The editor's per-score list filters on scoreId and never sees it.
-    {
-        id: 'take-orphan',
-        scoreId: 'e2e-deleted-score',
-        startedAt: '2026-07-20T18:30:00.000Z',
-        endedAt: '2026-07-20T18:30:30.000Z',
-        seconds: 30,
-        hasAudio: true,
-    },
-]
-
 /** The account's billing state: Sketch, with billing not configured (nothing can be bought). See {@link mockBilling}. */
 const BILLING_STATE = {
     tierId: 'free',
@@ -114,8 +83,6 @@ export interface ApiMock {
     readonly deletes: string[]
     /** IDs the app requested via POST /scores/:id/duplicate. */
     readonly duplicates: string[]
-    /** IDs the app requested via DELETE /recordings/:id. */
-    readonly recordingDeletes: string[]
     /** Share-link state of the mock score: token while on, null while off. */
     shareToken: string | null
 }
@@ -191,21 +158,6 @@ async function installApiMocks(page: Page, mock: ApiMock, { rawDocument }: { raw
         }
 
         if (/\/scores\/[^/]+\/load$/.test(path)) return json(storedDocument)
-
-        // Takes recorded into the mock score (newest first), replay and deletion.
-        if (/\/recordings\/[^/]+\/audio$/.test(path)) return route.fulfill({ status: 404, headers: corsHeaders(route), body: '' })
-        const takeMatch = path.match(/\/recordings\/([^/]+)$/)
-        if (takeMatch && method === 'DELETE') {
-            mock.recordingDeletes.push(takeMatch[1])
-            return json({})
-        }
-        if (path.endsWith('/recordings')) {
-            return json(
-                TAKES.filter((take) => !mock.recordingDeletes.includes(take.id)).filter(
-                    (take) => !url.searchParams.get('scoreId') || take.scoreId === url.searchParams.get('scoreId'),
-                ),
-            )
-        }
 
         // Read-only share link: mint/revoke on the score, resolve publicly.
         const shareMatch = path.match(/\/scores\/([^/]+)\/share$/)
@@ -285,7 +237,7 @@ export async function expectHeaderFitsViewport(page: Page): Promise<void> {
     expect(viewport).not.toBeNull()
     expect(headerBox?.x ?? -1).toBeGreaterThanOrEqual(0)
     expect(headerBox?.width ?? Infinity).toBeLessThanOrEqual((viewport?.width ?? 0) + 1)
-    for (const name of ['Share score', 'Recordings', 'Export score']) {
+    for (const name of ['Share score', 'Export score']) {
         const box = await page.getByRole('button', { name, exact: true }).boundingBox()
         expect(box, name).not.toBeNull()
         expect((box?.x ?? 0) + (box?.width ?? Infinity), name).toBeLessThanOrEqual((headerBox?.x ?? 0) + (headerBox?.width ?? 0) + 1)
@@ -368,7 +320,7 @@ export const test = base.extend<{ apiMock: ApiMock; rawDocument: boolean }>({
         await use(page)
     },
     apiMock: async ({ page, context, rawDocument }, use) => {
-        const mock: ApiMock = { patches: [], creates: [], deletes: [], duplicates: [], recordingDeletes: [], shareToken: null }
+        const mock: ApiMock = { patches: [], creates: [], deletes: [], duplicates: [], shareToken: null }
         // Satisfy the Next.js middleware cookie gate for protected routes.
         await context.addCookies([{ name: 'better-auth.session_token', value: 'e2e', domain: 'localhost', path: '/' }])
         // Pre-answer the GDPR consent banner so it never overlays the UI under test.

@@ -111,7 +111,7 @@ deploy.yml) once the GCP project exists.
 14. ~~**GDPR data export endpoint**~~ — **done 2026-09-05** (client-side, no API change):
     Settings → Account → "Download my data" zips profile.json, settings.json and every
     score as MusicXML + JSON in the browser (`lib/AccountExport.ts`); the privacy page
-    points at it (overnight log §3); "All your recordings" list in Settings → Your data (§23). Recordings audio deliberately excluded (deleted with the account).
+    points at it (overnight log §3). Recordings audio deliberately excluded (deleted with the account); the in-app recordings list (§23) was removed 2026-11-07, see item 22.
 15. ~~**Signup CAPTCHA (Turnstile)**~~ — **code done 2026-09-05**: better-auth captcha plugin on
     `/sign-up/email` (`auth/captcha-config.ts`), Turnstile widget on the signup form; verified
     end-to-end with Cloudflare test keys (overnight log §4, §17). Remaining
@@ -143,8 +143,10 @@ deploy.yml) once the GCP project exists.
 22. ~~**Recordings product surface**~~ — **done 2026-09-05**: the editor header's "Takes"
     menu lists every recording made into the score (newest first) with replay of the
     archived audio and confirmed deletion (`GET/DELETE /recordings`, `GET /recordings/:id/audio`
-    — signed URL or stream, owner-scoped; overnight log §11). A cross-score "all my recordings" page can build on
-    the same endpoint (`GET /recordings` without `scoreId`).
+    — signed URL or stream, owner-scoped; overnight log §11). **Removed 2026-11-07**: the editor's
+    Recordings panel, Settings → Recordings and the whole `/recordings` HTTP surface are gone —
+    users never list, replay or delete recordings (storage reads/egress scale with replays). Audio
+    is archived once per take and read only by the admin console (`/admin/recordings/:id/audio`).
 
 22c. **Bulk e-mail to users** — **decided + built 2026-09-05**: service announcements from the admin
 console (`/announcements`, audience filter, test copy, audit log) over the transactional SendGrid

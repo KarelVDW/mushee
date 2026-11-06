@@ -12,7 +12,6 @@ import { RecordingUsage } from './entities/recording-usage.entity'
 import { RecordingCreditsService } from './recording-credits.service'
 import { RecordingLocksService } from './recording-locks.service'
 import { RecordingSessionsService } from './recording-sessions.service'
-import { RecordingsController } from './recordings.controller'
 import { RecordingsGateway } from './recordings.gateway'
 import { RecordingsService } from './recordings.service'
 
@@ -24,7 +23,6 @@ import { RecordingsService } from './recordings.service'
         BetaModule,
         StorageModule,
     ],
-    controllers: [RecordingsController],
     providers: [RecordingsGateway, RecordingSessionsService, RecordingsService, RecordingCreditsService, RecordingLocksService],
     exports: [RecordingsService, RecordingCreditsService],
 })

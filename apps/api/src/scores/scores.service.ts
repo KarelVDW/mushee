@@ -255,9 +255,8 @@ export class ScoresService {
 
     private async removeScore(score: Score): Promise<void> {
         // The score's takes: their rows go with the score row (FK ON DELETE
-        // CASCADE), their audio does not. Delete it first, as RecordingsService.remove
-        // does for one take — if storage fails, the score is still whole and its
-        // takes' audio still reachable through it.
+        // CASCADE), their audio does not. Delete it first — if storage fails, the
+        // score is still whole and its takes' audio still reachable through it.
         await this.storageService.deleteFolder(RecordingArchiver.folderFor(score.userId, score.id))
         await this.editCache.deleteByScoreId(score.id)
 

@@ -89,35 +89,11 @@ export function getSharedScore(token: string): Promise<SharedScore> {
     return api(`/shared/${encodeURIComponent(token)}`)
 }
 
-// ── Recordings (takes) ──────────────────────────────────────────────────────
-
-export interface RecordingSummary {
-    id: string
-    scoreId: string
-    startedAt: string
-    endedAt: string | null
-    /** Seconds recorded. */
-    seconds: number
-    /** Whether audio was archived (takes from before archiving have none). */
-    hasAudio: boolean
-}
-
-export function listRecordings(scoreId?: string): Promise<RecordingSummary[]> {
-    return api(`/recordings${scoreId ? `?scoreId=${encodeURIComponent(scoreId)}` : ''}`)
-}
-
-export function deleteRecording(id: string): Promise<void> {
-    return api(`/recordings/${id}`, { method: 'DELETE' })
-}
+// ── Recordings ──────────────────────────────────────────────────────────────
 
 /** The transcription gateway's socket for a take; every recording belongs to a score, and the gateway requires its id up front. */
 export function recordingSocketUrl(scoreId: string): string {
     return `${API_WS_URL}/recording?scoreId=${encodeURIComponent(scoreId)}`
-}
-
-/** Where a media element fetches a take's audio; the session cookie rides along (same-site). */
-export function recordingAudioUrl(id: string): string {
-    return `${API_URL}/recordings/${id}/audio`
 }
 
 export interface AccountDeletionStatus {

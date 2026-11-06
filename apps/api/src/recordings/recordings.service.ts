@@ -1,6 +1,6 @@
 import type { Readable } from 'node:stream'
 
-import { ForbiddenException, Injectable, Logger, NotFoundException } from '@nestjs/common'
+import { Injectable, Logger, NotFoundException } from '@nestjs/common'
 import { InjectRepository } from '@nestjs/typeorm'
 import { Repository } from 'typeorm'
 
@@ -9,27 +9,16 @@ import { Recording } from './entities/recording.entity'
 import { describeError } from './pipeline/describe-error'
 import { audioContentTypeFor, RecordingArchiver } from './recording-archiver'
 
-/** A take as the owner sees it in the editor's takes list. */
-export interface RecordingSummary {
-    id: string
-    scoreId: string
-    startedAt: string
-    endedAt: string | null
-    /** Seconds recorded (1 credit = 1 s). */
-    seconds: number
-    /** Whether audio was archived for it (rows from before archiving have none). */
-    hasAudio: boolean
-}
-
 /** The archived audio: a time-limited URL straight to the bucket when the backend signs, else a stream. */
 export type RecordingAudio = { url: string } | { stream: Readable; contentType: string }
 
 const SIGNED_URL_TTL_SECONDS = 15 * 60
 
 /**
- * A user's takes after the fact: list them, replay their archived audio,
- * delete one, and purge them all with the account. The admin console replays
- * through here too, so there is one reader of a take folder's layout. Live
+ * Takes after the fact, for the operator only: the admin console's replay of
+ * archived audio, and the account purge's audio sweep. Users never read or
+ * delete takes through the API — storage reads and egress would scale with
+ * every replay — so there is deliberately no owner-facing surface here. Live
  * recording is RecordingSessionsService's.
  */
 @Injectable()
@@ -41,35 +30,6 @@ export class RecordingsService {
         private readonly recordingRepo: Repository<Recording>,
         private readonly storage: StorageService,
     ) {}
-
-    /** The user's takes, newest first — all of them, or those recorded into one score. */
-    async listForUser(userId: string, scoreId?: string): Promise<RecordingSummary[]> {
-        const rows = await this.recordingRepo.find({
-            where: scoreId ? { userId, scoreId } : { userId },
-            order: { createdAt: 'DESC' },
-        })
-        return rows.map((row) => ({
-            id: row.id,
-            scoreId: row.scoreId,
-            startedAt: row.createdAt.toISOString(),
-            endedAt: row.endedAt?.toISOString() ?? null,
-            seconds: row.creditsSpent,
-            hasAudio: row.storagePath !== null,
-        }))
-    }
-
-    /** One take, only for its owner. */
-    private async findOwned(userId: string, id: string): Promise<Recording> {
-        const recording = await this.recordingRepo.findOneBy({ id })
-        if (!recording) throw new NotFoundException('Recording not found')
-        if (recording.userId !== userId) throw new ForbiddenException()
-        return recording
-    }
-
-    /** The archived audio of a take, for the owner to replay. */
-    async audioFor(userId: string, id: string): Promise<RecordingAudio> {
-        return this.archivedAudio(await this.findOwned(userId, id))
-    }
 
     /**
      * The admin console's ownerless replay: any take by id, for support. The
@@ -108,17 +68,6 @@ export class RecordingsService {
     private async discoverAudioKey(storagePath: string): Promise<string | undefined> {
         const keys = await this.storage.list(storagePath)
         return keys.find((key) => key.split('/').pop()?.startsWith('audio.'))
-    }
-
-    /**
-     * Delete one take: its archived audio first, then the row. Storage goes first
-     * for the same reason as in the account purge — a row without its audio is
-     * recoverable, orphaned audio is not.
-     */
-    async remove(userId: string, id: string): Promise<void> {
-        const recording = await this.findOwned(userId, id)
-        if (recording.storagePath) await this.storage.deleteFolder(recording.storagePath)
-        await this.recordingRepo.delete({ id: recording.id })
     }
 
     /**

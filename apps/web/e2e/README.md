@@ -38,7 +38,7 @@ What it covers:
   controls; range selection (shift+arrows, drag, select all); copy/cut/paste;
   fixed clipboard shortcuts; shortcut rebinding persists; clef/tempo popovers
   open from the tool dock; a mocked recording and its summary (Hear it back,
-  Undo this recording); recordings and share menus; export to **MusicXML**,
+  Undo this recording); the share menu, and no recordings menu; export to **MusicXML**,
   **MIDI**, and **PDF** (real downloads, verified headers).
 - `editor-keyboard.spec.ts` — every remaining default keybinding from
   `commands.ts` (arrow navigation, R/T/./3 toggles, Backspace clear pitch, M

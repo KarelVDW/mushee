@@ -17,7 +17,6 @@ import {
     createCheckout,
     createPackCheckout,
     createScore,
-    deleteRecording,
     deleteScore,
     duplicateScore,
     getAccountDeletionStatus,
@@ -28,7 +27,6 @@ import {
     getSettings,
     getSharedScore,
     listPlans,
-    listRecordings,
     listScores,
     loadScore,
     NetworkError,
@@ -38,7 +36,6 @@ import {
     patchOnboarding,
     putKeyboardShortcuts,
     reactivateAccount,
-    type RecordingSummary,
     requestAccountDeletion,
     resumeSubscription,
     type ScoreDocument,
@@ -190,43 +187,6 @@ export function useUnshareScore(id: string) {
             )
         },
         meta: { errorMessage: 'Could not turn the share link off. Please try again.' },
-    })
-}
-
-const recordingKeys = {
-    all: ['recordings'] as const,
-    lists: ['recordings', 'list'] as const,
-    list: (scoreId?: string) => [...recordingKeys.lists, scoreId ?? ''] as const,
-}
-
-/** Every recording the account holds, newest first (Settings → Your data). */
-export function useAllRecordings(options?: { enabled?: boolean }) {
-    return useQuery({
-        queryKey: recordingKeys.list(),
-        queryFn: () => listRecordings(),
-        enabled: options?.enabled ?? true,
-    })
-}
-
-/** The recordings made into one score, newest first. */
-export function useRecordings(scoreId: string) {
-    return useQuery({
-        queryKey: recordingKeys.list(scoreId),
-        queryFn: () => listRecordings(scoreId),
-    })
-}
-
-export function useDeleteRecording() {
-    const queryClient = useQueryClient()
-    return useMutation({
-        mutationFn: (id: string) => deleteRecording(id),
-        onSuccess: (_data, id) => {
-            // The server answers nothing new, so the patched lists are already right — no refetch.
-            queryClient.setQueriesData<RecordingSummary[]>({ queryKey: recordingKeys.lists }, (rows) =>
-                rows?.filter((row) => row.id !== id),
-            )
-        },
-        meta: { errorMessage: "Couldn't delete the recording. Please try again." },
     })
 }
 
