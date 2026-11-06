@@ -112,10 +112,16 @@ describe('PitchTrack.backExtendOnsets', () => {
     })
 
     it('stops at the window, at the confidence floor and at another pitch', () => {
-        expect(track(cents, conf).backExtendOnsets([note(10, 10, 60)], { minConfidence: 0.15, maxFrames: 3 })[0].startTimeSeconds).toBeCloseTo(7 * HOP)
-        expect(track(cents, conf).backExtendOnsets([note(10, 10, 60)], { minConfidence: 0.25, maxFrames: 8 })[0].startTimeSeconds).toBeCloseTo(10 * HOP)
+        expect(
+            track(cents, conf).backExtendOnsets([note(10, 10, 60)], { minConfidence: 0.15, maxFrames: 3 })[0].startTimeSeconds,
+        ).toBeCloseTo(7 * HOP)
+        expect(
+            track(cents, conf).backExtendOnsets([note(10, 10, 60)], { minConfidence: 0.25, maxFrames: 8 })[0].startTimeSeconds,
+        ).toBeCloseTo(10 * HOP)
         const bent = cents.map((c, i) => (i < 8 ? c + 100 : c))
-        expect(track(bent, conf).backExtendOnsets([note(10, 10, 60)], { minConfidence: 0.15, maxFrames: 8 })[0].startTimeSeconds).toBeCloseTo(8 * HOP)
+        expect(
+            track(bent, conf).backExtendOnsets([note(10, 10, 60)], { minConfidence: 0.15, maxFrames: 8 })[0].startTimeSeconds,
+        ).toBeCloseTo(8 * HOP)
     })
 
     it('never reaches into or touches the previous note', () => {
@@ -133,7 +139,11 @@ describe('PitchTrack.backExtendOnsets', () => {
 describe('ReverbDecodeAdaptation.decide', () => {
     const gate = { knee: 0.85, slope: 2, floor: 0.2, base: 0.5, mode: 'min' as const, dryDropDb: Infinity }
     const extend = { maxDropDb: 10, maxConfMed: 0.87, minConfidence: 0.15, windowSec: 0.15 }
-    const ev = (confMed: number, maxDropDb = 20): { confMed: number; loudFrames: number; maxDropDb: number } => ({ confMed, loudFrames: 100, maxDropDb })
+    const ev = (confMed: number, maxDropDb = 20): { confMed: number; loudFrames: number; maxDropDb: number } => ({
+        confMed,
+        loudFrames: 100,
+        maxDropDb,
+    })
 
     it('keeps the profile gate at or above the knee and lowers it below, never under the floor', () => {
         const a = new ReverbDecodeAdaptation(gate, undefined, 1.5)
@@ -150,7 +160,9 @@ describe('ReverbDecodeAdaptation.decide', () => {
 
     it('min mode never raises a gate the profile already relaxed; replace mode ignores the profile relief', () => {
         expect(new ReverbDecodeAdaptation(gate, undefined, 1.5).decide(ev(0.84), 0.4, false, HOP).gate).toBe(0.4)
-        expect(new ReverbDecodeAdaptation({ ...gate, mode: 'replace' }, undefined, 1.5).decide(ev(0.84), 0.4, false, HOP).gate).toBeCloseTo(0.48)
+        expect(new ReverbDecodeAdaptation({ ...gate, mode: 'replace' }, undefined, 1.5).decide(ev(0.84), 0.4, false, HOP).gate).toBeCloseTo(
+            0.48,
+        )
         expect(new ReverbDecodeAdaptation({ ...gate, mode: 'replace' }, undefined, 1.5).decide(ev(0.9), 0.4, false, HOP).gate).toBe(0.5)
     })
 
@@ -201,9 +213,15 @@ describe('CrepeProvider streaming with the relative gate on', () => {
 
     /** Half-second notes decaying 40 dB/s, as in a room — a steady tone has no dynamics and reads neutral. */
     const tone = (sec: number): Float32Array =>
-        Float32Array.from({ length: Math.round(sec * 16000) }, (_, i) => 0.3 * Math.pow(10, (-2 * ((i / 16000) % 0.5))) * Math.sin((2 * Math.PI * 440 * i) / 16000))
+        Float32Array.from(
+            { length: Math.round(sec * 16000) },
+            (_, i) => 0.3 * Math.pow(10, -2 * ((i / 16000) % 0.5)) * Math.sin((2 * Math.PI * 440 * i) / 16000),
+        )
 
-    async function provider(env: Record<string, string>): Promise<{ p: InstanceType<typeof import('../../src/recordings/pipeline/providers/crepe-provider').CrepeProvider>; b: ReturnType<typeof backend> }> {
+    async function provider(env: Record<string, string>): Promise<{
+        p: InstanceType<typeof import('../../src/recordings/pipeline/providers/crepe-provider').CrepeProvider>
+        b: ReturnType<typeof backend>
+    }> {
         for (const [k, v] of Object.entries(env)) vi.stubEnv(k, v)
         vi.resetModules()
         const { CrepeProvider } = await import('../../src/recordings/pipeline/providers/crepe-provider')

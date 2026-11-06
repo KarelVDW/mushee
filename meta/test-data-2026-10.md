@@ -17,29 +17,29 @@ within session limits.
 
 ## Phases
 
-| # | phase | status |
-|---|---|---|
-| 0 | Scoping (6 parallel readers: test-data status, truthless inventory, synth engine, harness, eval app, pipeline history) | done |
-| 1 | Close out the previous test-data work (docs and small fixes; see "Close-out") | done |
-| 2 | Build the `synthcorpus.resynth` tool (`synthetic-corpus/RESYNTH.md`) + perturbation self-test | done |
-| 3 | Pilot: whistled-high-register + calibration clips → cost per clip, prompt tuning | done (wave script v1→v4) |
-| 4 | Waves over every dataset that lacks truth, gated on usage | done except humtrans (scope question to Karel) |
-| 5 | Organise datasets + harness truth-source/pooling + fresh HEAD benchmark | done (rescored on the final truth) |
-| 6 | apps/eval rework (benchmark-only, JSON data, compare view) | done (verified on the real data) |
-| 7 | Timeline: historical pipelines → per-commit notes cache → scored JSON in `apps/eval/data/timeline/` | done |
+| #   | phase                                                                                                                  | status                                         |
+| --- | ---------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------- |
+| 0   | Scoping (6 parallel readers: test-data status, truthless inventory, synth engine, harness, eval app, pipeline history) | done                                           |
+| 1   | Close out the previous test-data work (docs and small fixes; see "Close-out")                                          | done                                           |
+| 2   | Build the `synthcorpus.resynth` tool (`synthetic-corpus/RESYNTH.md`) + perturbation self-test                          | done                                           |
+| 3   | Pilot: whistled-high-register + calibration clips → cost per clip, prompt tuning                                       | done (wave script v1→v4)                       |
+| 4   | Waves over every dataset that lacks truth, gated on usage                                                              | done except humtrans (scope question to Karel) |
+| 5   | Organise datasets + harness truth-source/pooling + fresh HEAD benchmark                                                | done (rescored on the final truth)             |
+| 6   | apps/eval rework (benchmark-only, JSON data, compare view)                                                             | done (verified on the real data)               |
+| 7   | Timeline: historical pipelines → per-commit notes cache → scored JSON in `apps/eval/data/timeline/`                    | done                                           |
 
 ## Scope: tracks that lack trustworthy note truth
 
-| dataset | clips | min | prior for the draft | copy timbre | after |
-|---|---|---|---|---|---|
-| whistled-high-register (+ the byte-identical `-aligned`) | 6 | 1.1 | aligned truth | whistle | one dataset, benchmark tier (our own recordings) |
-| mir-qbsh | 50 | 6.7 | pv-derived truth | voice `u` | context (licence-restricted) |
-| whistle-real | 117 | 18.3 | sineTrack drafts | whistle | benchmark tier |
-| dagstuhl-choir | 102 | 51.0 | DTW score alignment (the hand-tapped beatGrid is kept) | voice `a`, register by part | benchmark tier |
-| jacrc-students → new `jacrc-notes` (hard links) | 175 | 85.3 | f0 segmentation + syllable onsets | voice `a` | `jacrc-students` keeps its human syllable onsets |
-| whistle-vintage | 6 | 3.0 | sineTrack drafts | whistle | context (accompanied 78 rpm, never pooled) |
-| humtrans (+ the byte-identical `-aligned`) | 769 | 183.2 | humtrans-aligned truth | voice `u` | context (CC BY-NC) |
-| in-app dev takes (`apps/api/debug/recordings`, `storage/recordings`) | ≤ 310 | ≤ 65 | f0 segmentation, after triage | by material | a new dataset if melodic |
+| dataset                                                              | clips | min   | prior for the draft                                    | copy timbre                 | after                                            |
+| -------------------------------------------------------------------- | ----- | ----- | ------------------------------------------------------ | --------------------------- | ------------------------------------------------ |
+| whistled-high-register (+ the byte-identical `-aligned`)             | 6     | 1.1   | aligned truth                                          | whistle                     | one dataset, benchmark tier (our own recordings) |
+| mir-qbsh                                                             | 50    | 6.7   | pv-derived truth                                       | voice `u`                   | context (licence-restricted)                     |
+| whistle-real                                                         | 117   | 18.3  | sineTrack drafts                                       | whistle                     | benchmark tier                                   |
+| dagstuhl-choir                                                       | 102   | 51.0  | DTW score alignment (the hand-tapped beatGrid is kept) | voice `a`, register by part | benchmark tier                                   |
+| jacrc-students → new `jacrc-notes` (hard links)                      | 175   | 85.3  | f0 segmentation + syllable onsets                      | voice `a`                   | `jacrc-students` keeps its human syllable onsets |
+| whistle-vintage                                                      | 6     | 3.0   | sineTrack drafts                                       | whistle                     | context (accompanied 78 rpm, never pooled)       |
+| humtrans (+ the byte-identical `-aligned`)                           | 769   | 183.2 | humtrans-aligned truth                                 | voice `u`                   | context (CC BY-NC)                               |
+| in-app dev takes (`apps/api/debug/recordings`, `storage/recordings`) | ≤ 310 | ≤ 65  | f0 segmentation, after triage                          | by material                 | a new dataset if melodic                         |
 
 Out of scope:
 
@@ -54,10 +54,10 @@ never pooled, whatever the quality of their truth.
 
 - `dataset.json` `truthSource`: `human` | `resynth` | `derived` | `constructed` | `onsets`.
 - A dataset is pooled when all of these hold:
-  - `!noteTruthDerived && !pitchless && !constructedPerformance && !licenceRestricted && pooled !== false`
-  - `licenceRestricted` is new in the pooling rule. It changes nothing today, because every
-    restricted set is also derived.
-  - `pooled: false` is the explicit opt-out, used for whistle-vintage.
+    - `!noteTruthDerived && !pitchless && !constructedPerformance && !licenceRestricted && pooled !== false`
+    - `licenceRestricted` is new in the pooling rule. It changes nothing today, because every
+      restricted set is also derived.
+    - `pooled: false` is the explicit opt-out, used for whistle-vintage.
 - Benchmark results carry `truthSource` per dataset. The headline is reported twice: over
   human-truth datasets only (continuous with the history) and over all pooled datasets.
 - **Calibration gate**: resynth truth counts as benchmark-grade if blind resynth on
@@ -66,16 +66,16 @@ never pooled, whatever the quality of their truth.
 
 ## Locations (decided)
 
-| what | where |
-|---|---|
-| resynth tool | `synthetic-corpus/synthcorpus/resynth/` (doc: `synthetic-corpus/RESYNTH.md`) |
-| per-clip work state (gitignored) | `synthetic-corpus/work/resynth/<dataset>/<clip>/` |
-| committed truth artifacts | `apps/api/scripts/eval/annotations/resynth/<dataset>/<clip>.resynth.json` |
-| harness truth / copies / contours (gitignored fixtures) | `eval-real/<tier>/<ds>/<clip>.truth.json`, `__resynth.flac`, `.f0.json` |
-| benchmark results (git-tracked JSON) | `apps/eval/data/benchmarks/{real,synth}/*.json` (moved from `apps/api/scripts/eval/benchmarks/results*`) |
-| timeline results (git-tracked JSON) | `apps/eval/data/timeline/<date>_<sha>.json` + `index.json` |
-| timeline work (gitignored) | `apps/api/scripts/eval/.cache/timeline/{trees,legacy,notes}/` |
-| per-run pipeline notes (gitignored) | `apps/api/scripts/eval/.cache/notes/<resultId>.jsonl` |
+| what                                                    | where                                                                                                    |
+| ------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| resynth tool                                            | `synthetic-corpus/synthcorpus/resynth/` (doc: `synthetic-corpus/RESYNTH.md`)                             |
+| per-clip work state (gitignored)                        | `synthetic-corpus/work/resynth/<dataset>/<clip>/`                                                        |
+| committed truth artifacts                               | `apps/api/scripts/eval/annotations/resynth/<dataset>/<clip>.resynth.json`                                |
+| harness truth / copies / contours (gitignored fixtures) | `eval-real/<tier>/<ds>/<clip>.truth.json`, `__resynth.flac`, `.f0.json`                                  |
+| benchmark results (git-tracked JSON)                    | `apps/eval/data/benchmarks/{real,synth}/*.json` (moved from `apps/api/scripts/eval/benchmarks/results*`) |
+| timeline results (git-tracked JSON)                     | `apps/eval/data/timeline/<date>_<sha>.json` + `index.json`                                               |
+| timeline work (gitignored)                              | `apps/api/scripts/eval/.cache/timeline/{trees,legacy,notes}/`                                            |
+| per-run pipeline notes (gitignored)                     | `apps/api/scripts/eval/.cache/notes/<resultId>.jsonl`                                                    |
 
 ## Resume runbook (after going offline, a crash, or a new session)
 
@@ -94,45 +94,45 @@ never pooled, whatever the quality of their truth.
 Source: the phase-0 audit, items 1–21. "Done" means changed in this pass. "Concluded" means
 decided and recorded without changing behaviour. "Open" means left with a reason.
 
-| # | loose end | outcome |
-|---|---|---|
-| 1 | `import-note-labels.ts` could stamp every clip of every dataset as verified | **Done.** New `--clips=a,b\|all` and `--verified-list=<file>` (a worklist counts only its ticked items). `--verified-by` is refused without `--dataset` and a clip selection, and unknown clip ids are refused. Checked in a scratch copy. `VERIFY-WORKLIST.md`'s command is fixed |
-| 2 | synthetic README lists "two real notes never share a slot" as shipped | **Done.** Moved to "measured null, not shipped", with the DP-quantiser lead |
-| 3 | 37 timbres / "v1" header / ~12 GB / after-table aggregation unlabelled | **Done.** 36 timbres (README and FINDINGS), v1.1, ~10 GB (`du`: 10G). The after-table is labelled as clip means vs the baseline's dataset means (0.720 vs 0.717). Also fixed: 90 → 92 sources (the export's distinct source ids), and "bagpipe (with drones)" → drones not mixed |
-| 4 | `benchmark.ts` history links and synthetic headline | Separate phase-1 task (the `benchmark.ts` owner), not in this brief |
-| 5 | synthetic tier missing from the harness docs | **Done** in `scripts/eval/README.md`: the `eval-synth` corpus layout, `EVAL_SYNTH`, `--synth`, and a table for the five synth scripts. `CORPORA.md` now names both synthetic corpora. `benchmarks/README.md` belongs to the `benchmark.ts` owner |
-| 6 | `CORPORA.md` context table lacked `whistled-high-register(-aligned)` | **Done.** Two rows added; only `-aligned` feeds the provisional whistling row |
-| 7 | stale triage in `VERIFY-WORKLIST.md` | **Done.** Re-ran `triage-verify-worklist.ts` (0.9 s), now ranked from `2026-09-27T06-23-29_d77db1d_onset-policy`. freesound-74388 left the list and freesound-250718 joined it. The file is marked SUPERSEDED and kept as history |
-| 8 | no benchmark since the 2026-10-22 refactor | **Done (phase 5).** Fresh HEAD benchmark 2026-10-31: every one of the 1,098 human-truth clips scores identically to the 2026-09-27 onset-policy run (Δ 0.000, ρ 1.00); the timeline's f2611442 point equals d77db1db |
-| 9 | eval-script adoption (`master-todo.md`) | Open, as documented |
-| 10 | cached-onset gap untracked; DETECT_* "moves numbers" | **Done.** Added to the `master-todo.md` item. `trackCache.ts` uses the default `OnsetDetector`, `RESOLVER_ENV_KEYS` lacks the onset variables, and all 4,274 `eval-cache` files predate 2026-09-27; the effect size is unmeasured. The DETECT_* sub-item is noted as de-duplication only |
-| 11 | A/B-only onset variables undocumented | **Concluded: keep all six** (no code deleted). The eval README has a new "Onset-policy kill-switches and A/B levers" table with each variable's measured status. `VOICE_ONSET_MIN_TROUGH_SEC`: no measurement recorded |
-| 12 | no corpus version or env provenance | **Done (corpus part).** `export.py` writes `corpusVersion` (`CORPUS_VERSION = 'v1.1'`). The 44 existing `eval-synth/*/dataset.json` files were stamped in place, with their format kept and no re-export. Result metadata (env overrides, corpus version) belongs to the `benchmark.ts` owner |
-| 13 | `FINDINGS.md:1976` says the lead-in probe is "still to be run" | **Done.** It now points to the `probe-leadin.ts` section |
-| 14 | `RESEARCH-STATUS.md` stale | **Done.** §3 J marked done (8173811c). §3 B: the "promotes 117" claim is corrected and the item is superseded by resynth truth. New §5 addendum covers the 2026-09-27 ship, its nulls and its leads |
-| 15 | SSO alto flute kept by the v1.1 audit without a record | **Concluded: keep** (v1.1 is final). Recorded in the synthetic README caveats with the audit scores: SSO English horn 13.2 and SSO piccolo 10.3 dropped, SSO alto flute 12.6 kept, Iowa alto flute 9.0. `work/sustain-audit.txt` is summarised there, not committed |
-| 16 | `CORPORA.md` apps/eval prescribed-truth section contradicts the DISCARDED verdict | **Done.** Marked discarded (COnP 0.00 dogfood) and notes the 2026-10-30 benchmark-only rework |
-| 17 | human whistle verification (0 of 898) | Superseded by resynth truth (phases 3–4). Recorded in the worklist, `CORPORA.md` and RESEARCH-STATUS §3 B |
-| 18 | corpus v1.2 realism leads | Deferred, one line each in the synthetic README's "Status (2026-10-30)" |
-| 19 | pipeline leads (joint DP quantiser, short-note change cost) | Open; listed in RESEARCH-STATUS §5 |
-| 20 | humming provisional; MTG-QBH | Open. humtrans and mir-qbsh get resynth truth in phase 4 but stay context (licence). MTG-QBH remains an audio lead |
-| 21 | `out/_showcase` listening check never recorded | Open for Karel; stated in the synthetic README's Status section |
+| #   | loose end                                                                         | outcome                                                                                                                                                                                                                                                                                       |
+| --- | --------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | `import-note-labels.ts` could stamp every clip of every dataset as verified       | **Done.** New `--clips=a,b\|all` and `--verified-list=<file>` (a worklist counts only its ticked items). `--verified-by` is refused without `--dataset` and a clip selection, and unknown clip ids are refused. Checked in a scratch copy. `VERIFY-WORKLIST.md`'s command is fixed            |
+| 2   | synthetic README lists "two real notes never share a slot" as shipped             | **Done.** Moved to "measured null, not shipped", with the DP-quantiser lead                                                                                                                                                                                                                   |
+| 3   | 37 timbres / "v1" header / ~12 GB / after-table aggregation unlabelled            | **Done.** 36 timbres (README and FINDINGS), v1.1, ~10 GB (`du`: 10G). The after-table is labelled as clip means vs the baseline's dataset means (0.720 vs 0.717). Also fixed: 90 → 92 sources (the export's distinct source ids), and "bagpipe (with drones)" → drones not mixed              |
+| 4   | `benchmark.ts` history links and synthetic headline                               | Separate phase-1 task (the `benchmark.ts` owner), not in this brief                                                                                                                                                                                                                           |
+| 5   | synthetic tier missing from the harness docs                                      | **Done** in `scripts/eval/README.md`: the `eval-synth` corpus layout, `EVAL_SYNTH`, `--synth`, and a table for the five synth scripts. `CORPORA.md` now names both synthetic corpora. `benchmarks/README.md` belongs to the `benchmark.ts` owner                                              |
+| 6   | `CORPORA.md` context table lacked `whistled-high-register(-aligned)`              | **Done.** Two rows added; only `-aligned` feeds the provisional whistling row                                                                                                                                                                                                                 |
+| 7   | stale triage in `VERIFY-WORKLIST.md`                                              | **Done.** Re-ran `triage-verify-worklist.ts` (0.9 s), now ranked from `2026-09-27T06-23-29_d77db1d_onset-policy`. freesound-74388 left the list and freesound-250718 joined it. The file is marked SUPERSEDED and kept as history                                                             |
+| 8   | no benchmark since the 2026-10-22 refactor                                        | **Done (phase 5).** Fresh HEAD benchmark 2026-10-31: every one of the 1,098 human-truth clips scores identically to the 2026-09-27 onset-policy run (Δ 0.000, ρ 1.00); the timeline's f2611442 point equals d77db1db                                                                          |
+| 9   | eval-script adoption (`master-todo.md`)                                           | Open, as documented                                                                                                                                                                                                                                                                           |
+| 10  | cached-onset gap untracked; DETECT\_\* "moves numbers"                            | **Done.** Added to the `master-todo.md` item. `trackCache.ts` uses the default `OnsetDetector`, `RESOLVER_ENV_KEYS` lacks the onset variables, and all 4,274 `eval-cache` files predate 2026-09-27; the effect size is unmeasured. The DETECT\_\* sub-item is noted as de-duplication only    |
+| 11  | A/B-only onset variables undocumented                                             | **Concluded: keep all six** (no code deleted). The eval README has a new "Onset-policy kill-switches and A/B levers" table with each variable's measured status. `VOICE_ONSET_MIN_TROUGH_SEC`: no measurement recorded                                                                        |
+| 12  | no corpus version or env provenance                                               | **Done (corpus part).** `export.py` writes `corpusVersion` (`CORPUS_VERSION = 'v1.1'`). The 44 existing `eval-synth/*/dataset.json` files were stamped in place, with their format kept and no re-export. Result metadata (env overrides, corpus version) belongs to the `benchmark.ts` owner |
+| 13  | `FINDINGS.md:1976` says the lead-in probe is "still to be run"                    | **Done.** It now points to the `probe-leadin.ts` section                                                                                                                                                                                                                                      |
+| 14  | `RESEARCH-STATUS.md` stale                                                        | **Done.** §3 J marked done (8173811c). §3 B: the "promotes 117" claim is corrected and the item is superseded by resynth truth. New §5 addendum covers the 2026-09-27 ship, its nulls and its leads                                                                                           |
+| 15  | SSO alto flute kept by the v1.1 audit without a record                            | **Concluded: keep** (v1.1 is final). Recorded in the synthetic README caveats with the audit scores: SSO English horn 13.2 and SSO piccolo 10.3 dropped, SSO alto flute 12.6 kept, Iowa alto flute 9.0. `work/sustain-audit.txt` is summarised there, not committed                           |
+| 16  | `CORPORA.md` apps/eval prescribed-truth section contradicts the DISCARDED verdict | **Done.** Marked discarded (COnP 0.00 dogfood) and notes the 2026-10-30 benchmark-only rework                                                                                                                                                                                                 |
+| 17  | human whistle verification (0 of 898)                                             | Superseded by resynth truth (phases 3–4). Recorded in the worklist, `CORPORA.md` and RESEARCH-STATUS §3 B                                                                                                                                                                                     |
+| 18  | corpus v1.2 realism leads                                                         | Deferred, one line each in the synthetic README's "Status (2026-10-30)"                                                                                                                                                                                                                       |
+| 19  | pipeline leads (joint DP quantiser, short-note change cost)                       | Open; listed in RESEARCH-STATUS §5                                                                                                                                                                                                                                                            |
+| 20  | humming provisional; MTG-QBH                                                      | Open. humtrans and mir-qbsh get resynth truth in phase 4 but stay context (licence). MTG-QBH remains an audio lead                                                                                                                                                                            |
+| 21  | `out/_showcase` listening check never recorded                                    | Open for Karel; stated in the synthetic README's Status section                                                                                                                                                                                                                               |
 
 ## Outcome (2026-10-31)
 
 **Truth generated** (every clip passed an independent judge; 0 unresolved):
 
-| dataset | clips | truth now | tier / pooled |
-|---|---|---|---|
-| whistle-real | 117 | resynth | benchmark, pooled (was sineTrack drafts) |
-| whistled-high-register | 6 | resynth | benchmark, pooled (the -aligned duplicate deleted) |
-| app-takes-whistling (new) | 19 | resynth | benchmark, pooled — real takes through the app's own chain |
-| app-takes-singing (new) | 52 | resynth | benchmark, pooled (40 vocadito re-encodes excluded) |
-| dagstuhl-choir | 94 | resynth | benchmark, pooled (audio re-fetched: float bug) |
-| jacrc-notes (new, audio = jacrc-students) | 175 | resynth | benchmark, pooled; jacrc-students keeps its human syllable onsets |
-| whistle-vintage | 6 | resynth | context, pooled:false (accompanied 78 rpm) |
-| mir-qbsh | 50 | resynth | context (licence-restricted) |
-| humtrans | 1 of 769 | aligned (derived) | context — **scope question open** (all / test split 388 / ~150 stratified / skip) |
+| dataset                                   | clips    | truth now         | tier / pooled                                                                     |
+| ----------------------------------------- | -------- | ----------------- | --------------------------------------------------------------------------------- |
+| whistle-real                              | 117      | resynth           | benchmark, pooled (was sineTrack drafts)                                          |
+| whistled-high-register                    | 6        | resynth           | benchmark, pooled (the -aligned duplicate deleted)                                |
+| app-takes-whistling (new)                 | 19       | resynth           | benchmark, pooled — real takes through the app's own chain                        |
+| app-takes-singing (new)                   | 52       | resynth           | benchmark, pooled (40 vocadito re-encodes excluded)                               |
+| dagstuhl-choir                            | 94       | resynth           | benchmark, pooled (audio re-fetched: float bug)                                   |
+| jacrc-notes (new, audio = jacrc-students) | 175      | resynth           | benchmark, pooled; jacrc-students keeps its human syllable onsets                 |
+| whistle-vintage                           | 6        | resynth           | context, pooled:false (accompanied 78 rpm)                                        |
+| mir-qbsh                                  | 50       | resynth           | context (licence-restricted)                                                      |
+| humtrans                                  | 1 of 769 | aligned (derived) | context — **scope question open** (all / test split 388 / ~150 stratified / skip) |
 
 Cost: 13 waves, ~1,700 agent calls, ≈ 1.9 → 0.35–0.55 % of a session window per clip after the v2–v4 protocol
 changes (tool budget + inspect/zoom/note commands, medium-effort generator and judge).
@@ -153,18 +153,17 @@ regression is 0b217b4f (Aug 9). Calibrated against the committed benchmark runs 
 
 Blind resynth truth (no prior notes) vs human truth, COnP @ ±100 ms (`scratchpad calib.py`, 24 clips):
 
-| set | resynth vs human | human vs human |
-|---|---|---|
-| vocadito (n = 10, two annotators) | 0.655 vs A1; **0.712** vs the closer annotator | A2 vs A1 **0.731** |
-| n20emv2 + hust (n = 9, one expert annotation) | ≈ 0.65 (n20emv2/hust experts are coarser than resynth: fewer, longer notes) | — |
-| URMP flute ×4 + violin ×1 | **0.96–1.00** | — |
+| set                                           | resynth vs human                                                            | human vs human     |
+| --------------------------------------------- | --------------------------------------------------------------------------- | ------------------ |
+| vocadito (n = 10, two annotators)             | 0.655 vs A1; **0.712** vs the closer annotator                              | A2 vs A1 **0.731** |
+| n20emv2 + hust (n = 9, one expert annotation) | ≈ 0.65 (n20emv2/hust experts are coarser than resynth: fewer, longer notes) | —                  |
+| URMP flute ×4 + violin ×1                     | **0.96–1.00**                                                               | —                  |
 
 Of the vocadito annotator notes resynth does not match (wave-7 analysis): same-pitch sung syllables merged (fixed by
 the v4 rule — vocadito_37 under v4: 0.760 vs A1, above A2-vs-A1 0.717), short (< 150 ms) ornaments folded into a
 neighbour (convention 5 — the n20emv2/hust experts fold even more), ±1 st calls on between-semitone notes, and only
 1–2 % truly missed notes. Read: resynth truth is about as close to a human annotator as a second human annotator is,
 with a slightly coarser convention on sung ornaments; on instruments it is near-exact.
-
 
 ## Progress log
 

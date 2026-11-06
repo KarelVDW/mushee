@@ -357,8 +357,8 @@ or `uncertain-region  only pyin hears pitch (C#6 85.0)  → judge by eye`.
       adds a note.
     - `extra-sound`: a note the original is voiced over < 35 % of.
     - `pitch`: the original's median over the note's middle is > 50 c from `midi` (65 c for a
-      note flagged `uncertain-pitch`, a decided boundary call); or `copy vs orig … (orig moving,
-note centre ok)`: the copy misses the original's in-note contour by > 50 c for ≥ 100 ms
+      note flagged `uncertain-pitch`, a decided boundary call); or
+      `copy vs orig … (orig moving, note centre ok)`: the copy misses the original's in-note contour by > 50 c for ≥ 100 ms
       while the original moves (a slow scoop, a glide, wide vibrato) — a contour/render limit,
       not a note error.
     - `extra-onset`, something inside a note that makes it two: a re-articulation (dip ≥ 3 dB
@@ -374,8 +374,8 @@ note centre ok)`: the copy misses the original's in-note contour by > 50 c for �
       a dip is not an onset) or a strong sung syllable within ±50 ms. jacrc's human syllable
       onsets count for all; a strong sung syllable stands in for any kind when nothing else is
       there. Evidence already matched to the previous note's onset is not reused. A repeat with
-      only a WEAK syllable change near it says so (`no orig re-articulation near 2.75, only a
-weak syllable change 2.76 (1.10)  → merge with n7, unless a new syllable starts there?`,
+      only a WEAK syllable change near it says so
+      (`no orig re-articulation near 2.75, only a weak syllable change 2.76 (1.10)  → merge with n7, unless a new syllable starts there?`,
       lower severity): look before merging.
     - `timing`: onset > 40 ms from the nearest such evidence.
     - `offset`: end > 80 ms from where the original's sound ends, for notes followed by ≥ 100 ms
@@ -489,8 +489,8 @@ towards under-splitting sung lines.
   same-pitch repeat within ±50 ms (and stands in for any onset with no other evidence), ends a
   note's sound, blocks `extend` hints across it, and inside a held note it is a `syllable` diff
   (a possible same-pitch split). 1.0–1.25 (`SYL_WEAK`) supports nothing; it only rewords an
-  `unsupported` repeat (`… only a weak syllable change … → merge, unless a new syllable starts
-there?`, lower severity), so a merge across it is not flagged either. Below 1.0 the events
+  `unsupported` repeat
+  (`… only a weak syllable change … → merge, unless a new syllable starts there?`, lower severity), so a merge across it is not flagged either. Below 1.0 the events
   are shown by `inspect` / `zoom` / `note` only.
 - **Material**: datasets whose material is `singing` (vocadito, n20emv2, hust-solfege,
   dagstuhl-choir, jacrc). Humming, whistling and instruments have no syllable channel.

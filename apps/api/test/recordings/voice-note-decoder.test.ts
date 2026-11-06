@@ -168,10 +168,18 @@ describe('VoiceNoteDecoder', () => {
         const blip = take(0.08)
         // Judged at the 0.05 reporting shift (unset), the 4-frame run survives as a 30 ms note…
         const atReporting = { existenceShiftSec: undefined }
-        expect(decoder(atReporting).decode(blip.track, blip.energy).map((n) => n.pitchMidi)).toEqual([60, 64, 62])
+        expect(
+            decoder(atReporting)
+                .decode(blip.track, blip.energy)
+                .map((n) => n.pitchMidi),
+        ).toEqual([60, 64, 62])
         // …judged at 0.07 (what ships) it is dropped, as it was before the 2026-11 shift.
         expect(SHIPPING_VOICE_OPTS.existenceShiftSec).toBe(0.07)
-        expect(decoder().decode(blip.track, blip.energy).map((n) => n.pitchMidi)).toEqual([60, 62])
+        expect(
+            decoder()
+                .decode(blip.track, blip.energy)
+                .map((n) => n.pitchMidi),
+        ).toEqual([60, 62])
         // A 5-frame run exists either way, and its onset is the reporting shift's.
         const held = take(0.1)
         const shipped = decoder().decode(held.track, held.energy)
@@ -322,7 +330,11 @@ describe('SHIPPING_VOICE_OPTS env overrides', () => {
 
     it('ignores malformed values instead of feeding NaN into the decode', async () => {
         for (const bad of ['off', '0.15', '0.15,', 'a,b', '0.1,0.2,0.3']) {
-            const o = await shippingWith({ VOICE_ONSET_SHIFT_SEC: 'abc', VOICE_ONSET_BACKEXTEND: bad, VOICE_ONSET_EXISTENCE_SHIFT_SEC: 'abc' })
+            const o = await shippingWith({
+                VOICE_ONSET_SHIFT_SEC: 'abc',
+                VOICE_ONSET_BACKEXTEND: bad,
+                VOICE_ONSET_EXISTENCE_SHIFT_SEC: 'abc',
+            })
             expect(o.onsetShiftSec).toBe(0.05)
             expect(o.backExtend).toBeUndefined()
             expect(o.existenceShiftSec).toBe(0.07)

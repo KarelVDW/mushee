@@ -169,7 +169,12 @@ export class CrepeProvider implements TrajectoryProvider {
      * the whole take again, and `voicingAdaptationDrifted` tells the pipeline when
      * that moved the decision away from one an earlier pass ran with.
      */
-    private reverbDecision(track: PitchTrack, energy: Float32Array, options: PitchTranscribeOptions | undefined, sess: CrepeSession): ReverbDecision {
+    private reverbDecision(
+        track: PitchTrack,
+        energy: Float32Array,
+        options: PitchTranscribeOptions | undefined,
+        sess: CrepeSession,
+    ): ReverbDecision {
         const adaptation = REVERB_DECODE_ADAPTATION
         if (!adaptation) throw new Error('reverbDecision without an adaptation')
         const realHopSec = track.hopSec / this.timeScale

@@ -159,10 +159,10 @@ with `benchmark.ts run --conditions rir-near,rir-far`. Generated
 (`DEGRADE_CONDITIONS=rir-near,rir-far fetch/degrade-real.ts`) for vocadito,
 annotated-vocalset, guitarset-solo and the 13 URMP sets, both splits.
 
-| condition  | source (DOI, licence)                                                                                                                       | member                                            | RT60 (T30, 0.5/1/2 kHz mean) | DRR      | receiver |
-| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------- | ---------------------------- | -------- | -------- |
-| `rir-near` | Arni variable-acoustics room, Aalto Acoustics Lab (Prawda, Schlecht, Välimäki 2022), `10.5281/zenodo.6985104`, **CC-BY-4.0** (record field) | `IR_numClosed_40_numComb_3942_mic_4_sweep_1.wav`  | 0.80 s                       | −2.5 dB  | 4, ≈1.7 m |
-| `rir-far`  | same record                                                                                                                                 | `IR_numClosed_55_numComb_0_mic_3_sweep_1.wav`     | 1.27 s                       | −10.8 dB | 3, ≈2.9 m |
+| condition  | source (DOI, licence)                                                                                                                       | member                                           | RT60 (T30, 0.5/1/2 kHz mean) | DRR      | receiver  |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ | ---------------------------- | -------- | --------- |
+| `rir-near` | Arni variable-acoustics room, Aalto Acoustics Lab (Prawda, Schlecht, Välimäki 2022), `10.5281/zenodo.6985104`, **CC-BY-4.0** (record field) | `IR_numClosed_40_numComb_3942_mic_4_sweep_1.wav` | 0.80 s                       | −2.5 dB  | 4, ≈1.7 m |
+| `rir-far`  | same record                                                                                                                                 | `IR_numClosed_55_numComb_0_mic_3_sweep_1.wav`    | 1.27 s                       | −10.8 dB | 3, ≈2.9 m |
 
 They are the measured twins of `echoey-room` (modelled 0.9 s / +2 dB) and
 `distant-mic` (1.3 s / −4 dB), one milder and one harsher, and exist so a reverb
@@ -185,12 +185,12 @@ not use. Corrected by L0b of the 2026-11 pass, staged, then swapped into `eval-r
 records what changed (`gridCorrection` / `windowsOnClick` / `nominalTempo` + `tempoTest`). Numbers before and after
 the swap are not comparable on these four datasets (FINDINGS.md 2026-11-01, "Correction 2").
 
-| dataset | change | effect on its COnP (both splits) |
-| --- | --- | --- |
-| `guitarset-solo` | every 15 s window starts on the last JAMS click beat at or before (anchor − 0.25 s) (`fetch-guitarset.ts`); audio, truth and variants re-cut; 2,523 notes (was 2,535) | +0.017\* |
-| `dagstuhl-choir` | each excerpt starts on its first annotated beat, bpm = the mean tempo over its marks, slices rounded (`fetch-dagstuhl.ts`); resynth notes shifted by −b0 (57 clamped to 0, 18 dropped; 2,175 notes) | +0.033\* |
+| dataset                                    | change                                                                                                                                                                                                                                           | effect on its COnP (both splits)                                                                    |
+| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------- |
+| `guitarset-solo`                           | every 15 s window starts on the last JAMS click beat at or before (anchor − 0.25 s) (`fetch-guitarset.ts`); audio, truth and variants re-cut; 2,523 notes (was 2,535)                                                                            | +0.017\*                                                                                            |
+| `dagstuhl-choir`                           | each excerpt starts on its first annotated beat, bpm = the mean tempo over its marks, slices rounded (`fetch-dagstuhl.ts`); resynth notes shifted by −b0 (57 clamped to 0, 18 dropped; 2,175 notes)                                              | +0.033\*                                                                                            |
 | `app-takes-singing`, `app-takes-whistling` | truth bpm = the take's recording tempo (session.json for 27 stored takes; the debug plot's barline spacing for 42 Apr–Jun debug takes, 25/25 agreement; 2 takes keep 120, flagged `unknown`); the tracked resynth annotations carry the same bpm | −0.027\* / −0.034\* (the seconds-COnP artefact of the right but coarser grid; beat F1 0.56 vs 0.31) |
-| `urmp-*` | score MIDIs fit no constant grid (score-tempo p90 503 ms; best constant 73 ms; 5/48 under 40 ms): bpm stays 120, flagged `nominalTempo: true` | 0 |
+| `urmp-*`                                   | score MIDIs fit no constant grid (score-tempo p90 503 ms; best constant 73 ms; 5/48 under 40 ms): bpm stays 120, flagged `nominalTempo: true`                                                                                                    | 0                                                                                                   |
 
 Hazard: `annotations/resynth/dagstuhl-choir/*.resynth.json` still describe the pre-cut excerpts. A resynth
 re-export of dagstuhl-choir must re-apply the cut (the staged `dataset.json` `gridCorrection` says how).

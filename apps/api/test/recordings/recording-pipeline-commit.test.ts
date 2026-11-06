@@ -36,7 +36,11 @@ function pipeline(): { p: RecordingPipeline; emitted: () => { start: number; dur
 /** One pass over `raw` (what the provider has decoded so far) at a buffer of `durationSec`. */
 function pass(p: RecordingPipeline, raw: NoteEventTime[], durationSec: number, isFinal = false): void {
     const extracted = new NoteExtractor().extract(raw, { bpm: BPM })
-    ;(p as unknown as { emitFromExtracted(e: ExtractedNotes, d: number, f: boolean): void }).emitFromExtracted(extracted, durationSec, isFinal)
+    ;(p as unknown as { emitFromExtracted(e: ExtractedNotes, d: number, f: boolean): void }).emitFromExtracted(
+        extracted,
+        durationSec,
+        isFinal,
+    )
 }
 
 const note = (start: number, dur: number, midi: number): NoteEventTime => ({

@@ -276,7 +276,12 @@ export class AudioConverter {
      * (a fixed provider in the eval harness); production passes nothing.
      * `pass.final` marks a streaming session's last pass (see `finalPass`).
      */
-    async convert(samples: Float32Array, bpm: number, pitchOptions = this.pitchOptions, pass: { final?: boolean } = {}): Promise<ExtractedNotes> {
+    async convert(
+        samples: Float32Array,
+        bpm: number,
+        pitchOptions = this.pitchOptions,
+        pass: { final?: boolean } = {},
+    ): Promise<ExtractedNotes> {
         const onsetTimesSec = this.onsetDetector?.detect(samples, this.provider.sampleRate)
         const raw = await this.provider.transcribe(samples, pass.final ? { ...pitchOptions, finalPass: true } : pitchOptions, this.session)
         return this.extractor.extract(raw, { bpm, onsetTimesSec })

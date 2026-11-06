@@ -2366,12 +2366,12 @@ files byte-identical to an independently built mirror). Audits: tails within −
 below −15 dB), 1 of 1,452 files with > 10 clipped samples (72 samples), head lag 0; model path == cached path on
 220 clip×conditions (9,387 notes). The broken originals are kept in `.cache/scratch/h0/broken-variants/`.
 
-| scope | old (= HEAD d16420ef) | `h0-fixed` | Δ both splits | dev | test |
-|---|---|---|---|---|---|
-| ALL (27) | 0.638 | 0.672 | **+0.034\*** [+0.026, +0.041] | +0.032\* | +0.038\* |
-| human truth (21) | 0.655 | 0.698 | **+0.043\*** [+0.034, +0.053] | +0.042\* | +0.047\* |
-| singing / whistling / instrument | 0.582 / 0.601 / 0.687 | 0.589 / 0.601 / 0.746 | +0.007\* / 0 / +0.060\* | | |
-| `real` condition (ALL / human) | 0.728 / 0.770 | identical | 0 of 1,561 clips differ | | |
+| scope                            | old (= HEAD d16420ef) | `h0-fixed`            | Δ both splits                 | dev      | test     |
+| -------------------------------- | --------------------- | --------------------- | ----------------------------- | -------- | -------- |
+| ALL (27)                         | 0.638                 | 0.672                 | **+0.034\*** [+0.026, +0.041] | +0.032\* | +0.038\* |
+| human truth (21)                 | 0.655                 | 0.698                 | **+0.043\*** [+0.034, +0.053] | +0.042\* | +0.047\* |
+| singing / whistling / instrument | 0.582 / 0.601 / 0.687 | 0.589 / 0.601 / 0.746 | +0.007\* / 0 / +0.060\*       |          |          |
+| `real` condition (ALL / human)   | 0.728 / 0.770         | identical             | 0 of 1,561 clips differ       |          |          |
 
 Per condition: echoey 0.565 → 0.654 (+0.089\*), distant 0.474 → 0.524 (+0.050\*), wind 0.755 → 0.833 (+0.079\*),
 street 0.751 → 0.825 (+0.073\*). Distant-mic singing barely moves (+0.005 n.s.): on the broken files the clipping
@@ -2421,6 +2421,7 @@ Unaffected: the `real` condition, whistling (no variants), the capture-codec tie
 ### Correction 2 (measurement, not the pipeline): four corpora were quantised on grids the product does not use
 
 The product starts a take on beat 1 at the take's recording tempo. The benchmark quantised:
+
 - GuitarSet windows that opened 0.25 s before a note, between clicks;
 - Dagstuhl excerpts that opened a median 0.30 s before their first beat, at the median beat interval;
 - every app take at a nominal 120 bpm, though 48 of 71 were recorded at 60–160.
@@ -2433,13 +2434,13 @@ both; 2 takes keep 120). URMP's score MIDIs fit no constant grid (score-tempo p9
 `swap-grid.sh` (backup and `--rollback` in `.cache/scratch/l0b/pre-swap/`). h0-fixed → `grid-fixed`, cached;
 every other dataset Δ 0.000:
 
-| dataset | Δ both splits | dev | test |
-|---|---|---|---|
-| guitarset-solo | **+0.017\*** [+0.003, +0.031] | +0.020\* | +0.014 |
-| dagstuhl-choir | **+0.033\*** [+0.011, +0.054] (cut +0.008, mean tempo +0.025\*) | +0.011 | +0.040\* |
-| app-takes-singing | **−0.027\*** [−0.050, −0.005] | −0.025 | −0.033\* |
-| app-takes-whistling | **−0.034\*** [−0.058, −0.013] | −0.069\* | −0.018\* |
-| ALL / human / whistling | −0.000 / +0.001\* / −0.011\* | | |
+| dataset                 | Δ both splits                                                   | dev      | test     |
+| ----------------------- | --------------------------------------------------------------- | -------- | -------- |
+| guitarset-solo          | **+0.017\*** [+0.003, +0.031]                                   | +0.020\* | +0.014   |
+| dagstuhl-choir          | **+0.033\*** [+0.011, +0.054] (cut +0.008, mean tempo +0.025\*) | +0.011   | +0.040\* |
+| app-takes-singing       | **−0.027\*** [−0.050, −0.005]                                   | −0.025   | −0.033\* |
+| app-takes-whistling     | **−0.034\*** [−0.058, −0.013]                                   | −0.069\* | −0.018\* |
+| ALL / human / whistling | −0.000 / +0.001\* / −0.011\*                                    |          |          |
 
 The app-take drop is the known seconds-COnP artefact of quantised output. The singers did follow the click (8th-grid
 phase concentration R 0.54 at the session tempo against 0.15 at 120), and snapping humanly-jittered onsets to the
@@ -2451,15 +2452,15 @@ excerpts, so a resynth re-export of that dataset must re-apply the cut.
 
 **The chain (same pipeline throughout):**
 
-| scope | old HEAD | h0-fixed | **h1-final** (both corrections) | total Δ |
-|---|---|---|---|---|
-| ALL (27) | 0.6385 | 0.6721 | **0.6717** | +0.033\* [+0.025, +0.041] |
-| human (21) | 0.6549 | 0.6981 | **0.6989** | +0.044\* [+0.034, +0.054] |
-| singing | 0.5824 | 0.5895 | 0.5900 | +0.008\* |
-| whistling | 0.6009 | 0.6009 | 0.5895 | −0.011\* |
-| instrument | 0.6867 | 0.7464 | 0.7476 | +0.061\* |
-| real only (ALL / human) | 0.7280 / 0.7700 | same | 0.7280 / 0.7713 | −0.000 |
-| ALL dev / test | 0.6292 / 0.6425 | 0.6613 / 0.6802 | 0.6588 / 0.6803 | +0.030\* / +0.038\* |
+| scope                   | old HEAD        | h0-fixed        | **h1-final** (both corrections) | total Δ                   |
+| ----------------------- | --------------- | --------------- | ------------------------------- | ------------------------- |
+| ALL (27)                | 0.6385          | 0.6721          | **0.6717**                      | +0.033\* [+0.025, +0.041] |
+| human (21)              | 0.6549          | 0.6981          | **0.6989**                      | +0.044\* [+0.034, +0.054] |
+| singing                 | 0.5824          | 0.5895          | 0.5900                          | +0.008\*                  |
+| whistling               | 0.6009          | 0.6009          | 0.5895                          | −0.011\*                  |
+| instrument              | 0.6867          | 0.7464          | 0.7476                          | +0.061\*                  |
+| real only (ALL / human) | 0.7280 / 0.7700 | same            | 0.7280 / 0.7713                 | −0.000                    |
+| ALL dev / test          | 0.6292 / 0.6425 | 0.6613 / 0.6802 | 0.6588 / 0.6803                 | +0.030\* / +0.038\*       |
 
 `2026-11-01T14-03-50_dadfb29b_h1-final` is the baseline every pipeline Δ below is measured against. The eval-app
 timeline is discontinuous at both corrections: the adverse rows of 16 datasets, and the four re-gridded datasets.
@@ -2483,13 +2484,14 @@ notes, where the ±100 ms window is hard. The product quantises to a 16th grid, 
 rewards centring the error; the decode is a median +20…+60 ms late. Shifts were compared only at equal phase mod
 the 20 ms hop: 0.03 / 0.05 / 0.07 / 0.09 give singing +0.010 / **+0.016** / 0 / −0.045 (dev); off the 120 bpm
 lattice (97 / 133 bpm) 0.05 is still +0.012.
+
 - **Dev, final harness:** singing +0.016\* [+0.012, +0.021]. app-takes-singing at its session bpm +0.019\*; it was
   +0.035\* at 120, so the tempo correction halves it, as L2 predicted.
 - **Test:** singing **+0.013\* [+0.009, +0.017]** (0.586 → 0.599), ALL +0.005\*, human +0.004\*, real-only +0.003\*.
-  - Whistling and instruments exactly 0.
-  - Voice by condition: echoey +0.022\*, distant +0.039\*, wind +0.030\*, street +0.036\*, real −0.005 (n.s.).
-  - Human-timed sets +0.020\*. AVS real −0.044\* (its pYIN-segmented timing), with its reverb rows +0.008 /
-    +0.034\*. esmuc −0.011\*. app-takes-singing +0.009 (n.s.).
+    - Whistling and instruments exactly 0.
+    - Voice by condition: echoey +0.022\*, distant +0.039\*, wind +0.030\*, street +0.036\*, real −0.005 (n.s.).
+    - Human-timed sets +0.020\*. AVS real −0.044\* (its pYIN-segmented timing), with its reverb rows +0.008 /
+      +0.034\*. esmuc −0.011\*. app-takes-singing +0.009 (n.s.).
 - **Independent checks (dev):** realistic synthetic singing to the click +0.009 (n.s., COnPOff +0.022\*);
   jacrc-students human syllable-onset recall +0.108\*; AVP onset F1 +0.082\*; mir-qbsh +0.038\*.
 - **Notation** (final harness, both splits): app-takes-singing beat F1 0.562 → 0.571, phase-locked 0.515 → 0.550,
@@ -2502,6 +2504,7 @@ lattice (97 / 133 bpm) 0.05 is still +0.012.
 consecutive same-MIDI raw notes across a gap of at most 120 ms, unless a detected onset lies within 30 ms of the
 gap, and only when the shorter note is a fragment (< 0.2 s). It applies to sustained instruments on the at-pitch
 provider only.
+
 - The plan's any-length rule had the larger dev gain (+0.0098\*) but ate re-bowed repeats the detector misses
   (synthetic cello/contrabass re-onsets 39 → 35 of 85, repeats 212 → 185 of 450). The fragment limit, the shipped
   `mergeAdjacent`'s own condition, was chosen after that result, so the fresh check is the other 34 synthetic
@@ -2510,56 +2513,56 @@ provider only.
 - **Dev, final harness:** instrument +0.0074\* [+0.0045, +0.0102]; every instrument condition positive; GuitarSet
   and singing note-identical.
 - **Test:** instrument **+0.0046\* [+0.0030, +0.0062]** (0.759 → 0.764), at the ~+0.005 bar.
-  - URMP +0.0050\*: bowed +0.014\*, woodwind +0.003, brass −0.001 (echoey × brass −0.007\*, 3 of 10 clip×conditions).
-  - ALL +0.0026\*, human +0.0030\*. Singing and GuitarSet exactly 0.
-  - URMP Yong re-onsets 124 → 123 of 190, same-pitch repeats ≤ 250 ms 403 → 399 of 510 (both n.s.).
-  - At-pitch whistles pass the gate: test +0.002 (n.s.), dev +0.005\*.
+    - URMP +0.0050\*: bowed +0.014\*, woodwind +0.003, brass −0.001 (echoey × brass −0.007\*, 3 of 10 clip×conditions).
+    - ALL +0.0026\*, human +0.0030\*. Singing and GuitarSet exactly 0.
+    - URMP Yong re-onsets 124 → 123 of 190, same-pitch repeats ≤ 250 ms 403 → 399 of 510 (both n.s.).
+    - At-pitch whistles pass the gate: test +0.002 (n.s.), dev +0.005\*.
 
 ### Built off after its test look
 
 - **Confidence-relative voicing gate (ADV-H2, `RECORDING_CONF_RELATIVE_GATE=1`).**
-  - Rule: gate = min(profile gate, max(0.20, 0.5 − 2·max(0, 0.85 − confMed))), where confMed is CREPE's median
-    confidence over loud frames. It is skipped when the take's P95 100-ms level drop is ≥ 12 dB (a dry-take veto,
-    added on dev after two dry, noisy app takes failed the clean guard). It is `min` with the shipped relief,
-    never `replace`, which always cost clean takes.
-  - Dev ALL +0.010\* [+0.005, +0.014]. Streaming: the 1.5 s frozen prefix keeps 89 % of it and `check-streaming`
-    rows are identical; but through the real RecordingPipeline on 22 reverberant webm takes the paced gain is
-    +0.005 against +0.020 instant, because the prefix-locked profile's relief already lowers many live gates.
-  - **Test:** ALL **+0.0057\* [+0.005, +0.007]**, human +0.006\*, singing +0.008\*, instrument +0.005\*; voice
-    echoey / distant +0.046\* / +0.063\*; every pooled `real` row ≥ −0.001 (AVS real +0.007\*).
-  - **Measured-RIR tier, test:** ALL +0.012\* [+0.008, +0.016]; voice rir-near / rir-far +0.022\* / +0.071\*;
-    sustained +0.007 / +0.006\*; plucked rir-far +0.016\*; **plucked rir-near −0.004 [−0.010, +0.002].**
-  - The pre-registered rule required a positive sign in every condition × family cell of the measured rooms, so
-    it does not ship. The failing cell is GuitarSet in the milder room and is not significant. **Owner call**:
-    `envFlag('RECORDING_CONF_RELATIVE_GATE', true)` ships it; stacked on the shipped set it adds about +0.004 ALL
-    on test.
-  - **Hardened for the flip (review findings 3 and 4; still off).**
-    - Silent and noise-only takes read as the wettest room: every frame is "loud" against its own peak, the level
-      never drops, and CREPE hears noise at ~0.2, so the gate fell to 0.20. Through the real pipeline with the knob
-      on, pink noise at −60 / −40 dBFS and a fan's room tone gave 1–10 junk notes (0 off; digital silence and a
-      −90 dBFS muted mic gave 0 either way). `PitchTrack.reverbEvidence` now reads a take neutral when its peak is
-      under −60 dBFS, under 10 % of its loud frames are pitched, or its level spans under 4 dB (dev: the quietest
-      real take peaks at −50 dBFS, the least pitched has 24 %, the flattest spans 6.4 dB; noise 0–1 % and 1–3 dB).
-      All five synthetic takes now give 0 notes, knob on or off. No benchmark clip × condition reads neutral, and
-      the cached run is note-identical on 2,813 of 2,813, knob on and off, both splits.
-    - The streaming drift check compared float gates exactly, so nearly every take the gate touched was rebuilt at
-      stop. It now allows 0.02 (`_DRIFT_TOL`). Emulated on the cached dev tracks: the exact compare rebuilt 580 of
-      1,372 takes, 0.02 rebuilds 501 with the same final COnP; 0.05 would rebuild 379 at −0.0003, and recording only
-      the passes that committed notes 528 at −0.0003, because every rebuild also erases the streaming commit's own
-      losses (see RecordingPipeline). `check-streaming` rows are identical.
+    - Rule: gate = min(profile gate, max(0.20, 0.5 − 2·max(0, 0.85 − confMed))), where confMed is CREPE's median
+      confidence over loud frames. It is skipped when the take's P95 100-ms level drop is ≥ 12 dB (a dry-take veto,
+      added on dev after two dry, noisy app takes failed the clean guard). It is `min` with the shipped relief,
+      never `replace`, which always cost clean takes.
+    - Dev ALL +0.010\* [+0.005, +0.014]. Streaming: the 1.5 s frozen prefix keeps 89 % of it and `check-streaming`
+      rows are identical; but through the real RecordingPipeline on 22 reverberant webm takes the paced gain is
+      +0.005 against +0.020 instant, because the prefix-locked profile's relief already lowers many live gates.
+    - **Test:** ALL **+0.0057\* [+0.005, +0.007]**, human +0.006\*, singing +0.008\*, instrument +0.005\*; voice
+      echoey / distant +0.046\* / +0.063\*; every pooled `real` row ≥ −0.001 (AVS real +0.007\*).
+    - **Measured-RIR tier, test:** ALL +0.012\* [+0.008, +0.016]; voice rir-near / rir-far +0.022\* / +0.071\*;
+      sustained +0.007 / +0.006\*; plucked rir-far +0.016\*; **plucked rir-near −0.004 [−0.010, +0.002].**
+    - The pre-registered rule required a positive sign in every condition × family cell of the measured rooms, so
+      it does not ship. The failing cell is GuitarSet in the milder room and is not significant. **Owner call**:
+      `envFlag('RECORDING_CONF_RELATIVE_GATE', true)` ships it; stacked on the shipped set it adds about +0.004 ALL
+      on test.
+    - **Hardened for the flip (review findings 3 and 4; still off).**
+        - Silent and noise-only takes read as the wettest room: every frame is "loud" against its own peak, the level
+          never drops, and CREPE hears noise at ~0.2, so the gate fell to 0.20. Through the real pipeline with the knob
+          on, pink noise at −60 / −40 dBFS and a fan's room tone gave 1–10 junk notes (0 off; digital silence and a
+          −90 dBFS muted mic gave 0 either way). `PitchTrack.reverbEvidence` now reads a take neutral when its peak is
+          under −60 dBFS, under 10 % of its loud frames are pitched, or its level spans under 4 dB (dev: the quietest
+          real take peaks at −50 dBFS, the least pitched has 24 %, the flattest spans 6.4 dB; noise 0–1 % and 1–3 dB).
+          All five synthetic takes now give 0 notes, knob on or off. No benchmark clip × condition reads neutral, and
+          the cached run is note-identical on 2,813 of 2,813, knob on and off, both splits.
+        - The streaming drift check compared float gates exactly, so nearly every take the gate touched was rebuilt at
+          stop. It now allows 0.02 (`_DRIFT_TOL`). Emulated on the cached dev tracks: the exact compare rebuilt 580 of
+          1,372 takes, 0.02 rebuilds 501 with the same final COnP; 0.05 would rebuild 379 at −0.0003, and recording only
+          the passes that committed notes 528 at −0.0003, because every rebuild also erases the streaming commit's own
+          losses (see RecordingPipeline). `check-streaming` rows are identical.
 - **Whistle family (WH-H1/H2/H3; `RECORDING_WHISTLE_DETECT=1 RECORDING_WHISTLE_PITCHDOWN=1 RECORDING_WHISTLE_ONSET=0.2`).**
-  - Rule: a whistle hint, or YAMNet "Whistling" in the top 3 (ties count against), means the take is never voice,
-    goes to the octave-down provider whatever its band, and gets a flat 0.2 re-attack dip.
-  - Dev, final harness: whistling **+0.037\*** [+0.021, +0.056] (WR +0.036\*, APP +0.037\*, WHR +0.038\*).
-  - **Test: −0.001 [−0.020, +0.017]** (WR −0.003: 16 clips up, 12 down, five losses ≥ 0.13; APP +0.002; 60 clips,
-    MDE 0.026), so it **does not ship**.
-  - Exactly 0 elsewhere on test: in the benchmark only the WR/APP note lists change, and profile identity on 2,658
-    test profiles shows 0 non-family differences (one context false positive, a TinySOL viola top note).
-  - Verdict recall at the production lock prefix is 0.77 on dev (target 0.8 missed; top 5 would give 0.80).
-  - Product-faithful (undeclared source, test): whistling on a `voice-lead` score **+0.033\* [+0.006, +0.061]**
-    (otherwise whistles take the voice decode, −0.042\* against the declared row); on a `piano` score +0.011 (n.s.).
-  - The `off` dip (dev +0.047) fails the re-onset guard: room-mic repeats go 14 → 0 on exact-truth synthetic
-    whistles.
+    - Rule: a whistle hint, or YAMNet "Whistling" in the top 3 (ties count against), means the take is never voice,
+      goes to the octave-down provider whatever its band, and gets a flat 0.2 re-attack dip.
+    - Dev, final harness: whistling **+0.037\*** [+0.021, +0.056] (WR +0.036\*, APP +0.037\*, WHR +0.038\*).
+    - **Test: −0.001 [−0.020, +0.017]** (WR −0.003: 16 clips up, 12 down, five losses ≥ 0.13; APP +0.002; 60 clips,
+      MDE 0.026), so it **does not ship**.
+    - Exactly 0 elsewhere on test: in the benchmark only the WR/APP note lists change, and profile identity on 2,658
+      test profiles shows 0 non-family differences (one context false positive, a TinySOL viola top note).
+    - Verdict recall at the production lock prefix is 0.77 on dev (target 0.8 missed; top 5 would give 0.80).
+    - Product-faithful (undeclared source, test): whistling on a `voice-lead` score **+0.033\* [+0.006, +0.061]**
+      (otherwise whistles take the voice decode, −0.042\* against the declared row); on a `piano` score +0.011 (n.s.).
+    - The `off` dip (dev +0.047) fails the re-onset guard: room-mic repeats go 14 → 0 on exact-truth synthetic
+      whistles.
 
 ### Built off at dev (no test look)
 
@@ -2598,11 +2601,11 @@ floor.
 
 - **The real model, no caches** (`benchmark.ts run --scratch`, 7 identical dataset shards per arm, all pooled
   datasets, all conditions, both splits). Before = every 2026-11 knob forced off; after = the new defaults.
-  - Before is note-identical to the cached `h1-final` on 2,813 / 2,813 clip×conditions, and after to the cached
-    shipped set on 2,813 / 2,813. So the model-path Δ is the cached Δ exactly.
-  - Test: ALL +0.008\* [+0.006, +0.010], human +0.007\*, singing +0.013\*, instrument +0.005\*.
-  - Both splits: ALL +0.009\* [+0.007, +0.011] (0.672 → 0.681), human +0.009\* (0.699 → 0.708), singing
-    +0.015\*, instrument +0.006\*, whistling +0.003\*, real only +0.006\*.
+    - Before is note-identical to the cached `h1-final` on 2,813 / 2,813 clip×conditions, and after to the cached
+      shipped set on 2,813 / 2,813. So the model-path Δ is the cached Δ exactly.
+    - Test: ALL +0.008\* [+0.006, +0.010], human +0.007\*, singing +0.013\*, instrument +0.005\*.
+    - Both splits: ALL +0.009\* [+0.007, +0.011] (0.672 → 0.681), human +0.009\* (0.699 → 0.708), singing
+      +0.015\*, instrument +0.006\*, whistling +0.003\*, real only +0.006\*.
 - **Realistic synthetic corpus** (`--synth --scratch`, home-phone + room, exact truth, both splits, 926
   clip×conditions): ALL +0.002\* [+0.001, +0.004], singing +0.008\* [+0.001, +0.015] (home-phone +0.009, room
   +0.007; alto −0.008 n.s. is the only voice below 0), instrument +0.001\*; no dataset significantly negative.
@@ -2629,12 +2632,12 @@ A review of the pass found two medium issues; both are fixed. (ADV-H2's hardenin
   reeds are often heard as plucked (URMP tuba 11/15), so a guitar into a violin score still gets the bridge.
   Every declared profile is byte-identical (4,664 real, 2,315 synthetic). Also: `RECORDING_SOURCE_CLASSIFY` and
   `RECORDING_PLUCKED_DETECT` joined the cache signature; the bridge's onset veto is a binary search (`b113fc40`).
-- **Streaming committed held notes short** (`bf471983`, pre-existing). A pass committed a note once its *written*
+- **Streaming committed held notes short** (`bf471983`, pre-existing). A pass committed a note once its _written_
   end was 0.4 s behind the audio, and that end is floor-snapped and capped, so a still-sounding note was committed
   at a short length that later passes could never lengthen. Measured on 39 real dev clip×conditions through the
   real RecordingPipeline (paced webm vs whole-buffer, same profile): 37 notes committed while still sounding, 44
   shorter than whole-buffer (50.25 beats; URMP oboe held notes of 6 and 5.5 beats written as 2); COnPOff paced
-  0.2221 vs whole 0.2291. Fix: commit only once the *performed* end is also 0.4 s behind. Still-sounding commits
+  0.2221 vs whole 0.2291. Fix: commit only once the _performed_ end is also 0.4 s behind. Still-sounding commits
   37 → 0, shorter-than-whole 44 → 18, COnPOff paced 0.2251. Cost: the 3.9 % of notes that are held appear later
   (median +1.0 s); no note appears earlier, the median time to screen goes 1.36 → 1.37 s. `check-streaming.ts`
   (`e0bb7de1`) now compares note lengths and has three held-note scenarios, all of which failed before the fix.
@@ -2651,16 +2654,16 @@ condition, not per dataset.
 collapse stages, a Python mirror validated exactly against the TypeScript on 8,760 clip × condition × shift rows).**
 The 0.07 → 0.05 change splits into onset timing and one side effect:
 
-| dev, 0.07 → 0.05 | total | timing only | existence floor (b1) | split + floor stages |
-|---|---|---|---|---|
-| annotated-vocalset real | −0.047\* | −0.047\* | −0.002 | +0.001 |
-| annotated-vocalset echoey / distant | +0.014\* / +0.041\* | +0.021\* / +0.039\* | −0.008\* / +0.002 | ≤ 0.001 |
-| esmuc-choir | −0.012\* | **+0.012\*** | **−0.026\*** | +0.002 |
-| hust-solfege | −0.004 | +0.003 | −0.008\* | +0.001 |
-| app-takes-singing / dagstuhl / n20emv2 | +0.019\* / +0.013 / +0.022\* | +0.031\* / +0.024\* / +0.027\* | −0.012\* / −0.010 / −0.008\* | ≤ 0.003 |
-| vocadito real / echoey / distant | +0.033\* / +0.036\* / +0.044\* | +0.031\* / +0.043\* / +0.049\* | +0.002 / −0.007\* / −0.005\* | ≤ 0.001 |
+| dev, 0.07 → 0.05                       | total                          | timing only                    | existence floor (b1)         | split + floor stages |
+| -------------------------------------- | ------------------------------ | ------------------------------ | ---------------------------- | -------------------- |
+| annotated-vocalset real                | −0.047\*                       | −0.047\*                       | −0.002                       | +0.001               |
+| annotated-vocalset echoey / distant    | +0.014\* / +0.041\*            | +0.021\* / +0.039\*            | −0.008\* / +0.002            | ≤ 0.001              |
+| esmuc-choir                            | −0.012\*                       | **+0.012\***                   | **−0.026\***                 | +0.002               |
+| hust-solfege                           | −0.004                         | +0.003                         | −0.008\*                     | +0.001               |
+| app-takes-singing / dagstuhl / n20emv2 | +0.019\* / +0.013 / +0.022\*   | +0.031\* / +0.024\* / +0.027\* | −0.012\* / −0.010 / −0.008\* | ≤ 0.003              |
+| vocadito real / echoey / distant       | +0.033\* / +0.036\* / +0.044\* | +0.031\* / +0.043\* / +0.049\* | +0.002 / −0.007\* / −0.005\* | ≤ 0.001              |
 
-- **The existence floor.** The decoder drops a run when `end − start < hop` *after* the shift. With `minNoteSec`
+- **The existence floor.** The decoder drops a run when `end − start < hop` _after_ the shift. With `minNoteSec`
   0.08 (4 frames at the 20 ms hop), 0.07 dropped every 4-frame run (0.01 s left) and 0.05 keeps it (0.03 s): the
   shift silently lowered the minimum note from 100 to 80 ms. That admitted 2,784 extra raw notes on dev (all
   exactly 30 ms), 1,046 of them on esmuc (7.7 per take: +7.1 written notes for +0.16 matches). Against the other
@@ -2672,7 +2675,7 @@ The 0.07 → 0.05 change splits into onset timing and one side effect:
   what the 2026-11 sweep read as a hop-lattice staircase, is the same floor: with existence fixed, both peak at 0.05.
 - **AVS real is its truth's onset convention, not the pipeline.** Its fetcher keeps only the pYIN "Sound" rows of
   rows typed Rest / Sound / Transition. 86 % of AVS notes follow a Transition (median 93 ms; the Sound row starts one
-  or two pYIN hops after it, 116 ms after the Transition starts), so the truth onset is where the glide has *ended*. Raw decoder onsets at 0.05 sit −52 ms against legato notes and +15 ms against
+  or two pYIN hops after it, 116 ms after the Transition starts), so the truth onset is where the glide has _ended_. Raw decoder onsets at 0.05 sit −52 ms against legato notes and +15 ms against
   notes after a rest (the other sets: +10…+30). Re-timing each legato truth onset to its Transition's midpoint (a
   diagnostic only) moves AVS clean's optimum from 0.09 to 0.05, like every human-annotated set (COnP 0.538 →
   0.657), and its reverb rows to 0.03, like vocadito's. Every VocalSet technique and exercise prefers 0.07–0.10 on
@@ -2682,6 +2685,7 @@ The 0.07 → 0.05 change splits into onset timing and one side effect:
 **Shipped: the existence floor decoupled from the onset shift (SDRY-1; kill-switch
 `VOICE_ONSET_EXISTENCE_SHIFT_SEC=0.05`).** `SHIPPING_VOICE_OPTS.existenceShiftSec` = 0.07: existence is judged at
 the old calibration, onsets are reported at 0.05. One pre-registered rule, the previous value, nothing tuned.
+
 - Dev vs HEAD: singing **+0.0076\*** [+0.0057, +0.0094]; performer-grouped two-fold +0.0065\* / +0.0087\*; esmuc
   +0.027\*, AVS real +0.002\*; no singing cell significantly negative.
 - **The one test look:** singing **+0.0079\* [+0.0067, +0.0091]** (0.599 → 0.607), ALL +0.0031\* [+0.0027, +0.0037],
@@ -2718,29 +2722,29 @@ phase-locked for nominal-tempo datasets. Nothing changed.
 Two full `benchmark.ts run`s (every dataset, 16 conditions, both splits, clean trees), each note-identical to its
 cached replay on 2,813 / 2,813 pooled clip×conditions:
 
-| run | what it measures | ALL | human | singing | whistling | instrument |
-|---|---|---|---|---|---|---|
-| `test-data-2026-10` (d16420ef, rescored) | the pre-pass pipeline, broken adverse tier | 0.638 | 0.655 | 0.582 | 0.601 | 0.687 |
-| `harness-2026-11` (a9baf46e, `VOICE_ONSET_SHIFT_SEC=0.07` `EXTRACTOR_BRIDGE_GAP_SEC=0`) | the same pipeline, corrected harness | 0.672 | 0.699 | 0.590 | 0.589 | 0.748 |
-| `pipeline-accuracy-2026-11` (bf982160; code = 5302a5bb) | SING-H1 + INST-H4 + SDRY-1 + the review fixes | **0.684** | **0.710** | 0.612 | 0.592 | 0.754 |
+| run                                                                                     | what it measures                              | ALL       | human     | singing | whistling | instrument |
+| --------------------------------------------------------------------------------------- | --------------------------------------------- | --------- | --------- | ------- | --------- | ---------- |
+| `test-data-2026-10` (d16420ef, rescored)                                                | the pre-pass pipeline, broken adverse tier    | 0.638     | 0.655     | 0.582   | 0.601     | 0.687      |
+| `harness-2026-11` (a9baf46e, `VOICE_ONSET_SHIFT_SEC=0.07` `EXTRACTOR_BRIDGE_GAP_SEC=0`) | the same pipeline, corrected harness          | 0.672     | 0.699     | 0.590   | 0.589     | 0.748      |
+| `pipeline-accuracy-2026-11` (bf982160; code = 5302a5bb)                                 | SING-H1 + INST-H4 + SDRY-1 + the review fixes | **0.684** | **0.710** | 0.612   | 0.592     | 0.754      |
 
 - **Rows 1 → 2 are the corrections**, not a gain: ALL +0.033\* [+0.025, +0.041], `real` −0.000.
 - **Rows 2 → 3 are the pipeline:**
-  - both splits: ALL +0.012\* [+0.010, +0.013], human +0.011\*, singing +0.022\*, instrument +0.006\*,
-    whistling +0.003\*;
-  - the test half: ALL +0.011\* [+0.009, +0.013], human +0.010\*, singing +0.021\*, instrument +0.005\*.
+    - both splits: ALL +0.012\* [+0.010, +0.013], human +0.011\*, singing +0.022\*, instrument +0.006\*,
+      whistling +0.003\*;
+    - the test half: ALL +0.011\* [+0.009, +0.013], human +0.010\*, singing +0.021\*, instrument +0.005\*.
 - Every condition gains (both splits): real +0.009\*, echoey +0.012\*, distant +0.014\*, wind +0.007\*, street +0.006\*.
-  - The largest dataset gains are n20emv2-test and vocadito +0.035\*, urmp-contrabass +0.034\*, n20emv2 and
-    jacrc-notes +0.032\*, and app-takes-singing +0.027\*.
-  - No dataset loses significantly (urmp-trombone −0.003 n.s.).
+    - The largest dataset gains are n20emv2-test and vocadito +0.035\*, urmp-contrabass +0.034\*, n20emv2 and
+      jacrc-notes +0.032\*, and app-takes-singing +0.027\*.
+    - No dataset loses significantly (urmp-trombone −0.003 n.s.).
 
 ### Open after this pass
 
 - **Owner calls:**
-  - ship ADV-H2 despite its one n.s. negative RIR cell;
-  - the whistle family for the undeclared voice-score case only (a new hypothesis: DETECT alone);
-  - the app-take tempo correction, which lowers the reported whistling material (−0.011\*) because seconds-COnP
-    punishes correct quantisation at slow tempi.
+    - ship ADV-H2 despite its one n.s. negative RIR cell;
+    - the whistle family for the undeclared voice-score case only (a new hypothesis: DETECT alone);
+    - the app-take tempo correction, which lowers the reported whistling material (−0.011\*) because seconds-COnP
+      punishes correct quantisation at slow tempi.
 - The dipDepth relief is blind but not inert; replacing its trigger with confMed is ADV-H2 itself. Removing the
   inert sustained ramp is a clean-up.
 - OK5 / DEMAND would add room and noise diversity to the measured tier (needs an HDF5 reader).

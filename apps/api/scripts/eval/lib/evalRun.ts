@@ -467,7 +467,9 @@ export function selectCorpus(o: EvalOptions): EvalCorpus {
         datasets,
         scenarios: allScenarios.filter((s) => !o.scenarioFilter || o.scenarioFilter.includes(s.id)),
         // A named condition is scored even when it is opt-in; an unnamed one never is.
-        conditions: conditionsFor(o.real, !!o.synth, !!o.conditionFilter).filter((c) => !o.conditionFilter || o.conditionFilter.includes(c.id)),
+        conditions: conditionsFor(o.real, !!o.synth, !!o.conditionFilter).filter(
+            (c) => !o.conditionFilter || o.conditionFilter.includes(c.id),
+        ),
     }
 }
 
